@@ -473,6 +473,12 @@ def run(translation_id, attempt: int = 1) -> None:
         run_row.reason_class = LINES_MISSING if missing else ""
         run_row.finished_at = timezone.now()
         run_row.save()
+        if written:
+            # The English changes what a Reading holds (Phase 9 chapter 6,
+            # v1.163.0): the share is counted again at the next draw.
+            from core import one_reading
+
+            one_reading.changed(transcript)
         assistant._record(
             FEATURE,
             recording,

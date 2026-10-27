@@ -228,7 +228,9 @@ def test_a_narrowed_question_reads_those_recordings_alone_and_says_so(
         drawn["read_words"]
         == "Asked of the 1 recordings narrowed to on the recordings list."
     )
-    assert state["head"] == "This case" and state["over"] is False
+    # The head carries the figure (One reading, v1.163.0).
+    assert state["head"].startswith("This case · one reading · ")
+    assert state["over"] is False
     row = Row.objects.get(category="llm", event="AI assistant call")
     assert row.details["route"] == "narrowed" and row.details["scope_kind"] == "filter"
     assert (
@@ -343,9 +345,8 @@ def test_over_the_ceiling_the_overviews_are_read_first_then_the_picks_whole(
     assert (
         state["over"] is True and state["summarised"] == 3 and state["no_summary"] == 2
     )
-    assert (
-        state["head"] == "Reads the overviews first, then the recordings they point to"
-    )
+    # The head carries the figure (One reading, v1.163.0).
+    assert state["head"] == "Over the ceiling · 10 of 6 hours · overviews first"
     told = client.post(
         f"/case-chat/{chat_id}/ask",
         data=json.dumps({"question": "Who mentioned the storage unit?"}),

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One reading: how full a case is</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 72ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+
+  /* the case page, reduced */
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .frame .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .frame .head h3 { font-size: 20px; margin: 0; }
+  .frame .acts { display: flex; gap: 8px; }
+  .dash { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 6px; color: var(--muted); margin-top: 4px; }
+  .tabs .on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs .n { background: var(--surface-2); border-radius: 8px; padding: 0 6px; font-size: 11px; }
+
+  /* the One reading strip */
+  .reading { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .reading .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .reading .figure { font-size: 15px; font-weight: 600; }
+  .reading .figure .n { font-family: var(--mono); }
+  .reading .bar { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+  .reading .bar .fill { position: absolute; top: 0; bottom: 0; left: 0; }
+  .reading .bar .fill.ok { background: var(--ok); } .reading .bar .fill.warn { background: var(--warn); } .reading .bar .fill.bad { background: var(--bad); }
+  .reading .bar .cut { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--surface); opacity: .9; }
+  .reading .bar .over { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, var(--bad) 0 3px, var(--bad-soft) 3px 6px); }
+  .reading .bar .nearly { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+  .reading .legend { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .reading .sentence { font-size: 13px; }
+  .reading .sentence a { color: var(--accent); }
+
+  /* the drawer, reduced */
+  .drawer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; font-size: 13px; overflow: hidden; min-height: 300px; }
+  .drawer .dh { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .drawer .dh .grow { flex: 1; min-width: 0; } .drawer .dh b { font-size: 14px; }
+  .drawer .body { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .drawer .ground { color: var(--muted); font-size: 12px; }
+  .drawer .q { align-self: flex-end; background: var(--accent-soft); border-radius: var(--radius-lg); padding: 6px 10px; max-width: 85%; }
+  .drawer .a { background: var(--surface-2); border-radius: var(--radius-lg); padding: 8px 10px; }
+  .drawer .a .cite { color: var(--accent); }
+  .drawer .read { color: var(--muted); font-size: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .drawer .ask { display: flex; gap: 6px; margin-top: auto; }
+  .drawer .ask .box { flex: 1; border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Phase 9 chapter 6 amendment, a drawing to agree before the build</div>
+    <h1>One reading: how full a case is, and what a question will do with it</h1>
+    <p class="lede">The incidents have One sitting: what the engine holds at once, with a bar. A case is read differently: whole transcripts packed into Readings of about six hours of talk each, under a ceiling of hours, and over the ceiling the overviews first. This drawing gives the case the same honesty in one strip on the case page and two lines in the drawer, from figures the app already keeps. Made-up cases and figures.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The strip on the case page, in its three states</h2></div>
+    <div class="cols">
+
+      <div class="frame">
+        <div class="head"><h3>Marchetti</h3><div class="acts"><span class="btn">Notes page</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="dash"><span class="pill">12 recordings</span><span class="pill warn">1 preparing</span><span class="pill">shared with 2</span></div>
+        <div class="reading">
+          <div class="top"><span class="figure">One reading <span class="muted">·</span> <span class="n">4</span> of <span class="n">120</span> hours</span><span class="pill ok">room</span></div>
+          <div class="bar"><div class="fill ok" style="width: 3.3%"></div><div class="nearly" style="left: 85%"></div></div>
+          <div class="legend"><span>11 transcripts, 1 not ready yet</span><span>room for about 116 hours more</span></div>
+          <div class="sentence">A question reads every transcript whole at one go, in under a minute.</div>
+        </div>
+        <div class="tabs"><span class="on">Recordings <span class="n">12</span></span><span>Search</span><span>Clips</span><span>Notes</span><span>Speakers</span><span>Incidents</span></div>
+        <p class="muted tiny" style="margin: 0">Green: the whole case fits one Reading. The figure is hours of recordings, as the ceiling counts them.</p>
+      </div>
+
+      <div class="frame">
+        <div class="head"><h3>Holt</h3><div class="acts"><span class="btn">Notes page</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="dash"><span class="pill">100 recordings</span><span class="pill">3 memos</span><span class="pill">shared with 4</span></div>
+        <div class="reading">
+          <div class="top"><span class="figure"><span class="n">4</span> readings <span class="muted">·</span> <span class="n">38</span> of <span class="n">120</span> hours</span><span class="pill warn">several readings</span></div>
+          <div class="bar"><div class="fill warn" style="width: 31.7%"></div><div class="cut" style="left: 8%"></div><div class="cut" style="left: 16.5%"></div><div class="cut" style="left: 24%"></div><div class="nearly" style="left: 85%"></div></div>
+          <div class="legend"><span>100 transcripts, all ready</span><span>room for about 82 hours more</span></div>
+          <div class="sentence">A question reads every transcript whole, in 4 readings two at a time, and takes a few minutes. Narrow the list to ask about fewer.</div>
+        </div>
+        <div class="tabs"><span class="on">Recordings <span class="n">100</span></span><span>Search</span><span>Clips</span><span>Notes <span class="n">31</span></span><span>Speakers</span><span>Incidents <span class="n">2</span></span></div>
+        <p class="muted tiny" style="margin: 0">Amber: under the ceiling, more than one Reading. The ticks are where the Readings part, in upload order. The cost is minutes, not a refusal.</p>
+      </div>
+
+      <div class="frame">
+        <div class="head"><h3>Holt, next spring</h3><div class="acts"><span class="btn">Notes page</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="dash"><span class="pill">260 recordings</span><span class="pill bad">over the reading ceiling</span><span class="pill">shared with 4</span></div>
+        <div class="reading">
+          <div class="top"><span class="figure">Over the ceiling <span class="muted">·</span> <span class="n">150</span> of <span class="n">120</span> hours</span><span class="pill bad">overviews first</span></div>
+          <div class="bar"><div class="fill bad" style="width: 80%"></div><div class="over" style="left: 80%; right: 0"></div><div class="nearly" style="left: 68%"></div></div>
+          <div class="legend"><span>258 transcripts, 2 not ready yet</span><span>240 summarised, 18 not yet</span></div>
+          <div class="sentence">A question reads the overviews of 240 recordings first, then the recordings they point to, whole. 18 have no summary yet and will not be read: <a href="#">write the summaries tonight</a>.</div>
+        </div>
+        <div class="tabs"><span class="on">Recordings <span class="n">260</span></span><span>Search</span><span>Clips</span><span>Notes <span class="n">80</span></span><span>Speakers</span><span>Incidents <span class="n">5</span></span></div>
+        <p class="muted tiny" style="margin: 0">Red: over the ceiling. The bar is the ceiling; the hatched part is what is over it. The pill in the head appears only in this state and opens here.</p>
+      </div>
+
+    </div>
+    <div class="caption">
+      <p><b>Where it sits.</b> Under the head's pills, above the tabs, on every tab of the case page, as the sitting's bar sits on an incident's Cameras tab. It is drawn from stored figures and reads no transcript to draw.</p>
+      <p><b>The three states.</b> Green under one Reading; amber under the ceiling but more than one; red over the ceiling. The thin mark at 85 percent of the ceiling is the nearly-full line, the same as the sitting's.</p>
+      <p><b>What the figures are.</b> Hours are the recordings' lengths, as the ceiling counts them (Case chat hours, 120 as shipped). Readings are whole transcripts packed in upload order into about six hours of talk each, from each transcript's size kept on its row. Summarised is a live count.</p>
+      <p><b>When a file is added.</b> It counts under "not ready yet" until it lands, as a question would skip it. When it lands, its size is kept with it and the strip moves the first time the page is drawn after. A correction, a translation landing or a summary written refreshes that one transcript's figure.</p>
+      <p><b>Room for.</b> "Room for about N hours more" is the ceiling less the hours. In amber it is still said, because the ceiling is the thing that changes how a question is answered; the next Reading is only minutes.</p>
+      <p><b>Nothing new to set.</b> The ceiling, the Reading size and the Readings at once are settings the app already has. The strip shows only when the Case Chat is on, as the sitting's bar shows only with the assistant on.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The drawer: the head line before a question, and what it read after</h2></div>
+    <div class="cols">
+
+      <div class="drawer">
+        <div class="dh"><div class="grow"><b>Gideon</b><div class="muted small">This case · 4 readings · 38 of 120 hours</div></div><span class="btn tiny ghost">⤢</span><span class="btn tiny ghost">Close</span></div>
+        <div class="body">
+          <div class="ground">Answers come from the 100 transcripts in this case, read whole in 4 readings two at a time, afresh for every question; a large case takes a few minutes. Narrow the list on the page to ask about fewer recordings.</div>
+          <div class="q">When was the car first mentioned?</div>
+          <div class="a">The car is first mentioned on the second day, when the caller says it was moved to the cousin's street <span class="cite">[Recording 14, 0:12:40]</span>. It comes up again the next morning <span class="cite">[Recording 17, 0:03:15]</span>.</div>
+          <div class="read"><span>Read 100 transcripts whole in 4 readings, 2 min 40 s</span><span class="pill">whole case</span></div>
+          <div class="ask"><span class="box">Ask anything about the recordings in this case</span><span class="btn primary">Ask</span></div>
+        </div>
+      </div>
+
+      <div class="drawer">
+        <div class="dh"><div class="grow"><b>Gideon</b><div class="muted small">Over the ceiling · 150 of 120 hours · overviews first</div></div><span class="btn tiny ghost">⤢</span><span class="btn tiny ghost">Close</span></div>
+        <div class="body">
+          <div class="ground">This case is 150 hours of recordings, more than the 120 a question reads whole: Gideon reads the overviews of 240 recordings first, then the recordings they point to, whole. 18 recordings have no summary yet and will not be read; the case page offers to write them tonight. Narrow the list on the page to ask about fewer recordings.</div>
+          <div class="q">Who else was told about the money?</div>
+          <div class="a">Two people are told: the sister, in the second week <span class="cite">[Recording 61, 0:08:02]</span>, and the man called T, on the last call before the arrest <span class="cite">[Recording 233, 0:21:48]</span>.</div>
+          <div class="read"><span>Read the overviews of 240, then 9 recordings whole in 1 reading, 1 min 50 s</span><span class="pill">whole case</span></div>
+          <div class="ask"><span class="box">Ask anything about the recordings in this case</span><span class="btn primary">Ask</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="caption">
+      <p><b>The head line.</b> Today it says "This case". It gains the strip's figure in a few words, so the person sees what a question will cost before typing. With a narrowing on the page it says the narrowed count, as today.</p>
+      <p><b>The grounding line.</b> The sentence the drawer already shows, with the Readings count added in the amber state. The over-the-ceiling sentence is the one that exists; it changes only "hours of talk" to "hours of recordings", which is what the figure is.</p>
+      <p><b>What it read.</b> Under every answer, the drawer already keeps what the question read. It gains the Readings count and the time taken, so a slow answer explains itself and a fast one shows what it skipped.</p>
+      <p><b>Not drawn.</b> No new setting, no new page, no change to how a question is answered. The strip and the lines describe the rule of Phase 9 chapter 6 as it stands; they do not change it.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

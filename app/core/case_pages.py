@@ -387,8 +387,9 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 if tab == "search" and asked
                 else None
             ),
-            # The dashboard line (Phase 7 chapter 3).
-            "pills": dashboard.pills(case, role, request.user, counts),
+            # The dashboard line (Phase 7 chapter 3), and One reading (Phase 9
+            # chapter 6, v1.163.0): the strip and the pill over the ceiling.
+            **_pills_and_reading(case, role, request.user, counts),
             "types": cases.recording_types(),
             "size": uploads.as_size(counts["size_bytes"]),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
@@ -555,6 +556,20 @@ def _speakers_tab(case: Case, user=None) -> dict:
     shown["needs"]["unnamed_minutes"] = sum(one[2] for one in ordered)
     shown["needs"]["first_unnamed"] = ordered[0][0] if ordered else None
     return shown
+
+
+def _pills_and_reading(case, role, user, counts) -> dict:
+    """The dashboard line's pills, and the One reading strip's figures when
+    the Case Chat is on (Phase 9 chapter 6, v1.163.0); over the ceiling the
+    line gains a pill that opens the strip."""
+    from core import one_reading
+
+    pills = dashboard.pills(case, role, user, counts)
+    reading = one_reading.json_for(case)
+    pill = one_reading.head_pill(reading)
+    if pill is not None:
+        pills.append(pill)
+    return {"pills": pills, "one_reading": reading}
 
 
 def _assignment_pills(case, rows, who, state, viewer) -> list[dict]:

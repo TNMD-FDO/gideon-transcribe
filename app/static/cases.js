@@ -794,6 +794,11 @@
       var dash = document.getElementById("dashboard-line");
       var newDash = fresh.getElementById("dashboard-line");
       if (dash && newDash) { dash.innerHTML = newDash.innerHTML; dash.hidden = newDash.hidden; }
+      // One reading (Phase 9 chapter 6) moves with them: a recording that
+      // lands counts from then on.
+      var reading = document.getElementById("one-reading");
+      var newReading = fresh.getElementById("one-reading");
+      if (reading && newReading) { reading.innerHTML = newReading.innerHTML; reading.className = newReading.className; }
     }
     function tick() {
       if (!preparing()) { return; }

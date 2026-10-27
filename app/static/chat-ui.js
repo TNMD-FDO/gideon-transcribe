@@ -308,7 +308,9 @@
             html += "<div class='card answer'>" + body(turn.answer, citer(turn.citations)) +
               (turn.cut_short ? "<p class='muted tiny'>The answer was cut short. Ask for the rest, or ask a narrower question.</p>" : "") +
               "<div class='row tools'><button type='button' class='ghost tiny copy' data-answer='" + escape(turn.answer) + "'>Copy</button>" +
-              (turn.answered_at ? "<span class='muted tiny'>" + escape(when(turn.answered_at)) + "</span>" : "") + "</div></div>";
+              (turn.answered_at ? "<span class='muted tiny'>" + escape(when(turn.answered_at)) + "</span>" : "") +
+              // What it read (Phase 9 chapter 6, v1.163.0): the Case Chat's turns carry it.
+              (turn.read_line ? "<span class='muted tiny read-line'>" + escape(turn.read_line) + "</span>" : "") + "</div></div>";
           }
           html += "</div>";
         });

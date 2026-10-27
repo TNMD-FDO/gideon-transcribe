@@ -39,15 +39,22 @@
         return "Reads the " + scope.recordings.length + " recording" + (scope.recordings.length === 1 ? "" : "s") +
           " you have narrowed to on this page, whole, read afresh for every question. Clear the narrowing to ask about the whole case.";
       }
+      // One reading (Phase 9 chapter 6, v1.163.0): the figures are the case
+      // page's strip's; the hours are the recordings' lengths.
       if (now.over && now.summarised) {
-        return "This case is " + now.hours + " hours of talk, more than the " + now.hours_allowed + " a question reads whole: " +
+        return "This case is " + now.hours + " hours of recordings, more than the " + now.hours_allowed + " a question reads whole: " +
           "Gideon reads the overviews of " + now.summarised + " recording" + (now.summarised === 1 ? "" : "s") + " first, then the recordings they point to, whole." +
           (now.no_summary ? " " + now.no_summary + " recording" + (now.no_summary === 1 ? " has" : "s have") + " no summary yet and will not be read; the case page offers to write them tonight." : "") +
           " Narrow the list on the page to ask about fewer recordings.";
       }
       if (now.over) {
-        return "This case is " + now.hours + " hours of talk, more than the " + now.hours_allowed + " a question reads whole, and no recording has a summary yet, so a question about the whole case will be refused. " +
+        return "This case is " + now.hours + " hours of recordings, more than the " + now.hours_allowed + " a question reads whole, and no recording has a summary yet, so a question about the whole case will be refused. " +
           "Write the summaries tonight on the case page, or narrow the list on the page and ask about those recordings.";
+      }
+      if (now.readings > 1) {
+        return "Answers come from the " + now.readable + " transcripts in this case" + (now.skipped ? ", with " + now.skipped + " not ready yet" : "") +
+          ", read whole in " + now.readings + " readings " + now.at_once + " at a time, afresh for every question; a large case takes a few minutes. " +
+          "Narrow the list on the page to ask about fewer recordings.";
       }
       return "Answers come from the " + now.readable + " transcript" + (now.readable === 1 ? "" : "s") +
         " in this case" + (now.skipped ? ", with " + now.skipped + " not ready yet" : "") + ", read afresh for every question.";

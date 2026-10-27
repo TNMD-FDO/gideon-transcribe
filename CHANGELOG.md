@@ -19,6 +19,19 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.163.0, 2026-10-27
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0093: two columns on a Transcript, its share of a Reading and when it was counted. Nothing already stored changes; the shares are counted the first time a case page is drawn.
+
+- **One reading (Phase 9 chapter 6; the drawing `docs/spec/mockups/phase-9-one-reading.html`).** The incidents say how full a Sitting is; now a case says how full it is and what a question will do with it. A strip on the case page under the head's pills, on every tab: "One reading · 4 of 120 hours" in green when the whole case fits one Reading; "4 readings · 38 of 120 hours" in amber when a question reads it whole in several Readings, with a tick where each parts, "room for about 82 hours more" and the sentence that it takes a few minutes; "Over the ceiling · 150 of 120 hours" in red with the bar hatched past the ceiling, the summarised and not-yet counts, the sentence that the overviews are read first and a link to write the summaries tonight. Over the ceiling the dashboard line gains the pill "over the reading ceiling", which opens the strip. The hours are the recordings' lengths, as the ceiling counts them (Case chat hours, 120 as shipped); the thin mark at 85 percent is the nearly-full line, as the sitting's. A recording counts as not ready until it lands, as a question would skip it.
+- **The drawer.** Its head line gains the figure ("This case · 4 readings · 38 of 120 hours"; "Over the ceiling · 150 of 120 hours · overviews first"), the grounding line says how many Readings a question takes, and under every answer the drawer now says what it read, in how many Readings and how long it took ("Read 100 transcripts whole in 4 readings, 2 min 40 s"), the line the chapter promised. The over-the-ceiling sentences say "hours of recordings", which is what the figure is.
+- **How the figures are kept.** Each Transcript keeps its share of a Reading, as the Case Chat renders it (the header's room, the words, the Digest, the notes), counted at the landing; a Correction, a split or a translation landing clears it and the next draw counts it again; a Digest newer than the count makes it stale too. The strip reads no transcript to draw once the shares are kept. The summarised count is live. No new setting, no change to how a question is answered: the strip and the lines describe the rule of chapter 6 as it stands.
+
 ## v1.162.0, 2026-10-27
 
 ```

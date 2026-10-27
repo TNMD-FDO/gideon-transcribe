@@ -298,6 +298,14 @@ class Transcript(models.Model):
     # The Digest's forced cuts (v1.53.0): the ids of the Segments before which
     # a window is split, added whenever a part came back cut off at the cap.
     digest_splits = models.JSONField(default=list, blank=True)
+    # One reading (Phase 9 chapter 6, v1.163.0): this Transcript's share of a
+    # Reading as the Case Chat renders it (the words, the Digest, the notes),
+    # kept here so the case page's strip sums stored figures and renders
+    # nothing to draw. Counted at the landing and whenever stale: never
+    # counted, cleared by a Correction or a translation, or a Digest newer
+    # than the count.
+    reading_tokens = models.IntegerField(default=0)
+    reading_made_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created"]

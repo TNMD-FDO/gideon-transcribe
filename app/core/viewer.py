@@ -27,6 +27,7 @@ from core import (
     engine,
     home,
     notes,
+    one_reading,
     settings_store,
     translation,
 )
@@ -869,6 +870,7 @@ def split_line(
         # Both halves are new words as spoken (ADR 0026): the first's English
         # goes and a run writes both.
         translation.on_correction(segment, by=by)
+        one_reading.changed(transcript)
         changes = list(transcript.speaker_changes or [])
         changes.append(
             {
@@ -960,6 +962,7 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
     # A Correction is made on the words as spoken (ADR 0026): the line's
     # English is stale, and a run writes it again.
     translation.on_correction(segment, by=request.user)
+    one_reading.changed(segment.transcript)
 
     audit.write(
         audit.Category.EDITS,

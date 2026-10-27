@@ -2754,6 +2754,20 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .sitting .legend i.words { background: repeating-linear-gradient(135deg, var(--danger) 0 3px, transparent 3px 6px); }
 .sitting .alone { display: grid; gap: 6px; margin-top: 4px; }
 .sitting .alone .cam { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; }
+/* One reading (Phase 9 chapter 6, v1.163.0): the strip on the case page under the head's pills. */
+.one-reading { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 8px 12px; margin: 0 0 12px; display: grid; gap: 5px; font-size: var(--t-small); }
+.one-reading .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.one-reading .figure { font-size: var(--t-base, 1rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+.one-reading .bar { position: relative; height: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2, var(--surface)); overflow: hidden; }
+.one-reading .bar i { position: absolute; top: 0; bottom: 0; display: block; }
+.one-reading .bar .fill { left: 0; background: var(--ok); }
+.one-reading.several .bar .fill { background: var(--warn); }
+.one-reading.over .bar .fill { background: var(--danger); }
+.one-reading .bar .cut { width: 2px; background: var(--surface); opacity: 0.9; }
+.one-reading .bar .over { right: 0; background: repeating-linear-gradient(135deg, var(--danger) 0 3px, transparent 3px 6px); }
+.one-reading .bar .nearly { width: 1px; top: -2px; bottom: -2px; background: var(--muted); opacity: 0.7; }
+.one-reading .legend { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); }
+.one-reading .sentence { color: var(--text); }
 /* The sitting in small, on the case page's Incidents tab and its offers (Phase 8 chapter 10). */
 .sitting-mini { display: inline-grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; min-width: 180px; max-width: 320px; vertical-align: middle; font-size: var(--t-small); }
 .sitting-mini .figure { white-space: nowrap; }

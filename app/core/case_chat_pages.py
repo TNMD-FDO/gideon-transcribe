@@ -27,6 +27,7 @@ from core import (
     expectation,
     exports,
     incidents,
+    one_reading,
     prompts,
     settings_store,
     tasks,
@@ -167,6 +168,9 @@ def _turn_json(
         # What the question read (Phase 9 chapter 6), for the page's line.
         "route": turn.route or "",
         "read_words": case_scope.read_words(turn) if turn.route else "",
+        # Under the answer (Phase 9 chapter 6, v1.163.0): what it read, in how
+        # many Readings, and how long it took.
+        "read_line": one_reading.read_line(turn),
         "expectation": expectation.json_of(turn.expectation, turn.state, "chat"),
         "asked_at": turn.asked_at.isoformat() if turn.asked_at else "",
         "answered_at": turn.answered_at.isoformat() if turn.answered_at else "",
@@ -362,10 +366,13 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
     read, skipped = _readable(still_here.values())
     # What a whole-case question would do (Phase 9 chapter 6), for the
     # drawer's head and its grounding line.
-    hours = case_scope.hours_of(read)
-    allowed = case_chat.hours_allowed()
-    overviews = assistant.overviews_for(read) if hours > allowed else {}
-    summarised = sum(1 for one in read if overviews.get(one.pk))
+    # One reading (Phase 9 chapter 6, v1.163.0): the same figures the case
+    # page's strip draws, for the head line and the grounding line.
+    # The poll counts no share: the case page's draw does that.
+    figures = one_reading.figures(case, count=False)
+    hours = figures["hours"]
+    allowed = figures["allowed"]
+    summarised = figures["summarised"]
     return JsonResponse(
         {
             "reachable": engine.is_reachable(),
@@ -373,12 +380,14 @@ def state(request: HttpRequest, case_id) -> JsonResponse:
             "busy": any(one["busy"] for one in chats),
             "readable": len(read),
             "skipped": len(skipped),
-            "hours": round(hours, 1),
+            "hours": figures["hours_words"],
             "hours_allowed": allowed,
             "over": hours > allowed,
             "summarised": summarised,
-            "no_summary": len(read) - summarised if hours > allowed else 0,
-            "head": case_scope.head_line(hours, allowed, summarised),
+            "no_summary": figures["no_summary"],
+            "readings": figures["readings"],
+            "at_once": figures["at_once"],
+            "head": figures["head"],
             "starters": settings_store.lines_of("case_chat_starters"),
             "chats": chats,
         }

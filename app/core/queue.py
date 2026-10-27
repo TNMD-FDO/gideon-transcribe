@@ -433,6 +433,11 @@ def merge(job: Job) -> Job:
     from core import translation
 
     translation.on_transcript(job.recording)
+    # One reading (Phase 9 chapter 6, v1.163.0): the transcript's share of a
+    # Reading counted while it is in hand, for the case page's strip.
+    from core import one_reading
+
+    one_reading.on_transcript(job.recording)
     # Its summary tonight, when the upload carried the tick (Phase 9 chapter 5).
     from core import summaries_tonight
 

@@ -19,6 +19,20 @@
       </div>
     </header>
     {% include "dashboard-line.html" %}
+    {% comment %}One reading (Phase 9 chapter 6, v1.163.0): how full the case is and what a question will do with it, on every tab; swapped by cases.js with the rows' refresh. Shown only when the Case Chat is on.{% endcomment %}
+    {% if one_reading %}
+      <div class="one-reading {{ one_reading.zone }}" id="one-reading" title="The hours are the recordings' lengths, as the ceiling counts them. A Reading is about six hours of talk read whole at one go.">
+        <div class="top"><span class="figure">{{ one_reading.figure }}</span><span class="pill small {{ one_reading.tone }}">{{ one_reading.pill }}</span></div>
+        <div class="bar" role="img" aria-label="{{ one_reading.figure }}">
+          <i class="fill" style="width: {{ one_reading.fill }}%"></i>
+          {% for cut in one_reading.cuts %}<i class="cut" style="left: {{ cut }}%"></i>{% endfor %}
+          {% if one_reading.zone == "over" %}<i class="over" style="left: {{ one_reading.fill }}%"></i>{% endif %}
+          <i class="nearly" style="left: {{ one_reading.nearly }}%"></i>
+        </div>
+        <div class="legend"><span>{{ one_reading.left }}</span><span>{{ one_reading.right }}</span></div>
+        <div class="sentence">{{ one_reading.sentence }}{% if one_reading.offer_summaries %} <a href="#summaries-line">write the summaries tonight</a>.{% endif %}</div>
+      </div>
+    {% endif %}
 
     {% if incidents_on %}
       {% comment %}New incident: the case's videos, ticked; the same dialog the offer's Choose myself opens with its videos ticked.{% endcomment %}
