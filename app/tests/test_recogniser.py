@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from core import clock_check, exports, queue, settings_store, uploads, whisperx
+from core import clock_check, engine, exports, queue, settings_store, uploads, whisperx
 from core.jobs import Job, Run, Transcript
 from core.models import LoginSession, User
 from core.recordings import Batch, MediaState, Recording, Side
@@ -127,9 +127,18 @@ def test_the_upload_page_greys_translate_under_qwen(
     page = client.get(reverse("upload")).content.decode()
     assert 'id="translate" disabled' not in page
     settings_store.set_to("recogniser", "qwen3-asr")
+    # Under Qwen3-ASR the English is the chat engine's (ADR 0026, v1.162.0):
+    # greyed only while no engine is configured, with the reason.
+    monkeypatch.setattr(engine, "configured", lambda: False)
     page = client.get(reverse("upload")).content.decode()
     assert 'id="translate" disabled' in page
-    assert "Not offered under the Qwen3-ASR recogniser yet" in page
+    flat = " ".join(page.split())
+    assert "no engine is configured" in flat
+    settings_store.set_to("assistant_available", True)
+    monkeypatch.setattr(engine, "configured", lambda: True)
+    page = client.get(reverse("upload")).content.decode()
+    assert 'id="translate" disabled' not in page
+    assert "the English follows" in page
 
 
 def test_the_words_for_which_recogniser_wrote_the_words():

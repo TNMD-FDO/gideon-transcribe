@@ -52,7 +52,11 @@
             {% comment %}Assigned to and Reviewed (Phase 9 chapter 3).{% endcomment %}
             <span class="pill{% if assignment.reviewed %} ok{% elif assignment.mine %} on{% endif %}" id="assignment-pill">{% if assignment.reviewed %}{{ assignment.reviewed_words }}{% else %}Assigned to {{ assignment.to }}{% endif %}</span>
           {% endif %}
-          {% if transcript.task_run == "translate" %}
+          {% if by_engine %}
+            {% comment %}The English from the words as spoken (ADR 0026): the pill, and the state while the English is on its way.{% endcomment %}
+            <span class="pill translate" title="The speech was recognised in the language spoken and translated to English line by line by the office's language model. The words as spoken are kept: the switch in the transcript's head shows them.">Translated to English from {{ language_name }}</span>
+            <span class="pill {{ english_state.1 }}" id="english-state"{% if not english_state.0 %} hidden{% endif %}>{{ english_state.0 }}</span>
+          {% elif transcript.task_run == "translate" %}
             <span class="pill translate" title="The speech was recognised in that language and translated to English. The original-language text is not kept, and word timing is not available for translations.">Translated to English from {{ language_name }}</span>
           {% endif %}
           {% if transcript.shared_segments %}
@@ -92,6 +96,11 @@
                   {% comment %}With notes (Phase 8 chapter 2): separate choices, so a plain export never carries a note.{% endcomment %}
                   <li><a href="{% url 'export' recording.pk 'word' %}?notes=1">{% icon "note" %} Export to Word, with notes</a></li>
                   <li><a href="{% url 'export' recording.pk 'text' %}?notes=1">{% icon "note" %} Export as text, with notes</a></li>
+                {% endif %}
+                {% if has_english %}
+                  {% comment %}With the words as spoken (ADR 0026): the same way as the notes.{% endcomment %}
+                  <li><a href="{% url 'export' recording.pk 'word' %}?spoken=1">{% icon "word" %} Export to Word, with the words as spoken</a></li>
+                  <li><a href="{% url 'export' recording.pk 'text' %}?spoken=1">{% icon "text" %} Export as text, with the words as spoken</a></li>
                 {% endif %}
                 {% comment %}The comparison's export (Phase 8 chapter 6): a link once this camera's report is compared.{% endcomment %}
                 <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
@@ -428,6 +437,14 @@
             The speakers are being matched over the whole recording. The
             labels change here by themselves in a moment.
           </p>
+          {% comment %}The English or the words as spoken (ADR 0026, v1.162.0): one text at a time, the English by default, remembered in the browser.{% endcomment %}
+          <div id="text-switch" class="text-switch small" hidden>
+            <span class="muted" id="text-switch-words"></span>
+            <span class="sw" role="group" aria-label="Which words to show">
+              <button type="button" class="small on" data-text="english">English</button>
+              <button type="button" class="small" data-text="spoken">As spoken</button>
+            </span>
+          </div>
           {% comment %}Find's close matches and what the camera showed (v1.97.0).{% endcomment %}
           <div id="find-more" class="find-more small" hidden></div>
           <ol id="transcript" class="transcript"></ol>

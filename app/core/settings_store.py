@@ -1188,9 +1188,10 @@ def _rows() -> list[Definition]:
                 "words and the lines are built from them, each piece keeps its "
                 "own language; the Model setting is Whisper's and greys; "
                 "Translate to English under it is written by the chat engine "
-                "from the words as spoken (ADR 0026), which a later release "
-                "builds, so the Upload page greys it until then. Live "
-                "recordings and the clock re-read stay on Whisper."
+                "from the words as spoken (ADR 0026, v1.162.0), which are kept "
+                "and can be shown; with no engine configured the Upload page "
+                "greys it. Live recordings and the clock re-read stay on "
+                "Whisper."
             ),
             when_changed=(
                 "The next Run; the service loads the other recogniser once, in "
@@ -1572,6 +1573,22 @@ def _rows() -> list[Definition]:
                 "How long one Summary call may take. Doubled while the model may think."
             ),
             when_changed="The next Summary.",
+        ),
+        Definition(
+            key="translation_time_seconds",
+            page=ASSISTANT,
+            name="Translation time limit",
+            kind=NUMBER,
+            default=300,
+            least=30,
+            most=3600,
+            unit="seconds",
+            what_it_does=(
+                "How long one window's call of the translation from the words "
+                "as spoken may take (ADR 0026). Doubled while the model may "
+                "think."
+            ),
+            when_changed="The next translation run.",
         ),
         Definition(
             key="suggestions_time_seconds",
@@ -2941,6 +2958,24 @@ def _rows() -> list[Definition]:
             when_changed="The next export.",
         ),
         Definition(
+            key="translation_notice_engine",
+            page=NOTICES,
+            name="Translation notice, by the chat engine",
+            kind=TEXT,
+            default=(
+                "Machine translation to English from {language} by the office's "
+                "language model, from the words as spoken by {model}, which are "
+                "kept and can be shown. This is not a certified translation."
+            ),
+            what_it_does=(
+                "Printed on every export of a Transcript whose English the chat "
+                "engine wrote from the words as spoken (ADR 0026), and never on "
+                "Captions. {language} and {model} are filled from the "
+                "Provenance; {model} names the recogniser."
+            ),
+            when_changed="The next export.",
+        ),
+        Definition(
             key="ai_notice",
             page=NOTICES,
             name="AI notice",
@@ -3449,6 +3484,7 @@ def time_limit_seconds(feature: str) -> int:
         "incident_memo": "incidents_memo_time_seconds",
         "incident_chat": "incidents_chat_time_seconds",
         "compare_report": "documents_compare_time_seconds",
+        "translation": "translation_time_seconds",
     }[feature]
     return get(key)
 

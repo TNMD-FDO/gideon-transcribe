@@ -290,6 +290,7 @@ from core.assistant import (  # noqa: E402, F401
     SuggestionRun,
     Summary,
     SummaryTemplate,
+    Translation,
 )
 from core.audit import Row  # noqa: E402, F401
 from core.backups import BackupStatus  # noqa: E402, F401

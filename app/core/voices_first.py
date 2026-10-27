@@ -25,7 +25,7 @@ import time
 from django.db import transaction
 from django.utils import timezone
 
-from core import assistant, audit, call_system, engine, prompts, voices
+from core import assistant, audit, call_system, engine, prompts, translation, voices
 from core.assistant import DONE, PromptTemplate, SpeakerCheck, SpeakerCorrection
 
 log = logging.getLogger(__name__)
@@ -138,7 +138,7 @@ def mixed_lines(transcript, taken: set) -> list[dict]:
             {
                 "segment_id": seg.pk,
                 "start": seg.start,
-                "quote": (seg.text or "")[:300],
+                "quote": (translation.reading(seg) or "")[:300],
                 "from": seg.speaker,
                 "to": to,
                 "reason": f"two voices: the {part} part sounds like {to}",
@@ -171,7 +171,7 @@ def doubt_rows(transcript, judge, kept: dict) -> dict:
         kept[one["segment_id"]] = {
             "segment_id": one["segment_id"],
             "start": seg.start,
-            "quote": (seg.text or "")[:300],
+            "quote": (translation.reading(seg) or "")[:300],
             "from": one["from"],
             "to": one["to"],
             "reason": f"the voice sounds like {one['to']}",
@@ -192,7 +192,7 @@ def doubt_rows(transcript, judge, kept: dict) -> dict:
         kept[one["segment_id"]] = {
             "segment_id": one["segment_id"],
             "start": seg.start,
-            "quote": (seg.text or "")[:300],
+            "quote": (translation.reading(seg) or "")[:300],
             "from": one["from"],
             "to": one["to"],
             "reason": f"the voice cannot tell between {one['from']} and {one['to']}",

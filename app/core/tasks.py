@@ -442,6 +442,17 @@ def keep_the_queue_moving(timestamp: int) -> None:
         log.warning("speaker check %s had no task; queued again", check.pk)
         check_speakers.defer(check_id=str(check.pk))
 
+    # A translation left queued with no task behind it, or waiting for the
+    # engine to come back (ADR 0026, v1.162.0): queued again every minute
+    # while the engine answers the minute check.
+    from core import translation
+
+    for run in translation.queued_without_a_task():
+        if run.reason_class == translation.ENGINE_AWAY and not engine_answers():
+            continue
+        log.info("translation %s queued again", run.pk)
+        translate_lines.defer(translation_id=str(run.pk))
+
     if queue.live_jobs().exists():
         _poll_again(1)
 
@@ -575,6 +586,22 @@ def check_speakers(check_id: str, attempt: int = 1) -> None:
     from core import speaker_check
 
     speaker_check.run(check_id, attempt)
+
+
+@app.task(queue="llm", name="translate_lines")
+def translate_lines(translation_id: str, attempt: int = 1) -> None:
+    """The English from the words as spoken (ADR 0026): one run, window by
+    window; a run that finds the engine away stays queued for the sweep."""
+    from core import translation
+
+    with or_failed(translation.Translation, translation_id):
+        translation.run(translation_id, attempt)
+
+
+def engine_answers() -> bool:
+    from core import engine
+
+    return engine.is_reachable()
 
 
 @app.task(queue="llm", name="read_doubts")

@@ -19,7 +19,20 @@ installs or upgrades to.
 
 ## Unreleased
 
-- **Decided, not yet built:** under the Qwen3-ASR recogniser, translation written by the chat engine from the words as spoken, which are kept (ADR 0026): the English to follow the landing, the switch **English | As spoken** on the recording page, the export with the words as spoken; the chapter in Phase 1 chapter 7, the drawing in `docs/spec/mockups/phase-1-recogniser-and-translation.html`. Until it is built, Translate to English greys on the Upload page under Qwen3-ASR.
+## v1.162.0, 2026-10-27
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0092: three columns on a line (its language, its English, and a hash of the words the English came from) and the translation run's table. Nothing already stored changes.
+
+- **Translation from the words as spoken (Phase 1 chapter 7, ADR 0026).** Under the Qwen3-ASR recogniser a Recording with Translate to English chosen, or found mixed under the mixed rule, lands in the language spoken and reads at once; the English follows, written by the chat engine line by line from the words as spoken, which are kept. A run shaped like the Speaker check's, one live per Transcript, queued as the Transcript lands after the vision hook and before Summaries tonight and the Speaker check, so both read the English once it is there. It waits while the engine is away, as Summaries tonight does, and the minute sweep queues it again once the engine answers. Only lines not in English are sent, in windows cut by the Digest's rule with three lines of context either side, the lines numbered, one JSON answer per line, checked line by line (a number from the window, a non-empty English, nothing absurdly long); one unreadable window is a lost window, not a lost run, and a run goes over its lines twice. Each line keeps a hash of the spoken text its English came from, so a Correction leaves that one line stale and the next run writes it again; a Correction queues the run by itself.
+- **On the pages.** "English to follow", "English, 3 of 12 · usually about 4 minutes", "English ready" (for an hour), "English for 5 lines not written · Translate again" and "English not written: the engine was away all night", on the recording page's head, the case rows and Home, with one Dashboard pill, "2 English to follow"; the batch mail waits for the English as it waits for a video's prepare, and says what was written. The recording page shows one text at a time, the English by default, with the switch **English | As spoken** in the Transcript's head, remembered in the browser as the open tab is; nothing is added to a line. A line whose English is still to come reads as the words as spoken and says "English to follow"; a line said in English carries "en" on the As spoken side. Find reads both texts, and a hit in the one not showing flips the switch and says so; Edit flips to As spoken, since a Correction is made on the words as spoken. The English side has no word-by-word highlighting during playback: the word times are the spoken words'.
+- **Everything downstream reads the English** when it is there and the words as spoken when it is not: Summary, Chat, Case Chat, the Speaker check and its quotes, comparisons, incidents, the voice step's quotes, Search and Find (a hit found only in the words as spoken says so), captions and Clips (a clip's captions read as stale once the English lands), and the exports. **Export to Word, with the words as spoken** and its text twin print each line's English with the spoken words under it in the small type; the exports' notice is the new **Translation notice, by the chat engine**, and the Summary and Chat prompts say what the Transcript is.
+- **Settings and the Panel.** Translation time limit (300 s) on the AI assistant page; Translation notice, by the chat engine on the Notices page; **Translation instructions** on the Templates page; Translate to English is offered again on the Upload page under Qwen3-ASR, greyed only when no chat engine is configured, with the reason. Translate again on the Details tab. Audit rows: Translation queued, and the engine call's own row, counts only. An Expectation key for the head's "usually about".
+- **The service is unchanged.** The per-line language the service has sent since 0.8.0 is now stored.
 
 ## v1.161.1, 2026-10-27
 

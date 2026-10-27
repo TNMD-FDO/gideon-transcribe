@@ -349,9 +349,11 @@ def test_the_speakers_tab_asks_a_handful_whatever_the_case(owner, client):
     page = answer.content.decode()
     assert "15 people, 200 recordings with unnamed speakers" in page
     # The tab's own questions are four; the rest is the case page under it,
-    # which reads each setting it needs in a query of its own (twenty-two
-    # of them) and counts every feature apart. Flat is the point here.
-    assert at_two_hundred < 90, (at_twenty, at_two_hundred)
+    # which reads each setting it needs in a query of its own (twenty-three
+    # of them) and counts every feature apart, the English to follow among
+    # them since v1.162.0 (one count, whatever the case). Flat is the point
+    # here.
+    assert at_two_hundred < 95, (at_twenty, at_two_hundred)
     assert at_two_hundred <= at_twenty + 2, (at_twenty, at_two_hundred)
 
 

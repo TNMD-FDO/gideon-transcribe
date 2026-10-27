@@ -158,6 +158,7 @@ def counts_for(cases, user=None) -> dict:
             "preparing": 0,
             "tonight": 0,
             "summaries": 0,
+            "translating": 0,
             "clips_rendering": 0,
             "clips_failed": 0,
             "assigned": 0,
@@ -234,6 +235,17 @@ def counts_for(cases, user=None) -> dict:
         .annotate(n=Count("id"))
     ):
         out[row["recording__case_id"]]["summaries"] = row["n"]
+    # The English to follow (ADR 0026, v1.162.0).
+    from core import translation
+
+    for row in (
+        translation.live()
+        .filter(transcript__recording__case_id__in=ids)
+        .order_by()
+        .values("transcript__recording__case_id")
+        .annotate(n=Count("id"))
+    ):
+        out[row["transcript__recording__case_id"]]["translating"] = row["n"]
     # Clips rendering, and failed.
     if clips_on:
         for row in (
@@ -354,6 +366,12 @@ def pills(
     # Preparing for summaries and chat, or enriched with vision now.
     if counts["preparing"]:
         add(_count(counts["preparing"], "preparing", "preparing"), here)
+    # The English to follow (ADR 0026, v1.162.0).
+    if counts.get("translating"):
+        add(
+            _count(counts["translating"], "English to follow", "English to follow"),
+            here,
+        )
 
     # Tonight's vision.
     if counts["tonight"]:

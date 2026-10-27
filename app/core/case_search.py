@@ -233,6 +233,14 @@ def heard_only(queryset, fields: list[str], words, also, heard: list[str]):
     return rows
 
 
+def _line_text(segment, words) -> str:
+    """Which of a line's two texts a hit shows (ADR 0026): the English when
+    the engine wrote one and the words are in it, else the words as spoken."""
+    if segment.english and matches(segment.english, words):
+        return segment.english
+    return segment.text
+
+
 def marked(text: str, words, also, near, heard: list[str] | None = None):
     """The text with its hit lit: the spelling for an also-heard-as hit, the
     words or their close forms for the rest."""
@@ -327,6 +335,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         words,
         sources=[
             (lines, "text"),
+            (lines, "english"),
             (lines.exclude(note=""), "note"),
             (moment_notes, "note"),
             (seen, "text"),
@@ -346,7 +355,7 @@ def search(case, asked: str, kind: str = "") -> dict:
         lines.select_related("transcript__recording").order_by(
             "transcript__recording__created", "start"
         ),
-        ["text", "speaker"],
+        ["text", "english", "speaker"],
         words,
         also,
         heard=heard,
@@ -361,12 +370,18 @@ def search(case, asked: str, kind: str = "") -> dict:
                 recording.title,
                 reverse("viewer", args=[recording.pk]),
             )
+            shown = _line_text(one, words)
             here["hits"].append(
                 _hit(
                     exports.clock(one.start),
-                    marked(one.text, words, also, near, heard),
+                    marked(shown, words, also, near, heard),
                     url=f"{reverse('viewer', args=[recording.pk])}?t={one.start:.1f}",
                     who=one.speaker,
+                    under=(
+                        "in the words as spoken"
+                        if one.english and shown is one.text
+                        else ""
+                    ),
                     all_cameras=incidents.url_at(links.get(recording.pk), one.start),
                     at=one.start,
                     close=near,
@@ -762,6 +777,7 @@ def find(incident, asked: str) -> dict:
         words,
         sources=[
             (lines, "text"),
+            (lines, "english"),
             (lines.exclude(note=""), "note"),
             (moment_notes, "note"),
             (_seen(transcripts), "text"),
@@ -904,6 +920,7 @@ def find_notes(case, asked: str) -> dict:
         words,
         sources=[
             (lines, "text"),
+            (lines, "english"),
             (lines.exclude(note=""), "note"),
             (moment_notes, "note"),
         ],
@@ -960,7 +977,7 @@ def find_notes(case, asked: str) -> dict:
         )
     rows, _ = _with_close(
         lines.select_related("transcript__recording"),
-        ["text", "speaker"],
+        ["text", "english", "speaker"],
         words,
         also,
         heard=heard,
@@ -1001,13 +1018,16 @@ def find_in(recording, asked: str) -> dict:
         return {"asked": asked, "close": [], "seen": [], "also": []}
     lines = Segment.objects.filter(transcript=transcript, same_as_other_side=False)
     seen = _seen([transcript])
-    also = close.forms(words, sources=[(lines, "text"), (seen, "text")])
-    near = close_only(lines.order_by("start"), ["text"], words, also)[:MOST]
+    also = close.forms(
+        words, sources=[(lines, "text"), (lines, "english"), (seen, "text")]
+    )
+    near = close_only(lines.order_by("start"), ["text", "english"], words, also)[:MOST]
     shown, _ = _with_close(seen.order_by("at"), ["text"], words, also)
     return {
         "asked": asked,
         "close": [
-            {"id": one.pk, "html": str(mark(one.text, words, also))} for one in near
+            {"id": one.pk, "html": str(mark(_line_text(one, words), words, also))}
+            for one in near
         ],
         "seen": [
             {

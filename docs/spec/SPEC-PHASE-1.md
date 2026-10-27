@@ -2308,7 +2308,7 @@ Under **Qwen3-ASR** the service runs a different path and returns the same resul
 
 An office with no chat engine keeps Whisper for translation: under Qwen3-ASR the Upload page's Translate to English greys with "needs the chat engine". Until the section below is built (v1.160.0 built the recogniser alone) the Upload page greys it under Qwen3-ASR with that reason instead, and a Recording that asked is transcribed in the language spoken. Live recordings and the clock re-read (ADR 0023) stay on Whisper: the re-read is Whisper's fitting, and a Transcript Qwen3-ASR wrote keeps its clock marks as the measure of the new timing and gets no re-read.
 
-### Translation from the words as spoken (ADR 0026, 2026-10-26; not yet built)
+### Translation from the words as spoken (ADR 0026, 2026-10-26; built in v1.162.0)
 
 Under Qwen3-ASR a Recording with Translate to English chosen (or found mixed, under the mixed rule's setting) is transcribed in the language spoken first and lands readable at once, each Segment carrying its language; the English follows:
 
@@ -2406,7 +2406,8 @@ Vocabulary terms, the context line, and Transcript text never appear in the audi
 - From the translation ticket to the WhisperX service contract: `task=translate_if_needed`, the `translate_if_mixed` request field, three-window detection with the `windows`, `combined`, and `mixed` result parts, `task_run` and `task_reason` in `settings_used`, and `word_timestamps.reason` of `translation` whenever the service ran translate; all written here as the request and storage rules.
 - From the Upload page ticket to the queue ticket: a Two-channel call with Diarize ticked sends each Side's Run with an empty speaker hint.
 - From the queue ticket to the translation ticket's open mechanics: Process again is a one-Recording Batch through the normal line, its audit row is "Batch submitted", and the old Transcript stays readable but locked until the new one lands.
-- 2026-10-26 (ADRs 0025 and 0026; not yet built): "The recogniser" and "Translation from the words as spoken" added; principles 2 and 3 and "No LLM in the translation path" scoped to the Whisper recogniser; rule 18 and chapter 17's ruling-out reversed for Recordings recognised by Qwen3-ASR. From the maintainer's decision after the trial of 2026-10-26 (`docs/research/qwen3-asr.md`).
+- 2026-10-27 (v1.162.0): "Translation from the words as spoken" built as written, with these settled by the build (ADR 0026): the signature is per line, not per window, a hash of the spoken text the English came from; the English side of a line has no word-by-word highlighting, the word times being the spoken words'; Translate again sits on the Details tab; the windows take the Digest window tokens setting under a quarter of the engine's window, with three lines of context either side; a run tries its lines twice and is done with a count of what it could not write; the run waits for the engine where the Speaker check fails at once.
+- 2026-10-26 (ADRs 0025 and 0026; the recogniser built in v1.160.0, the translation in v1.162.0): "The recogniser" and "Translation from the words as spoken" added; principles 2 and 3 and "No LLM in the translation path" scoped to the Whisper recogniser; rule 18 and chapter 17's ruling-out reversed for Recordings recognised by Qwen3-ASR. From the maintainer's decision after the trial of 2026-10-26 (`docs/research/qwen3-asr.md`).
 
 
 ## 8. Transcript viewer and player

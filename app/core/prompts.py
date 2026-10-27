@@ -113,6 +113,8 @@ SHIPPED_HISTORY = {
     "prompt:moment": ("e995c610e187a63d", "e9c80701c0ab577f"),
     "prompt:digest": ("c19b8288923ed5e9", "09bca7a6668b3994"),
     "prompt:speaker_check": ("c53a7a37eb2a8f1f",),
+    # v1.162.0 (ADR 0026): the translation from the words as spoken.
+    "prompt:translation": (),
     # Re-shipped in v1.64.0 (Phase 7 chapter 2): the investigator's ask with
     # the why line, and the memo in an investigator's voice.
     "prompt:incident_events": ("6414affa68b3ecb0", "548dcd1608ba79ea"),
@@ -1215,6 +1217,24 @@ SPEAKER_CHECK_FORMAT = (
     "of a few words. An empty list when nothing should move."
 )
 
+# Translation from the words as spoken (ADR 0026, v1.162.0): the editable
+# instruction, and the format line the app adds.
+TRANSLATION = (
+    "You are translating a transcript of a recording into plain English, one "
+    "line at a time, for lawyers who will read it beside the words as spoken. "
+    "Translate each numbered line as it was said: keep the speaker's register, "
+    "keep names, numbers, places, slang and profanity as they are, keep a "
+    "question a question and a fragment a fragment. Never summarise, never "
+    "add, never explain, never soften. A line already in English is given "
+    "back unchanged. Lines marked as context are there so a sentence cut "
+    "across lines reads whole; do not answer for them."
+)
+TRANSLATION_FORMAT = (
+    "Answer with the JSON asked for: a list under lines, each item the line's "
+    "number as shown in brackets and its English. One item for every line "
+    "asked for, none for a context line."
+)
+
 # A Moment: what the camera showed at one time (Phase 4). The template is the
 # editable part; the format line and the words the app adds are not. Written
 # against what the BodyCam-VQA study found vision models get wrong on this
@@ -1685,6 +1705,31 @@ def speaker_check_schema(speakers: list[str]) -> dict:
     }
 
 
+def translation_schema() -> dict:
+    """The translation's answer (ADR 0026): a list of lines, each a number
+    and its English."""
+    return {
+        "type": "object",
+        "properties": {
+            "lines": {
+                "type": "array",
+                "maxItems": 400,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "n": {"type": "integer"},
+                        "english": {"type": "string"},
+                    },
+                    "required": ["n", "english"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["lines"],
+        "additionalProperties": False,
+    }
+
+
 def incident_events_schema() -> dict:
     """The proposals' answer: a list of events, each a time, an end, a line
     and the words it rests on."""
@@ -1970,19 +2015,27 @@ class Line:
     start: float
     speaker: str
     text: str
+    # The text is the words as spoken because the line has no English yet
+    # (ADR 0026, v1.162.0): a reader can say so.
+    spoken: bool = False
 
 
-def lines_of(transcript, without_system: bool = False) -> list[Line]:
+def lines_of(
+    transcript, without_system: bool = False, spoken: bool = False
+) -> list[Line]:
     """One line per Segment, numbered from 1, the second Side's copies left out;
     the Call system's lines left out too when asked (the Speaker check and
-    Suggest names never see them, ADR 0021)."""
-    from core import call_system
+    Suggest names never see them, ADR 0021). The text is the English when the
+    chat engine wrote one, else the words as spoken (ADR 0026); `spoken`
+    asks for the words as spoken whatever is there (the translation run)."""
+    from core import call_system, translation
 
     rows = transcript.segments.filter(same_as_other_side=False)
     if without_system:
         rows = rows.exclude(speaker=call_system.NAME)
     lines = []
     for number, segment in enumerate(rows.order_by("start", "id"), start=1):
+        text = segment.text if spoken else translation.reading(segment)
         lines.append(
             Line(
                 number=number,
@@ -1992,7 +2045,8 @@ def lines_of(transcript, without_system: bool = False) -> list[Line]:
                     (segment.speaker or "")
                     + (" (corrected)" if segment.corrected else "")
                 ),
-                text=segment.text,
+                text=text,
+                spoken=not spoken and translation.awaits(segment),
             )
         )
     return lines
@@ -2017,7 +2071,20 @@ def nature_line(recording, transcript) -> str:
             f"in {exports.language_name(transcript.language) or 'an unknown language'}"
         )
 
-    if transcript.task_run == "translate":
+    from core import translation
+
+    if translation.by_engine(transcript):
+        first = (
+            f"This is a {duration} recording {where}, transcribed in the language "
+            "spoken and translated to English line by line by the office's "
+            "language model: a machine translation from the words as spoken, "
+            "which are kept. Translation errors are possible."
+        )
+        if translation.awaits_any(transcript):
+            first += (
+                " Lines whose English is not yet written appear in the language spoken."
+            )
+    elif transcript.task_run == "translate":
         first = (
             f"This is an automatic machine translation to English of a {duration} "
             f"recording {where}. The original-language text is not available. "

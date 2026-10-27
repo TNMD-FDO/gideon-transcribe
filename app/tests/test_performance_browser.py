@@ -203,7 +203,12 @@ def test_find_waits_after_a_keystroke_and_touches_only_the_marked_rows():
         "lookTimer = window.setTimeout(function () { lookTimer = null; look(); }, "
         "150);" in viewer
     )
-    assert 'row.lowered = (segment.text || "").toLowerCase();' in viewer
+    # Both texts, the words as spoken and the English, lowered once a row
+    # (ADR 0026), so Find reads either without lowering on every keystroke.
+    assert (
+        'row.lowered = ((segment.text || "") + "\\u0001" + (segment.english || ""))'
+        ".toLowerCase();" in viewer
+    )
     assert "} else if (row.marked) {" in viewer
     # Enter before the pause is up searches now.
     assert (

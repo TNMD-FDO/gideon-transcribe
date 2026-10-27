@@ -253,15 +253,25 @@
                 </div>
               </div>
 
-              <label class="row"{% if recogniser == "qwen3-asr" %} title="Translate to English is Whisper's for now"{% endif %}>
-                <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" %} disabled{% endif %}> <b>Translate to English</b>
+              <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
+                <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
               </label>
-              {% if recogniser == "qwen3-asr" %}
-                {% comment %}ADR 0025: the Qwen3-ASR recogniser never writes English; the chat engine's translation (ADR 0026) comes with a later release. Greyed with the reason, never hidden.{% endcomment %}
+              {% if recogniser == "qwen3-asr" and not translation_offered %}
+                {% comment %}ADR 0026: under the Qwen3-ASR recogniser the English is the chat engine's; with no engine configured it cannot be written. Greyed with the reason, never hidden.{% endcomment %}
                 <p class="muted small">
-                  Not offered under the Qwen3-ASR recogniser yet: a recording is
-                  transcribed in the language spoken, and the English comes with
-                  a later release.
+                  Not offered: under the Qwen3-ASR recogniser the English is
+                  written by the chat engine from the words as spoken, and no
+                  engine is configured. A recording is transcribed in the
+                  language spoken.
+                </p>
+              {% elif recogniser == "qwen3-asr" %}
+                {% comment %}ADR 0026: the transcript lands in the language spoken and the English follows, written by the chat engine from the words as spoken, which are kept.{% endcomment %}
+                <p class="muted small">
+                  The transcript lands in the language spoken and reads at once;
+                  the English follows, written by the chat engine line by line
+                  from the words as spoken, which are kept and can be shown. A
+                  recording in more than one language is translated whether or
+                  not this is ticked.
                 </p>
               {% else %}
                 <p class="muted small">

@@ -31,6 +31,7 @@ from core import (
     settings_store,
     summaries_tonight,
     tasks,
+    translation,
     uploads,
     vision,
     vocabulary,
@@ -218,6 +219,13 @@ def state_words(one) -> tuple[str, str]:
         # summary and chat wait, so the pill says so rather than Ready.
         if one.transcript.prepare_state in ("queued", "running"):
             return "Preparing", "warn"
+        # The English to follow (ADR 0026, v1.162.0): readable in the
+        # language spoken meanwhile, and the row says so.
+        from core import translation
+
+        said, tone = translation.words(one.transcript, brief=True)
+        if said:
+            return said, tone
         return "Ready", "ok"
     if one.media_state == "rejected":
         return "Refused", "danger"
@@ -327,6 +335,9 @@ def upload(request: HttpRequest) -> HttpResponse:
             "transcription_installed": pieces.transcription_installed(),
             # The speaker hint is pyannote's alone (Phase 5 chapter 4).
             "diarizer": settings_store.diarizer(),
+            # Under Qwen3-ASR the English is the chat engine's (ADR 0026):
+            # Translate to English greys only when there is no engine.
+            "translation_offered": translation.offered(),
             # Translate to English is Whisper's until the chat engine's
             # translation is built (ADR 0025, ADR 0026).
             "recogniser": settings_store.recogniser(),

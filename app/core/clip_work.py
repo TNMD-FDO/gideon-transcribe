@@ -210,11 +210,11 @@ def srt_for(clip: Clip) -> str:
         if moment is not None:
             text = "Camera: " + exports.camera_text(moment)
         else:
-            text = (
-                f"{segment.speaker}: {segment.text}"
-                if segment.speaker
-                else segment.text
-            )
+            # The English when the engine wrote one (ADR 0026).
+            from core import translation
+
+            said = translation.reading(segment)
+            text = f"{segment.speaker}: {said}" if segment.speaker else said
         cues.append(
             f"{number}\r\n"
             f"{exports.srt_time(start - clip.start)} --> "

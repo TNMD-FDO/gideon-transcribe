@@ -28,6 +28,7 @@ from core import (
     home,
     notes,
     settings_store,
+    translation,
 )
 from core.jobs import Segment
 from core.media_access import media_root
@@ -390,6 +391,13 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         "language_name": (
             exports.language_name(transcript.language) if transcript is not None else ""
         ),
+        # The English from the words as spoken (ADR 0026, v1.162.0): the
+        # head's pill, its state, and the export menu's second pair.
+        "by_engine": translation.by_engine(transcript) if transcript else False,
+        "english_state": translation.words(transcript) if transcript else ("", ""),
+        "has_english": (
+            transcript.segments.exclude(english="").exists() if transcript else False
+        ),
         "sides": list(recording.sides.all()),
         "job": job,
         "is_someone_elses": cases.standing(recording, request.user) == "admin",
@@ -469,12 +477,24 @@ def segments(request: HttpRequest, recording_id) -> JsonResponse:
             # What both Sides of a call said together: shown once, named for
             # both, and counted here so the page can say so plainly.
             "shared_segments": transcript.shared_segments,
+            # The English from the words as spoken (ADR 0026, v1.162.0):
+            # whether this Transcript's English is the engine's, and where
+            # the run stands, so the page can show the switch and the state.
+            "translation": {
+                "by_engine": translation.by_engine(transcript),
+                **translation.state_json(transcript),
+            },
             "segments": [
                 {
                     "id": segment.pk,
                     "start": segment.start,
                     "end": segment.end,
                     "text": segment.text,
+                    # The line's language and its English (ADR 0026); `awaits`
+                    # when the English is still to be written.
+                    "language": segment.language,
+                    "english": segment.english,
+                    "awaits": translation.awaits(segment),
                     "speaker": segment.speaker,
                     "corrected": segment.corrected,
                     "guess": segment.pk in guessed,
@@ -688,7 +708,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
                     "end": one.end,
                     "clock": exports.clock(one.start),
                     "speaker": one.speaker,
-                    "text": one.text,
+                    "text": translation.reading(one),
                     "verdict": clock_check.verdict_json(one),
                     **notes.line_json(one),
                 }
@@ -846,6 +866,9 @@ def split_line(
         segment.save(
             update_fields=["end", "text", "words", "speaker", "corrected", "voice_fit"]
         )
+        # Both halves are new words as spoken (ADR 0026): the first's English
+        # goes and a run writes both.
+        translation.on_correction(segment, by=by)
         changes = list(transcript.speaker_changes or [])
         changes.append(
             {
@@ -934,6 +957,9 @@ def correct(request: HttpRequest, recording_id, segment_id) -> JsonResponse:
     segment.text = (wanted.get("text") or "").strip()
     segment.corrected = True
     segment.save(update_fields=["text", "corrected"])
+    # A Correction is made on the words as spoken (ADR 0026): the line's
+    # English is stale, and a run writes it again.
+    translation.on_correction(segment, by=request.user)
 
     audit.write(
         audit.Category.EDITS,
@@ -1610,6 +1636,32 @@ def media_state(request: HttpRequest, recording_id) -> JsonResponse:
 
 
 @login_required
+@login_required
+@require_POST
+def translate_again(request: HttpRequest, recording_id) -> JsonResponse:
+    """Translate again (ADR 0026, v1.162.0): the lines whose English is not
+    written, or stale, sent to the engine once more, from the Details tab."""
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        return JsonResponse({"error": "no such recording"}, status=404)
+    transcript = getattr(recording, "transcript", None)
+    if transcript is None or not translation.by_engine(transcript):
+        return JsonResponse(
+            {"error": "This transcript's English is not the chat engine's."},
+            status=409,
+        )
+    if translation.busy(transcript):
+        return JsonResponse({"queued": False, "words": "English to follow"})
+    if not translation.offered():
+        return JsonResponse(
+            {"error": "The chat engine is off, so nothing can be translated."},
+            status=409,
+        )
+    queued = translation.again(recording, by=request.user)
+    said, _ = translation.words(transcript)
+    return JsonResponse({"queued": queued is not None, "words": said})
+
+
 def details(request: HttpRequest, recording_id) -> JsonResponse:
     """The Provenance: where a Recording came from and how it was processed.
 
@@ -1688,6 +1740,12 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
             ("Pieces", exports.pieces_words(used)),
             ("Task", f"{used.get('task_run', '')} ({used.get('task_reason', '')})"),
             ("Language", exports.language_name(transcript.language)),
+            # The English from the words as spoken (ADR 0026, v1.162.0).
+            *(
+                [("English", exports.english_words(transcript))]
+                if translation.by_engine(transcript)
+                else []
+            ),
             (
                 "Word timing",
                 "yes"
@@ -1781,6 +1839,15 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     # somebody's recording covers the look.
     if transcript is not None and request.user.is_admin:
         answer["digest"] = _digest_for_admins(transcript)
+    # Translate again (ADR 0026): offered when the English is the engine's
+    # and lines are still to be written, or the last run failed.
+    answer["translate_again"] = bool(
+        transcript is not None
+        and translation.by_engine(transcript)
+        and translation.offered()
+        and not translation.busy(transcript)
+        and translation.awaits_any(transcript)
+    )
     return JsonResponse(answer)
 
 

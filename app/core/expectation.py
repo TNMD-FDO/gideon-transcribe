@@ -58,6 +58,9 @@ KEYS = {
         "incident_events", 90, 20, "incident_events", "proposals", looked=True
     ),
     "compare_report": Key("compare_report", 180, 12, "compare_report", "comparison"),
+    # The English from the words as spoken (ADR 0026, v1.162.0): a call per
+    # window, a half-hour call about eight of them.
+    "translation": Key("translation", 240, 30, "translation", "translation"),
 }
 
 THINGS = {
@@ -67,8 +70,10 @@ THINGS = {
     "summary": "the summary",
     "dictation": "the memo",
     "chat": "",
+    "translation": "the English",
 }
 BIG = {
+    "translation": "A recording this size gives the engine a great deal to translate",
     "memo": "A memo this size gives the engine a great deal to read",
     "proposals": "An incident this size gives the engine a great deal to read",
     "comparison": "A report this size gives the engine a great deal to read",

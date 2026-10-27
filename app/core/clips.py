@@ -228,10 +228,12 @@ def transcript_mark(recording) -> str:
         return ""
 
     digest = hashlib.sha256()
-    for start, end, speaker, text in transcript.segments.values_list(
-        "start", "end", "speaker", "text"
+    # The English is in the mark too (ADR 0026, v1.162.0): captions made
+    # before it landed read as stale.
+    for start, end, speaker, text, english in transcript.segments.values_list(
+        "start", "end", "speaker", "text", "english"
     ):
-        digest.update(f"{start:.3f}|{end:.3f}|{speaker}|{text}|".encode())
+        digest.update(f"{start:.3f}|{end:.3f}|{speaker}|{text}|{english}|".encode())
     return digest.hexdigest()[:32]
 
 

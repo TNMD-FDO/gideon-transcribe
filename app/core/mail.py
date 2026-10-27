@@ -1075,15 +1075,28 @@ def batch_finished(batch) -> bool:
 
 def _still_preparing(recording) -> bool:
     transcript = getattr(recording, "transcript", None)
-    return transcript is not None and transcript.prepare_state in ("queued", "running")
+    if transcript is None:
+        return False
+    if transcript.prepare_state in ("queued", "running"):
+        return True
+    # The English to follow (ADR 0026, v1.162.0): the mail waits for it as
+    # it waits for a video's prepare.
+    from core import translation
+
+    return translation.pending(transcript)
 
 
 def _prepared_and_summaries_line(recordings) -> str:
     """The {prepared} line, and under it the one line about the summaries
-    scheduled for tonight (Phase 9 chapter 5), when there are any."""
-    from core import summaries_tonight
+    scheduled for tonight (Phase 9 chapter 5), when there are any; and the
+    English written from the words as spoken (ADR 0026)."""
+    from core import summaries_tonight, translation
 
-    lines = [_prepared_line(recordings), summaries_tonight.mail_line(recordings)]
+    lines = [
+        _prepared_line(recordings),
+        translation.mail_line(recordings),
+        summaries_tonight.mail_line(recordings),
+    ]
     return "\n".join(one for one in lines if one)
 
 

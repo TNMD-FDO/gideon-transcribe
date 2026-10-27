@@ -208,8 +208,33 @@ def languages_heard(transcript: Transcript) -> str:
     return ", ".join(names[:-1]) + " and " + names[-1]
 
 
+def english_words(transcript: Transcript) -> str:
+    """The Details row for the English the chat engine wrote from the words
+    as spoken (ADR 0026): how many lines have it, and where a run stands."""
+    from core import translation
+
+    total = transcript.segments.filter(same_as_other_side=False).count()
+    english = transcript.segments.filter(same_as_other_side=False).count() - sum(
+        1
+        for one in transcript.segments.filter(same_as_other_side=False)
+        if translation.awaits(one)
+    )
+    said = (
+        "written by the chat engine from the words as spoken by "
+        f"{engine_of(transcript)}, {english} of {total} lines"
+    )
+    state, _ = translation.words(transcript)
+    return f"{said} ({state})" if state else said
+
+
 def kind_line(transcript: Transcript) -> str:
     """What this document is, in one line, on the cover and at the head."""
+    from core import translation
+
+    if translation.by_engine(transcript):
+        if transcript.language_mixed:
+            return f"Translated to English ({languages_heard(transcript)} detected)"
+        return f"Translated to English from {language_name(transcript.language)}"
     if transcript.task_run == "translate":
         if transcript.language_mixed:
             return f"Translated to English ({languages_heard(transcript)} detected)"
@@ -221,7 +246,23 @@ def kind_line(transcript: Transcript) -> str:
 
 def notice_for(transcript: Transcript) -> str:
     """The one notice, with its placeholders filled from the Provenance."""
+    from core import translation
+
     model = model_of(transcript)
+    if translation.by_engine(transcript):
+        # The second wording (ADR 0026): the English is the chat engine's,
+        # from the words as spoken, which are kept; {model} names the
+        # recogniser that wrote them.
+        spoken = (
+            languages_heard(transcript)
+            if transcript.language_mixed
+            else language_name(transcript.language)
+        )
+        return _fill(
+            settings_store.get("translation_notice_engine"),
+            language=spoken,
+            model=engine_of(transcript),
+        )
     if transcript.task_run == "translate":
         spoken = (
             languages_heard(transcript)
@@ -425,13 +466,19 @@ def _due(waiting: list, before: float | None) -> list:
     return due
 
 
-def plain_text(recording: Recording, with_notes: bool = False) -> str:
+def plain_text(
+    recording: Recording, with_notes: bool = False, with_spoken: bool = False
+) -> str:
     """The four-line head, a blank line, then one line per Segment.
 
     This is also the shape the AI assistant reads and the shape a Clip's
     excerpt uses, so it stays one thing rather than three that drift apart.
     With notes (Phase 8 chapter 2), and only then, each note follows its line.
+    A line reads as its English when the chat engine wrote one (ADR 0026);
+    with the words as spoken, and only then, they follow under each such line.
     """
+    from core import translation
+
     transcript = recording.transcript
     segments = list(
         transcript.segments.filter(same_as_other_side=False).select_related(
@@ -485,9 +532,10 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
         elif not name and segment.corrected:
             name = "corrected"
         start = f"[{clock(segment.start)}]"
-        lines.append(
-            f"{start} {name}: {segment.text}" if name else f"{start} {segment.text}"
-        )
+        said = translation.reading(segment)
+        lines.append(f"{start} {name}: {said}" if name else f"{start} {said}")
+        if with_spoken and segment.english:
+            lines.append("    (as spoken) " + segment.text.replace("\n", " "))
         if with_notes and segment.note:
             lines.append("    " + note_line(segment) + segment.note.replace("\n", " "))
     for one in _due(waiting, None):
@@ -515,9 +563,13 @@ def camera_lines_text(transcript) -> list[str]:
 def srt(recording: Recording, offset: float = 0.0) -> str:
     """One cue per Segment, `Speaker: text`, and no notice."""
     cues = []
+    from core import translation
+
     wanted = recording.transcript.segments.filter(same_as_other_side=False)
     for number, segment in enumerate(wanted, start=1):
-        text = f"{segment.speaker}: {segment.text}" if segment.speaker else segment.text
+        # Captions carry the English when the engine wrote one (ADR 0026).
+        said = translation.reading(segment)
+        text = f"{segment.speaker}: {said}" if segment.speaker else said
         cues.append(
             f"{number}\r\n"
             f"{srt_time(segment.start - offset)} --> "
@@ -542,17 +594,26 @@ def srt_time(seconds: float) -> str:
 # Word -------------------------------------------------------------------------
 
 
-def word(recording: Recording, exported_by: str, with_notes: bool = False) -> bytes:
+def word(
+    recording: Recording,
+    exported_by: str,
+    with_notes: bool = False,
+    with_spoken: bool = False,
+) -> bytes:
     """Layout "Record": a cover page, the line-numbered talk, then the record.
 
     US Letter, one-inch margins, the talk in a fixed-width face so that a
     printed page cites the same way whoever prints it. With notes (Phase 8
     chapter 2), and only then, each note prints in italics under its line.
+    With the words as spoken (ADR 0026), and only then, each line's English
+    prints with the words as spoken under it in the small type.
     """
     from docx import Document
     from docx.enum.section import WD_SECTION
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt, RGBColor
+
+    from core import translation
 
     transcript = recording.transcript
     segments = list(
@@ -680,9 +741,19 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
         line.paragraph_format.space_after = Pt(6)
         mark = "*" if segment.corrected else " "
         name = f"{segment.speaker.upper()}: " if segment.speaker else ""
-        run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{segment.text}")
+        said = translation.reading(segment)
+        run = line.add_run(f"[{clock(segment.start)}]{mark} {name}{said}")
         run.font.name = "Consolas"
         run.font.size = Pt(10)
+        if with_spoken and segment.english:
+            # The words as spoken under their English (ADR 0026).
+            spoken = document.add_paragraph()
+            spoken.paragraph_format.left_indent = Inches(0.5)
+            spoken.paragraph_format.space_after = Pt(6)
+            told = spoken.add_run(segment.text)
+            told.font.name = "Consolas"
+            told.font.size = Pt(8)
+            told.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
         if with_notes and segment.note:
             # The office's note under its line, in italics (Phase 8 chapter 2).
             under = document.add_paragraph()
@@ -1234,17 +1305,33 @@ def export(request: HttpRequest, recording_id, shape: str) -> HttpResponse:
 
     # With notes (Phase 8 chapter 2): a separate choice, never the default.
     with_notes = request.GET.get("notes") == "1"
-    suffix = " with notes" if with_notes else ""
+    # With the words as spoken (ADR 0026): the same way, only where the
+    # English is the chat engine's.
+    from core import translation
+
+    with_spoken = request.GET.get("spoken") == "1" and translation.by_engine(
+        recording.transcript
+    )
+    suffix = (" with notes" if with_notes else "") + (
+        " with the words as spoken" if with_spoken else ""
+    )
 
     if shape == "word":
-        body = word(recording, request.user.username, with_notes=with_notes)
+        body = word(
+            recording,
+            request.user.username,
+            with_notes=with_notes,
+            with_spoken=with_spoken,
+        )
         record_export(request, recording, "transcript word" + suffix)
         return hand_over(
             body, export_name(recording, f"transcript{suffix}.docx"), WORD_TYPE
         )
 
     if shape == "text":
-        body = plain_text(recording, with_notes=with_notes).encode("utf-8")
+        body = plain_text(
+            recording, with_notes=with_notes, with_spoken=with_spoken
+        ).encode("utf-8")
         record_export(request, recording, "transcript text" + suffix)
         return hand_over(
             body,

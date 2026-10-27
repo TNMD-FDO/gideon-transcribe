@@ -712,8 +712,10 @@ def _watch_lines(camera) -> list[tuple[float, str, bool]]:
     """What the search reads on a camera: the transcript's lines at their
     times, and the record's picture lines where the camera has one."""
     transcript = camera.recording.transcript
+    from core import translation
+
     lines = [
-        (segment.start, " ".join(segment.text.split()), False)
+        (segment.start, " ".join(translation.reading(segment).split()), False)
         for segment in transcript.segments.order_by("start")
         if segment.text.strip()
     ]

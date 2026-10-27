@@ -39,6 +39,7 @@ TIME_LIMITS = {
     "chat_turn": 120,
     "speaker_suggestions": 180,
     "moment": 120,
+    "translation": 300,
 }
 SAMPLING = {"temperature": 0.3, "top_p": 0.9}
 SUGGESTION_SAMPLING = {"temperature": 0.0, "top_p": 1.0}
@@ -75,6 +76,7 @@ class PromptTemplate(models.Model):
     MEMO_SHEET = "memo_sheet"
     INCIDENT_CHAT = "incident_chat"
     COMPARISON = "comparison"
+    TRANSLATION = "translation"
     DEFAULTS = {
         GROUND_RULES: ("Ground rules", prompts.GROUND_RULES),
         CHAT: ("Chat", prompts.CHAT),
@@ -89,6 +91,7 @@ class PromptTemplate(models.Model):
         MEMO_SHEET: ("Memo facts sheet", prompts.MEMO_SHEET),
         INCIDENT_CHAT: ("Incident chat", prompts.INCIDENT_CHAT),
         COMPARISON: ("Comparison", prompts.COMPARISON),
+        TRANSLATION: ("Translation instructions", prompts.TRANSLATION),
     }
 
     key = models.CharField(max_length=30, unique=True)
@@ -588,6 +591,48 @@ class SpeakerCheck(models.Model):
                 fields=["transcript"],
                 condition=models.Q(state__in=("queued", "running")),
                 name="one_live_check_per_transcript",
+            )
+        ]
+
+
+class Translation(models.Model):
+    """One run of the chat engine's translation from the words as spoken
+    (ADR 0026, Phase 1 chapter 7, v1.162.0): queued as a Transcript lands
+    under Qwen3-ASR with Translate to English asked, after a Correction, or
+    on Translate again; one live per Transcript. Counts only, never a word."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transcript = models.ForeignKey(
+        "core.Transcript", on_delete=models.CASCADE, related_name="translations"
+    )
+    asked_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    state = models.CharField(max_length=10, choices=STATES, default=QUEUED)
+    # The engine's reason when the run failed; "engine_away" while a queued
+    # run waits for the engine, as Summaries tonight waits; "lines_missing"
+    # on a run done with lines it could not write.
+    reason_class = models.CharField(max_length=40, blank=True, default="")
+    # "landed", "corrected" or "again": what queued it.
+    how = models.CharField(max_length=12, blank=True, default="")
+    lines = models.IntegerField(default=0)
+    lines_written = models.IntegerField(default=0)
+    lines_missing = models.IntegerField(default=0)
+    windows = models.IntegerField(default=0)
+    windows_done = models.IntegerField(default=0)
+    # The time expectation (v1.95.0), noted at the ask and stamped at the start.
+    expectation = models.JSONField(default=dict, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transcript"],
+                condition=models.Q(state__in=("queued", "running")),
+                name="one_live_translation_per_transcript",
             )
         ]
 

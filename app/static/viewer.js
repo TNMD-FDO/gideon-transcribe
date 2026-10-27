@@ -22,6 +22,16 @@
   // between the lines and never one of them.
   var momentNotes = [];
   var wordTiming = false;
+  // The English or the words as spoken (ADR 0026, v1.162.0): one text at a
+  // time, the English by default, remembered in the browser as the tab is.
+  var textMode = "english";
+  var translationState = null;
+  try {
+    if (window.localStorage.getItem("text") === "spoken") { textMode = "spoken"; }
+  } catch (ignored) { /* the English then, as always */ }
+  function shownText(segment) {
+    return (textMode === "english" && segment.english) ? segment.english : (segment.text || "");
+  }
   var here = -1;
   var colours = {};
   // The Call system's name (ADR 0021): its rows are drawn in grey italics.
@@ -340,6 +350,22 @@
         }
       }
 
+      // A line whose English is still to be written (ADR 0026) reads as
+      // the words as spoken meanwhile, and says so on the English side.
+      if (textMode === "english" && segment.awaits && translationState && translationState.by_engine) {
+        var awaiting = document.createElement("span");
+        awaiting.className = "pill tiny";
+        awaiting.textContent = "English to follow";
+        awaiting.title = "The chat engine has not written this line's English yet; these are the words as spoken.";
+        tags.appendChild(awaiting);
+      } else if (textMode === "spoken" && segment.language && !segment.english && segment.language.indexOf("en") === 0 && translationState && translationState.by_engine) {
+        var inEnglish = document.createElement("span");
+        inEnglish.className = "pill tiny";
+        inEnglish.textContent = "en";
+        inEnglish.title = "Said in English; there is no other text.";
+        tags.appendChild(inEnglish);
+      }
+
       var said = document.createElement("p");
       said.className = "txt";
       said.innerHTML = wordsOf(segment);
@@ -364,7 +390,9 @@
       });
       // Kept beside the row (v1.134.0): the words lowered once for Find, and
       // what the row was built from, so a reload can leave it alone.
-      row.lowered = (segment.text || "").toLowerCase();
+      // Both texts (ADR 0026), so Find reads the English and the words as
+      // spoken alike.
+      row.lowered = ((segment.text || "") + "\u0001" + (segment.english || "")).toLowerCase();
       row.signature = signatureOf(segment, index);
       row.marked = false;
       return row;
@@ -385,6 +413,7 @@
   function signatureOf(segment, index) {
     return [
       segment.speaker || "", colours[segment.speaker] || "", segment.text || "", wordTiming ? "w" : "",
+      segment.english || "", segment.awaits ? "a" : "", textMode,
       segment.note || "", segment.note_by || "", segment.note_on || "", segment.corrected ? "c" : "",
       notesOf(segment, index).map(function (one) {
         return one.id + ":" + one.at + ":" + (one.note_by || "") + ":" + (one.note || "");
@@ -595,6 +624,11 @@
     // can be underlined. Without it the segment is one piece: a translated
     // transcript has segment timing only, and pretending otherwise would
     // underline the wrong words.
+    // The English (ADR 0026) is one piece: the word times belong to the
+    // words as spoken, and underlining English words by them would lie.
+    if (textMode === "english" && segment.english) {
+      return escape(segment.english);
+    }
     if (!wordTiming || !segment.words || !segment.words.length) {
       return escape(segment.text);
     }
@@ -1330,6 +1364,14 @@
       return;
     }
 
+    // A Correction is made on the words as spoken (ADR 0026): the switch
+    // moves to As spoken first, and the rows are built again.
+    if (textMode === "english" && segment.english) {
+      setTextMode("spoken");
+      row = column ? column.children[index] : null;
+      if (!row) { return; }
+    }
+
     var said = row.querySelector(".txt");
     if (!said) { return; }
 
@@ -1404,6 +1446,13 @@
         // The words are the machine's; once a person has changed the text,
         // the old word timings no longer describe it.
         segment.words = [];
+        // A Correction is made on the words as spoken (ADR 0026): the
+        // line's English is stale and the engine writes it again.
+        if (segment.english || segment.awaits) {
+          segment.english = "";
+          segment.awaits = !!(segment.language && segment.language.indexOf("en") !== 0);
+          if (translationState) { translationState.pending = true; watchTranslation(); }
+        }
         editing = null;
         redrawRow(segment);
         // draw() built the rows again, so the highlight and any search
@@ -1805,6 +1854,25 @@
 
     // The pattern once, not once a row (v1.134.0).
     var pattern = wanted ? new RegExp(wanted.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi") : null;
+    // A hit only in the text not showing (ADR 0026) opens with that text
+    // showing: the switch moves, the rows are built again, and the search
+    // runs once more over them.
+    if (wanted && translationState && translationState.by_engine && !lookingAgain) {
+      var inShown = false, inOther = false;
+      segments.forEach(function (segment) {
+        var shown = shownText(segment).toLowerCase();
+        var other = (textMode === "english" ? (segment.text || "") : (segment.english || "")).toLowerCase();
+        if (shown.indexOf(wanted) !== -1) { inShown = true; }
+        else if (other && other.indexOf(wanted) !== -1) { inOther = true; }
+      });
+      if (!inShown && inOther) {
+        lookingAgain = true;
+        setTextMode(textMode === "english" ? "spoken" : "english");
+        lookingAgain = false;
+        UI.toast(textMode === "spoken" ? "Found in the words as spoken." : "Found in the English.");
+        return;
+      }
+    }
     Array.prototype.forEach.call(column ? column.children : [], function (row, index) {
       var segment = segments[index];
       // The lowered words were kept beside the row when it was built.
@@ -1817,7 +1885,7 @@
         var said = row.querySelector(".txt");
         if (!said) { return; }
         matches.push(index);
-        said.innerHTML = escape(segment.text).replace(pattern, function (found) {
+        said.innerHTML = escape(shownText(segment)).replace(pattern, function (found) {
           return "<mark>" + found + "</mark>";
         });
         row.marked = true;
@@ -1960,7 +2028,40 @@
         ).join("");
         drawMarks(body.marks || []);
         drawAdminDigest(body.digest);
+        drawTranslateAgain(body.translate_again);
       });
+  }
+
+  // Translate again (ADR 0026, v1.162.0): the lines whose English is not
+  // written sent to the engine once more, from the Details tab.
+  function drawTranslateAgain(offered) {
+    var box = document.getElementById("details");
+    if (!box || !offered) { return; }
+    var holder = document.createElement("div");
+    holder.className = "row small";
+    holder.style.marginTop = "8px";
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "small";
+    button.textContent = "Translate again";
+    button.title = "Send the lines whose English is not written to the chat engine once more.";
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      fetch("/recording/" + window.VIEWER.recording + "/translate-again", {
+        method: "POST",
+        headers: { "X-CSRFToken": cookie("csrftoken") }
+      }).then(function (answer) { return answer.json(); })
+        .then(function (told) {
+          if (told.error) { UI.toast(told.error); button.disabled = false; return; }
+          UI.toast(told.queued ? "The English is on its way." : (told.words || "English to follow"));
+          if (translationState) { translationState.pending = true; translationState.words = told.words || "English to follow"; }
+          applyTextSwitch();
+          holder.remove();
+        })
+        .catch(function () { button.disabled = false; UI.toast("That could not be asked for."); });
+    });
+    holder.appendChild(button);
+    box.parentNode.insertBefore(holder, box.nextSibling);
   }
 
   // For an Admin only: the digest and the record's descriptions as the
@@ -2196,6 +2297,8 @@
         segments = fresh;
         momentNotes = body.moment_notes || [];
         wordTiming = body.word_timestamps;
+        translationState = body.translation || null;
+        applyTextSwitch();
         if (sameCount) { redrawChanged(); } else { draw(); }
         here = -1;
         if (player) { follow(); }
@@ -2226,6 +2329,86 @@
       .catch(function () { window.setTimeout(watchSpeakersPass, 10000); });
   }
   if (passNotice && !passNotice.hidden) { window.setTimeout(watchSpeakersPass, 5000); }
+
+  // The English or the words as spoken (ADR 0026, v1.162.0) ----------------
+  //
+  // One switch in the transcript's head, shown only when the English is the
+  // chat engine's; the choice is remembered in the browser as the tab is.
+  var textSwitch = document.getElementById("text-switch");
+  var textSwitchWords = document.getElementById("text-switch-words");
+  var englishState = document.getElementById("english-state");
+  var lookingAgain = false;
+  var watchingTranslation = false;
+
+  function setTextMode(which) {
+    if (which !== "english" && which !== "spoken") { return; }
+    if (textMode === which) { applyTextSwitch(); return; }
+    textMode = which;
+    try {
+      window.localStorage.setItem("text", which);
+    } catch (ignored) { /* a browser that forbids storage forgets it */ }
+    applyTextSwitch();
+    draw();
+    here = -1;
+    if (player) { follow(); }
+    if (search && search.value.trim()) { look(); }
+  }
+
+  function applyTextSwitch() {
+    if (!textSwitch) { return; }
+    var engines = !!(translationState && translationState.by_engine);
+    var anyEnglish = segments.some(function (one) { return !!one.english; });
+    var anyWaiting = segments.some(function (one) { return !!one.awaits; });
+    textSwitch.hidden = !(engines && (anyEnglish || anyWaiting));
+    if (textSwitch.hidden) { return; }
+    Array.prototype.forEach.call(textSwitch.querySelectorAll("button[data-text]"), function (button) {
+      button.classList.toggle("on", button.dataset.text === textMode);
+    });
+    var spokenCount = segments.filter(function (one) { return one.language && one.language.indexOf("en") !== 0; }).length;
+    if (textSwitchWords) {
+      textSwitchWords.textContent = textMode === "english"
+        ? "Translated by the office's language model from the words as spoken · " + segments.length + " lines" + (anyWaiting ? " · English to follow" : "")
+        : "The words as spoken, as the recogniser heard them · " + spokenCount + " lines in another language, " + (segments.length - spokenCount) + " in English";
+    }
+    if (englishState && translationState) {
+      englishState.textContent = translationState.words || "";
+      englishState.hidden = !translationState.words;
+      englishState.className = "pill " + (translationState.tone || "");
+    }
+    if (translationState && translationState.pending) { watchTranslation(); }
+  }
+
+  if (textSwitch) {
+    textSwitch.addEventListener("click", function (event) {
+      var button = event.target.closest("button[data-text]");
+      if (button) { setTextMode(button.dataset.text); }
+    });
+  }
+
+  // While the English is on its way the transcript is asked for again every
+  // little while; the rows whose English landed are built again in place.
+  function watchTranslation() {
+    if (watchingTranslation) { return; }
+    watchingTranslation = true;
+    window.setTimeout(function () {
+      watchingTranslation = false;
+      fetch("/recording/" + window.VIEWER.recording + "/segments")
+        .then(function (answer) { return answer.json(); })
+        .then(function (body) {
+          var fresh = body.segments || [];
+          translationState = body.translation || null;
+          var sameCount = !!column && fresh.length === segments.length && fresh.length === column.children.length;
+          segments = fresh;
+          momentNotes = body.moment_notes || [];
+          wordTiming = body.word_timestamps;
+          if (sameCount) { redrawChanged(); } else { draw(); }
+          applyTextSwitch();
+          if (search && search.value.trim()) { look(); }
+          if (translationState && translationState.pending) { watchTranslation(); }
+        })
+        .catch(function () { if (translationState && translationState.pending) { watchTranslation(); } });
+    }, 15000);
+  }
 
   if (channel) {
     channel.onmessage = function (event) {
@@ -2645,6 +2828,8 @@
         segments = body.segments || [];
         momentNotes = body.moment_notes || [];
         wordTiming = body.word_timestamps;
+        translationState = body.translation || null;
+        applyTextSwitch();
         if (!duration && segments.length) {
           duration = segments[segments.length - 1].end;
         }

@@ -332,6 +332,19 @@ class Segment(models.Model):
     # could not place keeps its word and loses its times.
     words = models.JSONField(default=list, blank=True)
 
+    # The language the line was said in, as the service heard it (ADR 0025,
+    # v1.162.0): a code such as "es" or "en", "" when the service gave none
+    # (the Whisper path, which reads one language for the whole Run).
+    language = models.CharField(max_length=8, blank=True, default="")
+    # The English the chat engine wrote from the words as spoken (ADR 0026,
+    # v1.162.0), kept beside them: "" for a line said in English and for a
+    # line not yet written. `english_of` is a short hash of the spoken text
+    # the English came from, so a Correction leaves the line stale and the
+    # next run writes it again. Every reader takes the English when there
+    # is one, else the words as spoken (core.translation.reading).
+    english = models.TextField(blank=True, default="")
+    english_of = models.CharField(max_length=16, blank=True, default="")
+
     # Somebody changed the text. The viewer marks it and exports say so, so
     # that machine text and human text are never confused for one another.
     corrected = models.BooleanField(default=False)

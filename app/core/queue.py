@@ -427,6 +427,12 @@ def merge(job: Job) -> Job:
     from core import vision
 
     vision.on_transcript(job.recording)
+    # The English from the words as spoken (ADR 0026, v1.162.0), before the
+    # summary and the check are queued so they read it once it is there,
+    # and before the Batch is looked at so its mail waits for it.
+    from core import translation
+
+    translation.on_transcript(job.recording)
     # Its summary tonight, when the upload carried the tick (Phase 9 chapter 5).
     from core import summaries_tonight
 
@@ -704,6 +710,9 @@ def _store(job: Job, results: dict) -> Transcript:
                     speaker=names.get(segment.get("speaker", ""), names.get("", "")),
                     speaker_label=segment.get("speaker", "") or "",
                     words=words,
+                    # The line's own language under Qwen3-ASR (ADR 0025,
+                    # v1.162.0); the Whisper path gives none.
+                    language=(segment.get("language") or "")[:8],
                 )
             )
 

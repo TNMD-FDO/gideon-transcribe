@@ -1,6 +1,6 @@
 # 26. Translation is written by the chat engine from the words as spoken, which are kept
 
-Date: 2026-10-26. Status: accepted. Release: not yet built (Phase 1 chapter 7, "Translation from the words as spoken").
+Date: 2026-10-26. Status: accepted. Release: v1.162.0, 2026-10-27 (Phase 1 chapter 7, "Translation from the words as spoken").
 
 ## Context
 
@@ -74,3 +74,37 @@ reads the language.
 - The faithfulness of the engine's English against Whisper's is the trial's
   open leg: a Spanish call read side by side by the office's reader before
   this ships.
+
+## Settled by the build (v1.162.0)
+
+- The signature is per line, not per window: `Segment.english_of` is a
+  short hash of the spoken text the English came from, so a Correction
+  leaves that one line stale and the next run sends it with its neighbours
+  for context and writes only it. Nothing outside the corrected line
+  changes, which is what the rule protects, with no window table.
+- Three columns on Segment (`language`, `english`, `english_of`) and one
+  run row, `Translation`, beside the Speaker check's, with the same one
+  live run per Transcript; migration 0092.
+- The run waits for the engine where the Speaker check fails at once: a
+  queued run the engine cannot take keeps `engine_away` and the minute
+  sweep queues it again once the engine answers the minute check; past
+  eight hours the pages say the engine was away all night.
+- The windows are cut by the Digest's rule under the Digest window tokens
+  setting, held under a quarter of the engine's window, with up to three
+  lines of context either side marked as such; the answer's room is twice
+  the source. A run goes over its lines twice; a line still unwritten is
+  counted, said on the pages, and offered to Translate again on the
+  Details tab.
+- Every reader of a line takes the English when there is one, else the
+  words as spoken, through `prompts.lines_of` for the chat engine's readers
+  and `translation.reading` elsewhere; a line said in English keeps no
+  second text. The English side of a line has no word-by-word highlighting
+  during playback: the word times are the spoken words', and mapping them
+  across languages would not be honest.
+- Two settings and a template: Translation time limit, Translation notice
+  by the chat engine, and Translation instructions on the Templates page;
+  an Expectation key `translation`; the audit rows "Translation queued"
+  (counts) and the engine call's own row.
+- Search and Find read both texts and say "in the words as spoken" when
+  the hit is there alone; captions and clips carry the English, and a
+  clip's captions read as stale once the English lands.

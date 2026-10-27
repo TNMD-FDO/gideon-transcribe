@@ -32,6 +32,7 @@ from core import (
     engine,
     prompts,
     settings_store,
+    translation,
     voice_book,
 )
 from core.assistant import (
@@ -450,7 +451,7 @@ def _voice_notes(transcript, kept: dict, check=None, doubt: bool = False) -> dic
             kept[one["segment_id"]] = {
                 "segment_id": one["segment_id"],
                 "start": seg.start,
-                "quote": (seg.text or "")[:300],
+                "quote": (translation.reading(seg) or "")[:300],
                 "from": one["from"],
                 "to": one["to"],
                 "reason": f"the voice sounds like {one['to']}",

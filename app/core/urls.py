@@ -96,6 +96,13 @@ urlpatterns = [
         viewer.details,
         name="details",
     ),
+    # Translate again (ADR 0026, v1.162.0): the English written again from
+    # the words as spoken, from the Details tab.
+    path(
+        "recording/<uuid:recording_id>/translate-again",
+        viewer.translate_again,
+        name="translate_again",
+    ),
     # Whether the Playback copy is ready, for a viewer that opened before it was.
     path(
         "recording/<uuid:recording_id>/media",

@@ -269,9 +269,16 @@ def people_line(case) -> str:
 
 def header_line(number: int, total: int, recording, transcript) -> str:
     """One line per Transcript, carrying what the Transcript-nature line carries."""
-    from core import exports
+    from core import exports, translation
 
-    if transcript.task_run == "translate":
+    if translation.by_engine(transcript):
+        nature = (
+            "machine translation to English by the office's language model from "
+            "the words as spoken in "
+            f"{exports.language_name(transcript.language) or 'an unknown language'}"
+            ", which are kept"
+        )
+    elif transcript.task_run == "translate":
         nature = (
             "machine translation to English from "
             f"{exports.language_name(transcript.language) or 'an unknown language'}"
