@@ -194,6 +194,8 @@ def test_the_ledger_answers_the_directions_by_number():
     # The rules version moves at every merge; the entries below are ours.
     assert "**Rules version:** 2026-10-27.1" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.160.2 (the fourth container's first day on the server" in ours
+    assert "Line 1 of your v0.3.188, answered with a finding" in ours
     assert "at v1.160.0 (a fourth image and a third container of ours on GPU 1" in ours
     assert "Agree or correct Transcribe's host-RAM row at 57 GB" in ours
     assert "at v1.159.2 (nineteen releases since the v1.146.0 entry" in ours

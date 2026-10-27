@@ -176,3 +176,94 @@ def test_the_catalogue_and_the_guides_carry_the_recogniser():
     assert 'RECOGNISER_URL: ""' in compose
     rules = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
     assert "Four images are built here" in rules
+
+
+SAMPLE_CHANGELOG = """# Changelog
+
+## Unreleased
+
+- a line
+
+## v1.160.2, 2026-10-27
+
+```
+Models: changed
+Database: unchanged
+```
+
+## v1.160.1, 2026-10-27
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+## v1.160.0, 2026-10-27
+
+```
+Models: changed
+Database: unchanged
+```
+
+## v1.159.2, 2026-10-26
+
+```
+Models: unchanged
+Database: migrates
+```
+
+## v1.159.1, 2026-10-26
+
+```
+Models: changed
+Database: unchanged
+```
+"""
+
+
+def sections_between(tag: str, before: str) -> str:
+    """Run the script's own reader on the sample, through bash."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("no bash on this machine")
+    script = (ROOT / "transcribe").read_text(encoding="utf-8")
+    function = script.split("sections_between() {", 1)[1].split("\n}\n", 1)[0]
+    program = (
+        f"sections_between() {{{function}\n}}\nsections_between '{tag}' '{before}'"
+    )
+    done = subprocess.run(
+        [bash, "-c", program],
+        input=SAMPLE_CHANGELOG,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout
+
+
+def test_the_upgrade_reads_every_release_it_steps_over():
+    # v1.160.2: an office that went from v1.159.2 to v1.160.1 was never asked
+    # for v1.160.0's models.
+    stepped = sections_between("v1.160.1", "v1.159.2")
+    assert "## v1.160.1" in stepped and "## v1.160.0" in stepped
+    assert "## v1.159.2" not in stepped and "Unreleased" not in stepped
+    assert stepped.count("Models: changed") == 1
+    # The target alone when nothing is stepped over.
+    own = sections_between("v1.160.1", "v1.160.0")
+    assert "## v1.160.1" in own and "## v1.160.0" not in own
+    assert "Models: changed" not in own
+    # A running release the changelog does not name: read to the end, which
+    # errs towards fetching.
+    unknown = sections_between("v1.160.1", "v0.9.0")
+    assert "## v1.159.1" in unknown and "Models: changed" in unknown
+    # No running release given: the same.
+    assert "## v1.159.1" in sections_between("v1.160.1", "")
+    # A tag is matched whole: v1.16 is not v1.160.1.
+    assert sections_between("v1.16", "") == ""
+    script = (ROOT / "transcribe").read_text(encoding="utf-8")
+    assert 'models_changed "$tag" "$before"' in script
+    assert 'read_the_release_lines "$tag" "$before"' in script
+    assert 'sections_between "$1" "${2:-}" | grep -qE' in script

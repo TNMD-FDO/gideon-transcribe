@@ -3260,7 +3260,7 @@ cmd_upgrade() {
     red "There is no release called $tag."
     exit 1
   fi
-  read_the_release_lines "$tag"
+  read_the_release_lines "$tag" "$before"
   git -C "$HERE" checkout --quiet "$tag"
   pass "the checkout is at $tag"
 
@@ -3373,9 +3373,9 @@ finish_the_upgrade() {
   # 8. The models, when the release says they changed.
   if ! transcription_is_on; then
     note "transcription is not installed, so no models to fetch"
-  elif models_changed "$tag"; then
+  elif models_changed "$tag" "$before"; then
     echo
-    amber "This release changes the models, so they are fetched now."
+    amber "This release, or one it steps over, changes the models, so they are fetched now."
     compose run --rm whisperx pull
   fi
 
@@ -3399,12 +3399,20 @@ read_the_release_lines() {
   # changed and whether the database migrates. They are read out before
   # anything is done, because they are what decides whether this upgrade is
   # a quiet one.
-  local tag="$1"
+  local tag="$1" before="${2:-}"
   echo
   echo "What $tag says about itself:"
   git -C "$HERE" show "$tag:CHANGELOG.md" 2>/dev/null |
     sed -n "/^## $tag/,/^## /p" | grep -E '^(Models|Database):' | sed 's/^/  /' ||
     amber "  its changelog says nothing about models or the database"
+  # The releases stepped over, each with its own two lines (v1.160.2): the
+  # models of any one of them are fetched at this upgrade.
+  git -C "$HERE" show "$tag:CHANGELOG.md" 2>/dev/null |
+    sections_between "$tag" "$before" |
+    awk -v tag="$tag" '
+      /^## v/ { split($0, h, /[ ,]/); name = h[2]; next }
+      name != tag && /^(Models|Database):/ { print "  " name " says " $0 }
+    '
   echo
 }
 
@@ -3449,9 +3457,26 @@ migrate_the_card_memory() {
   fi
 }
 
+sections_between() {
+  # The changelog on stdin, cut to the sections of every release an upgrade
+  # steps over: from the target's own section down to, and not including,
+  # the running release's (v1.160.2). With no running release given, or one
+  # the changelog does not name, it runs to the end of the file, which errs
+  # towards fetching. Before this the upgrade read the target's section
+  # alone, and an office that went from v1.159.2 to v1.160.1 missed the
+  # models v1.160.0 named; the office that wrote the app did, when
+  # v1.160.0's upgrade stopped at its build and v1.160.1 went on from it.
+  awk -v tag="$1" -v from="${2:-}" '
+    $0 ~ ("^## " tag "(,| |$)") { on = 1 }
+    on && from != "" && $0 ~ ("^## " from "(,| |$)") { exit }
+    on { print }
+  '
+}
+
 models_changed() {
+  # Every release stepped over is read, not only the target (v1.160.2).
   git -C "$HERE" show "$1:CHANGELOG.md" 2>/dev/null |
-    sed -n "/^## $1/,/^## /p" | grep -qE '^Models: *changed'
+    sections_between "$1" "${2:-}" | grep -qE '^Models: *changed'
 }
 
 running_jobs() {
