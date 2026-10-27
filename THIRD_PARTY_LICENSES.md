@@ -28,6 +28,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | qwen-asr (code) | Apache-2.0 | the recogniser image's package (ADR 0025, v1.160.0), installed without its demo's dependencies; `docs/research/qwen3-asr.md` part 3 is the list of what the image holds |
 | Qwen/Qwen3-ASR-1.7B and Qwen/Qwen3-ForcedAligner-0.6B (weights) | Apache-2.0 | the Qwen3-ASR recogniser and its aligner; open weights, not gated; fetched by the model pull into the model folder, never shipped in an image |
 | FlashAttention (`flash-attn`) | BSD-3-Clause | the recogniser image's attention kernels, the project's own prebuilt wheel pinned by checksum |
+| einops | MIT | what the FlashAttention wheel asks for (v1.160.1) |
 | nagisa (with DyNet) | MIT (DyNet Apache-2.0) | the aligner's Japanese word splitter, imported by the package at module level and never called on the office's languages; the package's Korean splitter, soynlp, is GPL-3.0 and is left out of the image, so a Korean recording under this recogniser fails at the aligner |
 | every other component pinned on the recogniser stack | as pinned | `docs/research/qwen3-asr.md` part 3 is the list |
 | OpenAI Whisper (code and model weights) | MIT | the Hugging Face mirror `openai/whisper-large-v3` is tagged Apache-2.0 and is not gated |

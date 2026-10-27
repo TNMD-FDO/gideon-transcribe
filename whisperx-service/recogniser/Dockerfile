@@ -34,11 +34,14 @@ RUN python3 -m venv "${VIRTUAL_ENV}"
 COPY requirements-torch.txt /tmp/requirements-torch.txt
 RUN pip install --no-cache-dir -r /tmp/requirements-torch.txt
 
-# The package's own inference imports first, then the package alone
-# (--no-deps): its dependency list carries the demo's gradio and flask and
-# would widen the image for code nothing here calls.
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+# The package's own inference imports first (with the FlashAttention wheel,
+# which needs PyPI for einops and so cannot sit in the torch step), under
+# the constraints the first server build froze, so a rebuild resolves to the
+# same tree; then the package alone (--no-deps): its dependency list carries
+# the demo's gradio and flask and would widen the image for code nothing
+# here calls.
+COPY requirements.txt constraints.txt /tmp/
+RUN pip install --no-cache-dir -c /tmp/constraints.txt -r /tmp/requirements.txt \
  && pip install --no-cache-dir --no-deps "qwen-asr==0.0.6"
 
 # The models must import, not merely install, and FlashAttention must load

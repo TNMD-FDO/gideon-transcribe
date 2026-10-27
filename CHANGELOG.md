@@ -21,6 +21,19 @@ installs or upgrades to.
 
 - **Decided, not yet built:** under the Qwen3-ASR recogniser, translation written by the chat engine from the words as spoken, which are kept (ADR 0026): the English to follow the landing, the switch **English | As spoken** on the recording page, the export with the words as spoken; the chapter in Phase 1 chapter 7, the drawing in `docs/spec/mockups/phase-1-recogniser-and-translation.html`. Until it is built, Translate to English greys on the Upload page under Qwen3-ASR.
 
+## v1.160.1, 2026-10-27
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The upgrade to v1.160.0 stopped at the fourth image's build on the first server to try it; this release is that build, mended and proven. Upgrading from v1.159.2 or from the stopped v1.160.0 gives the same result; the models v1.160.0 named were fetched by that upgrade before it stopped, and a pull finds them in place.
+
+- **The recogniser image builds.** Its torch requirements file points pip at the PyTorch index and nothing else, as the other two GPU images do, and the FlashAttention wheel sat in that file; the wheel asks for `einops`, which that index does not carry, so pip stopped with "No matching distribution found for einops" and `./transcribe upgrade` stopped with it, the old containers left running. The wheel now sits in `requirements.txt`, which uses PyPI, with `einops` pinned (0.8.2) beside it. The image was never built before that upgrade: the Release workflow builds no images while the packages are private, and nothing else in the gate runs a build. For this release it was built twice on the office server from a scratch folder, through the import check at the end of the Dockerfile, before the tag was made.
+- **The recogniser's `constraints.txt`.** The 71 packages the direct pins pull in, frozen from that first build and read by the Dockerfile as constraints, so a rebuild resolves to the same tree, as the diarizer's does (v1.135.0). `docs/research/qwen3-asr.md` part 3 has the rows.
+- **The gate for an image.** A release that changes a Dockerfile or a requirements file is built on the server from a scratch folder before it is tagged, since no workflow builds it; written into ADR 0025's list of what the build settled.
+
 ## v1.160.0, 2026-10-27
 
 ```

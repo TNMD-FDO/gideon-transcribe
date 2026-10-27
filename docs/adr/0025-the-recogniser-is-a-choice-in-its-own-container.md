@@ -112,4 +112,14 @@ Three things made the shape a decision rather than a swap:
   system message with no token slot; the order of dropping stands.
 - The transitive package tree of the fourth image is frozen at the first
   server build into `constraints.txt` in the release after this, as the
-  diarizer's was (v1.135.0).
+  diarizer's was (v1.135.0). Done in v1.160.1: 71 pins from the build of
+  2026-10-27.
+- (v1.160.1) The FlashAttention wheel is installed from `requirements.txt`,
+  under PyPI, and not from the torch step: the torch step points pip at the
+  PyTorch index alone, and the wheel asks for `einops`, which that index
+  does not carry. The first server build of v1.160.0 failed on exactly that
+  and the upgrade stopped, the old containers left running. A release that
+  changes one of the image's files is built on the office server from a
+  scratch folder, through the Dockerfile's import check, before it is
+  tagged: the Release workflow builds no images while the packages are
+  private, so nothing else proves a build.

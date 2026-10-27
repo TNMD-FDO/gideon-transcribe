@@ -10,8 +10,19 @@
 # transformers 4.57.6 and accelerate 1.12.0 are the versions the package
 # pins; librosa is the version the official image carried at the trial; the
 # rest are the newest at the pin date (2026-10-27). What these pull in is
-# held by the first server build's freeze, written into constraints.txt at
-# the release after this one, as the diarizer's was.
+# held by constraints.txt, the freeze of the first server build (v1.160.1).
+
+# FlashAttention 2, the project's own prebuilt wheel for this torch, CUDA 12,
+# Python 3.12 and the C++11 ABI the torch wheels use, pinned by the checksum
+# read on 2026-10-27 from the downloaded file. Built from source it would
+# take hours on the hosted runner; the wheel installs in seconds. The
+# package's encoder attention window is applied only under FlashAttention 2
+# (issue 213), so this is not optional. It asks for torch, already in place
+# from requirements-torch.txt, and einops, which is on PyPI and not on the
+# PyTorch index: that is why the wheel is in this file and not that one.
+einops==0.8.2
+flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3%2Bcu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl#sha256=f25da18657a87fc83dc1bfb8b7751b82246e9db355510226b674fd437c34b5fb
+
 transformers==4.57.6
 accelerate==1.12.0
 librosa==0.11.0
