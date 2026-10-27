@@ -3466,9 +3466,14 @@ sections_between() {
   # alone, and an office that went from v1.159.2 to v1.160.1 missed the
   # models v1.160.0 named; the office that wrote the app did, when
   # v1.160.0's upgrade stopped at its build and v1.160.1 went on from it.
+  #
+  # The whole file is read, never left early (v1.161.1): this script runs
+  # under pipefail, and an awk that quit at the running release's heading
+  # closed the pipe on `git show` while it was still writing the changelog,
+  # which killed the upgrade silently after "What ... says about itself".
   awk -v tag="$1" -v from="${2:-}" '
     $0 ~ ("^## " tag "(,| |$)") { on = 1 }
-    on && from != "" && $0 ~ ("^## " from "(,| |$)") { exit }
+    on && from != "" && $0 ~ ("^## " from "(,| |$)") { on = 0 }
     on { print }
   '
 }

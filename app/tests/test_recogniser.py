@@ -267,3 +267,28 @@ def test_the_upgrade_reads_every_release_it_steps_over():
     assert 'models_changed "$tag" "$before"' in script
     assert 'read_the_release_lines "$tag" "$before"' in script
     assert 'sections_between "$1" "${2:-}" | grep -qE' in script
+
+
+def test_the_reader_reads_the_whole_changelog_under_pipefail(tmp_path):
+    # v1.161.1: the script runs under pipefail, and a reader that quit at
+    # the running release's heading closed the pipe on `git show` while it
+    # was still writing, which killed the upgrade to v1.161.0 silently.
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("no bash on this machine")
+    big = tmp_path / "CHANGELOG.md"
+    # Well past a pipe's buffer, with the running release near the top.
+    big.write_text(SAMPLE_CHANGELOG + ("- a line of padding\n" * 200000))
+    script = (ROOT / "transcribe").read_text(encoding="utf-8")
+    function = script.split("sections_between() {", 1)[1].split("\n}\n", 1)[0]
+    program = (
+        "set -o pipefail\n"
+        f"sections_between() {{{function}\n}}\n"
+        f"cat '{big.as_posix()}' | sections_between v1.160.1 v1.159.2 | wc -l"
+    )
+    done = subprocess.run([bash, "-c", program], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert int(done.stdout.strip()) > 0

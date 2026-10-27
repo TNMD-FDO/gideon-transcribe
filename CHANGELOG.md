@@ -21,6 +21,24 @@ installs or upgrades to.
 
 - **Decided, not yet built:** under the Qwen3-ASR recogniser, translation written by the chat engine from the words as spoken, which are kept (ADR 0026): the English to follow the landing, the switch **English | As spoken** on the recording page, the export with the words as spoken; the chapter in Phase 1 chapter 7, the drawing in `docs/spec/mockups/phase-1-recogniser-and-translation.html`. Until it is built, Translate to English greys on the Upload page under Qwen3-ASR.
 
+## v1.161.1, 2026-10-27
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The upgrade to v1.161.0 stopped silently on the office's server right after "What v1.161.0 says about itself", before the checkout, with the old containers running and nothing replaced. This release is the fix, with one by-hand step for the office already on v1.160.2 or v1.161.0.
+
+- **The upgrade reads the changelog to its end.** `./transcribe` runs under pipefail, and the reader v1.160.2 added quit at the running release's heading, which closed the pipe on `git show` while it was still writing the changelog and killed the script without a word. It now reads the whole file; a test feeds it a changelog well past a pipe's buffer under pipefail.
+- **An office on v1.160.2 or v1.161.0 upgrades by hand, once.** The half of the upgrade that failed runs from the script already on the server, so `./transcribe upgrade v1.161.1` would stop at the same line there. Run instead, from the install folder, the same two steps the upgrade takes and then its own second half from the new release's script:
+
+  ```
+  git fetch --tags --force --quiet && git checkout --quiet v1.161.1 && ./transcribe upgrade-finish v1.161.1 v1.160.2 no
+  ```
+
+  with `v1.160.2` replaced by the release the server is on. The dump and the configuration copy the stopped upgrade took stand; `upgrade-finish` builds or pulls the images, starts the stack and runs the check as the upgrade would. Every later release upgrades as usual.
+
 ## v1.161.0, 2026-10-27
 
 ```
