@@ -6,5 +6,5 @@ API is versioned by path instead, so a breaking change becomes /v2/ rather than
 a surprise.
 """
 
-SERVICE_VERSION = "0.8.0"
+SERVICE_VERSION = "0.8.1"
 API_VERSION = "v1"

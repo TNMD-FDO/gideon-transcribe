@@ -50,6 +50,19 @@ JAIL_CALL_TYPE = "jail call"
 FILL_GAP_SECONDS = 15.0
 FILL_SHORT_WORDS = 6
 
+# The opening fragment (v1.161.0): a recogniser that cuts lines at pauses
+# starts a call's first announcement with a fragment of its own ("This
+# call is"), before the first line the phrases find, where the rule above
+# has no system line to lean on. A short line, or one that begins with
+# "please", within the gap before the first system line is the system's
+# too, when that system line opens the call: it starts within this many
+# seconds of the call's first line, and every line before it is such a
+# fragment, each within the gap of the next. A line that is not (somebody
+# spoke first) means the announcement did not open the call, and nothing
+# before it is the system's; a mid-call announcement pulls nothing before
+# it either, since a party's "Okay" often comes just before one.
+OPENING_SECONDS = 60.0
+
 # Found by its phrases (v1.149.0): on a Recording with no type, this many
 # lines carrying the phrases make it a jail call for the pass. One line can
 # be a party quoting the system or a phrase said in passing; three distinct
@@ -126,6 +139,35 @@ def fill_in(rows: list, system: set) -> list:
     return added
 
 
+def fill_opening(rows: list, system: set) -> list:
+    """The fragments before the call's first system line (v1.161.0): every
+    line before it is short or begins with "please", each within the gap of
+    the line after it, and the system line starts within the opening; then
+    they are all the system's, and otherwise none is. `system` grows as
+    lines join."""
+    if not rows or not system:
+        return []
+    first = next((i for i, row in enumerate(rows) if row.pk in system), None)
+    if first is None or first == 0:
+        return []
+    if rows[first].start - rows[0].start > OPENING_SECONDS:
+        return []
+    added = []
+    after = rows[first]
+    for segment in reversed(rows[:first]):
+        if after.start - segment.end > FILL_GAP_SECONDS:
+            return []
+        words = plain(segment.text).split()
+        if not (len(words) <= FILL_SHORT_WORDS or (words and words[0] == "please")):
+            # Somebody spoke before the announcement: it does not open the
+            # call, and nothing before it is the system's.
+            return []
+        added.append(segment.pk)
+        after = segment
+    system.update(added)
+    return added
+
+
 def mark(transcript) -> int:
     """Give the Call system its lines on a Transcript that has just landed.
 
@@ -166,6 +208,8 @@ def mark(transcript) -> int:
         return 0
     system.update(marked)
     marked += fill_in(rows, system)
+    opening = fill_opening(rows, system)
+    marked += opening
     if marked:
         transcript.segments.filter(pk__in=marked).update(speaker=NAME)
     provenance = dict(transcript.provenance or {})
@@ -174,6 +218,7 @@ def mark(transcript) -> int:
         "phrases": len(made_phrases),
         "found_by": "type" if by_type else "phrases",
         "heard": heard,
+        "opening": len(opening),
     }
     transcript.provenance = provenance
     transcript.save(update_fields=["provenance"])

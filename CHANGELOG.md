@@ -21,6 +21,18 @@ installs or upgrades to.
 
 - **Decided, not yet built:** under the Qwen3-ASR recogniser, translation written by the chat engine from the words as spoken, which are kept (ADR 0026): the English to follow the landing, the switch **English | As spoken** on the recording page, the export with the words as spoken; the chapter in Phase 1 chapter 7, the drawing in `docs/spec/mockups/phase-1-recogniser-and-translation.html`. Until it is built, Translate to English greys on the Upload page under Qwen3-ASR.
 
+## v1.161.0, 2026-10-27
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The first jail call processed under Qwen3-ASR on the office's server (2026-10-27) showed two things the finer line cutting does that Whisper's longer utterances hid. Both fixed here; the WhisperX image is rebuilt (service 0.8.1).
+
+- **The Call system takes the opening fragment (Phase 5 chapter 3).** A recogniser that cuts lines at pauses starts a call's first announcement with a fragment of its own ("This call is"), before the first line the phrase list finds. The fill-in rule of v1.139.0 only reaches a line between two system lines, so the fragment stayed under a party's label, in that party's lane on the Speakers page. Now, when the call's first system line starts within the first minute and every line before it is short or begins with "please", each within fifteen seconds of the next, those lines are the system's too; one line that is neither means somebody spoke before the announcement, and nothing before it is taken. A mid-call announcement pulls nothing before it either, since a party's "Okay" often comes just before one. The count goes in the Transcript's provenance as `opening`. The phone system's voice (v1.159.0) had matched the same line and counted it as one it would have given; this rule needs no voice and no switch.
+- **A line with no speaker takes its neighbour's (service 0.8.1).** Under `qwen3-asr` with the diarizer, a fragment none of whose words fell inside a diarizer span was a line of its own with no speaker: 21 of 436 lines on that call, six words at most. It now takes the speaker of its nearest neighbour in time, the previous one when the gaps are equal, counted in `settings_used.speakers_filled`; a file with no speaker anywhere is left as it is. The Whisper path is unchanged.
+
 ## v1.160.2, 2026-10-27
 
 ```

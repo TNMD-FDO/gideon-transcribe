@@ -332,3 +332,86 @@ def test_a_recording_typed_something_else_is_left_alone_however_many_phrases(
     other = a_call(admin, tmp_path, settings, kind="")
     call_system.on_landed(other.transcript)
     assert other.transcript.segments.filter(speaker=call_system.NAME).count() == 0
+
+
+OPENING_LINES = (
+    # A recogniser that cuts lines at pauses: the first announcement starts
+    # with a fragment the phrase list cannot name, before the first line it
+    # finds (test_3 under Qwen3-ASR, 2026-10-27).
+    (0.0, "Speaker 1", "This call is"),
+    (
+        1.9,
+        "Speaker 1",
+        "from a correctional facility and may be monitored and recorded.",
+    ),
+    (12.0, "Speaker 1", "Hello?"),
+    (14.0, "Speaker 2", "Hey, it's me. Can you hear me?"),
+    (876.0, "Speaker 1", "Okay."),
+    (880.0, "Speaker 1", "You have one minute remaining."),
+)
+
+
+def a_call_with_lines(person, tmp_path, settings, lines):
+    recording = a_call(person, tmp_path, settings)
+    transcript = recording.transcript
+    transcript.segments.all().delete()
+    for start, speaker, text in lines:
+        Segment.objects.create(
+            transcript=transcript,
+            start=start,
+            end=start + 1.5,
+            text=text,
+            speaker=speaker,
+            speaker_label=speaker.upper().replace(" ", "_"),
+        )
+    return recording
+
+
+def test_the_opening_fragment_before_the_first_announcement_is_the_systems(
+    admin, tmp_path, settings
+):
+    # v1.161.0.
+    settings_store.set_to("call_system_available", True)
+    recording = a_call_with_lines(admin, tmp_path, settings, OPENING_LINES)
+    assert call_system.mark(recording.transcript) == 3
+    marked = list(
+        recording.transcript.segments.filter(speaker=call_system.NAME)
+        .order_by("start")
+        .values_list("start", flat=True)
+    )
+    # The fragment at the opening joins; the party's "Okay." before the
+    # mid-call announcement does not: only the first system line pulls.
+    assert marked == [0.0, 1.9, 880.0]
+    assert recording.transcript.segments.get(start=876.0).speaker == "Speaker 1"
+    recording.transcript.refresh_from_db()
+    given = recording.transcript.provenance["call_system"]
+    assert given["lines"] == 3 and given["opening"] == 1
+
+
+def test_the_opening_rule_needs_the_announcement_to_open_the_call(
+    admin, tmp_path, settings
+):
+    settings_store.set_to("call_system_available", True)
+    # Somebody spoke before the announcement: it did not open the call, so
+    # not even the fragment next to it is taken; a first announcement late
+    # in the call pulls nothing before it.
+    lines = (
+        (0.0, "Speaker 1", "Hello, this is a long line of eight words here."),
+        (3.0, "Speaker 1", "This call is"),
+        (4.9, "Speaker 1", "from a correctional facility and may be monitored."),
+    )
+    recording = a_call_with_lines(admin, tmp_path, settings, lines)
+    assert call_system.mark(recording.transcript) == 1
+    assert recording.transcript.segments.get(start=0.0).speaker == "Speaker 1"
+    assert recording.transcript.segments.get(start=3.0).speaker == "Speaker 1"
+    late = (
+        (0.0, "Speaker 1", "Hello?"),
+        (2.0, "Speaker 2", "Hey."),
+        (90.0, "Speaker 1", "Okay."),
+        (92.0, "Speaker 1", "You have one minute remaining."),
+    )
+    recording = a_call_with_lines(admin, tmp_path, settings, late)
+    assert call_system.mark(recording.transcript) == 1
+    assert recording.transcript.segments.get(start=90.0).speaker == "Speaker 1"
+    recording.transcript.refresh_from_db()
+    assert recording.transcript.provenance["call_system"]["opening"] == 0

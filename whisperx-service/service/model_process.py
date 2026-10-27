@@ -585,8 +585,12 @@ def _run_qwen(engine: Engine, job: dict[str, Any], outbox, stage) -> None:
     transcribed, speakers, diarizer_used, timings["diarize"] = _diarize(
         engine, job, audio, transcribed, stage
     )
+    speakers_filled = 0
     if request.get("diarize"):
         transcribed["segments"] = recognising.split_at_speakers(transcribed["segments"])
+        transcribed["segments"], speakers_filled = recognising.fill_speakers(
+            transcribed["segments"]
+        )
     peak_used = max(peak_used, _vram()[0])
 
     # The result --------------------------------------------------------------
@@ -616,6 +620,7 @@ def _run_qwen(engine: Engine, job: dict[str, Any], outbox, stage) -> None:
         "piece_seconds": recognising.PIECE_SECONDS,
         "pieces": len(pieces),
         "words_unlengthed": unlengthed,
+        "speakers_filled": speakers_filled,
         "compute_type": "bfloat16",
         "diarize": bool(request.get("diarize")),
         "diarizer": (

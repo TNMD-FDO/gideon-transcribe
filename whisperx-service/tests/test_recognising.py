@@ -210,3 +210,34 @@ def test_an_empty_file_has_no_language():
     part = recognising.language_part([], None)
     assert part["detected"] == "" and part["probability"] is None
     assert part["mixed"] is False
+
+
+def test_a_line_with_no_speaker_takes_its_nearest_neighbours():
+    # Service 0.8.1: a fragment none of whose words fell inside a diarizer
+    # span is a line of its own under lines cut at pauses; it takes the
+    # speaker of the neighbour nearest in time, the previous one when equal.
+    segments = [
+        {"start": 0.0, "end": 1.0, "text": "a", "speaker": "speaker_0", "words": []},
+        {"start": 1.2, "end": 1.6, "text": "b", "words": []},
+        {"start": 3.0, "end": 4.0, "text": "c", "speaker": "speaker_1", "words": []},
+        {"start": 4.1, "end": 4.4, "text": "d", "words": []},
+        {"start": 4.5, "end": 5.0, "text": "e", "speaker": "speaker_0", "words": []},
+        {"start": 9.0, "end": 9.5, "text": "f", "words": []},
+    ]
+    out, filled = recognising.fill_speakers(segments)
+    assert filled == 3
+    assert [one["speaker"] for one in out] == [
+        "speaker_0",
+        "speaker_0",  # nearer the line before (0.2 s) than the one after (1.4 s)
+        "speaker_1",
+        "speaker_1",  # equal gaps of 0.1 s: the previous line
+        "speaker_0",
+        "speaker_0",  # nothing after it: the previous line
+    ]
+    assert [one["text"] for one in out] == ["a", "b", "c", "d", "e", "f"]
+    assert "speaker" not in segments[1], "the input is not changed"
+
+
+def test_a_file_with_no_speaker_anywhere_is_left_alone():
+    segments = [{"start": 0.0, "end": 1.0, "text": "a", "words": []}]
+    assert recognising.fill_speakers(segments) == (segments, 0)

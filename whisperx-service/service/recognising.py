@@ -302,6 +302,38 @@ def split_at_speakers(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def fill_speakers(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """A line none of whose words fell inside a diarizer span has no speaker
+    (service 0.8.1): under lines cut at pauses such a fragment is a line of
+    its own, where Whisper's longer utterance carried it under a speaker.
+    It takes the speaker of its nearest neighbour in time, the previous
+    line when the gaps are equal; a file with no speaker anywhere is left
+    as it is. Returns the lines and how many were filled."""
+    if not any(segment.get("speaker") for segment in segments):
+        return segments, 0
+    out: list[dict[str, Any]] = []
+    filled = 0
+    for index, segment in enumerate(segments):
+        if segment.get("speaker"):
+            out.append(segment)
+            continue
+        before = next((s for s in reversed(segments[:index]) if s.get("speaker")), None)
+        after = next((s for s in segments[index + 1 :] if s.get("speaker")), None)
+        chosen = None
+        if before is not None and after is not None:
+            gap_before = segment["start"] - before["end"]
+            gap_after = after["start"] - segment["end"]
+            chosen = before if gap_before <= gap_after else after
+        else:
+            chosen = before if before is not None else after
+        if chosen is None:
+            out.append(segment)
+            continue
+        out.append({**segment, "speaker": chosen["speaker"]})
+        filled += 1
+    return out, filled
+
+
 # The languages ----------------------------------------------------------------
 
 # A second language counts as present, and the file as mixed, from this
