@@ -181,3 +181,28 @@ it is written by the chat engine from the words as spoken, which are kept
 memory, a minute for a half-hour call. Not decided by this trial: the 0.6B
 model (not run), the vLLM backend (not run; the Transformers path with
 FlashAttention 2 was enough), and the Spanish leg.
+
+## Part 3. The pinned stack of the recogniser image (v1.160.0, 2026-10-27)
+
+The counterpart of `docs/research/diarizer-pinned-stack.md` for the fourth image, `whisperx-service/recogniser/`: what it holds, why each pin is what it is, and what a bump has to prove. ADR 0025 is the decision; Part 2 above is the trial that settled the shape.
+
+| Component | Pin | Why | Source |
+|---|---|---|---|
+| Base image | `nvidia/cuda:12.8.2-base-ubuntu24.04`, the same digest as the other two GPU images | One CUDA runtime for the three containers, so the package's driver requirement does not rise; the torch cu128 wheel carries its own CUDA libraries | the WhisperX Dockerfile |
+| Python | 3.12, Ubuntu 24.04's | The package asks for 3.9 or above; the other images use the same | [S1] |
+| torch | 2.8.0+cu128 from `download.pytorch.org/whl/cu128` | The WhisperX stack's own wheel. The package pins no torch; the trial ran on the official image's 2.9.1+cu128, and the model's code is plain transformers, so the stack's wheel is taken rather than a second torch | [S1], Part 1 |
+| flash-attn | 2.8.3, the project's prebuilt wheel `flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl` (released 2025-08-14), sha256 `f25da18657a87fc83dc1bfb8b7751b82246e9db355510226b674fd437c34b5fb` read from the downloaded file on 2026-10-27 | The package's encoder attention window is applied only under FlashAttention 2 (issue 213), and the trial ran under it on the office's card (compute capability 12.0). Built from source it takes hours on the hosted runner; the wheel installs in seconds. cxx11abi TRUE matches the torch wheels since 2.6 | [S2] |
+| qwen-asr | 0.0.6 (2026-01-30), installed with `--no-deps` | The only release at the trial; its wheel's sha256 `b9c55a38413298f3a990a4475467399daec6e8f4172363053fc42e2166c2dfd3`. Its dependency list carries the demo's gradio and flask and the vLLM extra, none of which the inference path imports, so the path's own imports are pinned instead | [S1], [S3] |
+| transformers, accelerate | 4.57.6, 1.12.0 | The package's own pins | [S1] |
+| librosa, soundfile | 0.11.0, 0.13.1 | librosa is what the official image carried at the trial; soundfile reads the WAV (`libsndfile1` from apt) | Part 1; [S4] |
+| nagisa | 0.2.11 (with DyNet38) | The aligner imports it at module level for Japanese; manylinux wheels for cp312 exist (2024-01-28) | [S5] |
+| soynlp | left out | The aligner imports it lazily for Korean text alone; it is GPL-3.0, so it stays out of the image and a Korean recording under this recogniser fails at the aligner | [S6] |
+| huggingface-hub | 0.36.0 | The offline snapshot lookup by revision, as the other images do it | [S4] |
+| FastAPI, uvicorn | 0.141.1, 0.52.4 | The container's small HTTP face, the same versions as the other two | `whisperx-service/requirements.txt` |
+| everything else | unpinned at v1.160.0 | What the pins above pull in (tokenizers, safetensors, numpy, scipy, numba and the rest) is frozen from the first server build's `pip freeze` into `constraints.txt` at the release after this, as the diarizer's was at v1.135.0 | |
+
+**The run.** The models load on the first piece, not at start: `/healthz` answers at once with `loaded: false`, and the first job under the choice pays the load (the trial: about 20 s). `attn_implementation` `flash_attention_2` on both models, `bfloat16`, `max_inference_batch_size` 1 (issue 207: a batch of unequal clips corrupts the shorter), `max_new_tokens` 1024 per piece (room, not a cap that cuts: a 45-second piece of fast speech is under 300 tokens). The service cuts the audio itself at about 45 seconds (Part 2's finding), so the package's own cutting at 180 never runs. Memory, from the trial: 5.5 GB held once loaded, 6.7 to 7.7 GB after a run; a job's wall time 20 to 36 times faster than real time.
+
+**What a bump has to prove.** 1. The import at build (`from qwen_asr import Qwen3ASRModel, Qwen3ForcedAligner` and `import flash_attn` against this torch). 2. The counts of Part 2 on the same four recordings, or the difference explained: the words per window tracking Whisper's, no loop at 45-second pieces, the clock-marked lines' agreement with the re-read. 3. torch stays on the WhisperX stack's CUDA (12.8) unless that stack moves first. 4. A flash-attn wheel exists for the new torch, or the bump waits.
+
+Sources for Part 3: [S1] qwen-asr on PyPI, https://pypi.org/project/qwen-asr/ (0.0.6, 2026-01-30; `requires_dist` read 2026-10-27). [S2] FlashAttention's releases, https://github.com/Dao-AILab/flash-attention/releases/tag/v2.8.3. [S3] The official Dockerfile, https://github.com/QwenLM/Qwen3-ASR/blob/main/docker/Dockerfile-qwen3-asr-cu128. [S4] The package's inference imports, https://github.com/QwenLM/Qwen3-ASR/blob/main/qwen_asr/inference/utils.py and `qwen3_forced_aligner.py`. [S5] nagisa on PyPI, https://pypi.org/project/nagisa/0.2.11/. [S6] soynlp on PyPI, https://pypi.org/project/soynlp/0.0.493/ (classifier GPLv3).

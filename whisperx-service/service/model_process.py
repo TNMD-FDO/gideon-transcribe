@@ -81,6 +81,28 @@ class Engine:
         self.model_name = model_name
         return self.pipeline
 
+    def unload_whisper(self) -> None:
+        """Let go of the Whisper model and its aligners (ADR 0025): a job
+        under Qwen3-ASR loads no Whisper model, and holding the last one
+        across it would put both recognisers' memory on the card at once.
+        The next Whisper job pays one reload. The pyannote pipeline stays:
+        both paths may need it."""
+        if self.pipeline is None and not self.aligners:
+            return
+        self.pipeline = None
+        self.model_name = None
+        self.aligners = {}
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:  # pragma: no cover - the image always has torch
+            pass
+
     def aligner_for(self, language: str):
         """The alignment model for a language, or None when there is not one.
 
@@ -226,6 +248,8 @@ def _class_of(exc: Exception) -> str:
     Only a card fault is worth trying again, and only once, after the process
     has been started fresh.
     """
+    if isinstance(exc, RecogniserDown):
+        return errors.RECOGNISER_UNAVAILABLE
     text = f"{type(exc).__name__}: {exc}".lower()
     if "cuda" in text or "out of memory" in text or "cublas" in text:
         return errors.GPU_ERROR
@@ -251,6 +275,9 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
 
     if request.get("task") == "diarize":
         _run_diarize_only(engine, job, outbox, stage)
+        return
+    if request.get("recogniser") == "qwen3-asr":
+        _run_qwen(engine, job, outbox, stage)
         return
 
     started = time.monotonic()
@@ -359,70 +386,10 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
 
     # Diarize -----------------------------------------------------------------
 
-    speakers: dict[str, Any] = {"labels": []}
-    timings["diarize"] = 0.0
-    diarizer_used: dict[str, Any] = {}
-
-    if request.get("diarize"):
-        stage("diarizing")
-        at = time.monotonic()
-        hint = request.get("speakers") or {}
-        counts: dict[str, Any] = {}
-        if "exactly" in hint:
-            counts["num_speakers"] = hint["exactly"]
-        elif "between" in hint:
-            counts["min_speakers"], counts["max_speakers"] = hint["between"]
-
-        wanted = bool(request.get("return_speaker_embeddings"))
-        embeddings = None
-        diarizer_used: dict[str, Any] = {"name": "pyannote"}
-        if request.get("diarizer", "nemotron") == "nemotron":
-            # Phase 5 chapter 4: the diarizer container reads the prepared
-            # WAV and answers with the spans; the words are given their
-            # Speakers here, by the same step pyannote's spans go through.
-            from service import diarizer_client
-
-            answer = diarizer_client.diarize(
-                Path(job["audio_path"]), timeout=_diarizer_timeout(job)
-            )
-            diarized = _spans_frame(answer.get("spans") or [])
-            diarizer_used = {
-                "name": "nemotron",
-                "model": (answer.get("model") or {}).get("name", ""),
-                "revision": (answer.get("model") or {}).get("revision", "")
-                or engine.settings.get("diarizer_revision")
-                or "",
-                "nemo": (answer.get("model") or {}).get("nemo", ""),
-            }
-        else:
-            # The pipeline takes the audio whisperx already loaded, so the
-            # file is read once for the whole job.
-            diarized = engine.diarization()(audio, return_embeddings=wanted, **counts)
-            if wanted:
-                diarized, embeddings = diarized
-
-        transcribed = whisperx.assign_word_speakers(diarized, transcribed, embeddings)
-        timings["diarize"] = round(time.monotonic() - at, 3)
-        peak_used = max(peak_used, _vram()[0])
-
-        labels = sorted(
-            {
-                segment["speaker"]
-                for segment in transcribed["segments"]
-                if segment.get("speaker")
-            }
-        )
-        speakers = {"labels": labels}
-        if wanted and embeddings:
-            # One vector per speaker, keyed by the label. The dimension is
-            # measured rather than assumed: the model's own configuration sits
-            # behind a licence gate and does not state it.
-            speakers["embeddings"] = {
-                label: [float(value) for value in vector]
-                for label, vector in embeddings.items()
-            }
-            first = next(iter(speakers["embeddings"].values()), [])
-            speakers["embedding_dimension"] = len(first)
+    transcribed, speakers, diarizer_used, timings["diarize"] = _diarize(
+        engine, job, audio, transcribed, stage
+    )
+    peak_used = max(peak_used, _vram()[0])
 
     # The result --------------------------------------------------------------
 
@@ -455,6 +422,252 @@ def _run_one(engine: Engine, job: dict[str, Any], outbox) -> None:
             peak_vram_gb=round(peak_used, 2),
         )
     )
+
+
+def _diarize(
+    engine: Engine, job: dict[str, Any], audio, transcribed: dict[str, Any], stage
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], float]:
+    """The speakers for a transcription, whichever recogniser wrote it: the
+    words given their Speakers, the labels, which diarizer ran, and the
+    seconds it took. Nothing when the job did not ask."""
+    import whisperx
+
+    request = job["request"]
+    if not request.get("diarize"):
+        return transcribed, {"labels": []}, {}, 0.0
+
+    stage("diarizing")
+    at = time.monotonic()
+    hint = request.get("speakers") or {}
+    counts: dict[str, Any] = {}
+    if "exactly" in hint:
+        counts["num_speakers"] = hint["exactly"]
+    elif "between" in hint:
+        counts["min_speakers"], counts["max_speakers"] = hint["between"]
+
+    wanted = bool(request.get("return_speaker_embeddings"))
+    embeddings = None
+    diarizer_used: dict[str, Any] = {"name": "pyannote"}
+    if request.get("diarizer", "nemotron") == "nemotron":
+        # Phase 5 chapter 4: the diarizer container reads the prepared
+        # WAV and answers with the spans; the words are given their
+        # Speakers here, by the same step pyannote's spans go through.
+        from service import diarizer_client
+
+        answer = diarizer_client.diarize(
+            Path(job["audio_path"]), timeout=_diarizer_timeout(job)
+        )
+        diarized = _spans_frame(answer.get("spans") or [])
+        diarizer_used = {
+            "name": "nemotron",
+            "model": (answer.get("model") or {}).get("name", ""),
+            "revision": (answer.get("model") or {}).get("revision", "")
+            or engine.settings.get("diarizer_revision")
+            or "",
+            "nemo": (answer.get("model") or {}).get("nemo", ""),
+        }
+    else:
+        # The pipeline takes the audio whisperx already loaded, so the
+        # file is read once for the whole job.
+        diarized = engine.diarization()(audio, return_embeddings=wanted, **counts)
+        if wanted:
+            diarized, embeddings = diarized
+
+    transcribed = whisperx.assign_word_speakers(diarized, transcribed, embeddings)
+    seconds = round(time.monotonic() - at, 3)
+
+    labels = sorted(
+        {
+            segment["speaker"]
+            for segment in transcribed["segments"]
+            if segment.get("speaker")
+        }
+    )
+    speakers: dict[str, Any] = {"labels": labels}
+    if wanted and embeddings:
+        # One vector per speaker, keyed by the label. The dimension is
+        # measured rather than assumed: the model's own configuration sits
+        # behind a licence gate and does not state it.
+        speakers["embeddings"] = {
+            label: [float(value) for value in vector]
+            for label, vector in embeddings.items()
+        }
+        first = next(iter(speakers["embeddings"].values()), [])
+        speakers["embedding_dimension"] = len(first)
+    return transcribed, speakers, diarizer_used, seconds
+
+
+class RecogniserDown(RuntimeError):
+    """The recogniser container stopped answering during a job."""
+
+
+def _run_qwen(engine: Engine, job: dict[str, Any], outbox, stage) -> None:
+    """Qwen3-ASR's path (Phase 1 chapter 7, ADR 0025; service 0.8.0).
+
+    No Whisper model is loaded. The prepared audio is cut into pieces of
+    about 45 seconds at the quietest point near each target, each piece goes
+    to the recogniser container with the prompt rule's text as the model's
+    context and comes back as timed words in the language heard, the words
+    are spanned where the aligner gave none a length, the lines are built
+    from them, and the diarizer runs over the whole file as under Whisper,
+    a line split where the speaker changes. The result has the one shape,
+    with a language on every segment and the pieces under `language`.
+    """
+    import whisperx
+
+    from service import recogniser_client, recognising
+
+    job_id = job["job_id"]
+    request = job["request"]
+    timings: dict[str, float] = {}
+    started = time.monotonic()
+    revisions = engine.settings.get("recogniser_revisions") or {}
+
+    stage("loading model")
+    health = recogniser_client.health()
+    if health is None:
+        raise RecogniserDown("the recogniser container is not answering")
+    engine.unload_whisper()
+    outbox.put(_message("loaded", model="qwen3-asr", revision=revisions.get("asr")))
+    audio = whisperx.load_audio(job["audio_path"])
+    duration = len(audio) / SAMPLE_RATE
+    peak_used, _ = _vram()
+    timings["load"] = round(time.monotonic() - started, 3)
+
+    # The context is a system message with no token slot to fit, so the
+    # prompt rule counts words; the cap and the order of dropping stand.
+    prompt = build_prompt(
+        request.get("context") or "",
+        list(request.get("vocabulary") or []),
+        recognising.count_words,
+    )
+    named = recognising.name_of(request.get("language"))
+
+    # Recognise, piece by piece ----------------------------------------------
+
+    stage("transcribing", 0.0)
+    at = time.monotonic()
+    pieces = recognising.cut_points(audio)
+    words: list[recognising.Word] = []
+    rows: list[dict[str, Any]] = []
+    for index, (a, b) in enumerate(pieces):
+        try:
+            answer = recogniser_client.recognise(
+                recognising.wav_bytes(audio[a:b]),
+                prompt.text or "",
+                timeout=_recogniser_timeout((b - a) / SAMPLE_RATE),
+                language=named,
+            )
+        except (OSError, ValueError) as exc:
+            raise RecogniserDown("the recogniser container failed on a piece") from exc
+        offset = a / SAMPLE_RATE
+        words += recognising.words_of(answer.get("words") or [], offset, index)
+        rows.append(
+            {
+                "offset_seconds": round(offset, 3),
+                "seconds": round((b - a) / SAMPLE_RATE, 3),
+                "language": request.get("language")
+                or recognising.code_of(answer.get("language")),
+            }
+        )
+        stage("transcribing", round((index + 1) / len(pieces) * 100, 1))
+    timings["transcribe"] = round(time.monotonic() - at, 3)
+    peak_used = max(peak_used, _vram()[0])
+
+    # The aligner ran inside each piece; the lines are built here.
+    words, unlengthed = recognising.span_unlengthed(words)
+    languages = {index: row["language"] for index, row in enumerate(rows)}
+    transcribed: dict[str, Any] = {"segments": recognising.lines_of(words, languages)}
+    timings["align"] = 0.0
+
+    # Diarize -----------------------------------------------------------------
+
+    transcribed, speakers, diarizer_used, timings["diarize"] = _diarize(
+        engine, job, audio, transcribed, stage
+    )
+    if request.get("diarize"):
+        transcribed["segments"] = recognising.split_at_speakers(transcribed["segments"])
+    peak_used = max(peak_used, _vram()[0])
+
+    # The result --------------------------------------------------------------
+
+    stage("finishing")
+    timings["queued"] = job.get("queued_seconds", 0.0)
+    timings["total"] = round(time.monotonic() - started, 3)
+    language = recognising.language_part(rows, request.get("language"))
+    used = diarizer_used or {}
+    settings_used = {
+        "task": request.get("task", "transcribe"),
+        "task_run": "transcribe",
+        "task_reason": "requested",
+        "language": language["detected"],
+        # The model that wrote the words; the Whisper model the request named
+        # is validated and reported, and not used.
+        "model": "qwen3-asr-1.7b",
+        "model_revision": revisions.get("asr"),
+        "model_note": (
+            f"the request named the whisper model {request.get('model', '')}, "
+            "which the qwen3-asr recogniser does not use"
+        ),
+        "recogniser": "qwen3-asr",
+        "recogniser_version": revisions.get("asr"),
+        "aligner_version": revisions.get("aligner"),
+        "attention": health.get("attention"),
+        "piece_seconds": recognising.PIECE_SECONDS,
+        "pieces": len(pieces),
+        "words_unlengthed": unlengthed,
+        "compute_type": "bfloat16",
+        "diarize": bool(request.get("diarize")),
+        "diarizer": (
+            request.get("diarizer", "nemotron") if request.get("diarize") else None
+        ),
+        "diarizer_version": (
+            used.get("revision")
+            if used.get("name") == "nemotron"
+            else (
+                engine.settings["model_revisions"].get("diarization") if used else None
+            )
+        ),
+        "diarizer_nemo": used.get("nemo") or None,
+        "speakers": request.get("speakers"),
+        "vocabulary_terms_given": len(request.get("vocabulary") or []),
+        "vocabulary_terms_used": prompt.vocabulary_terms_used,
+        "context_given": bool(request.get("context")),
+        "prompt_tokens": prompt.prompt_tokens,
+        "return_speaker_embeddings": bool(request.get("return_speaker_embeddings")),
+        "fit_words_over_whole": False,
+    }
+    service = _service()
+    service["recogniser"] = health.get("versions") or {}
+    result = {
+        "audio": job["audio"],
+        "language": language,
+        "word_timestamps": {"present": True, "reason": None},
+        "segments": _segments(transcribed),
+        "speakers": speakers,
+        "settings_used": settings_used,
+        "service": service,
+        "timings_seconds": timings,
+        "gpu": _card(),
+    }
+    path = Path(job["result_path"])
+    path.write_text(json.dumps(result), encoding="utf-8")
+    outbox.put(
+        _message(
+            "result",
+            job_id=job_id,
+            path=str(path),
+            wall_seconds=timings["total"],
+            peak_vram_gb=round(peak_used, 2),
+        )
+    )
+    del duration
+
+
+def _recogniser_timeout(piece_seconds: float) -> float:
+    """Generous: a 45-second piece takes a second or two once the models
+    are loaded, and the first piece after a container start loads them."""
+    return 300.0 + 4.0 * piece_seconds
 
 
 def _run_diarize_only(engine: Engine, job: dict[str, Any], outbox, stage) -> None:
@@ -614,6 +827,9 @@ def _segments(transcribed: dict[str, Any]) -> list[dict[str, Any]]:
         }
         if segment.get("speaker"):
             one["speaker"] = segment["speaker"]
+        if segment.get("language"):
+            # Each piece's own language under Qwen3-ASR (ADR 0025).
+            one["language"] = segment["language"]
         words = segment.get("words")
         if words:
             one["words"] = [
@@ -701,6 +917,8 @@ def _settings_used(
             "chunk_seconds": 30,
         },
         "diarize": bool(request.get("diarize")),
+        # Which model wrote the words (ADR 0025): this path is Whisper's.
+        "recogniser": "whisper",
         # Which model told the voices apart (Phase 5 chapter 4), and its pin.
         "diarizer": (
             request.get("diarizer", "nemotron") if request.get("diarize") else None

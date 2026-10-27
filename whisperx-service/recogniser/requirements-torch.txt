@@ -1,0 +1,16 @@
+# torch for the recogniser image: the same wheel as the WhisperX and diarizer
+# images (whisperx-service/requirements-torch.txt), so the three containers
+# share one CUDA 12.8 runtime and the package's driver requirement does not
+# rise. qwen-asr does not pin torch; the trial of 2026-10-26 ran on the
+# official image's torch 2.9.1+cu128, and this wheel is the stack's own
+# (docs/research/qwen3-asr.md, part 3). Do not move to a CUDA 13 torch.
+--index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0+cu128
+
+# FlashAttention 2, the project's own prebuilt wheel for this torch, CUDA 12,
+# Python 3.12 and the C++11 ABI the torch wheels use, pinned by the checksum
+# read on 2026-10-27 from the downloaded file. Built from source it would
+# take hours on the hosted runner; the wheel installs in seconds. The
+# package's encoder attention window is applied only under FlashAttention 2
+# (issue 213), so this is not optional.
+flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3%2Bcu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl#sha256=f25da18657a87fc83dc1bfb8b7751b82246e9db355510226b674fd437c34b5fb

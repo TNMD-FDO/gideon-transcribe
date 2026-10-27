@@ -22,8 +22,9 @@ can transcribe beside another on the same card.
   diarization model, and a token belonging to that account. Both are needed
   together, and neither is enough on its own. See "The HuggingFace gate" in
   `docs/whisperx-api.md`. Nemotron 3 Diarization is open and needs no token.
-- Somewhere for the models (about 6.5 GB) and somewhere for the service's own
-  state.
+- Somewhere for the models (about 12 GB: the Whisper models, the diarizer's
+  and, from service 0.8.0, the Qwen3-ASR recogniser's two) and somewhere for
+  the service's own state.
 - Video memory: see "GPU budget" below.
 
 ## Installing it
@@ -172,6 +173,17 @@ eight-hour recording would want about 21 GB on the diarizer's side. So allow
 hours through Nemotron. It is a second container, `diarizer`, on the same card
 by the same UUID, with a 4 GB host-memory limit; its stack and the figures are
 in `docs/research/diarizer-pinned-stack.md`.
+
+**The recogniser beside them** (service 0.8.0, ADR 0025) is a third
+container, `recogniser`, holding Qwen3-ASR-1.7B and its forced aligner for
+the Consumer that asks for `recogniser=qwen3-asr`. It loads its models on
+the first piece it is sent, not at start, so a service whose Consumers stay
+on Whisper pays nothing on the card for it; once loaded it holds about 5.5
+GB and about 7 to 8 GB while a piece is recognised (the trial of
+2026-10-26, `docs/research/qwen3-asr.md`), with a 10 GB host-memory limit.
+Under Qwen3-ASR the Whisper model is not loaded for the job, so the card's
+high point for such a job is lower than Whisper's, not higher; a service
+that runs both in turn holds both.
 
 ## Measuring it on your own recordings
 

@@ -300,7 +300,9 @@
     if (mailMe && !mailMe.disabled) { mailMe.checked = !!values.email_when_done; }
     document.getElementById("diarize").checked = !!values.diarize;
     showDiarizeWarning();
-    document.getElementById("translate").checked = !!values.translate;
+    var translate = document.getElementById("translate");
+    // Greyed under the Qwen3-ASR recogniser (ADR 0025): never ticked then.
+    translate.checked = !translate.disabled && !!values.translate;
     document.getElementById("language").value = values.language || "";
     document.getElementById("vocabulary").value =
       (values.vocabulary || []).join("\n");

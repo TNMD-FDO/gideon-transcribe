@@ -15,7 +15,7 @@ The app is installed in pieces. The server alone runs the app; each piece is add
 | What the server has | What it opens | Card memory | What else it needs |
 |---|---|---|---|
 | **The server alone** | Cases, incidents, chronology, notes, clips, documents, sharing, the Panel. Recordings people upload are kept and wait for a card. | none | Ubuntu Server 24.04 or newer; Docker with the Compose plugin; a data drive; a name in your DNS; a certificate (the install makes a self-signed one). About 6 GB of images to fetch, once. |
-| **+ a small card** | Transcription, translation to English, speakers told apart, the Speakers page; short recordings. | 16 to 23 GB | The NVIDIA driver (570 or newer) and the container toolkit with CDI. Batch size 4; a recording over an hour may run out of memory. About 6.5 GB of models to fetch, once. |
+| **+ a small card** | Transcription, translation to English, speakers told apart, the Speakers page; short recordings. | 16 to 23 GB | The NVIDIA driver (570 or newer) and the container toolkit with CDI. Batch size 4; a recording over an hour may run out of memory. About 12 GB of models to fetch, once. |
 | **+ a card** | The same, for recordings up to about two hours. | 24 to 31 GB | Batch size 8. |
 | **+ a larger card** | The same, at the measured speed. | 32 GB and up | Batch size 16. |
 | **+ room for the engine** | The AI assistant: summaries, chats, proposed events, the incident memo and its facts sheet, the comparison, and vision (the Local engine's model reads pictures). | 44 GB and up | The Local engine takes about 20 GB beside transcription and fetches about 8 GB of model, once. **Or** an engine your office already runs on the LAN, which needs no card here at all. |
@@ -278,13 +278,13 @@ One command runs the whole of this step in order, stopping at the first thing th
 
 (`./transcribe bring-up --build` builds the images on the server instead of pulling them.) It pulls the images, proves the card and fetches the models when transcription is on, starts everything, makes the Local admin when there is none (it asks you for the password), and ends with `./transcribe check`. The install offers to run it for you at the end of its questions. The same steps by hand, for a reader who wants to see each one:
 
-**Get the images.** Compose pulls the app's three images from the registry (the app, the transcription service, and the diarizer beside it), and the upstream ones (the database, the web server, the upload sidecar):
+**Get the images.** Compose pulls the app's four images from the registry (the app, the transcription service, and the diarizer and the recogniser beside it), and the upstream ones (the database, the web server, the upload sidecar):
 
 ```bash
 docker compose pull
 ```
 
-If the registry cannot be reached from your server, or nothing is published there yet, build the three images on the server instead. It takes twenty to forty minutes the first time and is mostly waiting:
+If the registry cannot be reached from your server, or nothing is published there yet, build the four images on the server instead. It takes twenty to forty minutes the first time and is mostly waiting:
 
 ```bash
 docker compose build
@@ -296,7 +296,7 @@ docker compose build
 docker compose run --rm whisperx selftest
 ```
 
-**Fetch the models** (with transcription). About 6.5 GB, once, into the App data folder. The Hugging Face token, if you gave one, is used here for pyannote; without one the pull says that model was skipped and goes on:
+**Fetch the models** (with transcription). About 12 GB, once, into the App data folder (the Whisper models, the diarizer's, and from v1.160.0 the Qwen3-ASR recogniser's two, about 5.3 GB, fetched whether or not the Panel ever chooses it). The Hugging Face token, if you gave one, is used here for pyannote; without one the pull says that model was skipped and goes on:
 
 ```bash
 docker compose run --rm whisperx pull
@@ -489,7 +489,7 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `The AI assistant refused the connection. Ask IT.` (in the app) | The engine wants a different token from the one in `secrets/llm_api_token`, or the file is empty. | `./transcribe engine`, paste the engine's token, then `docker compose up -d`. |
 | The Status page says `AI assistant: unreachable since ...` | The engine is down, or `llm-worker` is not on its network. | Check the engine's own stack; `./transcribe check` proves the network membership; `./transcribe engine` fixes it. For the Local engine, `./transcribe logs vllm`: the first start downloads the model and takes minutes. |
 | `the engine token file is empty` in `./transcribe logs vllm` | The Local engine refuses to start without a token. | `./transcribe engine local on` writes one when the file is empty. |
-| `error from registry: denied` during a pull | The three images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
+| `error from registry: denied` during a pull | The four images are not published, or the server is not signed in to the registry. | Nothing. Compose falls back to building them on the server, which is slower and otherwise the same. |
 | `The registry had nothing to give, so the images are built here.` | As above, during an upgrade. Not an error. | Wait. Ten to twenty minutes the first time. |
 | `The build failed, so the upgrade stops here.` | Building an image on the server failed. The old containers are still running. | Read the message above it. Usually the server cannot reach one of the appendix's hosts. `./transcribe rollback <the tag you were on>` puts the checkout back. |
 | `There is no release called vX.Y.Z.` | The tag does not exist, or the server cannot reach GitHub. | Check the tag on the Releases page, and that `github.com` is reachable from the server. |
@@ -652,7 +652,7 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `MEDIA_THREADS_PER_JOB` | How many processor threads one piece of media work may use. Media work never uses the card. |
 | `MEDIA_CONCURRENT_JOBS` | How many pieces of media work run at once. These two are how you keep some of the server for everything else. |
 | `MEDIA_WORKER_CPUS` | The most processors the media worker may use, written by the install and the upgrade from the host's own count, forty at most (v1.137.0). |
-| `BUILD_CACHE_GB` | How much build cache this project's own Docker builder keeps between upgrades, in gigabytes; the newest records up to this, so an upgrade that builds rebuilds only what changed. One build of the three images leaves about 40 GB; 60 as shipped. Lower it on a small Docker disk (v1.137.2). |
+| `BUILD_CACHE_GB` | How much build cache this project's own Docker builder keeps between upgrades, in gigabytes; the newest records up to this, so an upgrade that builds rebuilds only what changed. One build of the four images leaves about 50 GB; 60 as shipped. Lower it on a small Docker disk (v1.137.2). |
 | `OLD_CACHE_PRUNED` | Written by the upgrade when the records this project's builds left in the daemon's shared build cache before v1.137.0 have been pruned: the round of the prune that ran (2 at v1.137.3). Leave it. |
 | `RELEASE_TAG` | The Release this server is running. Written by `./transcribe upgrade`, never by hand. Empty on a first install. |
 

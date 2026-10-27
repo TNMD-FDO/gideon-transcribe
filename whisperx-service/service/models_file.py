@@ -31,6 +31,7 @@ class Models:
         diarization: Model,
         diarizer: Model | None = None,
         voices: Model | None = None,
+        recogniser: dict[str, Model] | None = None,
     ) -> None:
         self.models = models
         self.diarization = diarization
@@ -39,6 +40,9 @@ class Models:
         self.diarizer = diarizer
         # TitaNet-large, the voices, in the same container (ADR 0021).
         self.voices = voices
+        # Qwen3-ASR and its forced aligner, served by the recogniser container
+        # (ADR 0025): "asr" and "aligner"; empty for a file from before it.
+        self.recogniser = recogniser or {}
 
     @classmethod
     def load(cls, path: Path = MODELS_FILE) -> Models:
@@ -78,7 +82,16 @@ class Models:
                 licence=raw["voices"].get("licence", ""),
                 file=raw["voices"].get("file", ""),
             )
-        return cls(models, diarization, diarizer, voices)
+        recogniser = {
+            name: Model(
+                name=name,
+                repository=model["repository"],
+                revision=model.get("revision"),
+                licence=model.get("licence", ""),
+            )
+            for name, model in (raw.get("recogniser") or {}).items()
+        }
+        return cls(models, diarization, diarizer, voices, recogniser)
 
     @property
     def names(self) -> tuple[str, ...]:

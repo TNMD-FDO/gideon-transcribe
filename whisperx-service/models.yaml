@@ -70,6 +70,27 @@ voices:
   gated: false
   size_gb: 0.10
 
+# The recogniser container's models (Phase 1 chapter 7, ADR 0025): Qwen3-ASR
+# 1.7B, which writes the words under the Qwen3-ASR recogniser choice, and its
+# forced aligner, which times them. Open weights, Apache 2.0, no gate and no
+# token. Served by the `recogniser` service in the Compose file, which reads
+# the two snapshots offline and loads them on the first job that asks. The
+# revisions are the repositories' heads on 2026-10-26, the day of the trial
+# (docs/research/qwen3-asr.md); they move only through a research ticket.
+recogniser:
+  asr:
+    repository: Qwen/Qwen3-ASR-1.7B
+    revision: 7278e1e70fe206f11671096ffdd38061171dd6e5
+    licence: Apache-2.0
+    gated: false
+    size_gb: 4.0
+  aligner:
+    repository: Qwen/Qwen3-ForcedAligner-0.6B
+    revision: c7cbfc2048c462b0d63a45797104fc9db3ad62b7
+    licence: Apache-2.0
+    gated: false
+    size_gb: 1.3
+
 # The alignment models for the languages in WHISPERX_ALIGN_LANGUAGES, so that
 # those languages are aligned offline from the first run. Both come from
 # torchaudio's own bundles, which torch fetches by URL rather than from a

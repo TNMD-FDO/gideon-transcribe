@@ -34,8 +34,8 @@ services:
     build:
       context: .
     restart: unless-stopped
-    # The transcription piece (v1.83.0, ADR 0015): the service and the
-    # diarizer start only under the `transcription` profile, which
+    # The transcription piece (v1.83.0, ADR 0015): the service, the diarizer
+    # and the recogniser start only under the `transcription` profile, which
     # `./transcribe install` writes when the office names a card and
     # `./transcribe add transcription` writes later. An office with no card
     # yet runs the rest of the stack without them.
@@ -106,6 +106,10 @@ services:
       WHISPERX_LOG_LEVEL: "${WHISPERX_LOG_LEVEL:-info}"
       # The diarizer container (Phase 5 chapter 4), on this network.
       DIARIZER_URL: "http://diarizer:8100"
+      # The recogniser container (Phase 1 chapter 7, ADR 0025), on this
+      # network; a job under the qwen3-asr recogniser goes to it piece by
+      # piece.
+      RECOGNISER_URL: "http://recogniser:8200"
       TZ: "${TZ:-UTC}"
 
     networks:
@@ -211,6 +215,71 @@ services:
     logging:
       driver: journald
 
+  # The recogniser (Phase 1 chapter 7, ADR 0025): Qwen3-ASR-1.7B and its
+  # forced aligner, in a container of their own so the WhisperX image's
+  # pinned stack is not disturbed (the package pins transformers 4.57.6 and
+  # brings FlashAttention 2). The WhisperX service calls it at
+  # http://recogniser:8200 one piece of audio at a time, under the Panel's
+  # Qwen3-ASR recogniser choice; nothing else calls it, and it has no token.
+  # It reads the model folder offline, on the same card as the service, and
+  # loads its models on the first piece, not at start: an office that keeps
+  # the Whisper recogniser pays nothing on the card for it. Once loaded it
+  # holds about 5.5 GB and about 7 to 8 GB while a piece is recognised.
+  recogniser:
+    image: ghcr.io/tnmd-fdo/gideon-transcribe-recogniser:${RELEASE_TAG:-dev}
+    build:
+      context: ./recogniser
+    restart: unless-stopped
+    profiles: ["transcription"]
+    user: "${WHISPERX_UID:?set WHISPERX_UID in .env}:${WHISPERX_GID:?set WHISPERX_GID in .env}"
+    init: true
+    deploy:
+      resources:
+        limits:
+          # Host memory: the two models pass through host memory as they
+          # load (about 5.5 GB), torch and transformers are the rest.
+          # Counted against Transcribe's line in the box ledger.
+          memory: 10G
+        reservations:
+          devices:
+            - driver: cdi
+              capabilities: ["gpu"]
+              device_ids:
+                - "nvidia.com/gpu=${WHISPERX_GPU_UUID:-unset}"
+    volumes:
+      - "${WHISPERX_MODELS_DIR:?set WHISPERX_MODELS_DIR in .env}:/models"
+    environment:
+      RECOGNISER_MODEL: Qwen/Qwen3-ASR-1.7B
+      RECOGNISER_ALIGNER: Qwen/Qwen3-ForcedAligner-0.6B
+      # The pinned revisions, the same as models.yaml's, echoed into every
+      # result's settings_used.
+      RECOGNISER_REVISION: 7278e1e70fe206f11671096ffdd38061171dd6e5
+      RECOGNISER_ALIGNER_REVISION: c7cbfc2048c462b0d63a45797104fc9db3ad62b7
+      # flash_attention_2 is what the trial ran; sdpa for a card the wheel
+      # does not cover, with the package's attention window then not applied.
+      RECOGNISER_ATTENTION: "${RECOGNISER_ATTENTION:-flash_attention_2}"
+      TZ: "${TZ:-UTC}"
+    networks:
+      - whisperx
+    expose:
+      - "8200"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8200/healthz", timeout=3).status == 200 else 1)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # The process is up in seconds; the models load on the first piece.
+      start_period: 120s
+    stop_grace_period: 20s
+    logging:
+      driver: journald
+
   # The fast lane: the same service a second time, for what must not wait
   # behind a long job (the app's Live recordings, and later the parts of one
   # being transcribed while it records, and the Interpreter's Turns). Off
@@ -274,6 +343,9 @@ services:
       WHISPERX_ALIGN_LANGUAGES: "${WHISPERX_ALIGN_LANGUAGES:-en,es}"
       WHISPERX_LOG_LEVEL: "${WHISPERX_LOG_LEVEL:-info}"
       DIARIZER_URL: "http://diarizer:8100"
+      # The lane runs Whisper alone (ADR 0025): with no recogniser named, a
+      # job that asks for qwen3-asr here is refused, recogniser_unavailable.
+      RECOGNISER_URL: ""
       TZ: "${TZ:-UTC}"
     networks:
       - whisperx

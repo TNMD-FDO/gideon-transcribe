@@ -2294,7 +2294,7 @@ For the Provenance and the viewer markers, the app keeps on the Recording: the t
 - **Kept**: Summaries and Chats, marked as based on an earlier Transcript once the new one lands; Clips keep their time spans and rendered files, and their transcript excerpts are refreshed from the new Transcript.
 - The Provenance keeps both processings. The audit log records the re-run as "Batch submitted" with its settings.
 
-### The recogniser (ADR 0025, 2026-10-26; not yet built)
+### The recogniser (ADR 0025, 2026-10-26; built in v1.160.0)
 
 The model that writes the words is a Panel choice, **Recogniser**: **Whisper** (the default; everything in this chapter as written) or **Qwen3-ASR**, read when each Job is sent to the service and sent as the request field `recogniser`. Each Transcript records which wrote it, in the Provenance, on Details and in the notices. Switching is instant either way: the next Job uses the new choice, Jobs already sent finish as they started, nothing is converted. The facts behind the choice and the trial of 2026-10-26 are in `docs/research/qwen3-asr.md`.
 
@@ -2306,7 +2306,7 @@ Under **Qwen3-ASR** the service runs a different path and returns the same resul
 - the diarizer runs over the whole file as before, and each word takes its speaker;
 - `translate` is refused with its reason: Translate to English under Qwen3-ASR is the app's, below; the Fast lane and Live recordings stay on Whisper; the **Model** setting (large-v3 or turbo) is Whisper's and greys with its reason.
 
-An office with no chat engine keeps Whisper for translation: under Qwen3-ASR the Upload page's Translate to English greys with "needs the chat engine".
+An office with no chat engine keeps Whisper for translation: under Qwen3-ASR the Upload page's Translate to English greys with "needs the chat engine". Until the section below is built (v1.160.0 built the recogniser alone) the Upload page greys it under Qwen3-ASR with that reason instead, and a Recording that asked is transcribed in the language spoken. Live recordings and the clock re-read (ADR 0023) stay on Whisper: the re-read is Whisper's fitting, and a Transcript Qwen3-ASR wrote keeps its clock marks as the measure of the new timing and gets no re-read.
 
 ### Translation from the words as spoken (ADR 0026, 2026-10-26; not yet built)
 

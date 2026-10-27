@@ -118,6 +118,8 @@ jobs:
           docker compose -f whisperx-service/compose.yaml --profile transcription config --quiet
           docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx whisperx
           docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx diarizer
+          # The recogniser (ADR 0025), under the same profile.
+          docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx recogniser
           ! docker compose -f whisperx-service/compose.yaml --profile transcription config --services | grep -qx whisperx-fast
           # The fast lane, which is the service a second time under a profile.
           docker compose -f whisperx-service/compose.yaml --profile fast config --quiet
@@ -148,6 +150,7 @@ jobs:
           docker compose --profile transcription config --quiet
           docker compose --profile transcription config --services | grep -qx whisperx
           docker compose --profile transcription config --services | grep -qx diarizer
+          docker compose --profile transcription config --services | grep -qx recogniser
           ! docker compose --profile transcription config --services | grep -qx whisperx-fast
           # The backup profile's service, and the drill's override project.
           docker compose --profile backup config --quiet

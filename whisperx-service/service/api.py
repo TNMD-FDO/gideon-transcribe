@@ -20,7 +20,7 @@ from typing import Any, Protocol
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from service import diarizer_client, errors, fitting, pins
+from service import diarizer_client, errors, fitting, pins, recogniser_client
 from service.audio import Audio, probe
 from service.auth import Tokens, bearer
 from service.models_file import Models
@@ -112,6 +112,7 @@ def create_app(
     voices_call: Callable[
         [Path, dict[str, Any], float], dict[str, Any]
     ] = diarizer_client.voices,
+    recogniser_up: Callable[[], bool] = recogniser_client.is_up,
 ) -> FastAPI:
     """Build the app.
 
@@ -176,6 +177,14 @@ def create_app(
                 "the diarizer container is not answering, so Nemotron cannot "
                 "separate the speakers. Check `docker compose ps diarizer`, or "
                 "choose the pyannote diarizer"
+            )
+        # A job under Qwen3-ASR must find its recogniser container here too
+        # (ADR 0025); the Fast lane has none and refuses every such job.
+        if submission.recogniser == "qwen3-asr" and not recogniser_up():
+            raise errors.recogniser_unavailable(
+                "the recogniser container is not answering, so Qwen3-ASR cannot "
+                "write the words. Check `docker compose ps recogniser`, or "
+                "choose the whisper recogniser"
             )
 
         waiting = store.duplicate_of(consumer.name, submission.client_reference)
@@ -396,6 +405,8 @@ def create_app(
                 "pyannote": models.is_cached(models.diarization),
                 "voices": voices_up(),
             },
+            # Which recognisers a job may ask for right now (ADR 0025).
+            "recognisers": {"whisper": True, "qwen3-asr": recogniser_up()},
             "uptime_seconds": round(time.monotonic() - started_at),
             "last_failure": (
                 {"reason_class": failure[0], "time": failure[1]} if failure else None

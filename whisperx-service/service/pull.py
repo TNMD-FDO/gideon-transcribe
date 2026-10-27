@@ -291,6 +291,41 @@ def _pull_voices(model: dict[str, Any] | None) -> list[str]:
     return []
 
 
+def _pull_recogniser(models: dict[str, Any] | None) -> list[str]:
+    """Qwen3-ASR and its forced aligner for the recogniser container (ADR
+    0025): not gated, so no token; each pinned by revision like every other
+    model, the whole snapshot fetched."""
+    from huggingface_hub import snapshot_download
+
+    _say("The recogniser's models")
+    if not models:
+        _say("  none listed in models.yaml")
+        return []
+    problems: list[str] = []
+    for name, model in models.items():
+        repository = model["repository"]
+        pinned = model.get("revision")
+        try:
+            path = snapshot_download(repository, revision=pinned)
+        except Exception as exc:  # noqa: BLE001 - the message is the report
+            _say(f"  {name}: COULD NOT BE FETCHED")
+            _say(f"    {exc}")
+            problems.append(
+                f"the recogniser's {name} model could not be fetched; is the "
+                "server online?"
+            )
+            continue
+        got = _revision_of(path)
+        if pinned and got != pinned:
+            _say(f"  {name}: revision {got}, but models.yaml pins {pinned}")
+            problems.append(
+                f"the recogniser's {name} model is not at the revision it is pinned to"
+            )
+        else:
+            _say(f"  {name}: at its pinned revision {got}")
+    return problems
+
+
 def pull() -> int:
     """Fetch and check every model. Returns 0 when everything is in place."""
     import yaml
@@ -314,6 +349,8 @@ def pull() -> int:
     problems += _pull_diarizer(models.get("diarizer"))
     _say()
     problems += _pull_voices(models.get("voices"))
+    _say()
+    problems += _pull_recogniser(models.get("recogniser"))
     _say()
     problems += _pull_alignment(models.get("alignment") or {}, languages)
     _say()

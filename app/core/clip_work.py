@@ -254,8 +254,8 @@ def excerpt_for(clip: Clip) -> str:
             f"{exports.kind_line(transcript)}. {recording.original_filename}, "
             f"{exports.clock(clip.start)} to {exports.clock(clip.end)}, uploaded "
             f"{recording.created:{exports.DAY}} by {recording.user.username}. "
-            f"Processed {transcript.created:{exports.DAY}} with Whisper "
-            f"{exports.model_of(transcript)}."
+            f"Processed {transcript.created:{exports.DAY}} with "
+            f"{exports.engine_of(transcript)}."
         ),
     ]
     if who:

@@ -267,11 +267,26 @@ def mark(transcript) -> dict:
         "marked": len(marks),
         "at": timezone.now().isoformat(timespec="seconds"),
     }
+    # A Transcript Qwen3-ASR wrote (ADR 0025) keeps its marks as the measure
+    # of that recogniser's timing and gets no re-read: its aligner timed
+    # every word already, and a re-read by Whisper would put one
+    # recogniser's words under another's lines.
+    from core import exports
+
+    by_whisper = exports.recogniser_of(transcript) == "whisper"
+    if marks and not by_whisper:
+        counts["reread"] = {
+            "state": "not run",
+            "why": "the qwen3-asr recogniser timed every word",
+            "jobs": {},
+            "retimed": 0,
+            "unplaced": 0,
+        }
     provenance = dict(transcript.provenance or {})
     provenance["clock_check"] = counts
     transcript.provenance = provenance
     transcript.save(update_fields=["provenance"])
-    if marks:
+    if marks and by_whisper:
         _ask_later(transcript)
     return counts
 
@@ -445,7 +460,10 @@ def reread_request(recording, transcript, head: int, piece: int = 0) -> dict:
         "diarizer": settings_store.diarizer(),
         "client_reference": f"clock-{transcript.pk}-{head}-{piece}-{int(time.time())}",
         # The words fitted over the whole piece (service 0.7.0, v1.153.0):
-        # the recogniser's own stamps no longer trap them.
+        # the recogniser's own stamps no longer trap them. The fitting is
+        # Whisper's path (ADR 0025), and a re-read runs only on a Transcript
+        # Whisper wrote.
+        "recogniser": "whisper",
         "fit_words_over_whole": True,
         "priority": REREAD_PRIORITY,
     }

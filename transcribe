@@ -45,7 +45,7 @@
 #   ./transcribe logs [name]  follow the logs of one service, or of all of them
 #
 # install refuses to overwrite an existing .env, secrets/, or tls/ unless it is
-# given --reconfigure. install and upgrade pull the three images; --build builds
+# given --reconfigure. install and upgrade pull the four images; --build builds
 # them on the server instead, for an office that cannot reach the registry.
 
 set -euo pipefail
@@ -989,7 +989,7 @@ cmd_bring_up() {
     compose run --rm whisperx selftest || { red "The self-test failed on this card; see above. Nothing was started. When it is fixed: ./transcribe bring-up"; exit 1; }
     n=$((n + 1))
     echo
-    echo "$n. Fetching the models (about 6.5 GB, once)."
+    echo "$n. Fetching the models (about 12 GB, once)."
     compose run --rm whisperx pull || { red "The models could not be fetched; is huggingface.co reachable from this server? When it is: ./transcribe bring-up"; exit 1; }
     n=$((n + 1))
   fi
@@ -1360,10 +1360,10 @@ add_transcription() {
   cat <<'WORDS'
 Transcription
 -------------
-The transcription service and the diarizer, on one card of this server. This
-names the card, fetches the models (about 6.5 GB, once), starts both
-containers and checks them. Recordings uploaded while there was no card are
-picked up within a minute.
+The transcription service, the diarizer and the recogniser, on one card of
+this server. This names the card, fetches the models (about 12 GB, once),
+starts the three containers and checks them. Recordings uploaded while there
+was no card are picked up within a minute.
 
 WORDS
   if ! have_a_card; then
@@ -1373,10 +1373,10 @@ WORDS
   configure_transcription || exit 1
   echo
   if [ "$build" = "--build" ]; then
-    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer
-  elif ! compose --profile transcription pull --quiet whisperx diarizer 2>/dev/null; then
+    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer recogniser
+  elif ! compose --profile transcription pull --quiet whisperx diarizer recogniser 2>/dev/null; then
     echo "  The images could not be pulled; building them here instead."
-    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer
+    ensure_the_builder && compose --profile transcription build --builder "$BUILDER" whisperx diarizer recogniser
   fi
   compose run --rm whisperx selftest || { red "The service's self-test failed on this card; see above. Nothing was started."; exit 1; }
   compose run --rm whisperx pull
@@ -1401,8 +1401,8 @@ cmd_remove() {
       if fast_lane_is_on; then
         cmd_fast_lane_off
       fi
-      compose --profile transcription stop whisperx diarizer 2>/dev/null || true
-      compose --profile transcription rm -f whisperx diarizer 2>/dev/null || true
+      compose --profile transcription stop whisperx diarizer recogniser 2>/dev/null || true
+      compose --profile transcription rm -f whisperx diarizer recogniser 2>/dev/null || true
       profile_remove transcription
       compose up -d
       green "Transcription is off. The models stay in the app data folder for the next add;"
@@ -3099,7 +3099,7 @@ OLD_CACHE_STRINGS="audiowaveform|pytesseract|import ldap|g729|requirements-torch
 OLD_CACHE_PRUNE_ROUND="2"
 
 # How much build cache this project's builder keeps between upgrades when
-# .env says nothing (v1.137.2): one build of the three images leaves about
+# .env says nothing (v1.137.2): one build of the four images leaves about
 # 40 GB of records, and the newest are kept up to this ceiling.
 BUILD_CACHE_GB_DEFAULT=60
 
@@ -3127,7 +3127,7 @@ root_gb_free() {
 
 tidy_the_images() {
   local keep="$1" previous="$2" image
-  for image in ghcr.io/tnmd-fdo/gideon-transcribe-whisperx ghcr.io/tnmd-fdo/gideon-transcribe-diarizer ghcr.io/tnmd-fdo/gideon-transcribe-app; do
+  for image in ghcr.io/tnmd-fdo/gideon-transcribe-whisperx ghcr.io/tnmd-fdo/gideon-transcribe-diarizer ghcr.io/tnmd-fdo/gideon-transcribe-recogniser ghcr.io/tnmd-fdo/gideon-transcribe-app; do
     docker images --format '{{.Repository}}:{{.Tag}}' "$image" 2>/dev/null \
       | grep -v -e ":${keep}\$" -e ":${previous}\$" -e ':dev$' -e ':<none>$' \
       | xargs -r docker image rm >/dev/null 2>&1 || true
@@ -3318,7 +3318,7 @@ finish_the_upgrade() {
   echo
   if [ "$build" = "yes" ]; then
     build_the_images
-  elif compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer >/dev/null 2>&1; then
+  elif compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer recogniser >/dev/null 2>&1; then
     pass "the images came from the registry"
     verify_the_pull "$tag"
   else
@@ -3494,7 +3494,7 @@ cmd_rollback() {
   # rollback had left RELEASE_TAG at the newer tag, so the newer images kept
   # running under the older compose file.
   set_env RELEASE_TAG "$tag"
-  if compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer >/dev/null 2>&1; then
+  if compose pull --quiet --ignore-buildable && compose pull --quiet app whisperx diarizer recogniser >/dev/null 2>&1; then
     pass "the images came from the registry"
   else
     amber "The registry had nothing to give for the app's own images, so they are built here."

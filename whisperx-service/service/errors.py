@@ -31,6 +31,11 @@ MODEL_UNAVAILABLE = "model_unavailable"
 HINT_NOT_SUPPORTED = "hint_not_supported"
 EMBEDDINGS_NOT_SUPPORTED = "embeddings_not_supported"
 DIARIZER_UNAVAILABLE = "diarizer_unavailable"
+# The recogniser choice (ADR 0025, service 0.8.0): Qwen3-ASR does not
+# translate, so a job that asks for English under it is refused at submit;
+# and the recogniser container must answer before such a job is accepted.
+RECOGNISER_CANNOT_TRANSLATE = "recogniser_cannot_translate"
+RECOGNISER_UNAVAILABLE = "recogniser_unavailable"
 
 # A CUDA fault or an out-of-memory. The only class that is retried, once, after
 # the model process has been reloaded.
@@ -134,6 +139,20 @@ def embeddings_not_supported() -> ServiceError:
 
 def diarizer_unavailable(message: str) -> ServiceError:
     return ServiceError(503, message, DIARIZER_UNAVAILABLE)
+
+
+def recogniser_cannot_translate(field: str) -> ServiceError:
+    return ServiceError(
+        400,
+        f"{field} was asked for with recogniser qwen3-asr, which writes the "
+        "speech in its own language and never English; ask for transcribe and "
+        "translate the words afterwards, or choose the whisper recogniser",
+        RECOGNISER_CANNOT_TRANSLATE,
+    )
+
+
+def recogniser_unavailable(message: str) -> ServiceError:
+    return ServiceError(503, message, RECOGNISER_UNAVAILABLE)
 
 
 def model_unavailable(message: str) -> ServiceError:

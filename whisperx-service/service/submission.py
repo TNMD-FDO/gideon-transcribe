@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from service import errors
-from service.detection import TASKS, TRANSCRIBE
+from service.detection import TASKS, TRANSCRIBE, TRANSLATE, TRANSLATE_IF_NEEDED
 
 # The caps the contract fixes.
 MAX_VOCABULARY_TERMS = 200
@@ -143,7 +143,15 @@ FIELDS = {
     "priority",
     "diarizer",
     "fit_words_over_whole",
+    "recogniser",
 }
+
+# Which model writes the words (Phase 1 chapter 7, ADR 0025; service 0.8.0):
+# Whisper in this image, or Qwen3-ASR in the service's own recogniser
+# container.
+WHISPER = "whisper"
+QWEN3_ASR = "qwen3-asr"
+RECOGNISERS = (WHISPER, QWEN3_ASR)
 
 # Which model tells voices apart (Phase 5 chapter 4): Nemotron 3 Diarization in
 # the service's own diarizer container, or the pyannote pipeline as before.
@@ -194,6 +202,9 @@ class Submission:
     # The words fitted over the whole file (service 0.7.0), for a Consumer
     # re-reading a short window; refused over FIT_WHOLE_MAX_SECONDS at submit.
     fit_words_over_whole: bool = False
+    # whisper or qwen3-asr (service 0.8.0); under qwen3-asr nothing that
+    # asks for English, and no fitting, which is Whisper's path.
+    recogniser: str = WHISPER
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -210,6 +221,7 @@ class Submission:
             "priority": self.priority,
             "diarizer": self.diarizer,
             "fit_words_over_whole": self.fit_words_over_whole,
+            "recogniser": self.recogniser,
         }
 
 
@@ -344,6 +356,25 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
             "fit_words_over_whole was asked for with task diarize, which writes "
             "no words to fit"
         )
+    recogniser = body.get("recogniser") or WHISPER
+    if recogniser not in RECOGNISERS:
+        raise errors.invalid(f"recogniser must be one of: {', '.join(RECOGNISERS)}")
+    translate_if_mixed = _boolean(body, "translate_if_mixed", False)
+    if recogniser == QWEN3_ASR:
+        # Qwen3-ASR writes the speech in its own language and never English
+        # (ADR 0026 has the Consumer translate afterwards), and the fitting
+        # over the whole file is Whisper's path. A Consumer that asks for
+        # either with it has a bug, and is told so rather than humoured.
+        if task in (TRANSLATE, TRANSLATE_IF_NEEDED):
+            raise errors.recogniser_cannot_translate(f"task {task}")
+        if translate_if_mixed:
+            raise errors.recogniser_cannot_translate("translate_if_mixed")
+        if fit_whole:
+            raise errors.invalid(
+                "fit_words_over_whole was asked for with recogniser qwen3-asr, "
+                "whose aligner times every word; the fitting is the whisper "
+                "recogniser's"
+            )
     reference = body.get("client_reference")
     if reference is not None and not isinstance(reference, str):
         raise errors.invalid("client_reference must be text")
@@ -356,7 +387,7 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
 
     return Submission(
         task=task,
-        translate_if_mixed=_boolean(body, "translate_if_mixed", False),
+        translate_if_mixed=translate_if_mixed,
         language=language,
         model=model,
         diarize=diarize,
@@ -368,4 +399,5 @@ def read(body: Any, models: tuple[str, ...]) -> Submission:
         priority=priority,
         diarizer=diarizer,
         fit_words_over_whole=fit_whole,
+        recogniser=recogniser,
     )

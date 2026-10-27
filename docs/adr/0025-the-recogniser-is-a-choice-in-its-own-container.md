@@ -1,6 +1,6 @@
 # 25. The recogniser is a choice, Whisper by default, Qwen3-ASR in a container of its own
 
-Date: 2026-10-26. Status: accepted. Release: not yet built (Phase 1 chapter 7, "The recogniser").
+Date: 2026-10-26. Status: accepted. Release: v1.160.0, 2026-10-27 (Phase 1 chapter 7, "The recogniser"); the translation under it, ADR 0026, not yet built.
 
 ## Context
 
@@ -79,3 +79,37 @@ Three things made the shape a decision rather than a swap:
   first.
 - Not built, and still the maintainer's: the 0.6B model, the vLLM backend,
   and Qwen3-ASR on the Fast lane.
+
+## Settled by the build (v1.160.0)
+
+- The cut lands on the quietest 100 ms within five seconds of each
+  45-second target, the package's own rule, in the service's own code; a
+  tail under a second stays on the piece before it. No voice-activity model
+  is loaded for it.
+- The container loads its two models on the first piece, not at start, so
+  an office that keeps Whisper pays nothing on the card for it; the service
+  checks the container answers before it accepts a job, as it does for the
+  diarizer. A job under Qwen3-ASR lets go of the Whisper model the service
+  held, so the two recognisers' memory is never on the card at once from
+  the service's side: the worst case is Whisper's 12 to 17 GB beside the
+  container's 5.5 GB held after its last job, inside the ledger's 24 GB
+  with the diarizer's idle share. The Fast lane names no recogniser container and refuses the
+  choice (`recogniser_unavailable`) rather than running Whisper quietly.
+- At submit the service refuses `task=translate`, `translate_if_needed`
+  and `translate_if_mixed` under Qwen3-ASR, whatever the language, since
+  the language is not known until the job runs; the app sends `transcribe`
+  for a Recording that asked for English and greys the Upload page's
+  Translate to English with its reason until ADR 0026's path is built.
+- A Transcript Qwen3-ASR wrote keeps its clock marks as the measure of the
+  new timing and gets no re-read: the re-read is Whisper's path, and it
+  would put one recogniser's words under another's lines.
+- The lines: a new one at a pause of 0.7 seconds, after a sentence end,
+  where a piece in another language begins, or past 15 seconds or 40
+  words; then split where the diarizer's speaker changes. A word with no
+  length takes up to 0.3 seconds forward to the next word, or back to the
+  previous one.
+- The prompt rule's cap counts words under Qwen3-ASR, the context being a
+  system message with no token slot; the order of dropping stands.
+- The transitive package tree of the fourth image is frozen at the first
+  server build into `constraints.txt` in the release after this, as the
+  diarizer's was (v1.135.0).

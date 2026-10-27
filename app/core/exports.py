@@ -264,6 +264,50 @@ def model_of(transcript: Transcript) -> str:
     return ""
 
 
+def recogniser_of(transcript: Transcript) -> str:
+    """Which model wrote the words (ADR 0025), from the first Run that says:
+    a Transcript from before the choice existed is Whisper's."""
+    for run in runs_of(transcript):
+        which = (run.get("settings_used") or {}).get("recogniser")
+        if which:
+            return str(which)
+    return "whisper"
+
+
+def recogniser_words(used: dict) -> str:
+    """The recogniser and its model as the pages and exports print them
+    after "Processed ... with", from settings_used."""
+    if used.get("recogniser") == "qwen3-asr":
+        version = used.get("recogniser_version") or ""
+        return "Qwen3-ASR 1.7B" + (f" ({version[:8]})" if version else "")
+    return f"Whisper {used.get('model') or ''}".strip()
+
+
+def engine_of(transcript: Transcript) -> str:
+    """The words after "Processed ... with": "Whisper large-v3-turbo" or
+    "Qwen3-ASR 1.7B", from the first Run that names a model."""
+    for run in runs_of(transcript):
+        used = run.get("settings_used") or {}
+        if used.get("model") or used.get("recogniser"):
+            return recogniser_words(used)
+    return "Whisper"
+
+
+def pieces_words(used: dict) -> str:
+    """How Qwen3-ASR read the audio (ADR 0025), for Details: the pieces and
+    the words the aligner gave no length to; "" under Whisper."""
+    if used.get("recogniser") != "qwen3-asr":
+        return ""
+    count = used.get("pieces") or 0
+    seconds = used.get("piece_seconds") or 0
+    spanned = used.get("words_unlengthed") or 0
+    return (
+        f"{count} piece{'s' if count != 1 else ''} of about {seconds:.0f} s, "
+        f"the lines built from the aligner's words; {spanned} word"
+        f"{'s' if spanned != 1 else ''} given a span"
+    )
+
+
 def length_of(recording: Recording) -> str:
     """A length a person reads, not a number of seconds."""
     seconds = int(recording.duration_seconds or 0)
@@ -402,7 +446,7 @@ def plain_text(recording: Recording, with_notes: bool = False) -> str:
             f"{kind_line(transcript)}. {recording.original_filename}, "
             f"{length_of(recording)}, uploaded {local(recording.created):{DAY}} by "
             f"{recording.user.username}. Processed {local(transcript.created):{DAY}} "
-            f"with Whisper {model_of(transcript)}."
+            f"with {engine_of(transcript)}."
         ),
     ]
     if who:
@@ -585,8 +629,7 @@ def word(recording: Recording, exported_by: str, with_notes: bool = False) -> by
             ("Language", language_name(transcript.language)),
             (
                 "Processed",
-                f"{local(transcript.created):{DAY}} with Whisper "
-                f"{model_of(transcript)}",
+                f"{local(transcript.created):{DAY}} with {engine_of(transcript)}",
             ),
             ("SHA-256", recording.sha256),
         ],
@@ -784,6 +827,8 @@ def _provenance(recording, transcript, segments, corrections, exported_by):
         ),
         ("Model", used.get("model", "")),
         ("Model revision", used.get("model_revision", "")),
+        ("Recogniser", recogniser_words(used) if used else ""),
+        ("Pieces", pieces_words(used)),
         (
             "Task",
             f"{used.get('task_run', '')} ({used.get('task_reason', '')})"
@@ -1338,8 +1383,7 @@ def _cover(document, recording, transcript, kind: str) -> None:
             ("Language", language_name(transcript.language)),
             (
                 "Processed",
-                f"{local(transcript.created):{DAY}} with Whisper "
-                f"{model_of(transcript)}",
+                f"{local(transcript.created):{DAY}} with {engine_of(transcript)}",
             ),
             ("SHA-256", recording.sha256),
         ],

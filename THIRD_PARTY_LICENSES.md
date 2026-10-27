@@ -1,7 +1,7 @@
 # Third-party licences
 
 Gideon Transcribe's own work is public domain (see `LICENSE`). Everything
-shipped beside it, in the two images built from this repository and in the
+shipped beside it, in the four images built from this repository and in the
 upstream images the compose file pins, keeps its own licence. This file lists
 those components.
 
@@ -25,6 +25,11 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | nvidia/Nemotron-3-Diarization (weights) | OpenMDW-1.1 | the default diarizer from v1.80.0; open weights, not gated, commercial use allowed; fetched by the model pull into the model folder, never shipped in an image |
 | nvidia/speakerverification_en_titanet_large (weights) | CC-BY-4.0 | TitaNet-large, the voices in the diarizer container (ADR 0021, v1.139.0); attribution required and given here; not gated; fetched by the model pull into the model folder, never shipped in an image; `docs/research/speaker-verification.md` is the measurement that chose it |
 | every other component pinned on the diarizer stack | as pinned | `docs/research/diarizer-pinned-stack.md` is the list |
+| qwen-asr (code) | Apache-2.0 | the recogniser image's package (ADR 0025, v1.160.0), installed without its demo's dependencies; `docs/research/qwen3-asr.md` part 3 is the list of what the image holds |
+| Qwen/Qwen3-ASR-1.7B and Qwen/Qwen3-ForcedAligner-0.6B (weights) | Apache-2.0 | the Qwen3-ASR recogniser and its aligner; open weights, not gated; fetched by the model pull into the model folder, never shipped in an image |
+| FlashAttention (`flash-attn`) | BSD-3-Clause | the recogniser image's attention kernels, the project's own prebuilt wheel pinned by checksum |
+| nagisa (with DyNet) | MIT (DyNet Apache-2.0) | the aligner's Japanese word splitter, imported by the package at module level and never called on the office's languages; the package's Korean splitter, soynlp, is GPL-3.0 and is left out of the image, so a Korean recording under this recogniser fails at the aligner |
+| every other component pinned on the recogniser stack | as pinned | `docs/research/qwen3-asr.md` part 3 is the list |
 | OpenAI Whisper (code and model weights) | MIT | the Hugging Face mirror `openai/whisper-large-v3` is tagged Apache-2.0 and is not gated |
 | PyTorch | BSD-3-Clause | |
 | every other component pinned on the WhisperX stack | as pinned | `docs/research/whisperx-pinned-stack.md` is the list |
@@ -54,7 +59,7 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | vLLM | Apache-2.0 | the Local engine's upstream image, behind the `llm` Compose profile, off by default; pulled by digest only when an office turns the profile on |
 | Qwen3.5-4B weights (`Qwen/Qwen3.5-4B`) | Apache-2.0 | the Local engine's default model, not gated; downloaded by the Local engine itself on its first start, never shipped in an image; an office that names another model in `LLM_LOCAL_MODEL` takes on that model's licence |
 | restic | BSD-2-Clause | the Backup chapter's upstream image; not yet shipped |
-| `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base, and the diarizer's; see note 2 |
+| `nvidia/cuda` base image | NVIDIA Deep Learning Container Licence (proprietary) | the WhisperX service's base, the diarizer's and the recogniser's; see note 2 |
 | ffmpeg as Debian and Ubuntu build it, with its codec packages | GPL v2 or later | see note 1 |
 
 ## 1. ffmpeg and the GPL

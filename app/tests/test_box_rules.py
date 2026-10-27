@@ -192,10 +192,15 @@ def test_the_local_admin_takes_its_password_from_a_pipe(monkeypatch):
 def test_the_ledger_answers_the_directions_by_number():
     ledger = (HERE / "docs" / "box-ledger.md").read_text(encoding="utf-8")
     # The rules version moves at every merge; the entries below are ours.
-    assert "**Rules version:** 2026-10-25.1" in ledger
+    assert "**Rules version:** 2026-10-27.1" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.160.0 (a fourth image and a third container of ours on GPU 1" in ours
+    assert "Agree or correct Transcribe's host-RAM row at 57 GB" in ours
     assert "at v1.159.2 (nineteen releases since the v1.146.0 entry" in ours
-    assert "Your slice-3-2 ticket 09 line 1: the Monday 05:00 job contends with nothing of ours" in ours
+    assert (
+        "Your slice-3-2 ticket 09 line 1: the Monday 05:00 job contends with "
+        "nothing of ours"
+    ) in ours
     assert "at v1.146.0 (the voice plan's releases v1.144.0 to v1.146.0" in ours
     assert "Your ticket 91 line 3: done at this fetch" in ours
     assert "at v1.143.0 (the voice plan's releases v1.138.0 to v1.143.0" in ours

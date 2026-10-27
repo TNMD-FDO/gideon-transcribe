@@ -2,7 +2,7 @@ name: Release
 
 # What turns a tag into something another office can install.
 #
-# Three images are built here and pushed to ghcr.io, and the tag becomes a
+# Four images are built here and pushed to ghcr.io, and the tag becomes a
 # GitHub Release whose notes are that version's section of CHANGELOG.md. A
 # Release is the only thing an installer ever installs or upgrades to.
 #
@@ -35,7 +35,7 @@ name: Release
 # The images are built only while the repository variable PUBLISH_IMAGES is
 # "yes". While the repository is private its packages are private too, and a
 # server cannot pull them without a token it does not have, so it builds the
-# three images itself and the builds here (a quarter of an hour of the
+# four images itself and the builds here (a quarter of an hour of the
 # organisation's free minutes per tag) serve nobody. The Release itself, with
 # its notes, is made either way; without images it says so, and
 # ./transcribe upgrade, finding no digest record, says to build.
@@ -76,6 +76,12 @@ jobs:
             context: ./whisperx-service/diarizer
             dockerfile: whisperx-service/diarizer/Dockerfile
             image: ghcr.io/tnmd-fdo/gideon-transcribe-diarizer
+          # The recogniser (Phase 1 chapter 7, ADR 0025): the fourth image,
+          # Qwen3-ASR and its aligner, built from its own folder.
+          - name: recogniser
+            context: ./whisperx-service/recogniser
+            dockerfile: whisperx-service/recogniser/Dockerfile
+            image: ghcr.io/tnmd-fdo/gideon-transcribe-recogniser
 
     steps:
       - name: Check out the repository
@@ -205,7 +211,8 @@ jobs:
           : > digests.txt
           for image in ghcr.io/tnmd-fdo/gideon-transcribe-app \
                        ghcr.io/tnmd-fdo/gideon-transcribe-whisperx \
-                       ghcr.io/tnmd-fdo/gideon-transcribe-diarizer; do
+                       ghcr.io/tnmd-fdo/gideon-transcribe-diarizer \
+                       ghcr.io/tnmd-fdo/gideon-transcribe-recogniser; do
             digest="$(docker buildx imagetools inspect "$image:$tag" \
               --format '{{.Manifest.Digest}}')"
             echo "$image:$tag@$digest" >> digests.txt
@@ -232,7 +239,7 @@ jobs:
             echo
             echo "None published for this release: the repository builds its"
             echo "images only when PUBLISH_IMAGES is set. Install or upgrade"
-            echo "with \`--build\`, which builds all three from this tag's source."
+            echo "with \`--build\`, which builds all four from this tag's source."
           } >> /tmp/notes.md
 
       - name: Leave the record where a server can fetch it

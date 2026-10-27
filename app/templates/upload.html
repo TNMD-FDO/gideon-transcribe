@@ -253,13 +253,22 @@
                 </div>
               </div>
 
-              <label class="row">
-                <input type="checkbox" id="translate"> <b>Translate to English</b>
+              <label class="row"{% if recogniser == "qwen3-asr" %} title="Translate to English is Whisper's for now"{% endif %}>
+                <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" %} disabled{% endif %}> <b>Translate to English</b>
               </label>
-              <p class="muted small">
-                A recording in more than one language is translated whether or
-                not this is ticked. A translation has no word timing.
-              </p>
+              {% if recogniser == "qwen3-asr" %}
+                {% comment %}ADR 0025: the Qwen3-ASR recogniser never writes English; the chat engine's translation (ADR 0026) comes with a later release. Greyed with the reason, never hidden.{% endcomment %}
+                <p class="muted small">
+                  Not offered under the Qwen3-ASR recogniser yet: a recording is
+                  transcribed in the language spoken, and the English comes with
+                  a later release.
+                </p>
+              {% else %}
+                <p class="muted small">
+                  A recording in more than one language is translated whether or
+                  not this is ticked. A translation has no word timing.
+                </p>
+              {% endif %}
 
               <details id="more" style="margin-top: 10px">
                 <summary>More options</summary>

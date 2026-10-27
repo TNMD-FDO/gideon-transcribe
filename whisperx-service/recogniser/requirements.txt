@@ -1,0 +1,22 @@
+# What the recogniser's package imports on its inference path, each pinned
+# (docs/research/qwen3-asr.md, part 3). qwen-asr itself is installed by the
+# Dockerfile's next step without its own dependency list, which carries the
+# demo's gradio and flask and the vLLM extra: the inference path imports
+# transformers, accelerate, librosa, soundfile, numpy and nagisa (the
+# aligner's Japanese word splitter, imported at module level) and, for
+# Korean text alone, soynlp, which is GPL-3.0 and left out: the office's
+# languages never reach it, and a Korean recording under this recogniser
+# fails at the aligner rather than ships a GPL library inside the image.
+# transformers 4.57.6 and accelerate 1.12.0 are the versions the package
+# pins; librosa is the version the official image carried at the trial; the
+# rest are the newest at the pin date (2026-10-27). What these pull in is
+# held by the first server build's freeze, written into constraints.txt at
+# the release after this one, as the diarizer's was.
+transformers==4.57.6
+accelerate==1.12.0
+librosa==0.11.0
+soundfile==0.13.1
+nagisa==0.2.11
+huggingface-hub==0.36.0
+fastapi==0.141.1
+uvicorn[standard]==0.52.4

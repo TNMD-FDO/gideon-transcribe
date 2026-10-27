@@ -50,7 +50,7 @@ The text produced from a Recording: ordered Segments with timestamps and Speaker
 _Avoid_: transcription (that is the process), output
 
 **Segment**:
-One timed span of a Transcript attributed to one Speaker. Under the Qwen3-ASR Recogniser it carries its own language and, when the chat engine translated, its English beside the words As spoken (ADRs 0025 and 0026; not yet built).
+One timed span of a Transcript attributed to one Speaker. Under the Qwen3-ASR Recogniser it carries its own language (ADR 0025, v1.160.0) and, when the chat engine translated, its English beside the words As spoken (ADR 0026; not yet built).
 
 **Speaker**:
 A voice label in one Transcript, optionally given a name. Diarization creates Speakers, and the Sides of a Two-channel call are Speakers too. Inside a Case, Speakers given the same name are one Person.
@@ -76,7 +76,7 @@ The language of the speech in a Recording, chosen by the user at upload or detec
 _Avoid_: source language, detected language (detection is one way the Spoken language becomes known)
 
 **Recogniser**:
-The model that writes the words of a Transcript, a Panel choice (ADR 0025, 2026-10-26; not yet built): **Whisper** (the default, large-v3 or turbo, as the app has always run) or **Qwen3-ASR** (the 1.7B model with its forced aligner, in a container of its own, the audio cut by the service into pieces of about 45 seconds, the lines built from the aligner's words, each piece in its own language). Each Transcript records which wrote it. Phase 1 chapter 7, "The recogniser".
+The model that writes the words of a Transcript, a Panel choice (ADR 0025, 2026-10-26; v1.160.0): **Whisper** (the default, large-v3 or turbo, as the app has always run) or **Qwen3-ASR** (the 1.7B model with its forced aligner, in a container of its own, the audio cut by the service into pieces of about 45 seconds, the lines built from the aligner's words, each piece in its own language). Each Transcript records which wrote it. Phase 1 chapter 7, "The recogniser".
 _Avoid_: engine (the AI assistant's word), ASR model (on a page), model alone (that is Whisper's large-v3 or turbo)
 
 **Translation**:

@@ -327,6 +327,9 @@ def upload(request: HttpRequest) -> HttpResponse:
             "transcription_installed": pieces.transcription_installed(),
             # The speaker hint is pyannote's alone (Phase 5 chapter 4).
             "diarizer": settings_store.diarizer(),
+            # Translate to English is Whisper's until the chat engine's
+            # translation is built (ADR 0025, ADR 0026).
+            "recogniser": settings_store.recogniser(),
             "limits": {
                 "largest_file": uploads.as_gb(settings_store.largest_file_bytes()),
                 "longest_hours": settings_store.longest_recording_seconds() // 3600,

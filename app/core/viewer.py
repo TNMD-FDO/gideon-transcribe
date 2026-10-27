@@ -1682,6 +1682,10 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
         rows += [
             ("Model", used.get("model", "")),
             ("Model revision", used.get("model_revision", "")),
+            # Which model wrote the words (ADR 0025), and how it read the
+            # audio under Qwen3-ASR.
+            ("Recogniser", exports.recogniser_words(used) if used else ""),
+            ("Pieces", exports.pieces_words(used)),
             ("Task", f"{used.get('task_run', '')} ({used.get('task_reason', '')})"),
             ("Language", exports.language_name(transcript.language)),
             (

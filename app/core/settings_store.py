@@ -1175,6 +1175,30 @@ def _rows() -> list[Definition]:
         ),
         # Transcription defaults -----------------------------------------------
         Definition(
+            key="recogniser",
+            page=TRANSCRIPTION,
+            name="Recogniser",
+            kind=CHOICE,
+            default="whisper",
+            choices=("whisper", "qwen3-asr"),
+            what_it_does=(
+                'The model that writes the words (ADR 0025). "whisper": '
+                'everything as it is. "qwen3-asr": the service cuts the audio '
+                "into pieces of about 45 seconds, Qwen's aligner times the "
+                "words and the lines are built from them, each piece keeps its "
+                "own language; the Model setting is Whisper's and greys; "
+                "Translate to English under it is written by the chat engine "
+                "from the words as spoken (ADR 0026), which a later release "
+                "builds, so the Upload page greys it until then. Live "
+                "recordings and the clock re-read stay on Whisper."
+            ),
+            when_changed=(
+                "The next Run; the service loads the other recogniser once, in "
+                "under a minute. Jobs already sent finish as they started, and "
+                "nothing already transcribed changes."
+            ),
+        ),
+        Definition(
             key="model",
             page=TRANSCRIPTION,
             name="Model",
@@ -1182,12 +1206,14 @@ def _rows() -> list[Definition]:
             default="large-v3-turbo",
             choices=("large-v3-turbo", "large-v3"),
             what_it_does=(
-                "The model every Run asks for. Users cannot change it and the "
-                "Upload page does not show it."
+                "The Whisper model every Run asks for. Users cannot change it "
+                "and the Upload page does not show it."
             ),
             when_changed=(
                 "The next Run. The service swaps models once, in under a minute."
             ),
+            # Whisper's alone (ADR 0025): greyed under the other recogniser.
+            needs_value=("recogniser", "whisper"),
         ),
         Definition(
             key="diarizer",
@@ -3433,6 +3459,11 @@ def chat_history_tokens() -> int:
 
 def engine_window_tokens() -> int:
     return get("engine_window_tokens")
+
+
+def recogniser() -> str:
+    """Which model writes the words (ADR 0025): whisper or qwen3-asr."""
+    return str(get("recogniser") or "whisper")
 
 
 def diarizer() -> str:

@@ -122,12 +122,14 @@ class Runner:
             return
 
         log.info(
-            "job %s started for %s: %.1f minutes of audio, model %s, diarize %s",
+            "job %s started for %s: %.1f minutes of audio, model %s, diarize %s, "
+            "recogniser %s",
             job.id,
             job.consumer,
             job.audio_seconds / 60,
             job.model,
             job.diarize,
+            (job.request or {}).get("recogniser", "whisper"),
         )
         queued = _seconds_between(job.created, job.started)
         self._inbox.put(
@@ -249,6 +251,14 @@ class Runner:
             "diarizer_revision": (
                 self.models.diarizer.revision if self.models.diarizer else None
             ),
+            # The recogniser container (ADR 0025): where it answers, and the
+            # pinned revisions of the two models it serves.
+            "recogniser_url": os.environ.get(
+                "RECOGNISER_URL", "http://recogniser:8200"
+            ),
+            "recogniser_revisions": {
+                name: model.revision for name, model in self.models.recogniser.items()
+            },
         }
 
     def _model_folders(self) -> dict[str, str]:

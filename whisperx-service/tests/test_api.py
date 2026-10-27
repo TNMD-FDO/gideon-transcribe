@@ -115,6 +115,8 @@ def client(settings, store, runner):
         probe_audio=lambda path: Audio(600.0, 16000, 1),
         # The diarizer container is up in these tests unless a test says not.
         diarizer_up=lambda: getattr(runner, "diarizer_is_up", True),
+        # So is the recogniser container (ADR 0025).
+        recogniser_up=lambda: getattr(runner, "recogniser_is_up", True),
     )
     return TestClient(app)
 
@@ -494,3 +496,52 @@ def test_a_nemotron_job_needs_the_diarizer_container(client, runner):
     assert submit(client, diarize=True, diarizer="pyannote").status_code == 202
     told = client.get("/v1/status", headers=headers()).json()
     assert told["diarizers"] == {"nemotron": False, "pyannote": True, "voices": False}
+
+
+# The recogniser (Phase 1 chapter 7, ADR 0025) ---------------------------------
+
+
+def test_the_recogniser_is_a_choice_and_whisper_is_the_default(client, store):
+    answer = submit(client, client_reference="plain")
+    assert answer.status_code == 202, answer.text
+    assert store.job(answer.json()["id"]).request["recogniser"] == "whisper"
+    answer = submit(client, client_reference="qwen", recogniser="qwen3-asr")
+    assert answer.status_code == 202, answer.text
+    assert store.job(answer.json()["id"]).request["recogniser"] == "qwen3-asr"
+    answer = submit(client, recogniser="parakeet")
+    assert answer.status_code == 400
+    assert "recogniser must be one of" in answer.json()["error"]
+
+
+def test_nothing_that_asks_for_english_goes_to_qwen(client):
+    """Qwen3-ASR writes the speech in its own language and never English
+    (ADR 0026 has the Consumer translate afterwards); the fitting over the
+    whole file is Whisper's path."""
+    for asked in (
+        {"task": "translate"},
+        {"task": "translate_if_needed"},
+        {"translate_if_mixed": True},
+    ):
+        answer = submit(client, recogniser="qwen3-asr", **asked)
+        assert answer.status_code == 400, asked
+        assert answer.json()["reason_class"] == "recogniser_cannot_translate"
+        # The same request is fine under Whisper.
+        assert submit(client, **asked).status_code == 202
+    answer = submit(client, recogniser="qwen3-asr", fit_words_over_whole=True)
+    assert answer.status_code == 400
+    assert "fit_words_over_whole" in answer.json()["error"]
+    assert "reason_class" not in answer.json()
+
+
+def test_a_qwen_job_needs_the_recogniser_container(client, runner):
+    runner.recogniser_is_up = False
+    answer = submit(client, recogniser="qwen3-asr")
+    assert answer.status_code == 503
+    assert answer.json()["reason_class"] == "recogniser_unavailable"
+    # A Whisper job does not need it.
+    assert submit(client).status_code == 202
+    told = client.get("/v1/status", headers=headers()).json()
+    assert told["recognisers"] == {"whisper": True, "qwen3-asr": False}
+    runner.recogniser_is_up = True
+    told = client.get("/v1/status", headers=headers()).json()
+    assert told["recognisers"] == {"whisper": True, "qwen3-asr": True}

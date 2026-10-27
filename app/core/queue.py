@@ -99,13 +99,25 @@ def request_for(run: Run) -> dict:
             "priority": 90,
         }
 
+    # Which model writes the words (ADR 0025): the Panel's choice, except that
+    # a Live recording stays on Whisper, as the Fast lane does.
+    recogniser = "whisper" if recording.is_live else settings_store.recogniser()
+
     # Translate ticked asks for English whatever is spoken; unticked asks for
     # the speech in its own language. The service decides the rest from the
-    # language field and its own detection.
-    task = "translate_if_needed" if recording.translate else "transcribe"
+    # language field and its own detection. Qwen3-ASR never writes English:
+    # until the chat engine's translation is built (ADR 0026) a Recording
+    # under it is transcribed in the language spoken, and the Upload page
+    # greys the choice with that reason.
+    task = (
+        "translate_if_needed"
+        if recording.translate and recogniser == "whisper"
+        else "transcribe"
+    )
 
     request: dict = {
         "task": task,
+        "recogniser": recogniser,
         "language": recording.spoken_language or "",
         "model": recording.model or settings_store.get("model"),
         "diarize": recording.diarize,
@@ -139,7 +151,11 @@ def request_for(run: Run) -> dict:
         # labels, as a stretch with one voice does.
         request["return_speaker_embeddings"] = True
 
-    if not recording.translate and not recording.spoken_language:
+    if (
+        not recording.translate
+        and not recording.spoken_language
+        and recogniser == "whisper"
+    ):
         # Only meaningful on a detected transcribe. With the setting off, or
         # with translation turned off altogether, such a Recording is
         # transcribed in its winning language and the viewer says so.
