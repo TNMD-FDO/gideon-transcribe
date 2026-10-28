@@ -4348,6 +4348,8 @@ A reason class is the fixed short identifier a row records when something is ref
 | Sign-in failed | wrong password; not in a group; deactivated; blocked; directory unreachable; throttled (identifiers left to the build) | Sign-in, accounts, and roles |
 | Upload refused | `too_large`; `too_long`; `quota_exceeded`; `limit_exceeded`; `batch_in_progress`; `service_unreachable`; `disk_full`; `incomplete_file` (v1.44.0); and one class each for no audio track, undecodable audio, empty file, duplicate file, and archive (identifiers left to the build) | Media handling; Queue and Jobs; Workspace lifecycle |
 | Job failed, from the service | `bad_input`; `too_large`; `too_long`; `model_unavailable`; `gpu_error` (retried once by the service); `timeout`; `cancelled`; `service_restarted`; `internal` | the WhisperX service API document |
+| Recording placed on the clock, Recording taken off the clock | the recording, the how (hand, day, file), the case; never a time or a date (Phase 10 chapter 1, v1.164.0) | Recordings |
+| Note marked to check, Note to check cleared | the recording; never the note's words (Phase 10 chapter 1, v1.164.0) | Edits |
 | Job failed, the app's own | `media_failed`; `service_unreachable`; `service_refused`; `result_expired`; `merge_failed`; from v1.163.1 `recogniser_unavailable` and `diarizer_unavailable` after a held hand-over | Queue and Jobs |
 | AI assistant | `llm_unreachable`; `llm_timeout`; `llm_refused`; `llm_too_long`; `llm_bad_output`; `llm_error`; `llm_no_vision` (Phase 4) | AI assistant |
 | Clip render failed | `clip_render_failed` | Clips |

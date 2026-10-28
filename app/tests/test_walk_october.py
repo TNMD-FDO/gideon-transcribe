@@ -425,7 +425,8 @@ def test_the_notes_page_has_the_notes_left_the_player_right_and_a_way_back():
     )
     assert 'id="np-play"' in page and 'id="np-note-now"' in page
     assert "np-bar-said" not in page
-    assert page.count('data-panel="notes"') == 2  # Recordings' and Details' way back
+    # Recordings', Chronology's (Phase 10, v1.164.0) and Details' way back.
+    assert page.count('data-panel="notes"') == 3
     js = (APP / "static" / "notes-page.js").read_text(encoding="utf-8")
     assert "np-bar-said" not in js and "function wirePlayer" in js
     assert 'KEY = "notes-page-player-width"' in js

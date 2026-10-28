@@ -19,6 +19,20 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.164.0, 2026-10-28
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migrations 0095 and 0096: a Recording's clock (five columns: the date, the second of the day, how it was placed, by whom, when) and To check on a line's note and a note at a moment. Nothing already stored changes.
+
+- **The case's chronology (Phase 10 chapter 1, ADR 0027; the drawing `docs/spec/mockups/phase-10-case-chronology.html`).** Every note in a case laid on one clock without an incident. On the case page's Notes tab a toggle **Rows | Chronology**, kept by the browser per person; on the Notes page a **Chronology** panel beside Recordings and Details, the player beside it. One day at a time under the **Date strip** (a bar per day with notes, its height the count, under its month; the arrow keys step days; on a one-day case one tall bar and the day is the tool). The ruler fits the day's notes; a drag across it looks closer at an hour, with Back to the day, the span kept in the address. The band in one of three shapes the day's recordings choose: lanes in colour up to six overlapping; packed lanes when more are spread over the day, six at most then the fold; the **Coverage lane** when more than six overlap, a shaded strip of how many were running with bars for the eight most noted, a press on the shade listing every recording running then. Opened, the band is capped at eight rows and scrolls inside itself with the ruler and the lane pinned; Show fewer returns. The **Notes lane**: a mark per note in its recording's colour, clusters as counts, hover for the words, press to light and play. Hints wherever two or more videos overlap under a cluster of marks, "3 cameras, 6 notes, 20:24 to 21:05". The spells of entries as the incident's Timeline view draws them, folded to their headings past forty notes with Open all; an entry's time plays the moment in the page's own Preview or the Notes page's player, its words edit the note in place, To check is pressed on or off by anyone on the case, a bar pressed lights its entries.
+- **Placing a recording whose time is not known.** A video with a read clock places itself (unchecked ones say so). Anything else sits on the rail above the ruler with its note count until placed: dragged onto the ruler with a guide and the time, or pressed, both opening "Place … by hand?" with Date, Starts at, "The day alone; the time is not known" and, where the file carries a time, "Use the file's time"; **Place recordings** opens a sheet to place many at once, a play mark on each row to hear the date said. A recording placed by the day alone sits in a **Time unknown on <day>** band. The placement is kept on the recording as its clock (ADR 0027), named and reversible: a placed bar pressed opens Move or Take off the clock; a stamp read later takes over. Audit rows Recording placed on the clock (the how, never a time) and Recording taken off the clock.
+- **Exports.** Chronology to Word, for the day or every day: the Timeline report's shape with a still per entry on a video, the words heard around it, the note and the writer; and as a spreadsheet. The audit row Chronology exported with the format and the scope, never a word.
+- **Nothing new to set.** The band's fold at eight, the cap at eight rows, the fold of spells at forty and the ten-minute spell gap are the page's constants; the exports read the Incidents page's report settings. No incident is touched: Phase 10 chapter 2, an incident made from a span of the chronology, is the next release.
+
 ## v1.163.2, 2026-10-28
 
 ```

@@ -404,6 +404,10 @@ class Segment(models.Model):
         related_name="+",
     )
     note_changed = models.DateTimeField(null=True, blank=True)
+    # To check (Phase 10 chapter 1, v1.164.0): a question for a colleague on
+    # the note, pressed on or off by anyone on the case from the case's
+    # chronology, as the incident's events carry it.
+    note_to_check = models.BooleanField(default=False)
 
     # The other Side said the same words at the same moment, which is what a
     # phone system's recorded announcement does: both parties hear it, so both

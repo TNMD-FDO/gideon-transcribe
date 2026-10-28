@@ -5,6 +5,7 @@ from django.urls import path
 from core import (
     assistant_pages,
     case_chat_pages,
+    case_chronology_pages,
     case_pages,
     clip_pages,
     dictation_pages,
@@ -360,6 +361,37 @@ urlpatterns = [
     ),
     # Download notes (Phase 8 chapter 2): every note in the case, as Word.
     path("case/<uuid:case_id>/notes.docx", case_pages.notes_export, name="case-notes"),
+    # The case's chronology (Phase 10 chapter 1).
+    path(
+        "case/<uuid:case_id>/chronology.json",
+        case_chronology_pages.day,
+        name="case-chronology",
+    ),
+    path(
+        "case/<uuid:case_id>/chronology/running",
+        case_chronology_pages.running,
+        name="case-chronology-running",
+    ),
+    path(
+        "case/<uuid:case_id>/chronology.<str:kind>",
+        case_chronology_pages.export,
+        name="case-chronology-export",
+    ),
+    path(
+        "recording/<uuid:recording_id>/clock",
+        case_chronology_pages.place,
+        name="recording-clock",
+    ),
+    path(
+        "recording/<uuid:recording_id>/clock/off",
+        case_chronology_pages.unplace,
+        name="recording-clock-off",
+    ),
+    path(
+        "recording/<uuid:recording_id>/note/to-check",
+        case_chronology_pages.to_check,
+        name="note-to-check",
+    ),
     path(
         "case/<uuid:case_id>/recordings.csv",
         case_pages.recordings_csv,

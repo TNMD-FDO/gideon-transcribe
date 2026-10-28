@@ -127,56 +127,8 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
         .values_list("transcript__recording_id", flat=True)
         .distinct()
     )
-    note_rows = []
+    note_rows = note_rows_of(case, recordings)
     writers: dict = {}
-    for one in (
-        Segment.objects.filter(
-            transcript__recording_id__in=ids, same_as_other_side=False
-        )
-        .exclude(note="")
-        .select_related("transcript", "note_by")
-        .order_by("start")[:LINES_MOST]
-    ):
-        note_rows.append(
-            {
-                "key": f"line:{one.pk}",
-                "kind": "line",
-                "id": one.pk,
-                "recording": str(one.transcript.recording_id),
-                "at": float(one.start),
-                "clock": exports.clock(one.start),
-                "text": one.note,
-                "said": one.text,
-                "who": one.speaker,
-                "by": one.note_by.shown_name if one.note_by else "",
-                "by_id": one.note_by_id,
-                "when": notes.date_of(one.note_changed),
-                "changed": one.note_changed.isoformat() if one.note_changed else "",
-            }
-        )
-    for one in (
-        MomentNote.objects.filter(recording_id__in=ids)
-        .select_related("note_by")
-        .order_by("at")[:LINES_MOST]
-    ):
-        note_rows.append(
-            {
-                "key": f"moment:{one.pk}",
-                "kind": "moment",
-                "id": one.pk,
-                "recording": str(one.recording_id),
-                "at": float(one.at),
-                "clock": exports.clock(one.at),
-                "text": one.note,
-                "said": "",
-                "who": "",
-                "by": one.note_by.shown_name if one.note_by else "",
-                "by_id": one.note_by_id,
-                "when": notes.date_of(one.note_changed),
-                "changed": one.note_changed.isoformat() if one.note_changed else "",
-            }
-        )
-    note_rows.extend(_event_rows(case, recordings))
     order = {str(one.pk): index for index, one in enumerate(recordings)}
     note_rows.sort(key=lambda row: (order.get(row["recording"], 0), row["at"]))
     counts: dict = {}
@@ -241,6 +193,65 @@ def list_json(request: HttpRequest, case_id) -> JsonResponse:
             "may_direct": case.may_direct(request.user),
         }
     )
+
+
+def note_rows_of(case, recordings) -> list[dict]:
+    """Every note on a line, at a moment or on an event of the case's
+    recordings, one row each, the shape the Notes page draws and the case's
+    chronology (Phase 10) lays on the clock: one reading for both."""
+    ids = [one.pk for one in recordings]
+    note_rows: list[dict] = []
+    for one in (
+        Segment.objects.filter(
+            transcript__recording_id__in=ids, same_as_other_side=False
+        )
+        .exclude(note="")
+        .select_related("transcript", "note_by")
+        .order_by("start")[:LINES_MOST]
+    ):
+        note_rows.append(
+            {
+                "key": f"line:{one.pk}",
+                "kind": "line",
+                "id": one.pk,
+                "recording": str(one.transcript.recording_id),
+                "at": float(one.start),
+                "clock": exports.clock(one.start),
+                "text": one.note,
+                "said": one.text,
+                "who": one.speaker,
+                "to_check": bool(one.note_to_check),
+                "by": one.note_by.shown_name if one.note_by else "",
+                "by_id": one.note_by_id,
+                "when": notes.date_of(one.note_changed),
+                "changed": one.note_changed.isoformat() if one.note_changed else "",
+            }
+        )
+    for one in (
+        MomentNote.objects.filter(recording_id__in=ids)
+        .select_related("note_by")
+        .order_by("at")[:LINES_MOST]
+    ):
+        note_rows.append(
+            {
+                "key": f"moment:{one.pk}",
+                "kind": "moment",
+                "id": one.pk,
+                "recording": str(one.recording_id),
+                "at": float(one.at),
+                "clock": exports.clock(one.at),
+                "text": one.note,
+                "said": "",
+                "who": "",
+                "to_check": bool(one.note_to_check),
+                "by": one.note_by.shown_name if one.note_by else "",
+                "by_id": one.note_by_id,
+                "when": notes.date_of(one.note_changed),
+                "changed": one.note_changed.isoformat() if one.note_changed else "",
+            }
+        )
+    note_rows.extend(_event_rows(case, recordings))
+    return note_rows
 
 
 def _event_rows(case, recordings) -> list[dict]:

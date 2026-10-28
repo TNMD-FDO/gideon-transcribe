@@ -53,6 +53,11 @@
     left.open({ recording: recording.id, seconds: seconds, quiet: !!quiet });
     drawHead(recording);
   }
+  // The case's chronology (Phase 10) plays a pressed entry on the left.
+  window.NotesPageOpen = function (recordingId, seconds) {
+    var one = state.byId && state.byId[recordingId];
+    if (one) { openAt(one, seconds); }
+  };
 
   function drawHead(recording) {
     document.getElementById("np-call-title").textContent = recording.title;
@@ -586,7 +591,9 @@
     findLayer.hidden = true; panels.hidden = false;
     document.getElementById("np-work").dataset.showing = name;
     Array.prototype.forEach.call(document.querySelectorAll(".np-panel-button"), function (button) { button.classList.toggle("on", button.dataset.panel === name); });
-    ["notes", "recordings", "details"].forEach(function (one) { document.getElementById("panel-" + one).hidden = one !== name; });
+    ["notes", "recordings", "chronology", "details"].forEach(function (one) { document.getElementById("panel-" + one).hidden = one !== name; });
+    // The case's chronology (Phase 10) draws itself the first time its panel shows.
+    if (name === "chronology" && window.CaseChronology) { window.CaseChronology.show(); }
     panels.scrollTop = 0;
   }
   document.addEventListener("click", function (event) {

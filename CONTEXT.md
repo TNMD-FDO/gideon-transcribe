@@ -131,7 +131,7 @@ The viewer behaviour that keeps the current Segment in view while the Recording 
 A user edit of a Segment's text in the viewer. Marked on the Segment and recorded in the audit log. Where the words As spoken are kept, the Correction is made on them and the English of that window is written again (ADR 0026).
 
 **Timeline**:
-The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call. The Incident page's strip of lanes is not the Timeline, and a Chronology is a list of Events (Phase 6).
+The waveform strip in the viewer, used to seek and to mark a Clip by dragging; split into one lane per Side on a Two-channel call. The Incident page's strip of lanes is not the Timeline, a Chronology is a list of Events (Phase 6), and the case's chronology (Phase 10) is a Chronology too, never a timeline.
 
 **Stage**:
 The viewer's left-hand column on a window 1280 pixels or wider: the picture, the transport under it, the line being spoken, and Describe this moment, resizable by its right edge. On a narrower window the picture sits beside the title and the transport under it; a sound recording has no stage at any width. Avoid: Bench (the right-hand column of v1.4.0 to v1.45.1), player pane, dock (that is the laptop's arrangement of the same things).
@@ -443,7 +443,7 @@ The Chronology tab's second shape, a toggle beside Rows kept by the browser per 
 _Avoid_: Gantt, chart, graph, list view
 
 **Spell**:
-A run of Events on a Chronology with no gap of ten minutes or more between neighbours, headed by its span on the Timeline view and in the Chronology figure, and named in the spreadsheet's last column. One event alone is a Spell headed by its time. Phase 8 chapter 12.
+A run of Events on a Chronology with no gap of ten minutes or more between neighbours, headed by its span on the Timeline view and in the Chronology figure, and named in the spreadsheet's last column. One event alone is a Spell headed by its time. Phase 8 chapter 12. On the case's chronology (Phase 10) a Spell is the same run of Notes, headed by its span and its counts, folded to its heading past forty notes on a day.
 _Avoid_: phase, segment, section, cluster
 
 **Chronology figure**:
@@ -499,8 +499,24 @@ The Incident page's arrangement, chosen from the Layout menu in the transport an
 _Avoid_: view mode, multiview, mosaic, split screen
 
 **Chronology**:
-An Incident's list of Events, in time order, the office's Notes on the synced cameras' lines among them, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2.
+An Incident's list of Events, in time order, the office's Notes on the synced cameras' lines among them, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2. A Case has one too (v1.164.0, Phase 10 chapter 1): its Notes laid on the recordings' own clocks without an Incident, reached by the toggle Rows | Chronology on the Notes tab and as a tab of the Notes page, one day at a time under the Date strip, with the Notes lane, the Coverage lane and the Spells; exported as a Word document with a still per entry and as a spreadsheet. The pages say "the case's chronology" and "the incident's chronology" where both are in view.
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
+
+**Recording's clock**:
+The time of day a Recording started at, kept on the Recording (v1.164.0, ADR 0027): the date, the second of the day, how it was placed (clock, from the camera's read stamp; by hand, dragged onto the case's chronology's ruler or typed; by the day, a date with no hour), by whom and when. A stamp read later takes over from a hand placement. A note's time of day on the case's chronology is the Recording's clock plus the note's moment. Audit rows Recording placed on the clock and Recording taken off the clock, with the how and never a time.
+_Avoid_: offset, sync (an Incident's word), timestamp, start time (say "its clock")
+
+**Date strip**:
+The case's chronology's row of days: one small bar per day that has notes, its height the day's note count, under its month, the day in hand lit; days with no notes are not drawn. A press opens the day; the arrow keys step through days. Phase 10 chapter 1.
+_Avoid_: calendar, heatmap, histogram
+
+**Notes lane**:
+The lane under the case's chronology's band: a mark per note at its time of day in its recording's colour, marks that would overlap at the scale in hand merged into one pill with a count; hover shows the words, a press lights the entry below and plays it; nothing is written beside a mark at any scale. The lane is the scrubbing surface, the Spells below are the reading surface. Phase 10 chapter 1.
+_Avoid_: markers, ticks, events lane (the Incident's)
+
+**Coverage lane**:
+The band's third shape on the case's chronology, when more than six recordings overlap: one shaded strip whose height at each moment is how many recordings were running then, labelled at its peaks; hover for the count, press for the list of recordings running then. Under it, bars for the eight most noted recordings only, the rest folded. Phase 10 chapter 1.
+_Avoid_: density, histogram, heat
 
 **Event**:
 One entry on a Chronology: a time of day on the Incident clock, a line of text, its source (a person, the words of one camera, or the camera line of one camera), and the cameras that show it. Added by a person at the moment being watched, from a line under a camera, or from a chat's citation; or proposed by the assistant from a camera's Digest (source assistant, chapter 3), or found by the app's own search for a Watch phrase (source watch phrase, Phase 7 chapter 2); a proposal stays Proposed under the Chronology and joins it only when a person accepts it. Or the office's Note on a line of a synced camera's transcript, which is an Event on that Incident's Chronology at the line's moment by itself, with the source **note** and the writer's name on its pill ("Note by D. Meehan, BWC2-1"): the same words as the note, changed or removed from either place, gone from the Chronology when the camera leaves; Phase 8 chapter 11 calls that row a note event. A press on an Event's mark, its time or its card seeks every camera and brings the camera it came from to the front (Phase 8 chapter 12). Phase 6 chapter 2.

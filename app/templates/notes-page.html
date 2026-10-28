@@ -32,6 +32,7 @@
       <div class="actions row np-actions">
         {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
         <button type="button" class="btn small np-panel-button" data-panel="recordings" title="The case's recordings, with Listen">{% icon "recordings" %} Recordings <span class="count" id="np-count-recordings"></span></button>
+        <button type="button" class="btn small np-panel-button" data-panel="chronology" title="The case's notes on the recordings' own clocks, one day at a time (Phase 10)">{% icon "note" %} Chronology</button>
         <button type="button" class="btn small np-panel-button" data-panel="details" title="The case's figures, its Team, its vocabulary and the downloads">{% icon "info" %} Details</button>
         <details class="menu" id="np-export">
           <summary class="btn small" title="Download the notes or the list">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
@@ -70,6 +71,11 @@
             <div class="np-recs" id="np-recordings"></div>
             <div class="row small muted" id="np-rec-foot" style="margin-top: 6px"></div>
           </div>
+        </div>
+        <div class="panel" id="panel-chronology" hidden>
+          <div class="layer-head np-panel-head"><button type="button" class="back" data-panel="notes">&lsaquo; Notes</button><b>Chronology</b><span class="grow"></span></div>
+          {% comment %}The case's chronology (Phase 10 chapter 1), the same drawing as the Notes tab's, the pressed entry playing on the left.{% endcomment %}
+          <div id="case-chronology" class="chron" data-case="{{ case.pk }}" data-json="{% url 'case-chronology' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export="{% url 'case-chronology-export' case.pk 'docx' %}" data-player="notes-page"></div>
         </div>
         <div class="panel" id="panel-details" hidden>
           <div class="layer-head np-panel-head"><button type="button" class="back" data-panel="notes">&lsaquo; Notes</button><b>Details</b><span class="grow"></span></div>
@@ -194,6 +200,7 @@
   <script src="{% static 'case-scope.js' %}"></script>
   <script src="{% static 'preview.js' %}"></script>
   <script src="{% static 'waveform.js' %}"></script>
+  <script src="{% static 'chronology.js' %}"></script>
   <script src="{% static 'notes-page.js' %}"></script>
   {% if case_chat_available %}
     <script src="{% static 'expectation.js' %}"></script>

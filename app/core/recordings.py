@@ -307,6 +307,22 @@ class Recording(models.Model):
     # at; null until read, an empty dict when nothing was found. Read as the
     # playback copy lands when the office says so, else with the vision.
     stamp = models.JSONField(null=True, blank=True)
+    # The Recording's clock (ADR 0027, v1.164.0): the day and the second of
+    # the day it started at, read from the stamp ("clock"), dragged or typed
+    # by a person on the case's chronology ("hand"), or the day alone
+    # ("day"); who placed it and when. Empty until read or placed. A note's
+    # time of day is this plus the note's moment.
+    clock_date = models.DateField(null=True, blank=True)
+    clock_start = models.FloatField(null=True, blank=True)
+    clock_how = models.CharField(max_length=8, blank=True, default="")
+    clock_by = models.ForeignKey(
+        "core.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    clock_at = models.DateTimeField(null=True, blank=True)
 
     # A Live recording's facts (Phase 3): when it started, its sources, the
     # browser, the pauses, how it ended, and the sidecar upload its pieces

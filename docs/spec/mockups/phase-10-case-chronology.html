@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The case's chronology</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #7b4ea3; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+
+  /* the case page, reduced */
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .frame .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .frame .head h3 { font-size: 20px; margin: 0; }
+  .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 6px; color: var(--muted); }
+  .tabs .on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs .n { background: var(--surface-2); border-radius: 8px; padding: 0 6px; font-size: 11px; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle span { padding: 3px 10px; } .toggle .on { background: var(--accent); color: var(--accent-ink); }
+
+  /* the chronology */
+  .chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+  .days .on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .rail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 6px; background: var(--surface); color: var(--text); cursor: grab; }
+  .chip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; background: var(--sys); }
+  .chip.c1 i { background: var(--c1); } .chip.c2 i { background: var(--c2); } .chip.c3 i { background: var(--c3); } .chip.c4 i { background: var(--c4); }
+  .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .band { position: relative; display: grid; gap: 4px; padding: 6px 0; }
+  .band .bar { position: relative; height: 10px; }
+  .band .bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; display: block; }
+  .band .bar i.c1 { background: var(--c1); } .band .bar i.c2 { background: var(--c2); } .band .bar i.c3 { background: var(--c3); } .band .bar i.c4 { background: var(--c4); }
+  .band .bar i.faint { opacity: .35; }
+  .band .bar b { position: absolute; left: 0; top: -1px; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+  .spell { border-top: 1px solid var(--line); padding-top: 8px; }
+  .spell .sh { display: flex; gap: 10px; align-items: baseline; }
+  .spell .sh b { font-family: var(--mono); font-size: 13px; }
+  .entry { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 0 10px; padding: 6px 0; position: relative; }
+  .entry .num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--surface); background: var(--sys); }
+  .entry .num.c1 { background: var(--c1); } .entry .num.c2 { background: var(--c2); } .entry .num.c3 { background: var(--c3); } .entry .num.c4 { background: var(--c4); }
+  .entry .stem { position: absolute; left: 10px; top: 28px; bottom: -6px; width: 2px; background: var(--line); }
+  .entry .top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .entry .t { font-family: var(--mono); color: var(--accent); }
+  .entry .play { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent); font-size: 9px; }
+  .entry .words { font-size: 14px; }
+  .entry .line { color: var(--muted); font-size: 12px; }
+  .entry .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+  .entry.lit { background: var(--accent-soft); border-radius: var(--radius); margin: 0 -6px; padding-inline: 6px; }
+  .unknown { border-top: 1px dashed var(--line); padding-top: 8px; }
+
+  /* the Notes lane, the fold and the hint */
+  .notes-lane { position: relative; height: 16px; border-top: 1px dashed var(--line); margin-top: 2px; }
+  .notes-lane i { position: absolute; top: 3px; width: 3px; height: 10px; border-radius: 1px; background: var(--sys); transform: translateX(-50%); }
+  .notes-lane i.c1 { background: var(--c1); } .notes-lane i.c2 { background: var(--c2); } .notes-lane i.c3 { background: var(--c3); } .notes-lane i.c4 { background: var(--c4); }
+  .notes-lane em { position: absolute; top: 1px; transform: translateX(-50%); font-style: normal; font-size: 10px; line-height: 14px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .notes-lane .lbl { position: absolute; right: 0; top: 1px; font-size: 10px; color: var(--muted); }
+  .hint { position: relative; height: 18px; }
+  .hint span { position: absolute; top: 0; border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 6px 6px; height: 6px; }
+  .hint b { position: absolute; top: 5px; transform: translateX(-50%); font-size: 11px; color: var(--accent); background: var(--surface); padding: 0 6px; white-space: nowrap; font-weight: 600; }
+  .band .bar i.fold { background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); border-radius: 2px; }
+  .band .bar .more { position: absolute; left: 0; top: -2px; font-size: 11px; color: var(--muted); padding-left: 6px; line-height: 14px; }
+  .band .bar .more a { color: var(--accent); }
+  .band .bar i b { position: static; }
+  .band.capped { max-height: 118px; overflow-y: auto; padding-right: 6px; border: 1px solid var(--line); border-radius: var(--radius); padding-left: 4px; }
+  .band.capped::after { content: "scrolls inside · 8 rows shown of 18"; display: block; position: sticky; bottom: 0; text-align: right; font-size: 10px; color: var(--muted); background: var(--surface); padding: 1px 4px; }
+  /* the date strip, the place sheet and folded spells */
+  .strip { display: flex; gap: 14px; align-items: flex-end; overflow: hidden; padding: 4px 0 0; }
+  .month { display: flex; flex-direction: column; gap: 3px; }
+  .month .days-bars { display: flex; gap: 3px; align-items: flex-end; height: 34px; }
+  .month .days-bars i { display: block; width: 7px; background: var(--line); border-radius: 2px 2px 0 0; }
+  .month .days-bars i.on { background: var(--accent); }
+  .month .days-bars i.some { background: var(--muted); opacity: .6; }
+  .month .name { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 2px; white-space: nowrap; }
+  .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .sheet table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .sheet th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .sheet td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .sheet .in { border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font-family: var(--mono); display: inline-block; min-width: 72px; }
+  .sheet .in.empty { color: var(--muted); }
+  .folded { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); padding: 7px 0; }
+  .folded b { font-family: var(--mono); font-size: 13px; }
+  .folded .chev { color: var(--muted); margin-right: 8px; }
+  /* the coverage lane and the running list */
+  .cover { position: relative; height: 56px; border-bottom: 1px solid var(--line); overflow: hidden; }
+  .cover svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .cover .peak { position: absolute; font-size: 10px; font-weight: 600; color: var(--accent); transform: translateX(-50%); }
+  .cover .lbl { position: absolute; right: 0; bottom: 2px; font-size: 10px; color: var(--muted); }
+  .cover .probe { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text); opacity: .6; }
+  .cover .probe b { position: absolute; top: 2px; left: 6px; font-size: 10px; font-weight: 600; color: var(--text); background: var(--surface); padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; white-space: nowrap; }
+  .running { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .running .row { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  .running .row .p { display: inline-flex; width: 18px; height: 16px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 8px; align-items: center; justify-content: center; }
+  .entry .num.plain { background: var(--sys); }
+  /* the right pane: the Preview */
+  .pane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .pane .vid { aspect-ratio: 16 / 9; background: linear-gradient(135deg, #2a3340, #141a22); border-radius: var(--radius); position: relative; color: #cfd6de; font-size: 11px; }
+  .pane .vid .stamp { position: absolute; left: 8px; bottom: 6px; font-family: var(--mono); }
+  .pane .vid .big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .pane .bar { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; }
+  .pane .bar i { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--accent); }
+  .pane .ln { font-size: 12px; } .pane .ln.lit { background: var(--accent-soft); border-radius: 4px; padding: 2px 6px; }
+  .note { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; }
+
+  /* the drag and the box */
+  .drag { position: relative; }
+  .ghost { position: absolute; left: 44%; top: -8px; transform: translateX(-50%); box-shadow: var(--shadow); border-color: var(--accent); }
+  .guide { position: absolute; left: 44%; top: 10px; bottom: 0; width: 2px; background: var(--accent); }
+  .guide b { position: absolute; top: -18px; left: 6px; font-family: var(--mono); font-size: 11px; color: var(--accent); white-space: nowrap; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+  .box h4 { margin: 0; font-size: 14px; }
+  .field { display: grid; grid-template-columns: 70px 1fr; gap: 6px; align-items: center; font-size: 13px; }
+  .field .in { border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; font-family: var(--mono); }
+  .acts { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* the export page */
+  .paper { background: #fff; color: #171b21; border: 1px solid var(--line); border-radius: 4px; padding: 18px 22px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .paper h5 { margin: 0 0 4px; font-size: 14px; }
+  .paper .ex { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid #e3e7ec; }
+  .paper .still { aspect-ratio: 16 / 9; background: linear-gradient(135deg, #3b4653, #1d242c); border-radius: 3px; position: relative; color: #dfe5ec; font-size: 10px; }
+  .paper .still span { position: absolute; left: 6px; bottom: 4px; font-family: var(--mono); }
+  .paper .ex .t { font-family: var(--mono); font-weight: 600; color: #0f5e86; }
+  .paper .ex .m { color: #5b6673; }
+  .paper .band { padding: 4px 0 8px; }
+  .paper .band .bar i.c1 { background: #1f6fb2; } .paper .band .bar i.c2 { background: #c2410c; } .paper .band .bar i.c3 { background: #2e7d32; }
+
+  /* the span */
+  .span { position: absolute; top: 0; bottom: 0; background: var(--accent-soft); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); opacity: .85; }
+  .offer { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sit { height: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .sit i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ok); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Phase 10, a drawing to agree before the build · 2026-10-28</div>
+    <h1>The case's chronology: the notes on one clock, without an incident</h1>
+    <p class="lede">The case's notes laid on their recordings' own clocks, as the incident's Timeline view draws its events, reached by a toggle on the Notes tab. A recording with a read clock places itself; one without is dragged onto the ruler once, and its notes follow. Press an entry and the moment plays beside the page. Exports as the incident's chronology does, with a still per entry in the Word document. Made-up case, recordings and notes.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The Notes tab, toggled to Chronology, with the Preview playing an entry</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Harbour Street stop</h3><div><span class="btn">Notes page</span> <span class="btn primary">Add recordings</span></div></div>
+      <div class="tabs"><span>Recordings <span class="n">7</span></span><span>Search</span><span>Clips <span class="n">3</span></span><span class="on">Notes <span class="n">18</span></span><span>Speakers</span><span>Incidents <span class="n">1</span></span><span>Documents</span></div>
+      <div class="split">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="lead">
+            <span class="muted">18 notes on 5 of 7 recordings, by 3 people</span>
+            <span style="display: flex; gap: 10px; align-items: center"><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span><span class="btn tiny">Export ▾</span></span>
+          </div>
+          <div class="chron">
+            <div class="days"><span class="on">6 Nov 2025 · 14</span><span>7 Nov · 3</span><span>12 Nov · 1</span></div>
+            <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Call_20251107_0915 · 3 notes</span><span class="chip"><i></i>Interview_Reyes.m4a · 1 note</span><span class="tiny">Drag one onto the ruler, or press it to type its time.</span></div>
+            <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:30</span><span style="left: 50%">21:00</span><span style="left: 75%">21:30</span><span style="left: 100%">22:00</span></div>
+            <div class="band">
+              <div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1</b></div>
+              <div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1</b></div>
+              <div class="bar"><i class="c3 faint" style="left: 34%; width: 30%"></i><b style="left: 34%">BWC3-1</b></div>
+            </div>
+            <div class="legend"><span><i style="background: var(--c1)"></i>BWC1-1 · clock</span><span><i style="background: var(--c2)"></i>BWC2-1 · clock</span><span><i style="background: var(--c3); opacity: .35"></i>BWC3-1 · clock, unchecked</span><span>The recordings' spans on their own clocks.</span></div>
+            <div class="notes-lane"><i class="c1" style="left: 20.5%"></i><i class="c2" style="left: 21.8%"></i><i class="c1" style="left: 24%"></i><i class="c2" style="left: 25.9%"></i><em style="left: 52%">×2</em><i class="c1" style="left: 54.1%"></i><span class="lbl">notes</span></div>
+            <div class="hint"><span style="left: 20.5%; width: 35%"></span><b style="left: 38%">3 cameras, 6 notes, 20:24 to 21:05</b></div>
+
+            <div class="spell">
+              <div class="sh"><b>20:24:36 to 20:31:05</b><span class="muted">4 notes</span></div>
+              <div class="entry"><span class="num c1">1</span><span class="stem"></span><div><div class="top"><span class="t">20:24:36</span><span class="play">▶</span></div><div class="words">First contact, officer asks for licence.</div><div class="line">"Can I see your licence and registration, please" · BWC1-1</div><div class="meta"><span class="pill">D. Meehan, 2 days ago</span><span class="chip c1"><i></i>BWC1-1</span></div></div></div>
+              <div class="entry lit"><span class="num c2">2</span><span class="stem"></span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan, yesterday</span><span class="chip c2"><i></i>BWC2-1</span><span class="pill warn">To check</span></div></div></div>
+              <div class="entry"><span class="num c1">3</span><span class="stem"></span><div><div class="top"><span class="t">20:28:44</span><span class="play">▶</span></div><div class="words">Consent to search is asked; answer unclear, listen again.</div><div class="line">"Do you mind if we take a look" · BWC1-1</div><div class="meta"><span class="pill">D. Meehan, 2 days ago</span><span class="chip c1"><i></i>BWC1-1</span></div></div></div>
+              <div class="entry"><span class="num c2">4</span><div><div class="top"><span class="t">20:31:05</span><span class="play">▶</span></div><div class="words">Bag opened.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan, yesterday</span><span class="chip c2"><i></i>BWC2-1</span></div></div></div>
+            </div>
+            <div class="spell">
+              <div class="sh"><b>21:02:18 to 21:04:50</b><span class="muted">2 notes</span></div>
+              <div class="entry"><span class="num c3">5</span><span class="stem"></span><div><div class="top"><span class="t">21:02:18</span><span class="play">▶</span><span class="pill warn">clock unchecked</span></div><div class="words">Third officer arrives; time needs checking against BWC1.</div><div class="line">"Dispatch, 3-1 on scene" · BWC3-1</div><div class="meta"><span class="pill">A. Ortiz, today</span><span class="chip c3"><i></i>BWC3-1</span></div></div></div>
+              <div class="entry"><span class="num c1">6</span><div><div class="top"><span class="t">21:04:50</span><span class="play">▶</span></div><div class="words">Miranda read; the exact words matter for the motion.</div><div class="line">"You have the right to remain silent" · BWC1-1</div><div class="meta"><span class="pill">D. Meehan, 2 days ago</span><span class="chip c1"><i></i>BWC1-1</span></div></div></div>
+            </div>
+            <div class="unknown">
+              <div class="sh" style="display: flex; gap: 10px; align-items: baseline"><b>Time unknown on 6 Nov</b><span class="muted">1 note</span></div>
+              <div class="entry"><span class="num">7</span><div><div class="top"><span class="t">6 Nov</span><span class="play">▶</span><span class="pill">placed by the day, J. Brennan</span></div><div class="words">He says he was never at the stop that night.</div><div class="line">"I wasn't anywhere near there" · Call_20251106_2140 at 03:12</div><div class="meta"><span class="pill">J. Brennan, yesterday</span><span class="chip"><i></i>Call_20251106_2140</span></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="pane">
+          <div class="muted tiny">Preview · BWC2-1 at 20:26:10</div>
+          <div class="vid"><span class="big">▶</span><span class="stamp">11/06/2025 20:26:10 · BWC2-1</span></div>
+          <div class="bar"><i style="left: 9%"></i><i style="left: 44%"></i></div>
+          <div class="muted tiny">Plays from 20:26:04, six seconds before the note.</div>
+          <div class="ln muted">20:25:58 Speaker 2: Stay in the car for me.</div>
+          <div class="ln lit">20:26:10 · at a moment, nothing said</div>
+          <div class="note"><b>J. Brennan</b> · Passenger side: second officer sees the bag on the floor. <span class="muted">Edit</span></div>
+          <div class="ln muted">20:26:21 Speaker 1: What's in the bag?</div>
+          <div style="display: flex; gap: 6px"><span class="btn tiny">Open the call</span><span class="btn tiny ghost">Close</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Nothing squished.</b> The chronology takes the Notes tab's whole column, where the rows were. The pressed entry plays in the case page's own right pane, where the Preview already lives for citations and search hits; nothing new is pushed in.</p>
+      <p><b>One day at a time.</b> The day tabs carry the note counts; the ruler, the band and the spells are the day in hand. A recording that runs past midnight is on both days.</p>
+      <p><b>The rail.</b> Recordings not yet on the clock sit above the ruler as chips, each with its note count, until they are placed (figure B). The band is the recordings placed, in their colours, with how each was placed in the legend.</p>
+      <p><b>The spells.</b> The incident's drawing: a gap of ten minutes starts a new spell; an entry is the note's words, the line it sits under in the muted colour (or "at a moment, nothing said"), the writer, the recording's chip, and To check when someone has asked. The lit entry is the one playing.</p>
+      <p><b>Time unknown.</b> A recording placed by its day alone sits in a band at the end of the day, so a jail call is on the right day without an invented hour. Its entry's time reads the day.</p>
+      <p><b>Export</b> in the lead: Chronology to Word (figure C) and as a spreadsheet, the incident's two, for the day in hand or every day.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Placing a recording by hand: the drag, and the typed time</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="chron drag">
+          <div class="days"><span>6 Nov 2025 · 14</span><span class="on">7 Nov · 3</span><span>12 Nov · 1</span></div>
+          <div class="rail"><span>Not on the clock yet:</span><span class="chip" style="opacity: .4"><i></i>Call_20251107_0915 · 3 notes</span><span class="chip"><i></i>Interview_Reyes.m4a · 1 note</span></div>
+          <div style="position: relative; height: 54px">
+            <span class="chip ghost"><i></i>Call_20251107_0915 · 3 notes</span>
+            <div class="guide"><b>09:15</b></div>
+            <div class="ruler" style="position: absolute; left: 0; right: 0; bottom: 0"><span style="left: 0%">08:00</span><span style="left: 25%">09:00</span><span style="left: 50%">10:00</span><span style="left: 75%">11:00</span><span style="left: 100%">12:00</span></div>
+          </div>
+          <div class="band"><div class="bar"><i class="c4" style="left: 60%; width: 18%"></i><b style="left: 60%">Interview room 2</b></div></div>
+        </div>
+        <p class="muted tiny" style="margin: 8px 0 0">Mid-drag: the chip follows the pointer along the ruler with a guide line and the time it would start at. Letting go opens the box.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div class="box">
+          <h4>Place Call_20251107_0915 by hand?</h4>
+          <div class="field"><span class="muted">Date</span><span class="in">7 Nov 2025</span></div>
+          <div class="field"><span class="muted">Starts at</span><span class="in">09:15:00</span></div>
+          <label class="small" style="display: flex; gap: 6px; align-items: center"><input type="checkbox"> The day alone; the time is not known</label>
+          <p class="small muted" style="margin: 0">Its 3 notes land from then on. It reads Placed by hand, D. Meehan, and anyone on the case may move it or take it off the clock.</p>
+          <div class="acts"><span class="btn">Cancel</span><span class="btn primary">Place</span></div>
+        </div>
+        <div class="box">
+          <h4>Call_20251107_0915</h4>
+          <p class="small muted" style="margin: 0">Pressed on the rail instead of dragged: the same box, the date filled from the day in hand and the time empty, for a call whose time is known from a log.</p>
+          <div class="field"><span class="muted">Date</span><span class="in">7 Nov 2025</span></div>
+          <div class="field"><span class="muted">Starts at</span><span class="in muted">hh:mm:ss</span></div>
+          <label class="small" style="display: flex; gap: 6px; align-items: center"><input type="checkbox" checked> The day alone; the time is not known</label>
+          <div class="acts"><span class="btn">Cancel</span><span class="btn primary">Place</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One gesture, borrowed.</b> The drag is the incident page's: a bar moved along the strip opens "Place BWC2-1 by hand?" there, and this is the same box with a date, since a case runs over days.</p>
+      <p><b>Kept on the recording.</b> The placement is the recording's clock: date, start, how (clock, by hand, by the day), by whom, when. One audit row, "Recording placed on the clock", with the how and never a time. An incident made later reads it as its first placement (Phase 10's second release).</p>
+      <p><b>Reversible.</b> A placed recording's chip in the band carries Move and Take off the clock on hover; a placement by hand is marked with the person's name in the legend and on its entries' pills.</p>
+      <p><b>A read clock wins.</b> When the camera's clock is read later for a recording placed by hand, the read clock takes over and the legend says so; the hand placement is kept in the audit, not on the page.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>One entry up close, and the same entry on the Word export's page</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="chron">
+          <div class="entry"><span class="num c2">2</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan, yesterday</span><span class="chip c2"><i></i>BWC2-1</span><span class="pill warn">To check</span><span class="btn tiny ghost">Edit</span><span class="btn tiny ghost">Open the call</span></div></div></div>
+        </div>
+        <p class="muted tiny" style="margin: 8px 0 0">Hovering an entry shows Edit and Open the call; To check is pressed on or off by anyone on the case, as the incident's is. The time plays the Preview; the words open the note for editing in place.</p>
+      </div>
+      <div class="paper">
+        <h5>Chronology: Harbour Street stop · 6 November 2025</h5>
+        <div class="m">3 recordings on the clock: BWC1-1 (clock, checked), BWC2-1 (clock, checked), BWC3-1 (clock, unchecked); 1 placed by the day: Call_20251106_2140 (J. Brennan).</div>
+        <div class="band"><div class="ruler" style="height: 14px"><span style="left: 0%">20:00</span><span style="left: 50%">21:00</span><span style="left: 100%">22:00</span></div><div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i></div><div class="bar"><i class="c2" style="left: 21%; width: 56%"></i></div><div class="bar"><i class="c3" style="left: 34%; width: 30%; opacity: .4"></i></div></div>
+        <div style="font-weight: 600; margin-top: 6px">20:24:36 to 20:31:05 · 4 notes</div>
+        <div class="ex"><div class="still"><span>20:26:10 · BWC2-1</span></div><div><div class="t">2 · 20:26:10 · BWC2-1</div><div><b>Passenger side: second officer sees the bag on the floor.</b> <span class="m">J. Brennan</span></div><div class="m">Heard around it: "Stay in the car for me." · "What's in the bag?"</div><div class="m">To check</div></div></div>
+        <div class="ex"><div class="still"><span>20:28:44 · BWC1-1</span></div><div><div class="t">3 · 20:28:44 · BWC1-1</div><div><b>Consent to search is asked; answer unclear, listen again.</b> <span class="m">D. Meehan</span></div><div class="m">Heard: "Do you mind if we take a look" · "I guess, I don't know"</div></div></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The snippet is the Preview.</b> On the page nothing image-like is kept: press the time and the frame at that moment shows in the pane, then plays from a few seconds before.</p>
+      <p><b>The export carries the stills.</b> Chronology to Word is the Timeline report's shape: the cover, the recordings and how each was placed, the band, then the entries in spells with a still cut from the playback copy at the moment, the words heard around it, the note and the writer. Cut when the document is made, as Download notes does; a sound recording's entry has no still.</p>
+      <p><b>The spreadsheet</b>: time of day, date, recording, placed how, note, the line, writer, written on. The audit row Chronology exported, with the format, never a word.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>The Notes page: the same shape as a tab of the work panel, the player beside it</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Harbour Street stop · Notes page</h3><span class="muted small">rail folded, the whole width</span></div>
+      <div class="split" style="grid-template-columns: minmax(0, 1fr) 360px">
+        <div class="chron">
+          <div class="tabs" style="margin-bottom: 4px"><span>Notes <span class="n">18</span></span><span class="on">Chronology</span><span>Recordings <span class="n">7</span></span><span>Details</span><span style="margin-left: auto" class="muted">Find…</span></div>
+          <div class="days"><span class="on">6 Nov 2025 · 14</span><span>7 Nov · 3</span><span>12 Nov · 1</span></div>
+          <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Call_20251107_0915 · 3 notes</span><span class="chip"><i></i>Interview_Reyes.m4a · 1 note</span></div>
+          <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 50%">21:00</span><span style="left: 100%">22:00</span></div>
+          <div class="band"><div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1</b></div><div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1</b></div></div>
+          <div class="spell"><div class="sh"><b>20:24:36 to 20:31:05</b><span class="muted">4 notes</span></div>
+            <div class="entry"><span class="num c1">1</span><span class="stem"></span><div><div class="top"><span class="t">20:24:36</span><span class="play">▶</span></div><div class="words">First contact, officer asks for licence.</div><div class="line">"Can I see your licence and registration, please" · BWC1-1</div></div></div>
+            <div class="entry lit"><span class="num c2">2</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div></div></div>
+          </div>
+        </div>
+        <div class="pane">
+          <div class="muted tiny">BWC2-1 · Body camera · 1:06:29 · 6 notes</div>
+          <div class="vid"><span class="big">▶</span><span class="stamp">11/06/2025 20:26:10 · BWC2-1</span></div>
+          <div class="bar"><i style="left: 9%"></i><i style="left: 44%"></i><i style="left: 61%"></i></div>
+          <div class="ln muted">20:25:58 Speaker 2: Stay in the car for me.</div>
+          <div class="ln lit">20:26:10 · at a moment, nothing said</div>
+          <div class="note"><b>J. Brennan</b> · Passenger side: second officer sees the bag on the floor. <span class="muted">Edit</span></div>
+          <div style="display: flex; gap: 6px; align-items: center"><span class="btn tiny">Previous note</span><span class="btn tiny">Next note</span><span class="muted tiny">Note 2 of 18</span><span class="btn tiny" style="margin-left: auto">Mark reviewed</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The roomy version.</b> The Notes page already takes the whole width with its player on the right and Previous and Next stepping through the notes. The Chronology tab in its work panel is the same drawing as figure A, and stepping follows the chronology's order when that tab is in front.</p>
+      <p><b>One reading.</b> Both pages draw the chronology from the one reading of the case's notes the Notes page already keeps, in a handful of queries whatever the count; the placement adds one column per recording to it.</p>
+    </div>
+  </section>
+
+  <!-- F -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure F</span><h2>A day of forty recordings: packed lanes, the fold, the Notes lane and the hint</h2></div>
+    <div class="frame">
+      <div class="chron">
+        <div class="lead"><div class="days"><span>5 Nov · 9</span><span class="on">6 Nov 2025 · 61</span><span>7 Nov · 22</span><span>8 Nov · 4</span></div><span style="display: flex; gap: 6px"><span class="pill acc">All types</span><span class="pill">Body camera 12</span><span class="pill">Jail call 28</span></span></div>
+        <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Interview_Reyes.m4a · 1 note</span><span class="chip"><i></i>Call_20251106_1402 · 2 notes</span><span class="tiny">and 3 more with no notes, folded</span></div>
+        <div class="ruler"><span style="left: 0%">07:00</span><span style="left: 20%">10:00</span><span style="left: 40%">13:00</span><span style="left: 60%">16:00</span><span style="left: 80%">19:00</span><span style="left: 100%">22:00</span></div>
+        <div class="band">
+          <div class="bar"><i class="c1" style="left: 3%; width: 4%"></i><i class="c1" style="left: 12%; width: 3%"></i><i class="c1" style="left: 22%; width: 5%"></i><i class="c1" style="left: 31%; width: 3%"></i><i class="c1" style="left: 47%; width: 4%"></i><i class="c1" style="left: 58%; width: 3%"></i><i class="c1" style="left: 66%; width: 4%"></i><i class="c1" style="left: 89%; width: 11%"></i></div>
+          <div class="bar"><i class="c2" style="left: 6%; width: 3%"></i><i class="c2" style="left: 18%; width: 4%"></i><i class="c2" style="left: 35%; width: 3%"></i><i class="c2" style="left: 52%; width: 5%"></i><i class="c2" style="left: 71%; width: 3%"></i><i class="c2" style="left: 89.5%; width: 10.5%"></i></div>
+          <div class="bar"><i class="c3" style="left: 9%; width: 3%"></i><i class="c3" style="left: 40%; width: 4%"></i><i class="c3" style="left: 62%; width: 3%"></i><i class="c3" style="left: 91%; width: 7%"></i></div>
+          <div class="bar"><i class="c4" style="left: 26%; width: 3%"></i><i class="c4" style="left: 55%; width: 3%"></i><i class="c4" style="left: 90%; width: 9%"></i></div>
+          <div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">and 14 more recordings on this day · <a href="#">Show all</a></span></div>
+        </div>
+        <div class="legend"><span>40 recordings on the clock, packed into 4 lanes; 28 by clock, 12 by hand.</span><span class="muted">Hover a bar for the recording; press it to light its entries.</span></div>
+        <div class="notes-lane"><i class="c1" style="left: 4%"></i><i class="c2" style="left: 7%"></i><i class="c1" style="left: 13%"></i><i class="c2" style="left: 19%"></i><i class="c1" style="left: 23%"></i><i class="c4" style="left: 27%"></i><i class="c3" style="left: 41%"></i><i class="c1" style="left: 48%"></i><em style="left: 53%">×3</em><i class="c1" style="left: 59%"></i><i class="c3" style="left: 63%"></i><i class="c2" style="left: 72%"></i><em style="left: 91%">×9</em><em style="left: 95%">×5</em><i class="c3" style="left: 97%"></i><span class="lbl">notes</span></div>
+        <div class="hint"><span style="left: 89%; width: 11%"></span><b style="left: 86%">4 cameras, 15 notes, 19:42 to 21:31</b></div>
+        <div class="spell" style="margin-top: 8px"><div class="sh"><b>07:36:10 to 07:41:02</b><span class="muted">2 notes</span></div>
+          <div class="entry"><span class="num c1">1</span><span class="stem"></span><div><div class="top"><span class="t">07:36:10</span><span class="play">▶</span></div><div class="words">Mentions the cousin's street for the first time.</div><div class="line">"it's parked over on his cousin's street" · Call_20251106_0735</div><div class="meta"><span class="pill">D. Meehan</span><span class="chip c1"><i></i>Call_20251106_0735</span></div></div></div>
+          <div class="entry"><span class="num c2">2</span><div><div class="top"><span class="t">07:41:02</span><span class="play">▶</span></div><div class="words">Second call, same subject, a different number.</div><div class="line">"did you move it yet" · Call_20251106_0740</div><div class="meta"><span class="pill">J. Brennan</span><span class="chip c2"><i></i>Call_20251106_0740</span></div></div></div>
+        </div>
+        <div class="muted tiny" style="padding-top: 6px">… 59 more notes in 11 spells down the page; the day tabs, the type pills and the writer pills narrow them, Find reaches the rest.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Packed, not stacked.</b> Forty recordings, four lanes: a recording takes the first lane that is free at its start, so calls spread over a day share lanes and only recordings that ran at the same time sit one above another. The evening's four body cameras stack at the right, and that stacking is the signal.</p>
+      <p><b>Six lanes at most.</b> Past six the rest fold into the hatched lane with Show all. Opened, the band is capped at eight rows and scrolls inside itself, the ruler pinned above and the Notes lane below, so the top of the page keeps one height whatever the day holds (figure J). The band is never sticky: it is the day's picture, read once, then scrolled past.</p>
+      <p><b>The Notes lane.</b> A mark per note in its recording's colour; marks that would overlap at this scale merge into a pill with a count. Hover shows the words light; a press lights the entry below and plays it. Nothing is written beside a mark at any scale, so sixty notes stay legible.</p>
+      <p><b>The hint.</b> Two or more videos overlapping with a cluster of marks under them: a soft bracket with the counts and the span. A signal only in the first release; the second puts Make an incident from this span on it. The app counts, the person decides.</p>
+      <p><b>The ruler fits the notes.</b> 07:00 to 22:00 here because that is where the day's notes are; a drag across the ruler looks closer at an hour and the edge returns to the day.</p>
+      <p><b>Colours.</b> Six cycle; within a day a recording keeps its colour on its bar, its marks, its chip and its entries' numbers. Past six recordings the colour tells lanes apart, the chip's name tells recordings apart.</p>
+    </div>
+  </section>
+
+  <!-- G -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure G</span><h2>Ninety recordings over three months: the date strip, the rail folded, the sheet that places many, the spells folded</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Holt</h3><span class="muted small">90 recordings · 212 notes · 12 Sep to 3 Dec 2025</span></div>
+      <div class="tabs"><span>Recordings <span class="n">90</span></span><span>Search</span><span>Clips <span class="n">9</span></span><span class="on">Notes <span class="n">212</span></span><span>Speakers</span><span>Incidents <span class="n">2</span></span><span>Documents <span class="n">3</span></span></div>
+      <div class="split" style="grid-template-columns: minmax(0, 1fr) 400px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="lead">
+            <span class="muted">212 notes on 71 of 90 recordings, by 4 people · 38 days with notes</span>
+            <span style="display: flex; gap: 10px; align-items: center"><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span><span class="btn tiny">Export ▾</span></span>
+          </div>
+          <div class="chron">
+            <div class="strip">
+              <div class="month"><div class="days-bars"><i style="height: 6px"></i><i style="height: 10px"></i><i style="height: 4px"></i><i style="height: 14px"></i><i style="height: 8px"></i><i style="height: 5px"></i></div><div class="name">Sep · 6 days</div></div>
+              <div class="month"><div class="days-bars"><i style="height: 8px"></i><i style="height: 22px"></i><i style="height: 12px"></i><i style="height: 6px"></i><i style="height: 30px"></i><i style="height: 9px"></i><i style="height: 16px"></i><i style="height: 7px"></i><i style="height: 11px"></i><i style="height: 5px"></i><i style="height: 19px"></i><i style="height: 8px"></i><i style="height: 13px"></i><i style="height: 4px"></i></div><div class="name">Oct · 14 days</div></div>
+              <div class="month"><div class="days-bars"><i style="height: 10px"></i><i style="height: 7px"></i><i style="height: 34px" class="on"></i><i style="height: 18px"></i><i style="height: 6px"></i><i style="height: 12px"></i><i style="height: 9px"></i><i style="height: 5px"></i><i style="height: 15px"></i><i style="height: 8px"></i><i style="height: 11px"></i><i style="height: 6px"></i><i style="height: 9px"></i><i style="height: 4px"></i><i style="height: 7px"></i></div><div class="name">Nov · 15 days</div></div>
+              <div class="month"><div class="days-bars"><i style="height: 9px"></i><i style="height: 5px"></i><i style="height: 12px"></i></div><div class="name">Dec · 3 days</div></div>
+              <span class="muted tiny" style="margin-left: auto; align-self: center">6 Nov 2025 · 61 notes · 18 recordings <br>← → step days · only days with notes</span>
+            </div>
+            <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Call_20251106_1402 · 2 notes</span><span class="chip"><i></i>Interview_Reyes.m4a · 1 note</span><span class="chip"><i></i>Call_20251107_0915 · 3 notes</span><span class="chip"><i></i>Call_20251108_1133 · 1 note</span><span class="chip"><i></i>Call_20251109_1820 · 2 notes</span><span class="tiny">and 41 more with notes</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+            <div class="ruler"><span style="left: 0%">07:00</span><span style="left: 20%">10:00</span><span style="left: 40%">13:00</span><span style="left: 60%">16:00</span><span style="left: 80%">19:00</span><span style="left: 100%">22:00</span></div>
+            <div class="band">
+              <div class="bar"><i class="c1" style="left: 3%; width: 4%"></i><i class="c1" style="left: 12%; width: 3%"></i><i class="c1" style="left: 22%; width: 5%"></i><i class="c1" style="left: 31%; width: 3%"></i><i class="c1" style="left: 47%; width: 4%"></i><i class="c1" style="left: 58%; width: 3%"></i><i class="c1" style="left: 66%; width: 4%"></i><i class="c1" style="left: 89%; width: 11%"></i></div>
+              <div class="bar"><i class="c2" style="left: 6%; width: 3%"></i><i class="c2" style="left: 18%; width: 4%"></i><i class="c2" style="left: 35%; width: 3%"></i><i class="c2" style="left: 52%; width: 5%"></i><i class="c2" style="left: 71%; width: 3%"></i><i class="c2" style="left: 89.5%; width: 10.5%"></i></div>
+              <div class="bar"><i class="c3" style="left: 9%; width: 3%"></i><i class="c3" style="left: 40%; width: 4%"></i><i class="c3" style="left: 62%; width: 3%"></i><i class="c3" style="left: 91%; width: 7%"></i></div>
+              <div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">and 6 more recordings on this day · <a href="#">Show all</a></span></div>
+            </div>
+            <div class="notes-lane"><i class="c1" style="left: 4%"></i><i class="c2" style="left: 7%"></i><i class="c1" style="left: 13%"></i><i class="c2" style="left: 19%"></i><i class="c1" style="left: 23%"></i><i class="c3" style="left: 41%"></i><i class="c1" style="left: 48%"></i><em style="left: 53%">×3</em><i class="c1" style="left: 59%"></i><i class="c3" style="left: 63%"></i><i class="c2" style="left: 72%"></i><em style="left: 91%">×9</em><em style="left: 95%">×5</em><i class="c3" style="left: 97%"></i><span class="lbl">notes</span></div>
+            <div class="hint"><span style="left: 89%; width: 11%"></span><b style="left: 86%">3 cameras, 15 notes, 19:42 to 21:31</b></div>
+            <div class="lead" style="margin-top: 6px"><span class="muted small">61 notes in 12 spells on 6 Nov · folded past forty</span><span class="btn tiny ghost">Open all</span></div>
+            <div class="folded"><span><span class="chev">›</span><b>07:36:10 to 07:41:02</b></span><span class="muted">2 notes · 2 recordings</span></div>
+            <div class="folded"><span><span class="chev">›</span><b>09:12:48 to 09:30:05</b></span><span class="muted">4 notes · 3 recordings</span></div>
+            <div class="folded"><span><span class="chev">›</span><b>11:04:00 to 11:06:12</b></span><span class="muted">3 notes · 1 recording</span></div>
+            <div class="spell"><div class="sh"><span class="chev" style="color: var(--muted); margin-right: 8px">⌄</span><b>13:40:10 to 13:52:30</b><span class="muted">5 notes · 2 recordings</span></div>
+              <div class="entry"><span class="num c1">10</span><span class="stem"></span><div><div class="top"><span class="t">13:40:10</span><span class="play">▶</span></div><div class="words">Names the storage unit for the first time.</div><div class="line">"it's all in the unit off Harbour" · Call_20251106_1338</div><div class="meta"><span class="pill">A. Ortiz</span><span class="chip c1"><i></i>Call_20251106_1338</span></div></div></div>
+              <div class="entry"><span class="num c2">11</span><div><div class="top"><span class="t">13:44:52</span><span class="play">▶</span></div><div class="words">Second number, same unit; cross-reference with the search warrant.</div><div class="line">"the unit, yeah, the one off Harbour" · Call_20251106_1341</div><div class="meta"><span class="pill">D. Meehan</span><span class="chip c2"><i></i>Call_20251106_1341</span><span class="pill warn">To check</span></div></div></div>
+              <div class="muted tiny" style="padding: 4px 0 0 36px">3 more in this spell</div>
+            </div>
+            <div class="folded"><span><span class="chev">›</span><b>19:42:08 to 21:31:40</b></span><span class="muted">15 notes · 3 cameras</span></div>
+            <div class="muted tiny" style="padding-top: 6px">… 7 more spells on this day.</div>
+          </div>
+        </div>
+        <div class="sheet">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><b>Place recordings</b><span class="btn tiny ghost">Close</span></div>
+          <div class="muted tiny">46 recordings with notes are not on the clock. Type what you know; a row with nothing typed is left as it is. Press ▶ to hear the date said on the call.</div>
+          <table>
+            <tr><th></th><th>Recording</th><th>Notes</th><th>Date</th><th>Starts at</th><th>Day alone</th></tr>
+            <tr><td><span class="play" style="display: inline-flex; width: 18px; height: 16px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 8px; align-items: center; justify-content: center">▶</span></td><td>Call_20251106_1402</td><td>2</td><td><span class="in">6 Nov 2025</span></td><td><span class="in">14:02</span></td><td><input type="checkbox"></td></tr>
+            <tr><td><span class="play" style="display: inline-flex; width: 18px; height: 16px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 8px; align-items: center; justify-content: center">▶</span></td><td>Interview_Reyes.m4a</td><td>1</td><td><span class="in">12 Nov 2025</span></td><td><span class="in empty">hh:mm</span></td><td><input type="checkbox" checked></td></tr>
+            <tr><td><span class="play" style="display: inline-flex; width: 18px; height: 16px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 8px; align-items: center; justify-content: center">▶</span></td><td>Call_20251107_0915</td><td>3</td><td><span class="in">7 Nov 2025</span></td><td><span class="in">09:15</span></td><td><input type="checkbox"></td></tr>
+            <tr><td><span class="play" style="display: inline-flex; width: 18px; height: 16px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 8px; align-items: center; justify-content: center">▶</span></td><td>Call_20251108_1133</td><td>1</td><td><span class="in empty">date</span></td><td><span class="in empty">hh:mm</span></td><td><input type="checkbox"></td></tr>
+          </table>
+          <div class="muted tiny">… 42 more rows, in upload order.</div>
+          <div class="acts"><span class="btn">Cancel</span><span class="btn primary">Place 3</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The date strip is the whole case.</b> One bar per day that has notes, its height the day's count, under its month; 38 days over three months here, as wide as the case's activity and no wider. The day in hand is lit; a press opens a day, the arrow keys step through them. Everything under the strip is one day.</p>
+      <p><b>The rail folds.</b> Only unplaced recordings with notes are on it, five shown, "and 41 more". <b>Place recordings</b> opens the sheet over the page, the layers' rule, one row per unplaced recording with notes: date, time or the day alone, a play mark to hear the date said. Place 3 places the rows typed; each is named and reversible; one audit row per recording.</p>
+      <p><b>The spells fold past forty notes.</b> A heading with its span and counts; press one to open it; Open all beside the lead. The writer pills, the type pills and Find narrow before that. The band itself is unchanged by the count: packed, six lanes at most, then the fold, and opened, the eight-row cap that scrolls (figure J).</p>
+      <p><b>One reading.</b> The page reads the case's notes once, in a handful of queries whatever the count, as the Notes page already does for 800 calls and 1,200 notes; the placements add one column per recording. The strip, the rail and the band are one screen's top; the day's notes follow.</p>
+    </div>
+  </section>
+
+  <!-- H -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure H</span><h2>Ninety recordings at the same time: the coverage lane, bars for the eight most noted, names instead of colours</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Holt</h3><span class="muted small">6 Nov 2025 · 94 recordings on the clock, 90 of them running together from 19:42 · 140 notes</span></div>
+      <div class="split" style="grid-template-columns: minmax(0, 1fr) 340px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="chron">
+            <div class="strip">
+              <div class="month"><div class="days-bars"><i style="height: 6px"></i><i style="height: 10px"></i><i style="height: 4px"></i><i style="height: 14px"></i></div><div class="name">Oct · 4 days</div></div>
+              <div class="month"><div class="days-bars"><i style="height: 8px"></i><i style="height: 7px"></i><i style="height: 34px" class="on"></i><i style="height: 12px"></i><i style="height: 6px"></i><i style="height: 9px"></i></div><div class="name">Nov · 6 days</div></div>
+              <span class="muted tiny" style="margin-left: auto; align-self: center">6 Nov 2025 · 140 notes · 94 recordings</span>
+            </div>
+            <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Call_20251106_2140 · 1 note</span><span class="tiny">and 2 more with notes</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+            <div class="ruler"><span style="left: 0%">19:30</span><span style="left: 25%">20:00</span><span style="left: 50%">20:30</span><span style="left: 75%">21:00</span><span style="left: 100%">21:30</span></div>
+            <div class="cover">
+              <svg viewBox="0 0 1000 56" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0,56 L60,56 L80,48 L120,40 L160,30 L200,18 L240,10 L300,6 L380,4 L460,6 L540,8 L620,12 L700,20 L780,30 L860,38 L930,46 L1000,52 L1000,56 Z" fill="var(--accent)" opacity="0.28"></path>
+                <path d="M0,56 L60,56 L80,48 L120,40 L160,30 L200,18 L240,10 L300,6 L380,4 L460,6 L540,8 L620,12 L700,20 L780,30 L860,38 L930,46 L1000,52" fill="none" stroke="var(--accent)" stroke-width="1.5"></path>
+              </svg>
+              <span class="peak" style="left: 38%; top: 2px">90 running</span>
+              <span class="peak" style="left: 14%; top: 22px; color: var(--muted)">31</span>
+              <span class="peak" style="left: 86%; top: 26px; color: var(--muted)">24</span>
+              <span class="probe" style="left: 52%"><b>20:31 · 87 running · 14 with notes</b></span>
+              <span class="lbl">how many were running</span>
+            </div>
+            <div class="band">
+              <div class="bar"><i class="c1" style="left: 8%; width: 86%"></i><b style="left: 8%">BWC1-1 · 11 notes</b></div>
+              <div class="bar"><i class="c2" style="left: 9%; width: 84%"></i><b style="left: 9%">BWC2-1 · 9 notes</b></div>
+              <div class="bar"><i class="c3" style="left: 12%; width: 70%"></i><b style="left: 12%">BWC7-2 · 8 notes</b></div>
+              <div class="bar"><i class="c4" style="left: 20%; width: 60%"></i><b style="left: 20%">BWC12-1 · 6 notes</b></div>
+              <div class="bar"><i class="c1" style="left: 24%; width: 40%"></i><b style="left: 24%">Dash-3 · 5 notes</b></div>
+              <div class="bar"><i class="c2" style="left: 30%; width: 55%"></i><b style="left: 30%">BWC22-1 · 5 notes</b></div>
+              <div class="bar"><i class="c3" style="left: 10%; width: 62%"></i><b style="left: 10%">BWC4-1 · 4 notes</b></div>
+              <div class="bar"><i class="c4" style="left: 33%; width: 48%"></i><b style="left: 33%">BWC9-2 · 4 notes</b></div>
+              <div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">10 more recordings with notes, and 72 with none, in the shade above · <a href="#">Show all with notes</a></span></div>
+            </div>
+            <div class="legend"><span>The eight with the most notes have a bar; press the shade at a moment for every recording running then.</span></div>
+            <div class="notes-lane"><em style="left: 10%">×4</em><i style="left: 14%"></i><em style="left: 19%">×7</em><i style="left: 23%"></i><i style="left: 26%"></i><em style="left: 31%">×12</em><em style="left: 36%">×9</em><i style="left: 40%"></i><em style="left: 45%">×15</em><em style="left: 52%">×14</em><i style="left: 57%"></i><em style="left: 61%">×11</em><i style="left: 66%"></i><em style="left: 71%">×8</em><i style="left: 76%"></i><em style="left: 82%">×6</em><i style="left: 88%"></i><i style="left: 93%"></i><span class="lbl">notes</span></div>
+            <div class="hint"><span style="left: 8%; width: 86%"></span><b style="left: 51%">90 cameras, 140 notes, 19:42 to 21:31</b></div>
+            <div class="lead" style="margin-top: 6px"><span class="muted small">140 notes in 9 spells on 6 Nov · folded past forty</span><span class="btn tiny ghost">Open all</span></div>
+            <div class="folded"><span><span class="chev">›</span><b>19:42:08 to 19:58:30</b></span><span class="muted">11 notes · 9 recordings</span></div>
+            <div class="spell"><div class="sh"><span class="chev" style="color: var(--muted); margin-right: 8px">⌄</span><b>20:24:36 to 20:35:10</b><span class="muted">26 notes · 17 recordings</span></div>
+              <div class="entry"><span class="num plain">12</span><span class="stem"></span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan</span><span class="chip"><i></i>BWC2-1</span><span class="pill warn">To check</span></div></div></div>
+              <div class="entry lit"><span class="num plain">13</span><span class="stem"></span><div><div class="top"><span class="t">20:26:14</span><span class="play">▶</span></div><div class="words">Same moment from the street side; the bag is visible before the door opens.</div><div class="line">"got something on the floor here" · BWC22-1</div><div class="meta"><span class="pill">A. Ortiz</span><span class="chip"><i></i>BWC22-1</span></div></div></div>
+              <div class="entry"><span class="num plain">14</span><div><div class="top"><span class="t">20:26:31</span><span class="play">▶</span></div><div class="words">Dash camera: the car's position relative to the kerb.</div><div class="line">camera line: a sedan at the kerb, two officers at the passenger door · Dash-3</div><div class="meta"><span class="pill">D. Meehan</span><span class="chip"><i></i>Dash-3</span></div></div></div>
+              <div class="muted tiny" style="padding: 4px 0 0 36px">23 more in this spell</div>
+            </div>
+            <div class="folded"><span><span class="chev">›</span><b>20:41:02 to 20:52:48</b></span><span class="muted">19 notes · 12 recordings</span></div>
+            <div class="muted tiny" style="padding-top: 6px">… 6 more spells on this day.</div>
+          </div>
+        </div>
+        <div class="running">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><b>Running at 20:31</b><span class="btn tiny ghost">Close</span></div>
+          <div class="muted tiny">87 recordings, 14 with notes first. Press a row to light its entries; ▶ plays it there.</div>
+          <div class="row"><span class="p">▶</span><span>BWC1-1</span><span class="muted">11 notes</span><span class="pill ok">clock</span></div>
+          <div class="row"><span class="p">▶</span><span>BWC2-1</span><span class="muted">9 notes</span><span class="pill ok">clock</span></div>
+          <div class="row"><span class="p">▶</span><span>BWC7-2</span><span class="muted">8 notes</span><span class="pill ok">clock</span></div>
+          <div class="row"><span class="p">▶</span><span>BWC12-1</span><span class="muted">6 notes</span><span class="pill warn">unchecked</span></div>
+          <div class="row"><span class="p">▶</span><span>Dash-3</span><span class="muted">5 notes</span><span class="pill">by hand</span></div>
+          <div class="muted tiny">… 9 more with notes, then 73 without, in upload order.</div>
+          <div style="display: flex; gap: 6px; align-items: center"><span class="muted tiny">Find a recording…</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The coverage lane.</b> When more than six recordings overlap, the band stops drawing a bar per recording and draws how many were running at each moment, labelled at the peaks. Hover for the count; press for the list on the right, every recording running then, the noted ones first, with a play mark and how it was placed.</p>
+      <p><b>Bars only for the noted ones.</b> The eight recordings with the most notes keep a bar under the lane, the rest fold behind Show all with notes. The 72 with no notes are in the shade only: the chronology is of notes.</p>
+      <p><b>The marks carry the weight.</b> The Notes lane is the same at ninety recordings as at three: a mark per note, clusters as counts, press to light and play. The hint under it, "90 cameras, 140 notes, 19:42 to 21:31", is the whole evening in one line and the substrate for the second release's Make an incident.</p>
+      <p><b>Names, not colours.</b> Six colours cannot tell ninety apart, so the entry numbers and the marks take one colour and the chip's name does the telling. The entries are otherwise as in figure A.</p>
+      <p><b>Three states, one rule.</b> Up to six overlapping: lanes in colour (A). More recordings but spread over the day: packed lanes and the fold (F). More than six overlapping: this. The page picks the state from the day's recordings; nobody chooses it, and one case meets all three.</p>
+    </div>
+  </section>
+
+  <!-- I -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure I</span><h2>One day holds everything: the day's shape, several hints, and the hour looked at closer</h2></div>
+    <div class="cols" style="grid-template-columns: 1fr">
+      <div class="frame">
+        <div class="head"><h3>Holt</h3><span class="muted small">98 recordings · 214 notes · 6 Nov 2025 holds 94 of them and 203 notes</span></div>
+        <div class="chron">
+          <div class="strip">
+            <div class="month"><div class="days-bars"><i style="height: 4px"></i><i style="height: 3px"></i></div><div class="name">Oct · 2 days</div></div>
+            <div class="month"><div class="days-bars"><i style="height: 3px"></i><i style="height: 34px" class="on"></i><i style="height: 4px"></i><i style="height: 3px"></i></div><div class="name">Nov · 4 days</div></div>
+            <span class="muted tiny" style="margin-left: auto; align-self: center">6 Nov 2025 · 203 notes · 94 recordings · the whole day</span>
+          </div>
+          <div class="rail"><span>Not on the clock yet:</span><span class="chip"><i></i>Call_20251106_2140 · 1 note</span><span class="tiny">and 1 more with notes</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+          <div class="ruler"><span style="left: 0%">06:00</span><span style="left: 17.6%">09:00</span><span style="left: 35.3%">12:00</span><span style="left: 52.9%">15:00</span><span style="left: 70.6%">18:00</span><span style="left: 88.2%">21:00</span><span style="left: 100%">23:00</span></div>
+          <div class="cover">
+            <svg viewBox="0 0 1000 56" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,56 L150,56 L165,44 L180,40 L220,40 L235,48 L250,56 L780,56 L800,30 L820,12 L850,5 L900,4 L930,8 L950,20 L965,40 L980,52 L1000,56 Z" fill="var(--accent)" opacity="0.28"></path>
+              <path d="M0,56 L150,56 L165,44 L180,40 L220,40 L235,48 L250,56 L780,56 L800,30 L820,12 L850,5 L900,4 L930,8 L950,20 L965,40 L980,52 L1000,56" fill="none" stroke="var(--accent)" stroke-width="1.5"></path>
+            </svg>
+            <span class="peak" style="left: 20%; top: 20px; color: var(--muted)">12 running</span>
+            <span class="peak" style="left: 87%; top: 2px">90 running</span>
+            <span class="lbl">how many were running</span>
+          </div>
+          <div class="band">
+            <div class="bar"><i class="c1" style="left: 80.5%; width: 17%"></i><b style="left: 80.5%">BWC1-1 · 11</b></div>
+            <div class="bar"><i class="c2" style="left: 81%; width: 16%"></i><b style="left: 81%">BWC2-1 · 9</b></div>
+            <div class="bar"><i class="c3" style="left: 16%; width: 7%"></i><b style="left: 16%">BWC7-2 · 6</b><i class="c3" style="left: 82%; width: 14%"></i></div>
+            <div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">5 more bars for the day's most noted, and 86 recordings in the shade above · <a href="#">Show all with notes</a></span></div>
+          </div>
+          <div class="notes-lane"><em style="left: 17%">×6</em><i style="left: 20%"></i><em style="left: 22%">×4</em><i style="left: 24%"></i><i style="left: 45%"></i><i style="left: 58%"></i><em style="left: 81%">×11</em><em style="left: 84%">×23</em><em style="left: 87%">×38</em><em style="left: 90%">×31</em><em style="left: 93%">×22</em><em style="left: 96%">×9</em><span class="lbl">notes</span></div>
+          <div class="hint"><span style="left: 16%; width: 8%"></span><b style="left: 20%">12 cameras, 14 notes, 09:02 to 09:40</b><span style="left: 80.5%; width: 17%"></span><b style="left: 89%">90 cameras, 140 notes, 19:42 to 21:31</b></div>
+          <div class="lead" style="margin-top: 6px"><span class="muted small">203 notes in 14 spells on 6 Nov · folded past forty · drag across the ruler to look closer</span><span class="btn tiny ghost">Open all</span></div>
+          <div class="folded"><span><span class="chev">›</span><b>09:02:10 to 09:40:12</b></span><span class="muted">14 notes · 12 recordings</span></div>
+          <div class="folded"><span><span class="chev">›</span><b>12:15:00 to 12:16:30</b></span><span class="muted">1 note · 1 recording</span></div>
+          <div class="folded"><span><span class="chev">›</span><b>19:42:08 to 19:58:30</b></span><span class="muted">11 notes · 9 recordings</span></div>
+          <div class="folded"><span><span class="chev">›</span><b>20:01:12 to 20:12:40</b></span><span class="muted">23 notes · 15 recordings</span></div>
+          <div class="muted tiny" style="padding-top: 6px">… 10 more spells on this day.</div>
+        </div>
+        <p class="muted tiny" style="margin: 8px 0 0">The whole day. The strip is one tall bar; the ruler runs from the first note to the last; the coverage lane shows where the day happened; each cluster gets its own hint.</p>
+      </div>
+      <div class="frame">
+        <div class="chron">
+          <div class="lead"><span class="muted small"><b>6 Nov 2025, 20:00 to 21:00</b> · 62 notes · 90 recordings running</span><span class="btn tiny">Back to the day</span></div>
+          <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:15</span><span style="left: 50%">20:30</span><span style="left: 75%">20:45</span><span style="left: 100%">21:00</span></div>
+          <div class="cover" style="height: 36px">
+            <svg viewBox="0 0 1000 36" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,10 L200,8 L400,5 L600,4 L800,6 L1000,9 L1000,36 L0,36 Z" fill="var(--accent)" opacity="0.28"></path>
+              <path d="M0,10 L200,8 L400,5 L600,4 L800,6 L1000,9" fill="none" stroke="var(--accent)" stroke-width="1.5"></path>
+            </svg>
+            <span class="peak" style="left: 60%; top: 8px">88 to 90 running</span>
+            <span class="probe" style="left: 43%"><b>20:26 · 90 running · 21 with notes</b></span>
+          </div>
+          <div class="band">
+            <div class="bar"><i class="c1" style="left: 0; width: 100%"></i><b>BWC1-1 · 7 in this hour</b></div>
+            <div class="bar"><i class="c2" style="left: 0; width: 100%"></i><b>BWC22-1 · 6</b></div>
+            <div class="bar"><i class="c3" style="left: 0; width: 100%"></i><b>BWC2-1 · 5</b></div>
+            <div class="bar"><i class="c4" style="left: 0; width: 100%"></i><b>Dash-3 · 5</b></div>
+            <div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">4 more bars for this hour's most noted, and 82 in the shade · <a href="#">Show all with notes</a></span></div>
+          </div>
+          <div class="notes-lane"><i style="left: 3%"></i><i style="left: 6%"></i><i style="left: 9%"></i><i style="left: 12%"></i><i style="left: 14%"></i><i style="left: 20%"></i><i style="left: 23%"></i><i style="left: 27%"></i><i style="left: 31%"></i><i style="left: 34%"></i><i style="left: 38%"></i><i style="left: 41%"></i><i style="left: 43%"></i><i style="left: 44.5%"></i><i style="left: 47%"></i><i style="left: 51%"></i><i style="left: 55%"></i><i style="left: 58%"></i><i style="left: 61%"></i><i style="left: 64%"></i><i style="left: 67%"></i><i style="left: 70%"></i><i style="left: 74%"></i><i style="left: 77%"></i><i style="left: 80%"></i><i style="left: 83%"></i><i style="left: 87%"></i><i style="left: 90%"></i><i style="left: 93%"></i><i style="left: 96%"></i><span class="lbl">notes</span></div>
+          <div class="hint"><span style="left: 0; width: 100%"></span><b style="left: 50%">90 cameras, 62 notes, 20:00 to 21:00</b></div>
+          <div class="lead" style="margin-top: 6px"><span class="muted small">62 notes in 4 spells between 20:00 and 21:00</span><span class="btn tiny ghost">Open all</span></div>
+          <div class="spell"><div class="sh"><span class="chev" style="color: var(--muted); margin-right: 8px">⌄</span><b>20:24:36 to 20:35:10</b><span class="muted">26 notes · 17 recordings</span></div>
+            <div class="entry lit"><span class="num plain">41</span><span class="stem"></span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan</span><span class="chip"><i></i>BWC2-1</span><span class="pill warn">To check</span></div></div></div>
+            <div class="entry"><span class="num plain">42</span><div><div class="top"><span class="t">20:26:14</span><span class="play">▶</span></div><div class="words">Same moment from the street side; the bag is visible before the door opens.</div><div class="line">"got something on the floor here" · BWC22-1</div><div class="meta"><span class="pill">A. Ortiz</span><span class="chip"><i></i>BWC22-1</span></div></div></div>
+            <div class="muted tiny" style="padding: 4px 0 0 36px">24 more in this spell</div>
+          </div>
+          <div class="folded"><span><span class="chev">›</span><b>20:41:02 to 20:52:48</b></span><span class="muted">19 notes · 12 recordings</span></div>
+        </div>
+        <p class="muted tiny" style="margin: 8px 0 0">The hour, after a drag across the ruler from 20:00 to 21:00. The coverage lane is the hour's; the bars are the hour's eight most noted; the "×38" cluster is now marks you can press one by one; the spells are the hour's. Back to the day returns. The hour is in the address, so a link opens it.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The strip steps aside.</b> On a one-day case it is one tall bar, found at once, and the day is the tool. Nothing about the day's drawing depends on the strip.</p>
+      <p><b>The day's shape before a word is read.</b> The ruler fitted to the day's notes and the coverage lane with its humps say where the day happened; each cluster of overlapping cameras with marks under it gets its own hint, so a day can hold more than one incident-shaped thing.</p>
+      <p><b>The hour is the other list-shortener.</b> Past forty notes the spells fold; a drag across the ruler narrows everything to the span, including which eight recordings get bars and how the marks cluster. The same drag becomes Make an incident in the second release, where the hint's counts are the picker's start.</p>
+    </div>
+  </section>
+
+  <!-- J -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure J</span><h2>Show all with notes: the fold opened on the evening of figure H, one bar pressed</h2></div>
+    <div class="frame">
+      <div class="chron">
+        <div class="ruler"><span style="left: 0%">19:30</span><span style="left: 25%">20:00</span><span style="left: 50%">20:30</span><span style="left: 75%">21:00</span><span style="left: 100%">21:30</span></div>
+        <div class="cover" style="height: 36px">
+          <svg viewBox="0 0 1000 36" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0,36 L60,36 L120,26 L200,12 L300,5 L460,4 L620,8 L780,20 L930,30 L1000,34 L1000,36 Z" fill="var(--accent)" opacity="0.28"></path>
+            <path d="M0,36 L60,36 L120,26 L200,12 L300,5 L460,4 L620,8 L780,20 L930,30 L1000,34" fill="none" stroke="var(--accent)" stroke-width="1.5"></path>
+          </svg>
+          <span class="peak" style="left: 38%; top: 2px">90 running</span>
+        </div>
+        <div class="band capped">
+          <div class="bar"><i class="c1" style="left: 8%; width: 86%"></i><b style="left: 8%">BWC1-1 · 11 notes</b></div>
+          <div class="bar"><i class="c2" style="left: 9%; width: 84%; outline: 2px solid var(--text); outline-offset: 1px"></i><b style="left: 9%">BWC2-1 · 9 notes · pressed</b></div>
+          <div class="bar"><i class="c3" style="left: 12%; width: 70%"></i><b style="left: 12%">BWC7-2 · 8 notes</b></div>
+          <div class="bar"><i class="c4" style="left: 20%; width: 60%"></i><b style="left: 20%">BWC12-1 · 6 notes</b></div>
+          <div class="bar"><i class="c1" style="left: 24%; width: 40%"></i><b style="left: 24%">Dash-3 · 5 notes</b></div>
+          <div class="bar"><i class="c2" style="left: 30%; width: 55%"></i><b style="left: 30%">BWC22-1 · 5 notes</b></div>
+          <div class="bar"><i class="c3" style="left: 10%; width: 62%"></i><b style="left: 10%">BWC4-1 · 4 notes</b></div>
+          <div class="bar"><i class="c4" style="left: 33%; width: 48%"></i><b style="left: 33%">BWC9-2 · 4 notes</b></div>
+          <div class="bar"><i class="c1" style="left: 11%; width: 80%"></i><b style="left: 11%">BWC15-1 · 3 notes</b></div>
+          <div class="bar"><i class="c2" style="left: 14%; width: 44%"></i><b style="left: 14%">BWC18-2 · 3 notes</b></div>
+          <div class="bar"><i class="c3" style="left: 9%; width: 85%"></i><b style="left: 9%">BWC3-1 · 2 notes</b></div>
+          <div class="bar"><i class="c4" style="left: 27%; width: 50%"></i><b style="left: 27%">Dash-7 · 2 notes</b></div>
+          <div class="bar"><i class="c1" style="left: 40%; width: 36%"></i><b style="left: 40%">BWC31-1 · 2 notes</b></div>
+          <div class="bar"><i class="c2" style="left: 16%; width: 66%"></i><b style="left: 16%">BWC6-2 · 1 note</b></div>
+          <div class="bar"><i class="c3" style="left: 22%; width: 30%"></i><b style="left: 22%">BWC40-1 · 1 note</b></div>
+          <div class="bar"><i class="c4" style="left: 50%; width: 42%"></i><b style="left: 50%">BWC44-1 · 1 note</b></div>
+          <div class="bar"><i class="c1" style="left: 13%; width: 20%"></i><b style="left: 13%">Cell-2 · 1 note</b></div>
+          <div class="bar"><i class="c2" style="left: 60%; width: 32%"></i><b style="left: 60%">BWC52-1 · 1 note</b></div>
+        </div>
+        <div class="band"><div class="bar"><i class="fold" style="left: 0; width: 100%"></i><span class="more">18 recordings with notes; 72 with none stay in the shade · <a href="#">Show fewer</a></span></div></div>
+        <div class="notes-lane"><em style="left: 10%">×4</em><i style="left: 14%"></i><em style="left: 19%">×7</em><i style="left: 23%"></i><i style="left: 26%"></i><em style="left: 31%">×12</em><em style="left: 36%">×9</em><i style="left: 40%"></i><em style="left: 45%">×15</em><em style="left: 52%">×14</em><i style="left: 57%"></i><em style="left: 61%">×11</em><i style="left: 66%"></i><em style="left: 71%">×8</em><i style="left: 76%"></i><em style="left: 82%">×6</em><i style="left: 88%"></i><i style="left: 93%"></i><span class="lbl">notes</span></div>
+        <div class="hint"><span style="left: 8%; width: 86%"></span><b style="left: 51%">90 cameras, 140 notes, 19:42 to 21:31</b></div>
+        <div class="lead" style="margin-top: 6px"><span class="muted small">BWC2-1 pressed: its 9 notes lit below, the rest dimmed · press again to clear</span><span class="btn tiny ghost">Open all</span></div>
+        <div class="spell"><div class="sh"><span class="chev" style="color: var(--muted); margin-right: 8px">⌄</span><b>20:24:36 to 20:35:10</b><span class="muted">26 notes · 17 recordings · 3 on BWC2-1</span></div>
+          <div class="entry lit"><span class="num plain">12</span><span class="stem"></span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div class="words">Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan</span><span class="chip"><i></i>BWC2-1</span><span class="pill warn">To check</span></div></div></div>
+          <div class="entry" style="opacity: .45"><span class="num plain">13</span><span class="stem"></span><div><div class="top"><span class="t">20:26:14</span><span class="play">▶</span></div><div class="words">Same moment from the street side; the bag is visible before the door opens.</div><div class="line">"got something on the floor here" · BWC22-1</div><div class="meta"><span class="pill">A. Ortiz</span><span class="chip"><i></i>BWC22-1</span></div></div></div>
+          <div class="entry lit"><span class="num plain">14</span><div><div class="top"><span class="t">20:31:05</span><span class="play">▶</span></div><div class="words">Bag opened.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan</span><span class="chip"><i></i>BWC2-1</span></div></div></div>
+          <div class="muted tiny" style="padding: 4px 0 0 36px">23 more in this spell, 1 on BWC2-1</div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The fold opened, in a capped band.</b> One bar per recording with notes in the span in view, eighteen here, in note-count order so the top eight stay put, each with its name and count, in a band eight rows tall that scrolls inside itself; the ruler stays pinned above it and the Notes lane below, so the marks always line up with the time whatever is scrolled. Show fewer returns to eight. The seventy-two with no notes stay in the shade and never get bars.</p>
+      <p><b>Nothing else moves.</b> The coverage lane, the Notes lane, the hint and the spells are as they were and at the same height; only the inside of the band scrolls. The choice is per person, kept by the browser, off by default.</p>
+      <p><b>A bar pressed.</b> BWC2-1's entries light in the spells below and the others dim, which is how one camera is followed through an evening of ninety; press again to clear. The same press works on the folded band's eight bars and on a row of the running list.</p>
+      <p><b>Colours past six cycle</b>; the name on the bar tells them apart, and the marks and the entry numbers stay in the plain colour.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E, the second release</span><h2>An incident from a span of the chronology</h2></div>
+    <div class="frame">
+      <div class="chron">
+        <div class="days"><span class="on">6 Nov 2025 · 14</span><span>7 Nov · 3</span><span>12 Nov · 1</span></div>
+        <div style="position: relative">
+          <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:30</span><span style="left: 50%">21:00</span><span style="left: 75%">21:30</span><span style="left: 100%">22:00</span></div>
+          <div class="band"><div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1</b></div><div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1</b></div><div class="bar"><i class="c3 faint" style="left: 34%; width: 30%"></i><b style="left: 34%">BWC3-1</b></div></div>
+          <div class="span" style="left: 20%; width: 56%"></div>
+        </div>
+        <div class="offer">
+          <div><b>20:24 to 21:31 on 6 Nov: 3 recordings ran in this span</b> <span class="muted">drawn across the ruler</span></div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><label class="chip c1"><input type="checkbox" checked> <i></i>BWC1-1 · 4 notes</label><label class="chip c2"><input type="checkbox" checked> <i></i>BWC2-1 · 6 notes</label><label class="chip c3"><input type="checkbox" checked> <i></i>BWC3-1 · 2 notes, clock unchecked</label></div>
+          <div style="display: flex; align-items: baseline; gap: 8px"><b>2½ of 7½ hours' worth</b><span class="muted small">the assistant would read all 3 whole, what was said and what they showed</span></div>
+          <div class="sit"><i style="width: 33%"></i></div>
+          <div style="display: flex; gap: 8px; align-items: center"><span class="btn primary">Make an incident from this span</span><span class="muted small">The cameras arrive placed as they are here; the 12 notes are its events.</span></div>
+        </div>
+      </div>
+      <p class="muted tiny" style="margin: 8px 0 0">On the new incident's About: "From the case's chronology, 6 Nov 20:24 to 21:31." Its cameras read Synced by clock or Synced by hand with the same person's name; the incident's own sync, by sound and by hand, stays for fine adjustment.</p>
+    </div>
+    <div class="caption">
+      <p><b>Which cameras.</b> The recordings with bars in the span, the eight most noted, come ticked; "and 82 more ran in this span · Choose more" opens the running list with a tick on every row, the noted ones first, counted against the Panel's Most cameras in an incident (20 as shipped, 2 to 40) and in hours: "14 of 20 cameras · 12 hours' worth". The sitting bar redraws with each tick, so a fifteenth camera shows its price before Make: on the server's engine one sitting holds about 9 camera hours with what they showed and about 18 by words alone. A camera with no notes yet is tickable too; the chronology starts from notes, the incident is not fenced by them.</p>
+      <p><b>Why second.</b> The first release makes the chronology and keeps each recording's clock in the shape this needs, so when the span arrives nothing placed is redone; the span's drag is the ruler's gesture already drawn.</p>
+      <p><b>What it reuses.</b> The incident offer the case page already makes for videos whose clocks overlap, with its sitting bar; the rule that a note on a synced camera is an Event by itself; New incident's own box, with its cameras ticked.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -206,6 +206,8 @@
               {% if notes.total %}{{ notes.total }} note{{ notes.total|pluralize }} in this case, the office's own words: {{ notes.lines }} on line{{ notes.lines|pluralize }} of transcripts, {{ notes.events }} on event{{ notes.events|pluralize }}.{% else %}None yet. A note is written under a line of a transcript (<b>note</b> on the line, or N) or on an event of a chronology; every note in the case is listed here, and <a href="{% url 'notes-page' case.pk %}">the Notes page</a> plays them one by one.{% endif %}
             </p>
             {% if notes.total %}
+              {% comment %}The case's chronology (Phase 10 chapter 1): the tab's second shape, Rows | Chronology, kept by the browser per person.{% endcomment %}
+              <span class="toggle" id="notes-shape" role="group" aria-label="Rows or Chronology"><button type="button" class="small on" data-shape="rows">Rows</button><button type="button" class="small" data-shape="chronology" title="The case's notes on the recordings' own clocks, one day at a time">Chronology</button></span>
               {% comment %}The Notes page (Phase 9 chapter 4): the notes as a work page.{% endcomment %}
               {# The page's link here too (v1.121.3): the eye goes to the tab for it. #}
               <a class="btn small" href="{% url 'notes-page' case.pk %}" title="One page: the recording on the left, every note on the right, stepping through them">{% icon "note" %} Notes page</a>
@@ -235,7 +237,11 @@
                 </li>
               {% endfor %}
             </ul>
-            {% if notes.more %}<p class="muted small">and {{ notes.more }} more; Download notes has them all.</p>{% endif %}
+            {% if notes.more %}<p class="muted small" id="notes-more">and {{ notes.more }} more; Download notes has them all.</p>{% endif %}
+          {% endif %}
+          {% if notes.total %}
+            {% comment %}The case's chronology (Phase 10 chapter 1), drawn by chronology.js from chronology.json when the toggle says Chronology; the pressed entry plays in the right pane's Preview.{% endcomment %}
+            <div id="case-chronology" class="chron" hidden data-case="{{ case.pk }}" data-json="{% url 'case-chronology' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export="{% url 'case-chronology-export' case.pk 'docx' %}" data-rows="#case-notes, .search-kinds, #notes-more"></div>
           {% endif %}
         {% elif tab == "incidents" %}
           {% comment %}
@@ -1032,6 +1038,7 @@
   <script src="{% static 'case-scope.js' %}"></script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
+  <script src="{% static 'chronology.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
   {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}

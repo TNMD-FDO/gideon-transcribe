@@ -2737,6 +2737,80 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .inc-transport { padding: 8px 0 0; }
 .inc-work { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: 80vh; }
 .inc-work .panels .panel { padding: 12px 14px; }
+/* The case's chronology (Phase 10 chapter 1): the Notes tab's second shape and the Notes page's panel. */
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.toggle button { border: 0; border-radius: 0; background: transparent; }
+.toggle button.on { background: var(--accent); color: var(--accent-ink); }
+.chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; font-size: var(--t-small); }
+.chron .lead-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chron .strip { display: flex; gap: 14px; align-items: flex-end; overflow-x: auto; padding: 4px 0 0; }
+.chron .month { display: flex; flex-direction: column; gap: 3px; flex: none; }
+.chron .month .days-bars { display: flex; gap: 3px; align-items: flex-end; height: 34px; }
+.chron .month .days-bars button { display: block; width: 7px; min-width: 7px; padding: 0; border: 0; border-radius: 2px 2px 0 0; background: var(--line); cursor: pointer; }
+.chron .month .days-bars button.on { background: var(--accent); }
+.chron .month .name { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 2px; white-space: nowrap; }
+.chron .rail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; color: var(--muted); }
+.chron .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 6px; background: var(--surface); color: var(--text); font-size: var(--t-small); }
+.chron .chip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; background: var(--muted); }
+.chron .rail .chip { cursor: grab; font: inherit; }
+.chron .rail .chip.dragging { opacity: .4; }
+.chron .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; cursor: crosshair; user-select: none; }
+.chron .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+.chron .ruler.over { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.chron .ruler .guide { position: absolute; top: -6px; bottom: -4px; width: 2px; background: var(--accent); }
+.chron .ruler .guide b { position: absolute; top: -16px; left: 6px; font-size: 11px; color: var(--accent); white-space: nowrap; background: var(--surface); padding: 0 4px; }
+.chron .ruler .sel { position: absolute; top: 0; bottom: 0; background: var(--accent-soft); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); opacity: .85; }
+.chron .cover { position: relative; height: 56px; border-bottom: 1px solid var(--line); overflow: hidden; }
+.chron .cover svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.chron .cover .peak { position: absolute; font-size: 10px; font-weight: 600; color: var(--accent); transform: translateX(-50%); pointer-events: none; }
+.chron .cover .lbl { position: absolute; right: 0; bottom: 2px; font-size: 10px; color: var(--muted); pointer-events: none; }
+.chron .band { position: relative; display: grid; gap: 4px; padding: 6px 0; }
+.chron .band.capped { max-height: 126px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 6px; }
+.chron .band .bar { position: relative; height: 12px; }
+.chron .band .bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 5px; display: block; cursor: pointer; }
+.chron .band .bar i.lit { outline: 2px solid var(--text); outline-offset: 1px; }
+.chron .band .bar i.movable { cursor: grab; }
+.chron .band .bar b { position: absolute; top: 0; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; pointer-events: none; white-space: nowrap; }
+.chron .band .bar i.fold { background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); border-radius: 2px; left: 0; right: 0; cursor: default; }
+.chron .band .bar .more { position: absolute; left: 0; top: -1px; font-size: 11px; color: var(--muted); padding-left: 6px; line-height: 14px; }
+.chron .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.chron .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+.chron .notes-lane { position: relative; height: 16px; border-top: 1px dashed var(--line); margin-top: 2px; }
+.chron .notes-lane i { position: absolute; top: 3px; width: 3px; height: 10px; border-radius: 1px; background: var(--muted); transform: translateX(-50%); cursor: pointer; }
+.chron .notes-lane em { position: absolute; top: 1px; transform: translateX(-50%); font-style: normal; font-size: 10px; line-height: 14px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
+.chron .notes-lane .lbl { position: absolute; right: 0; top: 1px; font-size: 10px; color: var(--muted); }
+.chron .hint { position: relative; height: 18px; }
+.chron .hint span { position: absolute; top: 0; border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 6px 6px; height: 6px; }
+.chron .hint b { position: absolute; top: 5px; transform: translateX(-50%); font-size: 11px; color: var(--accent); background: var(--surface); padding: 0 6px; white-space: nowrap; font-weight: 600; }
+.chron .spell { border-top: 1px solid var(--line); padding-top: 8px; }
+.chron .spell .sh { display: flex; gap: 10px; align-items: baseline; cursor: pointer; }
+.chron .spell .sh b { font-family: var(--mono); font-size: 13px; }
+.chron .spell .sh .chev { color: var(--muted); }
+.chron .entry { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 0 10px; padding: 6px 0; position: relative; }
+.chron .entry .num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--surface); background: var(--muted); }
+.chron .entry .top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.chron .entry .t { font-family: var(--mono); color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; font-size: inherit; }
+.chron .entry .play { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent); font-size: 9px; background: var(--surface); cursor: pointer; padding: 0; }
+.chron .entry .words { font-size: var(--t-base, 1rem); }
+.chron .entry .words textarea { width: 100%; min-height: 60px; }
+.chron .entry .line { color: var(--muted); font-size: 12px; }
+.chron .entry .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.chron .entry .meta .ghost { display: none; }
+.chron .entry:hover .meta .ghost { display: inline-flex; }
+.chron .entry.lit { background: var(--accent-soft); border-radius: var(--radius); margin: 0 -6px; padding-inline: 6px; }
+.chron .entry.dim { opacity: .45; }
+.chron .unknown { border-top: 1px dashed var(--line); padding-top: 8px; }
+.chron .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow: auto; }
+.chron .sheet table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.chron .sheet th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.chron .sheet td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.chron .sheet input[type=text] { width: 110px; font-family: var(--mono); }
+.chron .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 440px; }
+.chron .box .field { display: grid; grid-template-columns: 80px 1fr; gap: 6px; align-items: center; }
+.chron .running { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; max-height: 60vh; overflow: auto; }
+.chron .running .row { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.chron-layer { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 16px; }
+.chron-layer > * { max-width: min(760px, 100%); width: 100%; }
 /* One sitting (Phase 8 chapter 9): the bar on the Cameras tab and the Add cameras dialog. */
 .sitting { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; margin: 0 0 12px; display: grid; gap: 6px; }
 .sitting .figure { font-size: var(--t-large, 1.15rem); font-weight: 600; }

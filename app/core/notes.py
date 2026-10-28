@@ -64,6 +64,8 @@ class MomentNote(models.Model):
         "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     note_changed = models.DateTimeField(null=True, blank=True)
+    # To check (Phase 10 chapter 1, v1.164.0), as on a line's note.
+    note_to_check = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
