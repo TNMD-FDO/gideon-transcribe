@@ -19,6 +19,16 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.163.2, 2026-10-28
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **Retry for a failed Job, on the case page and My recordings.** Phase 1 says a failed media step and a failed Job are both offered a Retry, but both pages offered it only for a failed media step: a recording whose Job failed had Delete as its only way, which is what the maintainer met on the body camera of v1.163.1. The row's Details now offer Retry for a failed Job too.
+- **The case page's rows carry the new flags.** v1.163.1 taught the rows "Waiting for the recogniser" and "Failed", but only on Home, My recordings and the Panel; the case page builds its rows itself and still read Ready. It reads the same words now.
+
 ## v1.163.1, 2026-10-28
 
 ```

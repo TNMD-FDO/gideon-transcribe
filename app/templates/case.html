@@ -897,7 +897,8 @@
                           <button type="button" class="small move"
                                   data-recording="{{ recording.pk }}"
                                   data-title="{{ recording.title }}">Move to another case</button>
-                        {% elif recording.media_state == "failed" %}
+                        {% elif recording.media_state == "failed" or recording.job_failed %}
+                          {% comment %}A failed media step and a failed Job are both offered a Retry (Phase 1); the Job's half was missing here until v1.163.2, leaving Delete as the only way.{% endcomment %}
                           <button type="button" class="small retry"
                                   data-recording="{{ recording.pk }}">Retry</button>
                         {% endif %}

@@ -111,7 +111,8 @@
                                       data-recording="{{ recording.pk }}"
                                       data-title="{{ recording.title }}">Move to case</button>
                             {% endif %}
-                          {% elif recording.media_state == "failed" %}
+                          {% elif recording.media_state == "failed" or recording.job_failed %}
+                            {% comment %}A failed Job is offered Retry too (v1.163.2), not only a failed media step.{% endcomment %}
                             <button type="button" class="small retry"
                                     data-recording="{{ recording.pk }}">Retry</button>
                           {% endif %}

@@ -48,7 +48,7 @@ from core import (
     vocabulary,
 )
 from core.cases import Case
-from core.jobs import Segment
+from core.jobs import JobState, Segment
 from core.recordings import Recording
 
 
@@ -706,6 +706,13 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
             job is not None and job.is_live and job.batch.is_reprocessing
         )
         one.in_the_queue = bool(job is not None and job.is_live)
+        # A hand-over held, and a Job that failed (v1.163.2): the same flags
+        # the other pages' rows carry, so the row says Waiting or Failed
+        # here too and offers Retry.
+        one.job_waiting = (
+            job.failure_class if one.in_the_queue and job.held_since is not None else ""
+        )
+        one.job_failed = bool(job is not None and job.state == JobState.FAILED)
         # A Live recording on its way says where it stands, in words.
         one.queue_line = (
             live.line_for(one)["says"]

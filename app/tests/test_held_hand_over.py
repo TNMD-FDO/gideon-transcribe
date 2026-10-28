@@ -198,3 +198,39 @@ def test_the_row_says_what_a_held_job_waits_for_and_failed_for_a_failed_one(
     job.save(update_fields=["state", "failure_class"])
     (row,) = pages._with_their_state(Recording.objects.filter(pk=recording.pk))
     assert (row.state_word, row.state_tone) == ("Failed", "danger")
+
+
+def test_the_case_page_and_my_recordings_say_failed_and_offer_retry(
+    person, a_case, client
+):
+    """v1.163.2: the case page's rows carry the same flags, and a failed Job
+    is offered Retry on both pages, not only a failed media step; before,
+    the case row read Ready and Delete was the only way."""
+    from tests.helpers import signed_in
+
+    recording = a_recording(person, a_case)
+    job = a_job(recording)
+    job.state = JobState.FAILED
+    job.failure_class = Reason.SERVICE_REFUSED
+    job.save(update_fields=["state", "failure_class"])
+    signed_in(client, person)
+    page = client.get(f"/case/{a_case.pk}").content.decode()
+    assert ">Failed<" in page
+    assert f'data-recording="{recording.pk}">Retry</button>' in page
+    # My recordings lists a person's own recordings outside any case.
+    loose = a_recording(person, None)
+    gone = a_job(loose)
+    gone.state = JobState.FAILED
+    gone.failure_class = Reason.SERVICE_REFUSED
+    gone.save(update_fields=["state", "failure_class"])
+    mine = client.get("/recordings").content.decode()
+    assert ">Failed<" in mine
+    assert f'data-recording="{loose.pk}">Retry</button>' in mine
+
+    # Held: the row says what it waits for, and offers nothing yet.
+    job.state = JobState.QUEUED
+    job.held_since = timezone.now()
+    job.failure_class = Reason.RECOGNISER_UNAVAILABLE
+    job.save(update_fields=["state", "held_since", "failure_class"])
+    page = client.get(f"/case/{a_case.pk}").content.decode()
+    assert "Waiting for the recogniser" in page and 'class="small retry"' not in page
