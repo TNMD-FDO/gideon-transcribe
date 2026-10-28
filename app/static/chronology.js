@@ -66,6 +66,7 @@
     html += ruler(d);
     html += band(d);
     html += notesLane(d);
+    html += incidentsLane(d);
     html += hints(d);
     html += spellsHtml(d);
     host.innerHTML = html;
@@ -75,6 +76,7 @@
   function leadRow(d) {
     var words = plural(d.count, "note") + (d.recordings ? " on " + plural(d.recordings, "recording") : "") + (d.span ? ", " + hm(d.ruler.from) + " to " + hm(d.ruler.to) : ", " + d.words);
     var right = "";
+    if (d.span && d.incidents_on) { right += "<button type='button' class='small primary' data-act='make-span' title='An incident from the span in view: the recordings that ran in it, ticked'>Make an incident from this span</button> "; }
     if (d.span) { right += "<button type='button' class='small' data-act='back'>Back to the day</button> "; }
     if (d.fold) { right += "<button type='button' class='small ghost' data-act='open-all'>Open all</button> "; }
     var base = host.dataset.export.replace(/\.docx$/, "");
@@ -217,7 +219,8 @@
     var html = "<div class='hint'>";
     d.hints.forEach(function (h) {
       var left = x(h.from, d), width = Math.max(1, x(h.to, d) - left);
-      html += "<span style='left: " + left + "%; width: " + width + "%'></span><b style='left: " + inside(left + width / 2) + "%' data-hint='" + h.from + "," + h.to + "' title='Press to look at this span'>" + esc(h.words) + "</b>";
+      html += "<span style='left: " + left + "%; width: " + width + "%'></span><span class='hl' style='left: " + inside(left + width / 2) + "%'><b data-hint='" + h.from + "," + h.to + "' title='Press to look at this span'>" + esc(h.words) + "</b>" +
+        (d.incidents_on ? "<button type='button' class='mk' data-make='" + h.from + "," + h.to + "' title='Make an incident from this span'>Make an incident</button>" : "") + "</span>";
     });
     html += "</div>";
     return html;
@@ -228,7 +231,8 @@
     d.spells.forEach(function (group, index) {
       var folded = d.fold && !state.open[index] && !state.open.all;
       var title = group.notes === 1 ? group.from : group.from + " to " + group.to;
-      html += "<div class='spell' data-spell='" + index + "'><div class='sh'><span class='chev'>" + (folded ? "›" : "⌄") + "</span><b>" + esc(title) + "</b><span class='muted'>" + plural(group.notes, "note") + " · " + plural(group.recordings, "recording") + (state.lit ? litWords(group) : "") + "</span></div>";
+      var inc = sameIncident(group.entries);
+      html += "<div class='spell' data-spell='" + index + "'><div class='sh'><span class='chev'>" + (folded ? "›" : "⌄") + "</span><b>" + esc(title) + "</b><span class='muted'>" + plural(group.notes, "note") + " · " + plural(group.recordings, "recording") + (state.lit ? litWords(group) : "") + "</span>" + (inc ? "<span class='pill small inc' title='Every note here is an event of this incident'>" + esc(inc.name) + "</span>" : "") + "</div>";
       if (!folded) { group.entries.forEach(function (e) { html += entry(e); }); }
       html += "</div>";
     });
@@ -244,7 +248,7 @@
   function entry(e) {
     var cls = "entry" + (state.lit ? (e.recording === state.lit ? " lit" : " dim") : "");
     var under = e.said ? "“" + esc(e.said) + "”" : (e.kind === "event" ? "on the event" + (e.event_time ? " at " + esc(e.event_time) : "") : "at a moment, nothing said");
-    return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'>" +
+    return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'" + (e.outside ? " data-outside='" + esc(JSON.stringify(e.outside)) + "'" : "") + ">" +
       "<span class='num' style='background: " + (e.colour || "var(--muted)") + "'>" + e.number + "</span>" +
       "<div><div class='top'><button type='button' class='t' data-act='play' title='Play the moment'>" + (e.time || "the day") + "</button><button type='button' class='play' data-act='play' title='Play the moment'>▶</button>" +
       (e.how === "day" ? "<span class='pill small'>placed by the day</span>" : "") + (e.to_check ? "<span class='pill small warn'>To check</span>" : "") + "</div>" +
@@ -252,7 +256,10 @@
       "<div class='line'>" + under + " · " + esc(e.title) + "</div>" +
       "<div class='meta'><span class='pill small'>" + esc(e.by) + (e.when ? ", " + esc(e.when) : "") + "</span><span class='chip'><i style='background: " + (e.colour || "var(--muted)") + "'></i>" + esc(e.title) + "</span>" +
       (e.kind !== "event" ? "<button type='button' class='small ghost' data-act='check' title='A question for a colleague; pressed on or off by anyone on the case'>" + (e.to_check ? "Clear To check" : "To check") + "</button>" : "") +
-      "<a class='small ghost' href='/recording/" + e.recording + "?t=" + e.at + "' title='The whole call, on its own page'>Open the call</a></div></div></div>";
+      "<a class='small ghost' href='/recording/" + e.recording + "?t=" + e.at + "' title='The whole call, on its own page'>Open the call</a>" +
+      (e.incident ? (e.incident.event ? "<span class='pill small inc' title='This note is an event of the incident'>an event of " + esc(e.incident.name) + "</span>" : "<span class='pill small inc' title='Its camera is in the incident but not on its clock yet; the note is an event once it is synced'>in " + esc(e.incident.name) + ", not synced yet</span>") : "") + "</div>" +
+      (e.outside ? "<div class='outside'>inside " + esc(e.outside.name) + "; " + esc(e.title) + " is not in it <button type='button' class='small' data-act='add-outside' title='The camera joins the incident on its clock as it sits here; this note is then an event of it'>Add " + esc(e.title) + " to the incident</button></div>" : "") +
+      "</div></div>";
   }
 
   // Wiring ---------------------------------------------------------------------
@@ -277,6 +284,7 @@
     host.querySelectorAll("[data-mark]").forEach(function (m) { m.addEventListener("click", function () { goTo(parseInt(m.dataset.mark, 10), true); }); });
     host.querySelectorAll("[data-marks]").forEach(function (m) { m.addEventListener("click", function () { var first = parseInt(m.dataset.marks.split(",")[0], 10); goTo(first, false); }); });
     host.querySelectorAll("[data-hint]").forEach(function (h) { h.addEventListener("click", function () { var p = h.dataset.hint.split(","); load(state.day.date, [parseFloat(p[0]), parseFloat(p[1])]); }); });
+    host.querySelectorAll("[data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1])); }); });
     host.querySelectorAll("[data-spell] .sh").forEach(function (sh) { sh.addEventListener("click", function () { var i = sh.parentNode.dataset.spell; state.open[i] = !state.open[i]; draw(); }); });
     host.querySelectorAll("[data-act]").forEach(function (b) {
       b.addEventListener("click", function (ev) {
@@ -285,6 +293,8 @@
         else if (act === "open-all") { state.open.all = true; draw(); }
         else if (act === "toggle-all") { ev.preventDefault(); state.showAll = !state.showAll; try { localStorage.setItem(keyAll, state.showAll ? "1" : "0"); } catch (e) { /* no storage */ } draw(); }
         else if (act === "sheet") { sheet(); }
+        else if (act === "make-span") { if (state.span) { makeSheet(state.span[0], state.span[1]); } }
+        else if (act === "add-outside") { addOutside(b.closest(".entry")); }
         else if (act === "play") { var e = b.closest(".entry"); open(e.dataset.recording, parseFloat(e.dataset.at)); light(e); }
         else if (act === "check") { check(b.closest(".entry")); }
         else if (act === "edit") { edit(b.closest(".entry")); }
@@ -394,6 +404,118 @@
       wrap.querySelectorAll("[data-hear]").forEach(function (b) { b.addEventListener("click", function (ev) { ev.stopPropagation(); open(b.dataset.hear, parseFloat(b.dataset.into)); }); });
       wrap.querySelectorAll("[data-run]").forEach(function (row) { row.addEventListener("click", function () { state.lit = row.dataset.run; wrap.remove(); draw(); }); });
     });
+  }
+
+  // An incident from a span (Phase 10 chapter 2, v1.167.0; the drawing
+  // phase-10-incident-from-span.html). The case's incidents are drawn as a
+  // lane of brackets, so nobody makes one twice; Make on a span that touches
+  // an incident leads with Add to it; a note on a camera outside an incident
+  // but inside its span offers to add the camera. Nothing is made without a
+  // press.
+  function incidentsLane(d) {
+    if (!d.incidents_on || !d.incidents || !d.incidents.length) { return ""; }
+    var html = "<div class='inc-lane' id='chron-incidents'>";
+    d.incidents.forEach(function (one) {
+      var left = x(one.from, d), width = Math.max(1, x(one.to, d) - left);
+      html += "<a class='br' href='" + esc(one.url) + "' style='left: " + left + "%; width: " + width + "%' title='" + esc(one.words + " · " + hm(one.from) + " to " + hm(one.to) + "; press to open it") + "'><b>" + esc(one.words) + "</b></a>";
+    });
+    html += "<span class='lbl'>incidents</span></div>";
+    return html;
+  }
+  function sameIncident(entries) {
+    var first = entries[0] && entries[0].incident;
+    if (!first) { return null; }
+    return entries.every(function (e) { return e.incident && e.incident.id === first.id; }) ? first : null;
+  }
+  function spanUrl(path, from, to) { return "/case/" + caseId + path + "?day=" + state.day.date + "&from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to); }
+  function makeSheet(from, to) {
+    fetch(spanUrl("/chronology/span", hm(from), hm(to)), { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
+      if (told.incidents && told.incidents.length) { addFirstSheet(told); } else { pickerSheet(told); }
+    }).catch(function () { alert("The span could not be read. Try again."); });
+  }
+  function rowHtml(r, ticked, inIt) {
+    var tick = inIt ? "<input type='checkbox' checked disabled title='Already in it'>" : "<input type='checkbox' name='pick'" + (ticked ? " checked" : "") + " aria-label='" + esc(r.title) + "'>";
+    return "<tr data-row='" + r.id + "'" + (r.notes ? "" : " class='quiet'") + "><td>" + tick + "</td><td>" + esc(r.title) + "</td><td>" + r.notes + "</td><td><span class='pill small'>" + esc(r.placed) + "</span></td><td class='mono'>" + esc(r.from) + " to " + esc(r.to) + "</td>" +
+      (inIt === undefined ? "" : "<td class='muted tiny'>" + (inIt ? "already in it" : "not in it yet") + "</td>") + "</tr>";
+  }
+  function picked(wrap) { return Array.prototype.map.call(wrap.querySelectorAll("tr[data-row] input[name=pick]:checked"), function (box) { return box.closest("tr").dataset.row; }); }
+  // The sitting bar (Phase 8 chapter 10) for the cameras ticked, with the
+  // incident's own when adding; redrawn on each tick.
+  function sittingBar(wrap, ids, already, afterAdding) {
+    var box = wrap.querySelector("[data-sitting]"); if (!box) { return; }
+    var all = ids.slice();
+    (already || []).forEach(function (id) { if (all.indexOf(id) < 0) { all.push(id); } });
+    var most = parseInt(wrap.dataset.most, 10) || 20;
+    var count = "<span class='small'><b>" + all.length + " of " + most + " cameras</b>" + (afterAdding ? " after adding" : "") + "</span>";
+    box.innerHTML = count;
+    if (!all.length) { return; }
+    fetch("/case/" + caseId + "/chronology/sitting?recordings=" + all.join(","), { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
+      var T = told.sitting;
+      if (!T || !T.on) { return; }
+      box.innerHTML = count.replace("</span>", " · " + esc(T.figure) + "</span>") + "<span class='sit " + esc(T.zone) + "'><i style='width: " + T.percent + "%'></i></span><span class='muted tiny'>" + esc(T.capacity_words) + "</span>";
+    }).catch(function () { /* the count stands */ });
+  }
+  function pickerSheet(told) {
+    var quiet = told.rows.filter(function (r) { return !r.notes; });
+    var html = "<div class='sheet chron make' data-most='" + told.most + "'><div class='row' style='justify-content: space-between; align-items: baseline'><b>Make an incident from " + esc(told.words) + ", " + esc(told.from) + " to " + esc(told.to) + "</b><button type='button' class='small ghost' data-close>Close</button></div>" +
+      "<div class='muted tiny'>The recordings that ran in the span, the most noted first and ticked. Each arrives on the incident's clock as it sits here; nothing is placed again. A camera with no notes is tickable, and a note on it afterwards is an event.</div>" +
+      "<table><tr><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th></tr>";
+    told.rows.forEach(function (r) { html += rowHtml(r, r.ticked); });
+    html += "</table>" + (quiet.length ? "<div class='muted tiny' data-more-line>and " + plural(quiet.length, "recording") + " ran in this span with no notes · <button type='button' class='small ghost' data-more>Choose more</button></div>" : "") +
+      "<div class='row' data-sitting style='gap: 10px; align-items: center; flex-wrap: wrap'></div>" +
+      "<div class='field'><span class='muted'>Name</span><input type='text' name='name' value='" + esc(told.name) + "' maxlength='200' style='width: 280px; font-family: inherit'></div>" +
+      "<p class='small' data-error style='margin: 0; color: var(--danger)'></p>" +
+      "<div class='row' style='justify-content: flex-end; gap: 8px'><button type='button' class='small' data-close>Cancel</button><button type='button' class='small primary' data-make-it>Make the incident</button></div></div>";
+    var wrap = layer(html);
+    wrap.querySelectorAll("tr.quiet").forEach(function (tr) { tr.hidden = true; });
+    var more = wrap.querySelector("[data-more]");
+    if (more) { more.addEventListener("click", function () { wrap.querySelectorAll("tr.quiet").forEach(function (tr) { tr.hidden = false; }); wrap.querySelector("[data-more-line]").hidden = true; }); }
+    function refresh() { sittingBar(wrap, picked(wrap)); }
+    wrap.querySelectorAll("input[name=pick]").forEach(function (box) { box.addEventListener("change", refresh); });
+    refresh();
+    wrap.querySelector("[data-make-it]").addEventListener("click", function () {
+      var ids = picked(wrap), error = wrap.querySelector("[data-error]");
+      if (!ids.length) { error.textContent = "Tick at least one recording."; return; }
+      if (ids.length > told.most) { error.textContent = "At most " + told.most + " cameras in an incident (the Panel's Most cameras in an incident)."; return; }
+      post("/case/" + caseId + "/chronology/incident", { day: told.date, from: told.from, to: told.to, name: wrap.querySelector("[name=name]").value, recordings: ids })
+        .then(function (made) { location.href = made.url; })
+        .catch(function (err) { error.textContent = err.message; });
+    });
+  }
+  function addFirstSheet(told) {
+    var inc = told.incidents[0], others = told.incidents.slice(1);
+    var inIt = {}; inc.in_ids.forEach(function (id) { inIt[id] = true; });
+    var fresh = told.rows.filter(function (r) { return !inIt[r.id]; });
+    // Nothing to add and nothing to widen: the incident is the answer.
+    var nothing = !fresh.length && !inc.widens;
+    var html = "<div class='sheet chron make' data-most='" + told.most + "'><div class='row' style='justify-content: space-between; align-items: baseline'><b>This span " + (inc.inside ? "lies inside" : "runs past") + " an incident</b><button type='button' class='small ghost' data-close>Close</button></div>" +
+      "<div class='notice small'><b>" + esc(inc.name) + "</b> runs " + esc(inc.from) + " to " + esc(inc.to) + " and has " + plural(inc.cameras, "camera") + ". Your span, " + esc(told.from) + " to " + esc(told.to) + ", " + (inc.inside ? "is inside it." : "overlaps it.") + (nothing ? " Everything that ran in the span is already in it." : "") + "</div>" +
+      "<table><tr><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th><th></th></tr>";
+    told.rows.forEach(function (r) { html += rowHtml(r, true, !!inIt[r.id]); });
+    html += "</table>" + (inc.widens ? "<div class='muted tiny'>Adding widens the incident to <b>" + esc(inc.union_from) + " to " + esc(inc.union_to) + "</b>; its cameras keep their places.</div>" : "") +
+      "<div class='row' data-sitting style='gap: 10px; align-items: center; flex-wrap: wrap'></div>";
+    others.forEach(function (o) { html += "<div class='muted tiny'>The span also touches <b>" + esc(o.name) + "</b>, " + esc(o.from) + " to " + esc(o.to) + ". <a href='" + esc(o.url) + "'>Open it</a></div>"; });
+    html += "<p class='small' data-error style='margin: 0; color: var(--danger)'></p>" +
+      "<div class='row' style='justify-content: flex-end; gap: 8px'><button type='button' class='small ghost' data-new title='A second incident over this span, on purpose'>Make a new one anyway</button>" +
+      (nothing ? "<a class='btn small primary' href='" + esc(inc.url) + "'>Open " + esc(inc.name) + "</a>" : "<button type='button' class='small primary' data-add>" + (fresh.length ? "Add to " + esc(inc.name) + (inc.widens ? " and widen it" : "") : "Widen " + esc(inc.name)) + "</button>") + "</div></div>";
+    var wrap = layer(html);
+    function refresh() { sittingBar(wrap, picked(wrap), inc.camera_ids, true); }
+    wrap.querySelectorAll("input[name=pick]").forEach(function (box) { box.addEventListener("change", refresh); });
+    refresh();
+    wrap.querySelector("[data-new]").addEventListener("click", function () { wrap.remove(); pickerSheet(told); });
+    var add = wrap.querySelector("[data-add]");
+    if (add) { add.addEventListener("click", function () {
+      post("/case/" + caseId + "/incident/" + inc.id + "/add-from-chronology", { day: told.date, from: told.from, to: told.to, recordings: picked(wrap) })
+        .then(function (done) { location.href = done.url; })
+        .catch(function (err) { wrap.querySelector("[data-error]").textContent = err.message; });
+    }); }
+  }
+  // The entry's line: its camera added to the incident whose span it is in.
+  function addOutside(e) {
+    var inc = JSON.parse(e.dataset.outside);
+    post("/case/" + caseId + "/incident/" + inc.id + "/add-from-chronology", { day: state.day.date, from: inc.from, to: inc.to, recordings: [e.dataset.recording] })
+      .then(function () { load(state.day.date, state.span); })
+      .catch(function (err) { alert(err.message); });
   }
   function check(e) {
     var key = e.dataset.entry.split(":"), wanted = !e.querySelector(".pill.warn");

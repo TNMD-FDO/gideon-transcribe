@@ -499,7 +499,7 @@ The Incident page's arrangement, chosen from the Layout menu in the transport an
 _Avoid_: view mode, multiview, mosaic, split screen
 
 **Chronology**:
-An Incident's list of Events, in time order, the office's Notes on the synced cameras' lines among them, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2. A Case has one too (v1.164.0, Phase 10 chapter 1): its Notes laid on the recordings' own clocks without an Incident, reached by the toggle Rows | Chronology on the Notes tab and as a tab of the Notes page, one day at a time under the Date strip, with the Notes lane, the Coverage lane and the Spells; exported as a Word document with a still per entry and as a spreadsheet. The pages say "the case's chronology" and "the incident's chronology" where both are in view.
+An Incident's list of Events, in time order, the office's Notes on the synced cameras' lines among them, drawn as the last lane of the Incident page's strip and exported as a Word table with the strip as a picture, or as a spreadsheet. Phase 6 chapter 2. A Case has one too (v1.164.0, Phase 10 chapter 1): its Notes laid on the recordings' own clocks without an Incident, reached by the toggle Rows | Chronology on the Notes tab and as a tab of the Notes page, one day at a time under the Date strip, with the Notes lane, the Coverage lane, the Incidents lane (v1.167.0) and the Spells; exported as a Word document with a still per entry and as a spreadsheet. From v1.167.0 (Phase 10 chapter 2) an Incident is made from a span of it, or a span's recordings are added to the Incident the span touches. The pages say "the case's chronology" and "the incident's chronology" where both are in view.
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Recording's clock**:
@@ -513,6 +513,10 @@ _Avoid_: calendar, heatmap, histogram
 **Notes lane**:
 The lane under the case's chronology's band: a mark per note at its time of day in its recording's colour, marks that would overlap at the scale in hand merged into one pill with a count; hover shows the words, a press lights the entry below and plays it; nothing is written beside a mark at any scale. The lane is the scrubbing surface, the Spells below are the reading surface. Phase 10 chapter 1.
 _Avoid_: markers, ticks, events lane (the Incident's)
+
+**Incidents lane**:
+The lane of the case's chronology under the Notes lane (v1.167.0, Phase 10 chapter 2): one bracket per Incident of the Case on the day, in the accent colour with its name, camera count and event count, read from its cameras as the case's clock has them; hover says its span, a press opens it. It is why nobody makes an Incident twice: Make on a span that touches a bracket leads with Add to that Incident. Only the spans; an Incident's Events are not on the case's chronology.
+_Avoid_: incident strip, incident bar, timeline of incidents
 
 **Coverage lane**:
 The band's third shape on the case's chronology, when more than six recordings overlap: one shaded strip whose height at each moment is how many recordings were running then, labelled at its peaks; hover for the count, press for the list of recordings running then. Under it, bars for the eight most noted recordings only, the rest folded. Phase 10 chapter 1.

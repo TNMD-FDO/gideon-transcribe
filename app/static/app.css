@@ -2819,6 +2819,25 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .sheet th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .chron .sheet td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .chron .sheet input[type=text] { width: 110px; font-family: var(--mono); }
+/* An incident from a span (Phase 10 chapter 2, v1.167.0; the drawing phase-10-incident-from-span.html): the incidents lane, Make on a hint, the entry's line, the two sheets. */
+.chron .inc-lane { position: relative; height: 18px; margin-top: 2px; }
+.chron .inc-lane .br { position: absolute; top: 2px; height: 12px; border: 2px solid var(--accent); border-top: 0; border-radius: 0 0 4px 4px; background: var(--accent-soft); text-decoration: none; overflow: hidden; }
+.chron .inc-lane .br b { position: absolute; left: 6px; top: -3px; font-size: 10px; color: var(--accent); white-space: nowrap; font-weight: 600; }
+.chron .inc-lane .lbl { position: absolute; right: 0; top: 1px; font-size: 10px; color: var(--muted); }
+.chron .hint .hl { position: absolute; top: 5px; transform: translateX(-50%); display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; background: var(--surface); padding: 0 4px; }
+.chron .hint .hl b { position: static; transform: none; padding: 0; }
+.chron .hint .mk { font-size: 10px; line-height: 14px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); cursor: pointer; }
+.chron .hint .mk:hover { background: var(--accent-soft); }
+.chron .entry .outside { font-size: 12px; color: var(--accent); margin-top: 3px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chron .pill.inc { background: var(--accent-soft); color: var(--accent); }
+.chron .sheet.make { max-width: 720px; }
+.chron .sheet .notice { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 6px 10px; border-radius: 0 var(--radius) var(--radius) 0; }
+.chron .sheet .sit { display: inline-block; flex: 1; min-width: 120px; height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+.chron .sheet .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 4px; }
+.chron .sheet .sit.nearly i { background: var(--warn); }
+.chron .sheet .field { display: grid; grid-template-columns: 80px 1fr; gap: 6px; align-items: center; }
+.chron .sheet .sit.over i { background: var(--danger); }
+.chron .sheet tr.quiet td { color: var(--muted); }
 .chron .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 440px; }
 .chron .box .field { display: grid; grid-template-columns: 80px 1fr; gap: 6px; align-items: center; }
 .chron .running { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; max-height: 60vh; overflow: auto; }

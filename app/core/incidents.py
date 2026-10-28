@@ -76,6 +76,8 @@ STRONG_MATCH = 1.5
 # How an Incident came to be.
 FROM_OFFER = "offer"
 BY_HAND = "hand"
+# From the case's chronology (Phase 10 chapter 2, v1.167.0).
+FROM_CHRONOLOGY = "chronology"
 
 DAY = 86400.0
 
@@ -170,6 +172,12 @@ class Incident(models.Model):
     # About this chronology (Phase 7 chapter 1): the office's paragraph
     # before the events, printed on the export's cover and told to the memo.
     about = models.TextField(max_length=2000, blank=True, default="")
+    # Made from the case's chronology (Phase 10 chapter 2, v1.167.0): where
+    # it came from ("made": the day and the span), the span it covers now on
+    # that day ("span"), and each addition from the chronology since
+    # ("changes"). Empty on an incident made any other way, until a span of
+    # the chronology adds to it.
+    from_chronology = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["created"]
@@ -531,8 +539,11 @@ def decline(case, key: str) -> None:
 # Making and changing an Incident ------------------------------------------------
 
 
-def make(case, name: str, recordings, *, by, how: str = BY_HAND, request=None):
-    """A new Incident with these videos, the clocked ones placed at once."""
+def make(
+    case, name: str, recordings, *, by, how: str = BY_HAND, request=None, details=None
+):
+    """A new Incident with these videos, the clocked ones placed at once.
+    `details` go on the audit row (the chronology's day and span)."""
     recordings = list(recordings)[: most_cameras()]
     with transaction.atomic():
         incident = Incident.objects.create(
@@ -554,6 +565,7 @@ def make(case, name: str, recordings, *, by, how: str = BY_HAND, request=None):
         case=case.name,
         how=how,
         cameras=len(recordings),
+        **(details or {}),
     )
     from core import cases
 

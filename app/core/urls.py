@@ -372,6 +372,27 @@ urlpatterns = [
         case_chronology_pages.running,
         name="case-chronology-running",
     ),
+    # An incident from a span (Phase 10 chapter 2, v1.167.0).
+    path(
+        "case/<uuid:case_id>/chronology/span",
+        case_chronology_pages.span,
+        name="case-chronology-span",
+    ),
+    path(
+        "case/<uuid:case_id>/chronology/sitting",
+        case_chronology_pages.span_sitting,
+        name="case-chronology-sitting",
+    ),
+    path(
+        "case/<uuid:case_id>/chronology/incident",
+        case_chronology_pages.make_incident,
+        name="case-chronology-incident",
+    ),
+    path(
+        "case/<uuid:case_id>/incident/<uuid:incident_id>/add-from-chronology",
+        case_chronology_pages.add_to_incident,
+        name="incident-add-from-chronology",
+    ),
     path(
         "case/<uuid:case_id>/chronology.<str:kind>",
         case_chronology_pages.export,

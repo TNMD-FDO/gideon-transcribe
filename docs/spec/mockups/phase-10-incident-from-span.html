@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An incident from a span</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #7b4ea3; --sys: #6b7480; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+
+  .frame { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; overflow: hidden; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle span { padding: 3px 10px; } .toggle .on { background: var(--accent); color: var(--accent-ink); }
+
+  .chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+  .days .on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .track { position: relative; height: 16px; border: 1px dashed var(--line); border-radius: 4px; color: var(--muted); font-size: 10px; display: flex; align-items: center; padding-left: 8px; }
+  .track .sel { position: absolute; top: -1px; bottom: -1px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 4px; }
+  .track .sel b { position: absolute; left: 6px; top: 0; font-size: 10px; color: var(--accent); white-space: nowrap; }
+  .band { position: relative; display: grid; gap: 4px; padding: 6px 0; }
+  .band .bar { position: relative; height: 10px; }
+  .band .bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; display: block; }
+  .band .bar b { position: absolute; left: 0; top: -1px; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); }
+  .lane { position: relative; height: 14px; }
+  .lane i { position: absolute; top: 3px; width: 8px; height: 8px; border-radius: 50%; }
+  .lane .lbl, .inc-lane .lbl { position: absolute; right: 0; top: 0; font-size: 10px; color: var(--muted); }
+  /* the incidents lane: one bracket per incident of the case */
+  .inc-lane { position: relative; height: 18px; }
+  .inc-lane .br { position: absolute; top: 2px; height: 12px; border: 2px solid var(--inc); border-top: 0; border-radius: 0 0 4px 4px; background: var(--inc-soft); }
+  .inc-lane .br b { position: absolute; left: 6px; top: -2px; font-size: 10px; color: var(--inc); white-space: nowrap; font-weight: 600; }
+  .hint { position: relative; height: 18px; }
+  .hint span { position: absolute; top: 2px; height: 10px; border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 4px 4px; opacity: .8; }
+  .hint b { position: absolute; top: 0; font-size: 10px; color: var(--accent); white-space: nowrap; font-weight: 500; }
+  .hint .mk { position: absolute; top: -1px; font-size: 10px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); }
+  .spell { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .spell .sh { display: flex; gap: 10px; align-items: baseline; }
+  .entry { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
+  .entry.lit { background: var(--accent-soft); }
+  .entry .num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: var(--sys); }
+  .entry .top { display: flex; gap: 8px; align-items: baseline; }
+  .entry .t { font-family: var(--mono); }
+  .entry .play { color: var(--accent); font-size: 11px; }
+  .entry .line { color: var(--muted); font-size: 12px; }
+  .entry .meta { display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap; align-items: center; }
+  .entry .outside { font-size: 12px; color: var(--inc); margin-top: 3px; }
+  .entry .outside .btn { margin-left: 6px; }
+
+  /* the sheet (the picker, and the Add-first sheet) */
+  .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 640px; font-size: 13px; }
+  .sheet table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .sheet th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .sheet td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .sheet .tick { display: inline-block; width: 13px; height: 13px; border: 1px solid var(--line); border-radius: 3px; vertical-align: -2px; background: var(--surface); }
+  .sheet .tick.on { background: var(--accent); border-color: var(--accent); }
+  .sheet .tick.in { background: var(--inc); border-color: var(--inc); opacity: .5; }
+  .sit { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 4px; }
+  .sit i.w { background: var(--warn); }
+  .notice { border-left: 3px solid var(--inc); background: var(--inc-soft); padding: 6px 10px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+  .about { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 14px; max-width: 420px; }
+  .about dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: 13px; }
+  .about dt { color: var(--muted); } .about dd { margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 10 chapter 2, amended · a drawing for the maintainer's word · 2026-10-28</span>
+    <h1>An incident from a span, without making incidents twice</h1>
+    <p class="lede">The chronology already holds what an incident needs: the recordings on one clock, their spans, the notes at their times. Chapter 2 makes one from a span with one press. The worry is the second press: a note written later, a hint seen again, and a second incident over the same hour. The drawing adds three guards. The case's incidents are drawn on the chronology, Make on a span that overlaps one leads with Add to it, and a later note on a camera outside the incident says so and offers to add the camera. Nothing is ever made without a press. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The chronology with the incidents lane, and Make an incident on a span</h2></div>
+    <div class="frame">
+      <div class="lead">
+        <span class="muted">6 Nov 2025 · 14 notes · <b>20:24 to 20:40 in view</b> <span class="btn tiny ghost">Back to the day</span></span>
+        <span style="display: flex; gap: 8px; align-items: center"><span class="btn tiny primary">Make an incident from this span</span><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span><span class="btn tiny">Export ▾</span></span>
+      </div>
+      <div class="chron">
+        <div class="days"><span class="on">6 Nov 2025 · 14</span><span>7 Nov · 3</span><span>12 Nov · 1</span></div>
+        <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:30</span><span style="left: 50%">21:00</span><span style="left: 75%">21:30</span><span style="left: 100%">22:00</span></div>
+        <div class="track">Drag across a span to look closer<div class="sel" style="left: 20%; width: 14%"><b>20:24 to 20:40</b></div></div>
+        <div class="band">
+          <div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1</b></div>
+          <div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1</b></div>
+          <div class="bar"><i class="c3" style="left: 34%; width: 30%"></i><b style="left: 34%">BWC3-1</b></div>
+          <div class="bar"><i class="c4" style="left: 62%; width: 30%"></i><b style="left: 62%">Dash-4</b></div>
+        </div>
+        <div class="lane"><i class="c1" style="left: 20.5%"></i><i class="c2" style="left: 21.8%"></i><i class="c1" style="left: 24%"></i><i class="c2" style="left: 25.9%"></i><i class="c3" style="left: 36%"></i><i class="c1" style="left: 54.1%"></i><i class="c4" style="left: 70%"></i><i class="c4" style="left: 74%"></i><span class="lbl">notes</span></div>
+        <div class="inc-lane"><div class="br" style="left: 52%; width: 28%"><b>Traffic stop, 6 Nov · 3 cameras · 5 events</b></div><span class="lbl">incidents</span></div>
+        <div class="hint"><span style="left: 20.5%; width: 16%"></span><b style="left: 21.5%">3 cameras, 6 notes, 20:24 to 20:40</b><span class="mk" style="left: 38%">Make an incident</span></div>
+        <div class="spell">
+          <div class="sh"><b>20:24:36 to 20:31:05</b><span class="muted">4 notes</span></div>
+          <div class="entry"><span class="num c1">1</span><div><div class="top"><span class="t">20:24:36</span><span class="play">▶</span></div><div>First contact, officer asks for licence.</div><div class="line">"Can I see your licence and registration, please" · BWC1-1</div></div></div>
+          <div class="entry"><span class="num c2">2</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div>Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The incidents lane.</b> One bracket per incident of the case, under the Notes lane, in its own colour with its name, camera count and event count on it. Hover says the cameras and the span; a press opens the incident. A person cannot make twice what they can see. Chapter 3's deferral of incident <i>events</i> on the chronology stands; this is only their spans.</p>
+      <p><b>Two doors to Make.</b> With a span dragged, the lead offers <b>Make an incident from this span</b> (chapter 2 as written). A hint's bracket carries <b>Make an incident</b> for its own span, so the common case is one press with no drag. Both open the picker (figure B).</p>
+      <p><b>Nothing is made by itself.</b> No proposal, no incident from a rule. The hint is a signal; the person decides.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The picker: the span's recordings ticked, the sitting bar, Make</h2></div>
+    <div class="sheet">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><b>Make an incident from 6 Nov, 20:24 to 20:40</b><span class="btn tiny ghost">Close</span></div>
+      <div class="muted tiny">The recordings that ran in the span, the most noted first and ticked. Each arrives on the incident's clock as it sits here; nothing is placed again.</div>
+      <table>
+        <tr><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th></tr>
+        <tr><td><span class="tick on"></span></td><td>BWC1-1</td><td>4</td><td><span class="pill ok">by clock</span></td><td class="mono">20:24 to 20:40</td></tr>
+        <tr><td><span class="tick on"></span></td><td>BWC2-1</td><td>2</td><td><span class="pill ok">by clock</span></td><td class="mono">20:24 to 20:40</td></tr>
+        <tr><td><span class="tick on"></span></td><td>BWC3-1</td><td>1</td><td><span class="pill warn">by hand, A. Ortiz</span></td><td class="mono">20:34 to 20:40</td></tr>
+        <tr><td><span class="tick"></span></td><td>Dispatch_2025-11-06.wav</td><td>0</td><td><span class="pill ok">by clock</span></td><td class="mono">20:24 to 20:40</td></tr>
+      </table>
+      <div class="muted tiny">and 2 more ran in this span with no notes · <span class="btn tiny ghost">Choose more</span></div>
+      <div style="display: flex; gap: 10px; align-items: center"><span class="small"><b>3 of 20 cameras</b> · 0.8 hours' worth</span><span class="sit" style="flex: 1"><i style="width: 9%"></i></span><span class="muted tiny">one sitting holds about 9 camera hours</span></div>
+      <div style="display: flex; gap: 8px; align-items: center"><label class="small">Name <input type="text" value="Traffic stop, 6 Nov 20:24" style="width: 240px"></label></div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px"><span class="btn">Cancel</span><span class="btn primary">Make the incident</span></div>
+    </div>
+    <div class="caption">
+      <p><b>As chapter 2 has it.</b> The recordings with bars in the span come ticked, up to the eight most noted; the rest wait behind Choose more. The count reads against the Panel's Most cameras in an incident, and in hours; the sitting bar redraws with each tick. A camera with no notes is tickable, and a note on it afterwards becomes an event.</p>
+      <p><b>The name</b> is offered from the day and the span's start, and can be typed over. The incident's About gets one line: "From the case's chronology, 6 Nov 20:24 to 20:40".</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Make on a span that overlaps an incident: Add to it comes first</h2></div>
+    <div class="cols">
+      <div class="sheet">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><b>This span lies inside an incident</b><span class="btn tiny ghost">Close</span></div>
+        <div class="notice small"><b>Traffic stop, 6 Nov</b> runs 21:02 to 21:31 and already has BWC1-1, BWC2-1 and BWC3-1. Your span, 21:05 to 21:20, is inside it.</div>
+        <table>
+          <tr><th></th><th>Recording</th><th>Notes</th><th></th></tr>
+          <tr><td><span class="tick in"></span></td><td>BWC1-1</td><td>2</td><td class="muted tiny">already in it</td></tr>
+          <tr><td><span class="tick in"></span></td><td>BWC2-1</td><td>1</td><td class="muted tiny">already in it</td></tr>
+          <tr><td><span class="tick on"></span></td><td>Dash-4</td><td>2</td><td class="muted tiny">not in it yet</td></tr>
+        </table>
+        <div style="display: flex; gap: 10px; align-items: center"><span class="small"><b>4 of 20 cameras</b> after adding · 1.9 hours' worth</span><span class="sit" style="flex: 1"><i style="width: 21%"></i></span></div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px"><span class="btn ghost">Make a new one anyway</span><span class="btn primary">Add Dash-4 to Traffic stop, 6 Nov</span></div>
+      </div>
+      <div class="sheet">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><b>This span runs past an incident</b><span class="btn tiny ghost">Close</span></div>
+        <div class="notice small"><b>Traffic stop, 6 Nov</b> runs 21:02 to 21:31. Your span, 21:20 to 21:50, overlaps its last eleven minutes.</div>
+        <table>
+          <tr><th></th><th>Recording</th><th>Notes</th><th></th></tr>
+          <tr><td><span class="tick in"></span></td><td>BWC1-1</td><td>1</td><td class="muted tiny">already in it</td></tr>
+          <tr><td><span class="tick on"></span></td><td>Dash-4</td><td>3</td><td class="muted tiny">not in it yet</td></tr>
+          <tr><td><span class="tick on"></span></td><td>Call_20251106_2140</td><td>1</td><td class="muted tiny">not in it yet</td></tr>
+        </table>
+        <div class="muted tiny">Adding widens the incident to <b>21:02 to 21:50</b>; its cameras keep their places.</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px"><span class="btn ghost">Make a new one anyway</span><span class="btn primary">Add 2 recordings and widen Traffic stop, 6 Nov</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One incident per span by default.</b> When the span touches an incident, the sheet names it and leads with Add: the cameras not yet in it come ticked, the ones already in it are shown and cannot be ticked twice. Make a new one anyway stands second, in the quiet style, so a second incident over the same hour is a choice and never an accident.</p>
+      <p><b>Widening.</b> When the span runs past the incident, Add widens the incident's span to cover both and says the new span before the press. The cameras already in it keep their places on its clock. (Choice 2 below.)</p>
+      <p><b>Two incidents touched.</b> The sheet names both and leads with the one that holds more of the span; the other is a line with its own Add. Rare, and nothing is merged by rule.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>A later note on a camera outside the incident</h2></div>
+    <div class="frame" style="max-width: 760px">
+      <div class="chron">
+        <div class="spell">
+          <div class="sh"><b>21:02:18 to 21:09:40</b><span class="muted">3 notes</span><span class="pill inc">Traffic stop, 6 Nov</span></div>
+          <div class="entry"><span class="num c3">5</span><div><div class="top"><span class="t">21:02:18</span><span class="play">▶</span></div><div>Third officer arrives; time needs checking against BWC1.</div><div class="line">"Dispatch, 3-1 on scene" · BWC3-1</div><div class="meta"><span class="pill">A. Ortiz, today</span><span class="pill inc">an event of Traffic stop, 6 Nov</span></div></div></div>
+          <div class="entry lit"><span class="num c4">6</span><div><div class="top"><span class="t">21:06:52</span><span class="play">▶</span><span class="pill">new</span></div><div>Dash camera catches the second car pulling in behind.</div><div class="line">at a moment, nothing said · Dash-4</div><div class="meta"><span class="pill">J. Brennan, just now</span></div><div class="outside">inside Traffic stop, 6 Nov; Dash-4 is not in it <span class="btn tiny">Add Dash-4 to the incident</span></div></div></div>
+          <div class="entry"><span class="num c1">7</span><div><div class="top"><span class="t">21:09:40</span><span class="play">▶</span></div><div>Miranda read; the exact words matter for the motion.</div><div class="line">"You have the right to remain silent" · BWC1-1</div><div class="meta"><span class="pill">A. Ortiz, 2 days ago</span><span class="pill inc">an event of Traffic stop, 6 Nov</span></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>A note on a camera already in the incident</b> is an event of it the moment it is written (Phase 8 chapter 11). Its entry says so with the incident's pill. Nothing to do.</p>
+      <p><b>A note on a camera outside the incident, inside its span,</b> gets one quiet line under its entry: inside which incident, that its camera is not in it, and Add. The camera arrives on the incident's clock as it sits on the chronology; the note is then an event like the others. The line is the only invitation the page makes, and it never says "make an incident".</p>
+      <p><b>A spell inside an incident</b> carries the incident's pill on its heading, so the eye sees the hour is already covered before it reaches the hint.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>The link back, on the incident's About</h2></div>
+    <div class="about">
+      <dl>
+        <dt>Cameras</dt><dd>4, synced by clock (3) and by hand (1)</dd>
+        <dt>From</dt><dd>the case's chronology, 6 Nov 21:02 to 21:50 <span class="btn tiny ghost">Open there</span></dd>
+        <dt>Widened</dt><dd>once, by J. Brennan, 7 Nov 09:14 (to 21:50)</dd>
+      </dl>
+    </div>
+    <div class="caption">
+      <p><b>The About says where it came from</b> and opens the chronology at that span. Each widening is one audit row, "Incident widened from the chronology", with the old and new span and the cameras added, never a word of a note.</p>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices, answered 2026-10-28</span><h2>Two things only the maintainer could decide</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>Where the incidents lane sits.</b> <span class="pill acc">Answered: under the Notes lane.</span> <b>Recommended:</b> under the Notes lane and above the hints, so the marks, the brackets and the hints read top to bottom as "what was noted, what already exists, what might be made". <b>Or:</b> above the ruler, beside the rail, as a strip of the day's incidents.</li>
+        <li><b>What Add does when the span runs past the incident.</b> <span class="pill acc">Answered: widen, saying the new span first.</span> <b>Recommended:</b> widen the incident to cover both and say the new span before the press, one audit row. <b>Or:</b> add the cameras only and leave the incident's span as it was, so the notes past its end stay outside it until someone widens it on the incident page.</li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>What does not change.</b> The incident page, its own sync by sound and by hand, Propose events and the sitting bar are as they are. Incident events never appear on the case's chronology (chapter 3). No incident is made or merged without a press.</p>
+      <p><b>Size.</b> One release, no model change; one migration if the About's "From" line is kept on the incident (a span and a source), else none. The spec: chapter 2 amended with the lane, the Add-first sheet and the entry's line; Appendix A gains "Incident made from the chronology" and "Incident widened from the chronology".</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

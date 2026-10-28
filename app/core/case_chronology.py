@@ -330,6 +330,11 @@ def day_of(case, date: dt.date, span: tuple[float, float] | None = None) -> dict
         ruler["to"] = min(DAY_SECONDS, ruler["from"] + 600)
     shape, lanes, folded, coverage = _band(bars, ruler)
     hints = _hints(bars, entries)
+    # The case's incidents on the day (chapter 2), and each entry's place
+    # against them: an event of one, or inside one on a camera not in it.
+    on_day = _incidents_on_day(case, date, span, placements)
+    for row in entries:
+        _place_in_incidents(row, on_day)
     groups = spells(entries)
     return {
         "date": date.isoformat(),
@@ -349,6 +354,8 @@ def day_of(case, date: dt.date, span: tuple[float, float] | None = None) -> dict
             for row in entries
         ],
         "hints": hints,
+        "incidents": on_day,
+        "incidents_on": incidents.on(),
         "spells": [
             {
                 "from": group[0]["time"],
@@ -474,6 +481,251 @@ def _hints(bars: list[dict], entries: list[dict]) -> list[dict]:
             }
         )
     return out
+
+
+# An incident from a span (Phase 10 chapter 2, v1.167.0) ----------------------
+
+
+def _incidents_on_day(case, date: dt.date, span, placements: dict) -> list[dict]:
+    """The case's incidents on this day: each one's span on the day from its
+    cameras as the case's clock reads them, so the lane and the bars agree.
+    An incident with no camera on the day is not drawn; with a span in hand,
+    only the incidents the span touches."""
+    if not incidents.on():
+        return []
+    out = []
+    for incident in case.incidents.prefetch_related("cameras__recording"):
+        low = high = None
+        ids = []
+        placed_ids = []
+        for camera in incident.cameras.all():
+            key = str(camera.recording_id)
+            ids.append(key)
+            if camera.is_placed():
+                placed_ids.append(key)
+            p_date, p_start, how = placements.get(key) or clock_of(camera.recording)
+            if p_date is None or how == DAY:
+                continue
+            running = _running(camera.recording, date, p_start, p_date, None)
+            if running is None:
+                continue
+            low = running[0] if low is None else min(low, running[0])
+            high = running[1] if high is None else max(high, running[1])
+        if low is None:
+            continue
+        if span is not None and (high < span[0] or low > span[1]):
+            continue
+        events = incident.events.filter(proposed=False).count()
+        out.append(
+            {
+                "id": str(incident.pk),
+                "name": incident.name,
+                "url": incident.url(),
+                "from": round(low, 1),
+                "to": round(high, 1),
+                "cameras": len(ids),
+                "camera_ids": ids,
+                "placed_ids": placed_ids,
+                "events": events,
+                "words": (
+                    f"{incident.name} · {len(ids)} camera{'' if len(ids) == 1 else 's'}"
+                    f" · {events} event{'' if events == 1 else 's'}"
+                ),
+            }
+        )
+    return out
+
+
+def _place_in_incidents(row: dict, on_day: list[dict]) -> None:
+    """The entry's incident: the one its recording is a camera of (its note
+    is an event of it, Phase 8 chapter 11); else, when its moment lies in an
+    incident's span on a camera not in it, that incident as `outside`."""
+    for one in on_day:
+        if row["recording"] in one["camera_ids"]:
+            # An event of it once the camera is on the incident's clock.
+            row["incident"] = {
+                "id": one["id"],
+                "name": one["name"],
+                "event": row["recording"] in one["placed_ids"],
+            }
+            return
+    for one in on_day:
+        if one["from"] <= row["seconds"] <= one["to"]:
+            row["outside"] = {
+                "id": one["id"],
+                "name": one["name"],
+                "from": hm(one["from"]),
+                "to": hm(one["to"]),
+            }
+            return
+
+
+def _span_dict(date: dt.date, span) -> dict:
+    return {"date": date.isoformat(), "from": hm(span[0]), "to": hm(span[1])}
+
+
+def span_words(kept: dict | None) -> str:
+    """ "6 Nov 2025, 20:24 to 20:40" from a kept span, or nothing."""
+    if not kept:
+        return ""
+    when = day_words(dt.date.fromisoformat(kept["date"]))
+    return f"{when}, {kept['from']} to {kept['to']}"
+
+
+def span_reading(case, date: dt.date, span) -> dict:
+    """What the Make an incident sheet needs for a span: the recordings that
+    ran in it with their notes, the eight most noted ticked, the incidents
+    the span touches (the one holding more of it first) with which of the
+    recordings are already in them and the span each would widen to, the
+    cap, and a name to offer."""
+    reading = day_of(case, date, span)
+    bars = sorted(reading["bars"], key=lambda b: (-b["notes"], b["from"]))
+    rows = [
+        {
+            "id": bar["id"],
+            "title": bar["title"],
+            "notes": bar["notes"],
+            "placed": bar["placed"],
+            "how": bar["how"],
+            "video": bar["video"],
+            "from": hm(bar["from"]),
+            "to": hm(bar["to"]),
+            "ticked": bar["notes"] > 0 and index < BARS_MOST,
+        }
+        for index, bar in enumerate(bars)
+    ]
+    touched = []
+    for one in reading["incidents"]:
+        # Judged to the minute, as the spans are said and kept: a span that
+        # reads the same minutes as the incident's is inside it.
+        union = (min(one["from"], span[0]), max(one["to"], span[1]))
+        held = min(one["to"], span[1]) - max(one["from"], span[0])
+        inside = hm(one["from"]) <= hm(span[0]) and hm(span[1]) <= hm(one["to"])
+        widens = (hm(union[0]), hm(union[1])) != (hm(one["from"]), hm(one["to"]))
+        touched.append(
+            {
+                "id": one["id"],
+                "name": one["name"],
+                "url": one["url"],
+                "from": hm(one["from"]),
+                "to": hm(one["to"]),
+                "cameras": one["cameras"],
+                "camera_ids": one["camera_ids"],
+                "inside": inside,
+                "widens": widens,
+                "union_from": hm(union[0]),
+                "union_to": hm(union[1]),
+                "in_ids": [row["id"] for row in rows if row["id"] in one["camera_ids"]],
+                "held": held,
+            }
+        )
+    touched.sort(key=lambda one: -one["held"])
+    return {
+        "date": date.isoformat(),
+        "words": day_words(date),
+        "from": hm(span[0]),
+        "to": hm(span[1]),
+        "rows": rows,
+        "incidents": touched,
+        "most": incidents.most_cameras(),
+        "name": f"{day_words(date)}, {hm(span[0])} to {hm(span[1])}",
+    }
+
+
+def _carry_places(incident, date: dt.date, *, by) -> None:
+    """A camera placed by hand or from the file on the case's clock arrives
+    on the incident's clock at the same start, under the same person's name
+    (one with a read stamp was placed from it by make). With no stamp among
+    the cameras, the first carried one sets the incident's clock to the day."""
+    for camera in incident.cameras.select_related("recording", "recording__clock_by"):
+        p_date, p_start, how = clock_of(camera.recording)
+        if how not in (HAND, FILE) or p_start is None or p_date is None:
+            continue
+        if camera.placed in (incidents.CLOCK, incidents.CLOCK_UNCHECKED):
+            continue
+        if incident.clock_zero is None:
+            incident.clock_zero = float(p_start)
+            incident.clock_date = p_date.strftime("%m/%d/%Y")
+            incident.clock_checked = True
+            incident.save(update_fields=["clock_zero", "clock_date", "clock_checked"])
+        starts_at = incidents._wrapped(float(p_start) - incident.clock_zero)
+        incidents._placed(
+            camera,
+            incidents.HAND if how == HAND else incidents.FILE,
+            starts_at,
+            by=camera.recording.clock_by or by,
+            request=None,
+            quietly=True,
+        )
+
+
+def make_incident(
+    case, date: dt.date, span, name: str, recordings, *, by, request=None
+):
+    """An incident from the span: made with these recordings, each carried
+    onto the incident's clock as the case's clock has it, and told where it
+    came from."""
+    kept = _span_dict(date, span)
+    incident = incidents.make(
+        case,
+        name,
+        recordings,
+        by=by,
+        how=incidents.FROM_CHRONOLOGY,
+        request=request,
+        details={"day": kept["date"], "span": f"{kept['from']} to {kept['to']}"},
+    )
+    _carry_places(incident, date, by=by)
+    incident.from_chronology = {"made": kept, "span": dict(kept), "changes": []}
+    incident.save(update_fields=["from_chronology"])
+    return incident
+
+
+def add_to_incident(
+    incident, date: dt.date, span, recordings, *, by, request=None
+) -> int:
+    """Recordings of a span added to an incident the span touches, the
+    incident widened to cover both; one audit row with the spans and the
+    count, never a note's words."""
+    added = incidents.add_cameras(incident, recordings, by=by, request=request)
+    _carry_places(incident, date, by=by)
+    kept = dict(incident.from_chronology or {})
+    was = kept.get("span")
+    now = _span_dict(date, span)
+    if was and was["date"] == now["date"]:
+        now = {
+            "date": now["date"],
+            "from": min(was["from"], now["from"]),
+            "to": max(was["to"], now["to"]),
+        }
+    widened = was is None or now != was
+    kept["span"] = now
+    kept.setdefault("changes", []).append(
+        {
+            "by": by.shown_name,
+            "at": timezone.now().isoformat(),
+            "span": f"{now['from']} to {now['to']}",
+            "added": added,
+            "widened": widened,
+        }
+    )
+    incident.from_chronology = kept
+    incident.save(update_fields=["from_chronology"])
+    audit.write(
+        incidents.CATEGORY,
+        "incident widened from the chronology",
+        actor=by,
+        affected_user=incident.case.owner,
+        object_type="incident",
+        object_id=incident.pk,
+        object_label=incident.name,
+        request=request,
+        case=incident.case.name,
+        was=f"{was['from']} to {was['to']}" if was else "",
+        now=f"{now['from']} to {now['to']}",
+        cameras=added,
+    )
+    return added
 
 
 def running_at(case, date: dt.date, at: float) -> list[dict]:

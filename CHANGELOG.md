@@ -19,6 +19,17 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.167.0, 2026-10-28
+
+```
+Models: unchanged
+Database: migrates (0097: an incident remembers the span of the chronology it came from)
+```
+
+- **An incident from a span of the case's chronology (Phase 10 chapter 2; the drawing `docs/spec/mockups/phase-10-incident-from-span.html`).** With a span dragged, the lead offers Make an incident from this span, and a hint's bracket carries Make an incident for its own span. The sheet lists the recordings that ran in the span, the most noted ticked, with how each was placed and its span in the window; the rows with no notes wait behind Choose more; the count reads against Most cameras in an incident and the sitting bar redraws with each tick; a name is offered from the day and the span. Each camera arrives on the incident's clock as the case's clock has it: from its stamp, or by hand or from the file under the same person's name at the same start. The incident's Details say where it came from, with Open there.
+- **Three guards against making an incident twice.** The case's incidents are drawn on the chronology as a lane of brackets under the Notes lane, each with its name and counts, a press opening it. Make on a span that touches an incident leads with Add to it: the recordings not yet in it ticked, the ones in it shown and not tickable, the incident widened when the span runs past it and the new span said before the press; Make a new one anyway stands second. A note on a camera outside an incident but inside its span gets one quiet line with Add the camera to the incident; a note on a camera already in it is an event of it as before and its entry wears the incident's pill, as does a spell whose notes are all events of one incident. Nothing is made without a press; nothing is merged by rule.
+- **Audit rows.** Incident made (how: chronology) with the day and the span; Incident widened from the chronology with the span before and after and the count. Never a word of a note.
+
 ## v1.166.0, 2026-10-28
 
 ```

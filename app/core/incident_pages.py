@@ -320,6 +320,8 @@ def state_json(incident: Incident, user) -> dict:
             "how": incident.how,
             # About this chronology and the To check count (Phase 7 chapter 1).
             "about": incident.about,
+            # From the case's chronology (Phase 10 chapter 2, v1.167.0).
+            "from_chronology": _from_chronology(incident),
             "to_check": chronology.to_check_count(incident),
             # Clip this event, and the Clips chapter's limits for the box.
             "clips": incident_clips.on(),
@@ -813,6 +815,40 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
         case, name, chosen, by=request.user, how=how, request=request
     )
     return redirect(incident.url())
+
+
+def _from_chronology(incident) -> dict:
+    """The Details tab's lines for an incident made or widened from the
+    case's chronology: where it came from, the span now, and each change."""
+    from core import case_chronology
+
+    kept = incident.from_chronology or {}
+    if not kept:
+        return {}
+    span = kept.get("span") or kept.get("made") or {}
+    url = ""
+    if span:
+        url = (
+            reverse("case", args=[incident.case_id])
+            + f"?tab=notes&shape=chronology&day={span['date']}"
+            + f"&from={span['from']}&to={span['to']}"
+        )
+    return {
+        "made": case_chronology.span_words(kept.get("made")),
+        "span": case_chronology.span_words(span),
+        "url": url,
+        "changes": [
+            {
+                "words": (
+                    (f"widened to {one['span']}" if one.get("widened") else "added to")
+                    + f", {one['added']} camera{'' if one['added'] == 1 else 's'}"
+                    + f", by {one['by']}"
+                ),
+                "at": one.get("at", ""),
+            }
+            for one in kept.get("changes", [])
+        ],
+    }
 
 
 def _suggested_name(recordings) -> str:

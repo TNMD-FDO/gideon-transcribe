@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 
-from core import audit, case_chronology, cases, exports
+from core import audit, case_chronology, cases, exports, incidents, sitting
 from core.case_pages import _on_or_404, _their_case
 from core.recordings import Recording
 
@@ -77,6 +77,88 @@ def running(request: HttpRequest, case_id) -> JsonResponse:
     if when is None or at is None:
         raise Http404
     return JsonResponse({"rows": case_chronology.running_at(case, when, at)})
+
+
+def _span_asked(request, body=None) -> tuple:
+    """The day and the span, from the address or a JSON body; 404 without."""
+    source = body if body is not None else request.GET
+    when = _date(str(source.get("day", "")))
+    start = _seconds(str(source.get("from", "")))
+    end = _seconds(str(source.get("to", "")))
+    if when is None or start is None or end is None or end <= start:
+        raise Http404
+    return when, (start, end)
+
+
+@login_required
+def span(request: HttpRequest, case_id) -> JsonResponse:
+    """The Make an incident sheet's reading of a span (chapter 2)."""
+    _on_or_404()
+    if not incidents.on():
+        raise Http404
+    case = _their_case(request, case_id)
+    when, asked = _span_asked(request)
+    return JsonResponse(case_chronology.span_reading(case, when, asked))
+
+
+@login_required
+def span_sitting(request: HttpRequest, case_id) -> JsonResponse:
+    """The sitting bar for the recordings ticked in the sheet, redrawn on
+    each tick (Phase 8 chapter 10's bar for an incident not yet made)."""
+    _on_or_404()
+    case = _their_case(request, case_id)
+    wanted = [one for one in request.GET.get("recordings", "").split(",") if one]
+    chosen = list(case.recordings.filter(pk__in=wanted))
+    return JsonResponse({"sitting": sitting.json_for_recordings(chosen)})
+
+
+def _body(request) -> dict:
+    try:
+        return json.loads(request.body or b"{}")
+    except ValueError:
+        return {}
+
+
+@login_required
+@require_POST
+def make_incident(request: HttpRequest, case_id) -> JsonResponse:
+    """Make the incident: the span's recordings ticked, named, opened."""
+    _on_or_404()
+    if not incidents.on():
+        raise Http404
+    case = _their_case(request, case_id)
+    body = _body(request)
+    when, asked = _span_asked(request, body)
+    wanted = [str(one) for one in (body.get("recordings") or [])]
+    chosen = list(case.recordings.filter(pk__in=wanted).order_by("created"))
+    if not chosen:
+        return JsonResponse({"error": "Tick at least one recording."}, status=400)
+    name = str(body.get("name", "") or "").strip()
+    incident = case_chronology.make_incident(
+        case, when, asked, name, chosen, by=request.user, request=request
+    )
+    return JsonResponse({"ok": True, "url": incident.url(), "id": str(incident.pk)})
+
+
+@login_required
+@require_POST
+def add_to_incident(request: HttpRequest, case_id, incident_id) -> JsonResponse:
+    """Add the span's recordings to the incident it touches, widening it."""
+    _on_or_404()
+    if not incidents.on():
+        raise Http404
+    case = _their_case(request, case_id)
+    incident = incidents.Incident.objects.filter(pk=incident_id, case=case).first()
+    if incident is None:
+        raise Http404
+    body = _body(request)
+    when, asked = _span_asked(request, body)
+    wanted = [str(one) for one in (body.get("recordings") or [])]
+    chosen = list(case.recordings.filter(pk__in=wanted).order_by("created"))
+    added = case_chronology.add_to_incident(
+        incident, when, asked, chosen, by=request.user, request=request
+    )
+    return JsonResponse({"ok": True, "url": incident.url(), "added": added})
 
 
 def _their_recording(request, recording_id) -> Recording:
