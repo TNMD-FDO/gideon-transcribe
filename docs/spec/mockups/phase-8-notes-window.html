@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Note window</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --now: #fff3c4; --now-ink: #171b21; --well: #0b0f14;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --sys: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --now: #4a4120; --now-ink: #e7ebef; --well: #05080b;
+      --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --now: #4a4120; --now-ink: #e7ebef; --well: #05080b;
+    --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --sys: #98a4b1; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+  a { color: var(--accent); }
+
+  /* the case page, reduced */
+  .frame { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; overflow: hidden; }
+  .frame .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .frame .head h3 { font-size: 20px; margin: 0; }
+  .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 6px; color: var(--muted); flex-wrap: wrap; }
+  .tabs .on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs .n { background: var(--surface-2); border-radius: 8px; padding: 0 6px; font-size: 11px; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle span { padding: 3px 10px; } .toggle .on { background: var(--accent); color: var(--accent-ink); }
+
+  /* the rows */
+  .notes { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .notes li { padding: 10px 12px; border-top: 1px solid var(--line); }
+  .notes li:first-child { border-top: 0; }
+  .notes .words { display: block; white-space: pre-wrap; }
+  .notes .meta { margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .notes .t { font-family: var(--mono); color: var(--accent); }
+  .notes .t.play::before { content: "▶ "; font-size: 10px; }
+  .notes li.lit { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .notes .cite { color: var(--accent); }
+
+  /* the chronology, reduced to one spell */
+  .chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .band { display: grid; gap: 4px; padding: 6px 0; }
+  .band .bar { position: relative; height: 10px; }
+  .band .bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; display: block; }
+  .band .bar b { position: absolute; left: 0; top: -1px; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; }
+  .lane { position: relative; height: 14px; }
+  .lane i { position: absolute; top: 3px; width: 8px; height: 8px; border-radius: 50%; }
+  .spell { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .spell .sh { display: flex; gap: 10px; align-items: baseline; }
+  .entry { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
+  .entry.lit { background: var(--accent-soft); }
+  .entry .num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: var(--sys); }
+  .entry .top { display: flex; gap: 8px; align-items: baseline; }
+  .entry .t { font-family: var(--mono); }
+  .entry .play { color: var(--accent); font-size: 11px; }
+  .entry .line { color: var(--muted); font-size: 12px; }
+  .entry .meta { display: flex; gap: 6px; margin-top: 2px; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); }
+
+  /* the Note window: the hearing window's frame, for a note */
+  .win { position: absolute; right: 18px; bottom: 18px; width: 400px; max-width: calc(100% - 36px); background: var(--surface); color: var(--text); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: 0 14px 36px rgba(0, 0, 0, .28); display: flex; flex-direction: column; font-size: 13px; overflow: hidden; z-index: 3; }
+  .win.inline { position: static; width: auto; max-width: 440px; }
+  .win .wh { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--accent); color: var(--accent-ink); cursor: grab; }
+  .win .wh b { font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .win .wh .clock { font-family: var(--mono); opacity: .85; font-size: 12px; }
+  .win .wh .close { background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; border-radius: var(--radius); padding: 2px 12px; min-height: 26px; }
+  .win .vid { position: relative; height: 150px; background: var(--well); color: #d9dee4; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .win .vid .stamp { position: absolute; left: 8px; bottom: 6px; font-family: var(--mono); font-size: 11px; background: rgba(0,0,0,.55); padding: 1px 6px; border-radius: 3px; }
+  .win .vid .from { position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: #c7ced6; }
+  .win .ln { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr); gap: 8px; padding: 4px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+  .win .ln .t { font-family: var(--mono); color: var(--muted); }
+  .win .ln .who { color: var(--muted); }
+  .win .ln.now { background: var(--now); color: var(--now-ink); }
+  .win .ln.now .t { color: inherit; }
+  .win .note { margin: 0 10px 6px 4.4rem; margin-left: calc(4.4rem + 18px); padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .win .note b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+  .win .wf { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+  .win .wf .grow { flex: 1; }
+
+  /* the sheet (narrow) and the today sketches */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,.18); z-index: 3; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+  .sheet .sh2 { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .arrow { display: inline-block; color: var(--muted); }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+  .narrow { width: 390px; max-width: 100%; height: 520px; margin: 0 auto; }
+  .today { opacity: .92; }
+  .leave { position: absolute; inset: 0; background: var(--surface); display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; z-index: 2; }
+  .leave .bar { height: 8px; background: var(--surface-2); border-radius: 4px; }
+  .leave .vid { height: 110px; background: var(--well); border-radius: var(--radius); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 8 chapter 2 and Phase 10 chapter 1 · a drawing for the maintainer's word</span>
+    <h1>The Note window: one way to play a note from the Notes tab, in Rows and in Chronology</h1>
+    <p class="lede">Today a note's time does two different things on the same tab. In Rows it leaves the case page for the recording page. In Chronology it opens the Preview, which since v1.165.0 has no column to sit in and so slides up as a sheet from the foot. The drawing gives both one door: a clean floating window, the frame the hearing window already has, showing the right recording at the note's moment with the note under its line. Nothing new is invented: it is the Preview card, as it already plays citations and search hits, in the window shape the office has used for voices since v1.154.0.</p>
+  </header>
+
+  <!-- A: today -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today: the same note, two doors</h2></div>
+    <div class="cols">
+      <div class="frame today" style="height: 300px">
+        <div class="lead"><span class="toggle"><span class="on">Rows</span><span>Chronology</span></span><span class="muted tiny">a press on the time, or on the words</span></div>
+        <ul class="notes">
+          <li class="lit"><span class="words">Passenger side: second officer sees the bag on the floor.</span><div class="meta"><span class="t">20:26:10</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC2-1 · J. Brennan, yesterday</div></li>
+          <li><span class="words">Consent to search is asked; answer unclear, listen again.</span><div class="meta"><span class="t">20:28:44</span> · BWC1-1 · <i>"Do you mind if we take a look"</i> · A. Ortiz, 2 days ago</div></li>
+        </ul>
+        <div class="leave"><b>The recording page, BWC2-1</b><div class="vid"></div><div class="bar"></div><div class="bar" style="width: 70%"></div><span class="muted tiny">The case page is left behind; Back returns to the Notes tab at the top of its list.</span></div>
+      </div>
+      <div class="frame today" style="height: 300px">
+        <div class="lead"><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span><span class="muted tiny">a press on ▶ beside the time</span></div>
+        <div class="chron" style="gap: 6px">
+          <div class="ruler"><span style="left: 0%">20:20</span><span style="left: 50%">20:30</span><span style="left: 100%">20:40</span></div>
+          <div class="band"><div class="bar"><i class="c1" style="left: 4%; width: 80%"></i><b style="left: 4%">BWC1-1</b></div><div class="bar"><i class="c2" style="left: 6%; width: 82%"></i><b style="left: 6%">BWC2-1</b></div></div>
+          <div class="entry lit"><span class="num c2">2</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div>Passenger side: second officer sees the bag on the floor.</div></div></div>
+        </div>
+        <div class="sheet"><div class="handle"></div><div class="sh2"><b style="flex: 1">BWC2-1</b><span class="mono muted tiny">20:26:10</span><span class="btn tiny ghost">Close</span></div><div style="height: 70px; background: var(--well)"></div><div class="muted tiny" style="padding: 6px 10px">the lines, the note, Note · Open the recording · All cameras</div></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Rows leaves the page.</b> The time and the words both open the recording page at the line with the note box ready (Phase 8 chapter 2 as written). A person reading thirty notes leaves and comes back thirty times.</p>
+      <p><b>Chronology plays in a sheet.</b> The time opens the Preview, and with the right column gone (v1.165.0) it is the sheet from the foot: the whole width, over the bottom of the list, not what a person expects of "a window".</p>
+    </div>
+  </section>
+
+  <!-- B: the window from Rows -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The Note window, opened from a row's time</h2></div>
+    <div class="frame" style="height: 560px">
+      <div class="head"><h3>Harbour Street stop</h3><div><span class="btn">Notes page</span> <span class="btn primary">Add recordings</span></div></div>
+      <div class="tabs"><span>Recordings <span class="n">7</span></span><span>Search</span><span>Clips <span class="n">3</span></span><span class="on">Notes <span class="n">18</span></span><span>Speakers</span><span>Incidents <span class="n">1</span></span><span>Documents</span><span>Details</span></div>
+      <div class="lead"><span class="muted">18 notes in this case, the office's own words: 16 on lines of transcripts, 2 on events.</span><span style="display: flex; gap: 8px; align-items: center"><span class="toggle"><span class="on">Rows</span><span>Chronology</span></span><span class="btn tiny">Notes page</span><span class="btn tiny">Search notes</span><span class="btn tiny">Download notes</span></span></div>
+      <ul class="notes" style="max-width: 640px">
+        <li><span class="words">Miranda read; the exact words matter for the motion.</span><div class="meta"><span class="t play">21:04:50</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC1-1 · Speaker 1: <i>"You have the right to remain silent"</i> · A. Ortiz, today</div></li>
+        <li class="lit"><span class="words">Passenger side: second officer sees the bag on the floor.</span><div class="meta"><span class="t play">20:26:10</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC2-1 · J. Brennan, yesterday</div></li>
+        <li><span class="words">Consent to search is asked; answer unclear, listen again.</span><div class="meta"><span class="t play">20:28:44</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC1-1 · Speaker 1: <i>"Do you mind if we take a look"</i> · A. Ortiz, 2 days ago</div></li>
+        <li><span class="words">First contact, officer asks for licence.</span><div class="meta"><span class="t play">20:24:36</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC1-1 · Speaker 1: <i>"Can I see your licence and registration, please"</i> · A. Ortiz, 2 days ago</div></li>
+        <li><span class="words">He says he was never at the stop that night.</span><div class="meta"><span class="t play">00:03:12</span> <span class="cite">on the page</span> · Call_20251106_2140 · Speaker 2: <i>"I wasn't anywhere near there"</i> · J. Brennan, yesterday</div></li>
+        <li><span class="words">Third officer arrives; time needs checking against BWC1.</span><div class="meta"><span class="t play">21:02:18</span> <span class="cite">on the page</span> <span class="cite">all cameras</span> · BWC3-1 · <i>"Dispatch, 3-1 on scene"</i> · A. Ortiz, today</div></li>
+      </ul>
+
+      <div class="win" role="dialog" aria-label="Note window">
+        <div class="wh"><b>BWC2-1</b><span class="clock">20:26:10</span><span class="close">Close ✕</span></div>
+        <div class="vid">▶<span class="stamp">11/06/2025 20:26:04</span><span class="from">from six seconds before</span></div>
+        <div class="ln"><span class="t">20:25:58</span><span><span class="who">Speaker 2:</span> Stay in the car for me.</span></div>
+        <div class="ln now"><span class="t">20:26:10</span><span class="muted">at this moment, nothing said</span></div>
+        <div class="note"><b>J. Brennan · yesterday</b>Passenger side: second officer sees the bag on the floor.</div>
+        <div class="ln"><span class="t">20:26:21</span><span><span class="who">Speaker 1:</span> What's in the bag?</span></div>
+        <div class="ln"><span class="t">20:26:25</span><span><span class="who">Speaker 3:</span> It's just my gym stuff.</span></div>
+        <div class="wf"><span class="btn tiny primary">Note</span><span class="btn tiny">Open the recording</span><span class="btn tiny ghost">All cameras</span><span class="grow"></span><span class="muted tiny">Esc closes</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The time is a play mark now.</b> ▶ 20:26:10 opens the window; the row lights while its window is open, as a cited hit does today. The list stays where it was, so the next note is one press away and the window simply moves to it.</p>
+      <p><b>The window is the hearing window's frame.</b> The accent head with the recording's title and the moment, Close in words, drag by the head, its place kept for the next one on this page, Escape closes. The office already knows it from the Speakers page.</p>
+      <p><b>What it shows.</b> The picture at the moment with the camera's own stamp, played from a few seconds before; the lines around the moment with the note's line lit; the note itself under its line with the writer and the date. Everything the Preview already draws, only the note block is new in this shape.</p>
+      <p><b>The foot.</b> Note writes or changes the note in place (the Preview's own box); Open the recording goes to the recording page at the line; All cameras where the recording is a synced camera of an incident. "on the page" and "all cameras" stay on the row for the eye that goes there.</p>
+    </div>
+  </section>
+
+  <!-- C: the same from Chronology -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The same window from the Chronology shape</h2></div>
+    <div class="frame" style="height: 420px">
+      <div class="lead"><span class="muted">6 Nov 2025 · 14 notes</span><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span></div>
+      <div class="chron" style="max-width: 640px">
+        <div class="ruler"><span style="left: 0%">20:20</span><span style="left: 33%">20:30</span><span style="left: 66%">20:40</span><span style="left: 100%">20:50</span></div>
+        <div class="band"><div class="bar"><i class="c1" style="left: 4%; width: 90%"></i><b style="left: 4%">BWC1-1</b></div><div class="bar"><i class="c2" style="left: 6%; width: 88%"></i><b style="left: 6%">BWC2-1</b></div></div>
+        <div class="lane"><i class="c1" style="left: 14%"></i><i class="c2" style="left: 20%"></i><i class="c1" style="left: 28%"></i><i class="c2" style="left: 36%"></i></div>
+        <div class="spell">
+          <div class="sh"><b>20:24:36 to 20:31:05</b><span class="muted">4 notes</span></div>
+          <div class="entry"><span class="num c1">1</span><div><div class="top"><span class="t">20:24:36</span><span class="play">▶</span></div><div>First contact, officer asks for licence.</div><div class="line">"Can I see your licence and registration, please" · BWC1-1</div></div></div>
+          <div class="entry lit"><span class="num c2">2</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div>Passenger side: second officer sees the bag on the floor.</div><div class="line">at a moment, nothing said · BWC2-1</div><div class="meta"><span class="pill">J. Brennan, yesterday</span><span class="pill warn">To check</span></div></div></div>
+          <div class="entry"><span class="num c1">3</span><div><div class="top"><span class="t">20:28:44</span><span class="play">▶</span></div><div>Consent to search is asked; answer unclear, listen again.</div><div class="line">"Do you mind if we take a look" · BWC1-1</div></div></div>
+        </div>
+      </div>
+      <div class="win" role="dialog" aria-label="Note window">
+        <div class="wh"><b>BWC2-1</b><span class="clock">20:26:10</span><span class="close">Close ✕</span></div>
+        <div class="vid" style="height: 120px">▶<span class="stamp">11/06/2025 20:26:04</span></div>
+        <div class="ln now"><span class="t">20:26:10</span><span class="muted">at this moment, nothing said</span></div>
+        <div class="note"><b>J. Brennan · yesterday</b>Passenger side: second officer sees the bag on the floor.</div>
+        <div class="ln"><span class="t">20:26:21</span><span><span class="who">Speaker 1:</span> What's in the bag?</span></div>
+        <div class="wf"><span class="btn tiny primary">Note</span><span class="btn tiny">Open the recording</span><span class="btn tiny ghost">All cameras</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One door, two shapes.</b> The entry's ▶ and the row's ▶ call the same thing. The Notes lane's marks and the running list's ▶ already do; they get the window too. The entry lights as it does today.</p>
+      <p><b>Unified in one place.</b> The rows' times carry the same two attributes the Search tab's hits carry (the recording and the second), and the Preview's one click handler opens them. The chronology already calls the Preview. The only change in the Preview is its floating shape on the case page: the window instead of the sheet. No second player, no second script.</p>
+      <p><b>The words of an entry</b> keep doing what Phase 10 says: in Chronology they open the note for editing in place. In Rows, see the choice below.</p>
+    </div>
+  </section>
+
+  <!-- D: narrow -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>A narrow window: the sheet, as every Preview is under 900 px</h2></div>
+    <div class="frame narrow">
+      <div class="tabs"><span>Recordings</span><span>Search</span><span class="on">Notes <span class="n">18</span></span><span>Speakers</span></div>
+      <ul class="notes">
+        <li class="lit"><span class="words">Passenger side: second officer sees the bag on the floor.</span><div class="meta"><span class="t play">20:26:10</span> · BWC2-1 · J. Brennan</div></li>
+        <li><span class="words">Consent to search is asked; answer unclear, listen again.</span><div class="meta"><span class="t play">20:28:44</span> · BWC1-1 · A. Ortiz</div></li>
+      </ul>
+      <div class="sheet"><div class="handle"></div><div class="sh2"><b style="flex: 1">BWC2-1</b><span class="mono muted tiny">20:26:10</span><span class="btn tiny ghost">Close</span></div><div style="height: 120px; background: var(--well)"></div>
+        <div class="win inline" style="border: 0; box-shadow: none; border-radius: 0"><div class="ln now"><span class="t">20:26:10</span><span class="muted">at this moment, nothing said</span></div><div class="note"><b>J. Brennan · yesterday</b>Passenger side: second officer sees the bag on the floor.</div><div class="wf"><span class="btn tiny primary">Note</span><span class="btn tiny">Open the recording</span></div></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Nothing floats on a phone or a half-screen window.</b> Under 900 px the Preview is the sheet from the foot it is today, with the same note block inside. The rule is the Preview's own and does not change.</p>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices, answered 2026-10-28</span><h2>Two things only the maintainer could decide</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>What the note's words do in Rows.</b> <span class="pill acc">Answered: only the time opens the window; the words keep leaving for the recording page with the box ready.</span> Today they leave for the recording page with the box ready. <b>Recommended:</b> the words open the window too, one door for the whole row, and Note in the window's foot edits in place; Open the recording is one press further. <b>Or:</b> the words keep leaving the page and only the time opens the window, which keeps Phase 8 chapter 2 as written but leaves the row with two behaviours.</li>
+        <li><b>The page behind the window.</b> <span class="pill acc">Answered: no dim.</span> The hearing window dims the page lightly while it is open, which suits a judgement on a voice. <b>Recommended for notes:</b> no dim, since a person plays several notes in a row and reads the list beside the window as it plays. <b>Or:</b> the same light dim as the hearing window, for one look everywhere.</li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>What does not change.</b> The Notes page (its own page, the player on the left) plays a row in its own player as now. The Search tab's note hits already open the Preview, so they take the window with no work. A note on an incident's event plays the camera it sits on at that moment, with Open the incident in the foot, as the chronology's event entries do.</p>
+      <p><b>The spec.</b> Phase 8 chapter 2's row citation ("opens the viewer at that line") and Phase 10 chapter 1's "in the page's own right pane" both become the Note window, with the sheet under 900 px. An amendment line in each; no new word in the glossary (Preview and Note are the words).</p>
+      <p><b>Size.</b> One release, no model change, no migration: the rows' two attributes in the template, the window shape in preview.js and app.css (the hearing window's frame without the voice parts), and the tests for the door and the shape.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

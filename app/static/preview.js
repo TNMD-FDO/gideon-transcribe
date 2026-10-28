@@ -16,6 +16,13 @@
 // pop-out of the whole call another (every line, not the minutes around the
 // moment). Preview.mount(host, options) makes one; window.Preview is the
 // floating instance as it always was.
+//
+// From v1.166.0 (the drawing phase-8-notes-window.html) the floating
+// instance on a wide window, where the page offers no column, is a window
+// of its own in the hearing window's frame (the coloured bar, Close in
+// words, dragged by its bar, its place kept) without the dim, so a note's
+// time on the Notes tab, a Search hit and a chat citation all open the
+// same thing where the sheet used to slide up. Under 900 px the sheet.
 
 (function () {
   "use strict";
@@ -83,19 +90,24 @@
     // page's column is never taken for it. Where it was dragged to is kept
     // for the next one on this page.
     var hearingPlace = null;
+    // The window's place (v1.166.0), kept apart from the hearing window's.
+    var windowPlace = null;
     function isHearing() { return isSnippet() && !host && window.innerWidth >= 900; }
 
     function build() {
       var column = (host || isSnippet()) ? null : columnOf();
+      // A window of its own (v1.166.0): no column to sit in, a wide window,
+      // and not a voice (that is the hearing window).
+      var windowed = !host && !column && !isSnippet() && window.innerWidth >= 900;
       card = host || document.createElement("div");
-      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : (isHearing() ? " hearing" : " sheet"))) + (options.whole ? " whole" : "") + (isSnippet() ? " snippet" : "");
+      card.className = "preview-card" + (host ? " mounted" : (column ? " in-page" : (isHearing() ? " hearing" : (windowed ? " window" : " sheet")))) + (options.whole ? " whole" : "") + (isSnippet() ? " snippet" : "");
       card.setAttribute("role", host ? "region" : "dialog");
       card.setAttribute("aria-label", "Preview");
       card.innerHTML =
         (host ? "" : "<div class='preview-handle' aria-hidden='true'></div>") +
         "<div class='preview-head'><b class='grow' id='preview-title'></b>" +
         "<span class='mono muted' id='preview-clock'></span>" +
-        (host ? "" : "<button type='button' class='" + (isSnippet() ? "preview-close" : "tiny ghost") + "' data-preview-act='close' aria-label='Close the preview'>" + (isSnippet() ? "Close ✕" : "Close") + "</button>") + "</div>" +
+        (host ? "" : "<button type='button' class='" + (isSnippet() || windowed ? "preview-close" : "tiny ghost") + "' data-preview-act='close' aria-label='Close the preview'>" + (isSnippet() || windowed ? "Close ✕" : "Close") + "</button>") + "</div>" +
         "<div class='preview-person' id='preview-person' hidden></div>" +
         "<div class='preview-samples' id='preview-samples' hidden></div>" +
         "<div class='preview-media'></div>" +
@@ -116,6 +128,13 @@
         drag(card.querySelector(".preview-head"));
         if (hearingPlace) {
           card.style.left = hearingPlace.left; card.style.top = hearingPlace.top;
+          card.style.right = "auto"; card.style.bottom = "auto";
+        }
+      }
+      if (card.classList.contains("window")) {
+        drag(card.querySelector(".preview-head"));
+        if (windowPlace) {
+          card.style.left = windowPlace.left; card.style.top = windowPlace.top;
           card.style.right = "auto"; card.style.bottom = "auto";
         }
       }
@@ -571,6 +590,9 @@
         from = null;
         if (card && card.classList.contains("hearing") && card.style.left) {
           hearingPlace = { left: card.style.left, top: card.style.top };
+        }
+        if (card && card.classList.contains("window") && card.style.left) {
+          windowPlace = { left: card.style.left, top: card.style.top };
         }
       }
       head.addEventListener("pointerup", letGo);

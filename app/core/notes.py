@@ -646,11 +646,23 @@ def _event_rows(case) -> list[dict]:
         .exclude(note="")
         .select_related("incident", "note_by")
     )
+    # The camera the event sits on and the moment by its clock (v1.166.0), so
+    # the Notes tab's time can play it in the Preview: the chronology's own
+    # reading, one query for the case.
+    from core import notes_page
+
+    placed = {
+        row["id"]: row
+        for row in notes_page._event_rows(case, list(case.recordings.all()))
+    }
     for event in found:
         incident = event.incident
+        camera = placed.get(str(event.pk))
         rows.append(
             {
                 "kind": "event",
+                "recording_id": camera["recording"] if camera else "",
+                "at": camera["at"] if camera else None,
                 "text": event.note,
                 "by": event.note_by.shown_name if event.note_by else "",
                 "on": date_of(event.note_changed),

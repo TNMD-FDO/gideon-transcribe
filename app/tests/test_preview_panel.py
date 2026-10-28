@@ -30,9 +30,9 @@ def test_the_preview_script_places_itself_in_the_page_or_as_a_sheet():
         'placed.classList.remove("has-preview")',
     ):
         assert piece in script, piece
-    # Only the hearing window (v1.154.0) is dragged, by its bar; the page's
-    # panel and the sheet are not.
-    assert script.count('drag(card.querySelector(".preview-head"))') == 1
+    # The hearing window (v1.154.0) and the window (v1.166.0) are dragged, by
+    # their bars; the page's panel and the sheet are not.
+    assert script.count('drag(card.querySelector(".preview-head"))') == 2
     assert 'if (card.classList.contains("hearing")) {' in script
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
     for rule in (
@@ -78,8 +78,8 @@ def test_the_preview_script_places_itself_in_the_page_or_as_a_sheet():
     assert "var column = (host || isSnippet()) ? null : columnOf();" in script
     for rule in (
         ".preview-card.hearing {",
-        ".preview-card.hearing .preview-head {",
-        ".preview-card.hearing .preview-close {",
+        ".preview-card.hearing .preview-head, .preview-card.window .preview-head {",
+        ".preview-card.hearing .preview-close, .preview-card.window .preview-close {",
         "body.hearing-open::after {",
         ".sg-prev.previewing",
     ):

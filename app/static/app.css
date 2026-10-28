@@ -3524,12 +3524,19 @@ body.gideon-window .gideon-grip { display: none; }
 .quota-raise-form .form input[type=number] { width: 64px; } .quota-raise-form .form input[type=text] { width: 180px; }
 /* The hearing window (v1.154.0; the drawing phase-5-hearing-window-and-temporary-quota.html): a person's voice in a window that floats over the page, plainly its own, with Close in words on a coloured bar. */
 .preview-card.hearing { right: 24px; bottom: 24px; width: 400px; max-height: calc(100vh - 48px); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgba(0, 0, 0, .28); z-index: 46; }
-.preview-card.hearing .preview-head { background: var(--accent); color: var(--accent-ink); cursor: grab; padding: 8px 10px; }
-.preview-card.hearing .preview-head .grow { font-size: 14px; }
-.preview-card.hearing .preview-head #preview-clock { color: inherit; opacity: .85; }
-.preview-card.hearing .preview-close { background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; border: 0; border-radius: var(--radius); padding: 2px 12px; min-height: 26px; cursor: pointer; }
-.preview-card.hearing .preview-close:hover { background: var(--surface-2); }
+.preview-card.hearing .preview-head, .preview-card.window .preview-head { background: var(--accent); color: var(--accent-ink); cursor: grab; padding: 8px 10px; }
+.preview-card.hearing .preview-head .grow, .preview-card.window .preview-head .grow { font-size: 14px; }
+.preview-card.hearing .preview-head #preview-clock, .preview-card.window .preview-head #preview-clock { color: inherit; opacity: .85; }
+.preview-card.hearing .preview-close, .preview-card.window .preview-close { background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; border: 0; border-radius: var(--radius); padding: 2px 12px; min-height: 26px; cursor: pointer; }
+.preview-card.hearing .preview-close:hover, .preview-card.window .preview-close:hover { background: var(--surface-2); }
 body.hearing-open::after { content: ''; position: fixed; inset: 0; background: rgba(0, 0, 0, .14); pointer-events: none; z-index: 45; }
+/* The Preview as a window (v1.166.0; the drawing phase-8-notes-window.html): where the page has no column for it and the window is wide, the floating Preview takes the hearing window's frame without the dim, so a note's time on the Notes tab, a Search hit and a chat citation open the same thing. Under 900 px the sheet from the foot stays. */
+.preview-card.window { right: 24px; bottom: 24px; width: 420px; max-height: calc(100vh - 48px); border: 1px solid var(--accent); box-shadow: 0 14px 36px rgba(0, 0, 0, .28); z-index: 46; }
+body.gideon-open .preview-card.window { right: calc(var(--gideon, 420px) + 28px); }
+.preview-card.window .noted { font-style: normal; margin-top: 4px; padding: 4px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; }
+/* The Notes tab's rows (v1.166.0): the time is the play mark, and the row whose moment the Preview is playing is lit. */
+.note-row a[data-preview-recording]::before { content: '\25B6 '; font-size: 10px; }
+.note-row:has(.previewing) { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .sg-prev.previewing, .hear-else.previewing, .sample.previewing { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* The Preview as a snippet (ADR 0023, v1.152.0): the line heard with one either side; the context lines dim. */
 .preview-card.snippet .preview-lines { max-height: none; flex: none; }

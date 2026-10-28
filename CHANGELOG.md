@@ -19,6 +19,16 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.166.0, 2026-10-28
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **A note's time plays it here (the drawing `docs/spec/mockups/phase-8-notes-window.html`).** On the Notes tab a row's time is a play mark: it opens the Preview at the note's moment without leaving the tab, and the row is lit while it plays, as the chronology's entries have done. The note's words still open the recording page with the box ready, at the maintainer's choice; Open the recording in the Preview's foot goes there too. A note on an incident's event plays the camera it sits on, with All cameras opening the incident at that moment.
+- **The Preview floats in a window of its own.** Where the page has no column for it and the screen is wide, the Preview takes the hearing window's frame, the coloured bar with the recording's title and the moment, Close in words, dragged by its bar and its place kept, without the dim: the Notes tab's rows and chronology, the Search tab's hits and a chat citation all open the same window where a sheet had slid up from the foot since v1.165.0. Under 900 px the sheet stays. The hearing window for a voice is unchanged.
+
 ## v1.165.0, 2026-10-28
 
 ```
