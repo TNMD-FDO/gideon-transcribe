@@ -19,6 +19,19 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.164.1, 2026-10-28
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Three things the maintainer met on the server's first look at the case's chronology.
+
+- **The drag that looks closer grew out from both sides of the press.** The ruler's tick labels are centred on their times, and the same style caught the selection box, so it was centred on the start instead of growing from it. The drag now has a track of its own under the ruler, a dashed strip that says "Drag across a span to look closer", lit on hover, with the span's times shown while it is drawn; a chip from the rail is dropped on the same track to place a recording there.
+- **The bars' labels bled past the bars.** The label now sits inside the bar, cut to its width with an ellipsis: the camera's id from its stamp, else the title shortened, with the note count only where there is room; a bar too narrow for a name carries none. The whole title, the count and the placement are on hover.
+- **Cancel on the Place recordings sheet did nothing.** The sheet has Close at the top and Cancel at the bottom, and only the first was wired; every Close and Cancel in a layer now closes it.
+
 ## v1.164.0, 2026-10-28
 
 ```

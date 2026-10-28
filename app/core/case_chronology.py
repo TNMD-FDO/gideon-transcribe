@@ -297,6 +297,9 @@ def day_of(case, date: dt.date, span: tuple[float, float] | None = None) -> dict
             {
                 "id": key,
                 "title": exports.title_of(one),
+                # The camera's id from its stamp, the bar's short name
+                # (v1.164.1); empty for a recording with none.
+                "camera": str((one.stamp or {}).get("camera") or "")[:24],
                 "from": round(running[0], 1),
                 "to": round(running[1], 1),
                 "notes": count,

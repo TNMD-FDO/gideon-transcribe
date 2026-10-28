@@ -120,12 +120,18 @@
   function inside(percent) { return Math.max(6, Math.min(94, percent)); }
 
   function ruler(d) {
-    var html = "<div class='ruler' id='chron-ruler' title='Drag across the ruler to look closer'>";
+    var html = "<div class='ruler' id='chron-ruler'>";
     var span = d.ruler.to - d.ruler.from, ticks = 6;
-    for (var i = 0; i <= ticks; i++) { var at = d.ruler.from + span * i / ticks; html += "<span style='left: " + (100 * i / ticks) + "%'>" + hm(at) + "</span>"; }
+    for (var i = 0; i <= ticks; i++) { var at = d.ruler.from + span * i / ticks; html += "<span class='tick' style='left: " + (100 * i / ticks) + "%'>" + hm(at) + "</span>"; }
     html += "</div>";
+    // The drag track (v1.164.1): a drag across it looks closer at the span;
+    // a chip from the rail dropped on it places the recording there.
+    html += "<div class='track' id='chron-track' title='Drag across a span to look closer; drop a recording from the rail here to place it'><span class='words'>" +
+      (d.span ? "Drag across a narrower span, or Back to the day" : "Drag across a span to look closer") + "</span></div>";
     return html;
   }
+  // A bar's short name: the camera's id from its stamp, else the title cut.
+  function shortName(b) { if (b.camera) { return b.camera; } var t = b.title || ""; return t.length > 18 ? t.slice(0, 17) + "…" : t; }
 
   function band(d) {
     var html = "";
@@ -170,9 +176,11 @@
   function barPiece(b, d, idOnly) {
     var left = x(b.from, d), width = Math.max(0.4, x(b.to, d) - left);
     var lit = state.lit === b.id ? " lit" : "";
-    var label = idOnly ? b.title : b.title + " · " + plural(b.notes, "note");
-    return "<i class='" + (b.movable ? "movable" : "") + lit + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + b.colour + "' title='" + esc(b.title + " · " + b.placed + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'></i>" +
-      "<b style='left: " + left + "%'>" + esc(label) + "</b>";
+    // The label sits inside the bar, cut to its width (v1.164.1); a bar too
+    // narrow for a name carries none, and the whole title is on hover.
+    var pixels = width * (host.clientWidth || 900) / 100;
+    var label = pixels < 56 ? "" : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + plural(b.notes, "note"));
+    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + b.colour + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
   }
 
   function legend(d) {
@@ -250,7 +258,7 @@
   // Wiring ---------------------------------------------------------------------
   function wire() {
     host.querySelectorAll("[data-day]").forEach(function (b) { b.addEventListener("click", function () { load(b.dataset.day, null); }); });
-    var r = host.querySelector("#chron-ruler");
+    var r = host.querySelector("#chron-track");
     if (r) { wireRuler(r); }
     host.querySelectorAll("[data-rail]").forEach(function (chip) {
       chip.addEventListener("dragstart", function (ev) { ev.dataTransfer.setData("text/plain", chip.dataset.rail); ev.dataTransfer.effectAllowed = "move"; chip.classList.add("dragging"); });
@@ -296,7 +304,7 @@
 
   // The ruler: a drag selects a span; a chip dropped places a recording.
   var guide = null;
-  function clearGuide() { if (guide) { guide.remove(); guide = null; } var r = host.querySelector("#chron-ruler"); if (r) { r.classList.remove("over"); } }
+  function clearGuide() { if (guide) { guide.remove(); guide = null; } var r = host.querySelector("#chron-track"); if (r) { r.classList.remove("over"); } }
   function secondsAt(r, clientX) { var rect = r.getBoundingClientRect(); var share = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)); return state.day.ruler.from + share * (state.day.ruler.to - state.day.ruler.from); }
   function wireRuler(r) {
     r.addEventListener("dragover", function (ev) { ev.preventDefault(); r.classList.add("over"); var at = secondsAt(r, ev.clientX); if (!guide) { guide = document.createElement("span"); guide.className = "guide"; guide.innerHTML = "<b></b>"; r.appendChild(guide); } guide.style.left = x(at, state.day) + "%"; guide.firstChild.textContent = hm(at); });
@@ -304,8 +312,8 @@
     r.addEventListener("drop", function (ev) { ev.preventDefault(); var id = ev.dataTransfer.getData("text/plain"); var at = secondsAt(r, ev.clientX); clearGuide(); var one = findRail(id); if (one) { placeBox(one, at); } });
     var from = null, sel = null;
     r.addEventListener("pointerdown", function (ev) { if (ev.button !== 0) { return; } from = secondsAt(r, ev.clientX); r.setPointerCapture(ev.pointerId); });
-    r.addEventListener("pointermove", function (ev) { if (from === null) { return; } var to = secondsAt(r, ev.clientX); if (!sel) { sel = document.createElement("span"); sel.className = "sel"; r.appendChild(sel); } var a = Math.min(from, to), b = Math.max(from, to); sel.style.left = x(a, state.day) + "%"; sel.style.width = (x(b, state.day) - x(a, state.day)) + "%"; });
-    r.addEventListener("pointerup", function (ev) { if (from === null) { return; } var to = secondsAt(r, ev.clientX); var a = Math.min(from, to), b = Math.max(from, to); from = null; if (sel) { sel.remove(); sel = null; } if (b - a >= 60) { load(state.day.date, [Math.floor(a), Math.ceil(b)]); } });
+    r.addEventListener("pointermove", function (ev) { if (from === null) { return; } var to = secondsAt(r, ev.clientX); if (!sel) { sel = document.createElement("span"); sel.className = "sel"; r.appendChild(sel); } var a = Math.min(from, to), b = Math.max(from, to); sel.style.left = x(a, state.day) + "%"; sel.style.width = (x(b, state.day) - x(a, state.day)) + "%"; var words = r.querySelector(".words"); if (words) { words.textContent = hm(a) + " to " + hm(b); } });
+    r.addEventListener("pointerup", function (ev) { if (from === null) { return; } var to = secondsAt(r, ev.clientX); var a = Math.min(from, to), b = Math.max(from, to); from = null; if (sel) { sel.remove(); sel = null; } if (b - a >= 60) { load(state.day.date, [Math.floor(a), Math.ceil(b)]); } else { draw(); } });
   }
 
   // Layers: the place box, the move box, the sheet, the running list.
@@ -313,7 +321,9 @@
     var wrap = document.createElement("div"); wrap.className = "chron-layer"; wrap.innerHTML = inner;
     wrap.addEventListener("click", function (ev) { if (ev.target === wrap) { wrap.remove(); } });
     document.body.appendChild(wrap);
-    var closer = wrap.querySelector("[data-close]"); if (closer) { closer.addEventListener("click", function () { wrap.remove(); }); }
+    // Every Close and Cancel in the layer closes it (v1.164.1: the sheet has
+    // both, and only the first used to work).
+    wrap.querySelectorAll("[data-close]").forEach(function (closer) { closer.addEventListener("click", function () { wrap.remove(); }); });
     return wrap;
   }
   function placeBox(one, at) {
