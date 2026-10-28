@@ -334,7 +334,9 @@ def test_anyone_with_the_case_adds_and_the_owner_removes(
     assert answer.status_code == 302
     term = CaseTerm.objects.get(case=a_case)
     assert term.also_heard_as == ["birchwood"]
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "Names and places" in page and "also heard as birchwood" in page
     assert 'name="action" value="remove"' not in page
     # A collaborator may not remove.
@@ -346,7 +348,9 @@ def test_anyone_with_the_case_adds_and_the_owner_removes(
     assert CaseTerm.objects.filter(case=a_case).exists()
     # The owner may.
     signed_in(client, owner)
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert 'name="action" value="remove"' in page
     client.post(
         reverse("case-vocabulary", args=[a_case.pk]),

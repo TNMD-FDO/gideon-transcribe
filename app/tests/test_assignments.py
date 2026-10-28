@@ -392,11 +392,16 @@ def test_the_team_the_pills_and_the_columns(a_case, owner, friend, third, client
     assignments.mark_reviewed(calls[0], by=friend)
 
     signed_in(client, friend)
+    # The Team is the Details tab since v1.165.0; the pills and the columns
+    # stay on the Recordings tab.
+    details = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
+    assert ">Team <" in details and "Add people" not in details
+    assert details.count('id="share"') == 1
+    assert "Also an owner" in details and ">Owner<" in details
+    assert "2 assigned</a> &middot; 1 reviewed" in details
     page = client.get(reverse("case", args=[a_case.pk])).content.decode()
-    assert ">Team <" in page and "Add people" not in page
-    assert page.count('id="share"') == 1
-    assert "Also an owner" in page and ">Owner<" in page
-    assert "2 assigned</a> &middot; 1 reviewed" in page
     assert "Mine, not reviewed 1" in page and "Unassigned 1" in page
     assert '<th class="col-assigned">Assigned to</th>' in page
     assert "Reviewed " in page and 'class="tick"' in page
@@ -410,10 +415,13 @@ def test_the_team_the_pills_and_the_columns(a_case, owner, friend, third, client
 
     # A plain Collaborator sees the Team without the controls or the ticks.
     signed_in(client, third)
+    details = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
+    assert ">Team <" in details and "Leave this case" in details
+    assert "Add people" not in details and 'class="also-owner"' not in details
     page = client.get(reverse("case", args=[a_case.pk])).content.decode()
-    assert ">Team <" in page and "Leave this case" in page
-    assert "Add people" not in page and 'class="tick"' not in page
-    assert 'class="also-owner"' not in page
+    assert 'class="tick"' not in page
 
     pills = dashboard.pills(a_case, "collaborator", friend)
     words = [one["words"] for one in pills]

@@ -216,7 +216,7 @@ def test_also_called_is_kept_and_read_everywhere(owner, a_case, client):  # noqa
     assert dana.also_called == ["Mama", "Mum"]
     assert Row.objects.filter(event="case vocabulary changed").count() == before + 1
     assert "Mama" not in str(Row.objects.latest("at").details)
-    page = client.get(f"/case/{a_case.pk}").content.decode()
+    page = client.get(f"/case/{a_case.pk}?tab=details").content.decode()
     assert "also called Mama, Mum" in page
     # Since v1.156.0 the nickname is typed on the Speakers tab's card; the
     # Names and places block reads it.

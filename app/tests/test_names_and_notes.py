@@ -152,7 +152,9 @@ def test_names_and_places_reads_the_people_and_the_tab_edits_their_names(
     person = Person.objects.create(case=a_case, name="Dana Reyes", role="Witness")
     vocabulary.add_term(a_case, "Pike Street", "Pike Treat", by=owner)
     signed_in(client, owner)
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "Names and places" in page and "1 person · 1 place and term" in page
     assert 'class="name-chip"' in page and "Dana Reyes" in page
     assert "named and renamed on the" in page
@@ -175,7 +177,9 @@ def test_names_and_places_reads_the_people_and_the_tab_edits_their_names(
     person.refresh_from_db()
     assert person.also_called == ["Dee", "Dana R"]
     assert person.also_heard_as == ["Donna Reyes"]
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "also called Dee, Dana R" in page and "heard as Donna Reyes" in page
     tab = client.get(
         reverse("case", args=[a_case.pk]) + "?tab=speakers"
@@ -215,7 +219,9 @@ def test_the_units_kept_voices_are_told_to_recognition_with_a_switch_each(
     assert "Officer Hale" in queue._case_vocabulary(recording)
     # The block says so.
     signed_in(client, owner)
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "1 kept voice of the Trial unit" in page
     assert "the Trial unit's kept voices' names" in page
     # The switch on the Voices place, with its row.
@@ -243,7 +249,9 @@ def test_the_block_is_quiet_without_a_unit(owner, a_case, client):
     signed_in(client, owner)
     shown = vocabulary.block_context(a_case)
     assert shown["unit_count"] == 0 and shown["people"] == [] and shown["terms"] == []
-    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    page = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "kept voice" not in page.split("Names and places", 1)[1][:400]
     assert json.dumps(shown["people"]) == "[]"
     seg_count = Segment.objects.count()

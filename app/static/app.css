@@ -493,6 +493,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
    with, and Delete alone at the foot in red. */
 .about-case .case-acts { margin-top: 10px; }
 .about-case .case-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+/* The Details tab (v1.165.0): the column's blocks in two columns, stacking on a narrow window. */
+.case-details { margin-top: 14px; }
+.case-details .details-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 28px; align-items: start; }
+.case-details .details-column { min-width: 0; }
+.case-details h2 { margin: 0 0 8px; font-size: 1.1em; }
+.case-details .case-vocabulary { margin-top: 0; }
+@media (max-width: 900px) { .case-details .details-grid { grid-template-columns: minmax(0, 1fr); } }
 /* The Case page's Shared with panel, under the facts about the case. */
 .shared-with { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 .shared-with h3 { margin: 0 0 8px; font-size: var(--t-body); }
@@ -1859,7 +1866,8 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
   /* The case page (Phase 8 chapter 7): the list takes the width and About
      this case a measure, so a file name stays on one line. */
   .case-page .page.workbench { max-width: none; }
-  .case-page .panes { grid-template-columns: minmax(0, 1fr) 24rem; }
+  /* v1.165.0: the right column is the Details tab now; every tab takes the width. */
+  .case-page .panes { grid-template-columns: minmax(0, 1fr); }
   .case-page #recordings th, .case-page #recordings td { white-space: nowrap; }
   .case-page #recordings td:first-child { white-space: normal; }
   .panes { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
@@ -3607,7 +3615,6 @@ body.hearing-open::after { content: ''; position: fixed; inset: 0; background: r
 .shell > main { container-type: inline-size; }
 @container (max-width: 1000px) {
   .case-page .panes { grid-template-columns: minmax(0, 1fr); }
-  .case-page .pane-detail { position: static; border-left: 0; padding-left: 0; }
 }
 /* v1.125.1: the case page's seven tabs are wider than the list's column on a
    1366 laptop (and on a wider screen zoomed past 100%), and a flex row that

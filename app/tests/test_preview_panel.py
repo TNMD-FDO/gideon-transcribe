@@ -101,7 +101,9 @@ def test_the_pages_offer_the_column_and_the_buttons_carry_the_person():
     assert 'class="sg-preview" data-preview-host hidden' in guided
     assert 'class="sg-side"' in guided and 'id="sg-context"' in guided
     case = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
-    assert 'class="preview-side" data-preview-host hidden' in case
+    # v1.165.0: no host on the case page since the right column became the
+    # Details tab; the Preview floats over the page as a sheet.
+    assert "data-preview-host" not in case
     assert "data-preview-person=" in case and "data-preview-speaker=" in case
     voices = (HERE / "templates" / "voices.html").read_text(encoding="utf-8")
     assert "data-preview-host" in voices and "data-preview-person=" in voices

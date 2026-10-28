@@ -270,10 +270,13 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
 
     chat_here = case_chat.available()
     # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
+    # Details (v1.165.0): the case's facts, actions, Team and Names and
+    # places, which sat in a right column on every tab, as a tab of their own.
     tabs = (
         ("search", "clips", "notes", "speakers")
         + (("incidents",) if incidents.on() else ())
         + (("documents",) if documents.on() else ())
+        + ("details",)
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).

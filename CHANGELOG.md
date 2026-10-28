@@ -19,6 +19,16 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.165.0, 2026-10-28
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **About this case is a tab (the drawing `docs/spec/mockups/phase-8-case-details-tab.html`).** The case page's right column, which sat beside every tab with the case's facts, Rename, Share and Download all transcripts, the Team, Names and places and Delete case, is a last tab, **Details**, after Documents. Its blocks sit in two columns, This case and the Team on the left, Names and places on the right, Delete case alone at the foot as before; on a narrow window they stack. Nothing in them changed in what it does: Rename, Share, Transfer, the Team's buttons, the spellings and the Add row keep their script and their addresses.
+- **Every tab takes the whole width.** The recordings list gets back the room it was losing to the column, so Assigned to, Vision, Incident and Added fit without wrapping, and the case's chronology on the Notes tab gains the same. The Preview, which opened at the top of that column for a citation or a hit, floats over the page's corner as it does on pages with no right column.
+
 ## v1.164.1, 2026-10-28
 
 ```

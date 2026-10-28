@@ -98,6 +98,9 @@
             <a href="{% url 'case' case.pk %}?tab=documents"
                class="tab{% if tab == 'documents' %} on{% endif %}">{% icon "document" %} Documents <span class="count">{{ documents_count }}</span></a>
           {% endif %}
+          {% comment %}Details (v1.165.0): the case's facts, actions, Team and Names and places, once a right column on every tab.{% endcomment %}
+          <a href="{% url 'case' case.pk %}?tab=details"
+             class="tab{% if tab == 'details' %} on{% endif %}">{% icon "info" %} Details</a>
         </div>
 
         {% if tab == "search" %}
@@ -243,6 +246,116 @@
             {% comment %}The case's chronology (Phase 10 chapter 1), drawn by chronology.js from chronology.json when the toggle says Chronology; the pressed entry plays in the right pane's Preview.{% endcomment %}
             <div id="case-chronology" class="chron" hidden data-case="{{ case.pk }}" data-json="{% url 'case-chronology' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export="{% url 'case-chronology-export' case.pk 'docx' %}" data-rows="#case-notes, .search-kinds, #notes-more"></div>
           {% endif %}
+        {% elif tab == "details" %}
+          {% comment %}
+            Details (v1.165.0, the drawing docs/spec/mockups/phase-8-case-details-tab.html):
+            what the right column held on every tab, as blocks in two columns:
+            the case's facts and actions and the Team on the left, Names and
+            places on the right, Delete case alone at the foot. Nothing here
+            changed in what it does.
+          {% endcomment %}
+          <div class="case-details about-case">
+            <div class="details-grid">
+              <div class="details-column">
+                <h2>This case</h2>
+        <dl class="kv">
+          {% if role == "collaborator" %}
+            <dt>Shared by</dt><dd>{{ case.owner.shown_name }}</dd>
+          {% elif not is_owner %}
+            <dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>
+          {% endif %}
+          <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
+          <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
+          <dt>Retention</dt>
+          <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
+        </dl>
+        {% comment %}
+          The case's own actions in one row under its facts (v1.109.0, the
+          walk's item 10): Rename, Share, Download; Keep while the case is in
+          its last days. Delete stands alone at the foot of the column, in
+          red, after everything else about the case.
+        {% endcomment %}
+        <div class="row actions case-acts">
+          {% if role != "collaborator" %}
+            <button type="button" class="btn" id="rename">Rename</button>
+          {% endif %}
+          {% if sharing_on and may_share %}
+            <button type="button" class="btn" id="share">Share</button>
+          {% endif %}
+          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
+          {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
+        </div>
+
+        {% if sharing_on %}
+          {% comment %}
+            The Team (Phase 9 chapter 3): everyone with the case sees the
+            list, the Owner first; the owner, an Admin and an also-owner may
+            add and remove people; the owner and an Admin may mark an
+            also-owner. A Collaborator may leave.
+          {% endcomment %}
+          <div class="shared-with team" id="shared-with"
+               data-share-words="{{ share_words|join:' ' }}"
+               data-transfer-words="{{ transfer_words|join:' ' }}">
+            <div class="row" style="align-items: baseline">
+              <h3 class="grow">Team <span class="muted small">{{ team|length }} {{ team|length|pluralize:"person,people" }}</span></h3>
+            </div>
+            <ul class="plain team-list" id="team">
+              {% for row in team %}
+                <li{% if row.share %} data-share="{{ row.share.pk }}"{% endif %}{% if row.status %} class="muted"{% endif %}>
+                  <div class="row" style="gap: 6px; flex-wrap: wrap">
+                    <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
+                    {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" and not may_direct %}<span class="pill small">Also an owner</span>{% endif %}
+                    {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
+                    <span class="grow"></span>
+                    {% if row.share %}
+                      {% if may_mark_owner %}
+                        <label class="small muted"><input type="checkbox" class="also-owner" data-share="{{ row.share.pk }}"{% if row.role == "also-owner" %} checked{% endif %}> Also an owner</label>
+                      {% endif %}
+                      {% if may_share %}
+                        <button type="button" class="small ghost unshare" data-share="{{ row.share.pk }}" data-name="{{ row.person.shown_name }}" data-assigned="{{ row.assigned }}">Remove</button>
+                      {% elif row.is_you %}
+                        <button type="button" class="small ghost unshare" data-share="{{ row.share.pk }}" data-name="you" data-leave="1">Leave this case</button>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                  <div class="muted small">
+                    {% if row.share %}{% if row.last_opened %}opened {{ row.last_opened|date:"d M Y H:i" }}{% else %}not opened yet{% endif %} &middot; {% endif %}<a href="{% url 'case' case.pk %}?who={{ row.person.username|urlencode }}" class="plain">{{ row.assigned }} assigned</a> &middot; {{ row.reviewed }} reviewed &middot; {{ row.noted }} noted
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+            {% if may_share and team|length == 1 %}
+              <p class="muted small" id="nobody-yet">Nobody else yet. Whoever you add with Share can work in this case as you do.</p>
+            {% endif %}
+            {% if may_transfer %}
+              <div class="row actions" style="margin-top: 8px">
+                <button type="button" class="btn ghost small" id="transfer">Transfer</button>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+              </div>
+              <div class="details-column">
+        {% include "case-vocabulary.html" %}
+              </div>
+            </div>
+        {% if role != "collaborator" %}
+          <div class="case-foot">
+            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
+          </div>
+        {% endif %}
+
+        <div id="rename-box" class="card" hidden style="margin-top: 12px">
+          <label for="new-name">Name</label>
+          <div class="row" style="gap: 6px">
+            <input id="new-name" type="text" maxlength="200" class="grow" value="{{ case.name }}">
+            <button type="button" class="btn primary" id="save-name">Save</button>
+            <button type="button" class="btn ghost" id="never-mind">Cancel</button>
+          </div>
+          <p class="notice warn" id="rename-warning" hidden></p>
+        </div>
+          </div>
         {% elif tab == "incidents" %}
           {% comment %}
             The Incidents tab (Phase 6 chapter 1, as amended in v1.59.1): the
@@ -931,105 +1044,6 @@
         {% endif %}
       </div>
 
-      <aside class="pane-detail about-case">
-        {% comment %}The Preview (v1.151.0) opens here, at the top of the right pane, while a voice, a citation or a hit is being heard; hidden otherwise.{% endcomment %}
-        <div class="preview-side" data-preview-host hidden></div>
-        <h2>About this case</h2>
-        <dl class="kv">
-          {% if role == "collaborator" %}
-            <dt>Shared by</dt><dd>{{ case.owner.shown_name }}</dd>
-          {% elif not is_owner %}
-            <dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>
-          {% endif %}
-          <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
-          <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
-          <dt>Retention</dt>
-          <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
-        </dl>
-        {% comment %}
-          The case's own actions in one row under its facts (v1.109.0, the
-          walk's item 10): Rename, Share, Download; Keep while the case is in
-          its last days. Delete stands alone at the foot of the column, in
-          red, after everything else about the case.
-        {% endcomment %}
-        <div class="row actions case-acts">
-          {% if role != "collaborator" %}
-            <button type="button" class="btn" id="rename">Rename</button>
-          {% endif %}
-          {% if sharing_on and may_share %}
-            <button type="button" class="btn" id="share">Share</button>
-          {% endif %}
-          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
-          {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
-        </div>
-
-        {% if sharing_on %}
-          {% comment %}
-            The Team (Phase 9 chapter 3): everyone with the case sees the
-            list, the Owner first; the owner, an Admin and an also-owner may
-            add and remove people; the owner and an Admin may mark an
-            also-owner. A Collaborator may leave.
-          {% endcomment %}
-          <div class="shared-with team" id="shared-with"
-               data-share-words="{{ share_words|join:' ' }}"
-               data-transfer-words="{{ transfer_words|join:' ' }}">
-            <div class="row" style="align-items: baseline">
-              <h3 class="grow">Team <span class="muted small">{{ team|length }} {{ team|length|pluralize:"person,people" }}</span></h3>
-            </div>
-            <ul class="plain team-list" id="team">
-              {% for row in team %}
-                <li{% if row.share %} data-share="{{ row.share.pk }}"{% endif %}{% if row.status %} class="muted"{% endif %}>
-                  <div class="row" style="gap: 6px; flex-wrap: wrap">
-                    <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
-                    {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" and not may_direct %}<span class="pill small">Also an owner</span>{% endif %}
-                    {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
-                    <span class="grow"></span>
-                    {% if row.share %}
-                      {% if may_mark_owner %}
-                        <label class="small muted"><input type="checkbox" class="also-owner" data-share="{{ row.share.pk }}"{% if row.role == "also-owner" %} checked{% endif %}> Also an owner</label>
-                      {% endif %}
-                      {% if may_share %}
-                        <button type="button" class="small ghost unshare" data-share="{{ row.share.pk }}" data-name="{{ row.person.shown_name }}" data-assigned="{{ row.assigned }}">Remove</button>
-                      {% elif row.is_you %}
-                        <button type="button" class="small ghost unshare" data-share="{{ row.share.pk }}" data-name="you" data-leave="1">Leave this case</button>
-                      {% endif %}
-                    {% endif %}
-                  </div>
-                  <div class="muted small">
-                    {% if row.share %}{% if row.last_opened %}opened {{ row.last_opened|date:"d M Y H:i" }}{% else %}not opened yet{% endif %} &middot; {% endif %}<a href="{% url 'case' case.pk %}?who={{ row.person.username|urlencode }}" class="plain">{{ row.assigned }} assigned</a> &middot; {{ row.reviewed }} reviewed &middot; {{ row.noted }} noted
-                  </div>
-                </li>
-              {% endfor %}
-            </ul>
-            {% if may_share and team|length == 1 %}
-              <p class="muted small" id="nobody-yet">Nobody else yet. Whoever you add with Share can work in this case as you do.</p>
-            {% endif %}
-            {% if may_transfer %}
-              <div class="row actions" style="margin-top: 8px">
-                <button type="button" class="btn ghost small" id="transfer">Transfer</button>
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
-
-        {% include "case-vocabulary.html" %}
-
-        {% if role != "collaborator" %}
-          <div class="case-foot">
-            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
-          </div>
-        {% endif %}
-
-        <div id="rename-box" class="card" hidden style="margin-top: 12px">
-          <label for="new-name">Name</label>
-          <div class="row" style="gap: 6px">
-            <input id="new-name" type="text" maxlength="200" class="grow" value="{{ case.name }}">
-            <button type="button" class="btn primary" id="save-name">Save</button>
-            <button type="button" class="btn ghost" id="never-mind">Cancel</button>
-          </div>
-          <p class="notice warn" id="rename-warning" hidden></p>
-        </div>
-      </aside>
     </div>
   </div>
 

@@ -220,7 +220,8 @@ def test_a_collaborator_works_in_the_case_as_their_own(a_case, owner, friend, cl
 
     # The Case page opens as a colleague's, with no Admin banner and no Admin
     # access row, and the Share remembers the opening.
-    page = client.get(reverse("case", args=[a_case.pk]))
+    # The case's facts and the Team are the Details tab since v1.165.0.
+    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=details")
     assert page.status_code == 200
     body = page.content.decode()
     assert "as an Admin" not in body and "Shared by" in body
@@ -421,12 +422,15 @@ def test_the_bin_and_deletion_take_the_shares_with_them(a_case, owner, friend):
 
 
 def test_a_deactivated_collaborator_is_shown_greyed(a_case, owner, friend, client):
+    # The Team is the Details tab since v1.165.0.
     share = sharing.grant(a_case, friend, actor=owner)
     friend.deactivated_at = timezone.now()
     friend.save()
     assert share.status == "deactivated"
     signed_in(client, owner)
-    body = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    body = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
     assert "deactivated" in body and "Ben Cole" in body
 
 

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The case page: Details as a tab</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.small { font-size: 12px; padding: 2px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.on { background: var(--accent-soft); color: var(--accent); }
+
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .frame .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .frame .head h3 { font-size: 20px; margin: 0; }
+  .dash { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .reading { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 6px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+  .tabs .on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs .n { background: var(--surface-2); border-radius: 8px; padding: 0 6px; font-size: 11px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .old { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+  .aside { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 12px; outline: 2px dashed var(--bad); outline-offset: 3px; }
+  .aside h4 { margin: 0 0 6px; font-size: 13px; }
+
+  /* the Details tab */
+  .details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 28px; align-items: start; }
+  .block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .block h4 { margin: 0; font-size: 14px; }
+  dl.kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+  dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .team li { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); list-style: none; }
+  .team ul { margin: 0; padding: 0; }
+  .vocab .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+  .foot { display: flex; justify-content: flex-start; padding-top: 10px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Phase 8 chapter 1 amendment, a drawing to agree before the build · 2026-10-28</div>
+    <h1>The case page: About this case moves to a Details tab</h1>
+    <p class="lede">Today the case page is two columns on every tab: the tab's content on the left and "About this case" on the right, with the case's facts, its actions, the Team, the Names and places and Delete case. The maintainer asked for that column to be a tab of its own. The drawing: the other tabs take the whole width, and a last tab, <b>Details</b>, holds what the column held, laid out as blocks. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today: the right column on every tab, and what leaves it</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Harbour Street stop</h3><div><span class="btn">Notes page</span> <span class="btn primary">Add recordings</span></div></div>
+      <div class="dash"><span class="pill">shared with 1</span></div>
+      <div class="reading"><b>One reading · 0.7 of 120 hours</b><span class="pill ok">room</span></div>
+      <div class="old">
+        <div>
+          <div class="tabs"><span class="on">Recordings <span class="n">5</span></span><span>Search</span><span>Clips <span class="n">3</span></span><span>Notes <span class="n">7</span></span><span>Speakers <span class="n">2</span></span><span>Incidents <span class="n">1</span></span><span>Documents <span class="n">0</span></span></div>
+          <table><tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Notes</th></tr>
+            <tr><td>Officer1_202511062025_BWC-1-0</td><td>Body camera</td><td><span class="pill ok">Ready</span></td><td class="mono">00:13:00</td><td>1 named, 5 unnamed</td><td>2</td></tr>
+            <tr><td>Officer2_202511062025_BWC-2-0</td><td>Body camera</td><td><span class="pill ok">Ready</span></td><td class="mono">00:13:00</td><td>1 named, 3 unnamed</td><td>2</td></tr>
+            <tr><td>Call_20251107_0915</td><td>Jail call</td><td><span class="pill ok">Ready</span></td><td class="mono">00:05:12</td><td>1 named, 2 unnamed</td><td>1</td></tr>
+          </table>
+        </div>
+        <div class="aside">
+          <h4>About this case</h4>
+          <dl class="kv"><dt>Recordings</dt><dd>5, 152 bytes</dd><dt>Last activity</dt><dd>28 Oct 2026 14:21</dd><dt>Retention</dt><dd>Deletes in 30 days unless used</dd></dl>
+          <div class="acts" style="margin-top: 8px"><span class="btn small">Rename</span><span class="btn small">Share</span><span class="btn small">Download all transcripts</span></div>
+          <h4 style="margin-top: 10px">Team <span class="muted" style="font-weight: 400">2 people</span></h4>
+          <div class="team"><ul><li><b>D. Meehan</b> <span class="pill on">Owner</span></li><li><b>J. Brennan</b> <span class="muted">opened 27 Oct</span></li></ul></div>
+          <h4 style="margin-top: 10px">Names and places</h4>
+          <div class="vocab"><div class="row"><span class="chip">Marisol Reyes · Witness</span><span class="chip">Harbour car park</span></div></div>
+          <div class="foot"><span class="btn ghost danger small">Delete case</span></div>
+        </div>
+      </div>
+      <p class="muted tiny" style="margin: 0">The dashed outline marks what moves. The Preview also opened at the top of this column while a citation or a hit was heard; without the column it floats, as it does on the pages that have no right column.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>After: the Recordings tab takes the whole width, and Details is the last tab</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Harbour Street stop</h3><div><span class="btn">Notes page</span> <span class="btn primary">Add recordings</span></div></div>
+      <div class="dash"><span class="pill">shared with 1</span></div>
+      <div class="reading"><b>One reading · 0.7 of 120 hours</b><span class="pill ok">room</span></div>
+      <div class="tabs"><span class="on">Recordings <span class="n">5</span></span><span>Search</span><span>Clips <span class="n">3</span></span><span>Notes <span class="n">7</span></span><span>Speakers <span class="n">2</span></span><span>Incidents <span class="n">1</span></span><span>Documents <span class="n">0</span></span><span>Details</span></div>
+      <table><tr><th>Recording</th><th>Type</th><th>State</th><th>Length</th><th>Speakers</th><th>Assigned to</th><th>Notes</th><th>Vision</th><th>Incident</th><th>Added</th></tr>
+        <tr><td>Officer1_202511062025_BWC-1-0</td><td>Body camera</td><td><span class="pill ok">Ready</span></td><td class="mono">00:13:00</td><td>1 named, 5 unnamed</td><td>J. Brennan</td><td>2</td><td>enriched</td><td>Harbour car park</td><td>4 Oct</td></tr>
+        <tr><td>Officer2_202511062025_BWC-2-0</td><td>Body camera</td><td><span class="pill ok">Ready</span></td><td class="mono">00:13:00</td><td>1 named, 3 unnamed</td><td>nobody</td><td>2</td><td>enriched</td><td>Harbour car park</td><td>4 Oct</td></tr>
+        <tr><td>Call_20251107_0915</td><td>Jail call</td><td><span class="pill ok">Ready</span></td><td class="mono">00:05:12</td><td>1 named, 2 unnamed</td><td>nobody</td><td>1</td><td></td><td></td><td>27 Oct</td></tr>
+      </table>
+      <p class="muted tiny" style="margin: 0">The list has the width it was losing to the column: Assigned to, Vision, Incident and Added fit without wrapping. The Chronology on the Notes tab gains the same room.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The Details tab</h2></div>
+    <div class="frame">
+      <div class="head"><h3>Harbour Street stop</h3><div><span class="btn">Notes page</span> <span class="btn primary">Add recordings</span></div></div>
+      <div class="dash"><span class="pill">shared with 1</span></div>
+      <div class="reading"><b>One reading · 0.7 of 120 hours</b><span class="pill ok">room</span></div>
+      <div class="tabs"><span>Recordings <span class="n">5</span></span><span>Search</span><span>Clips <span class="n">3</span></span><span>Notes <span class="n">7</span></span><span>Speakers <span class="n">2</span></span><span>Incidents <span class="n">1</span></span><span>Documents <span class="n">0</span></span><span class="on">Details</span></div>
+      <div class="details">
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div class="block">
+            <h4>This case</h4>
+            <dl class="kv"><dt>Owner</dt><dd>D. Meehan</dd><dt>Recordings</dt><dd>5, 152 bytes</dd><dt>Last activity</dt><dd>28 Oct 2026 14:21</dd><dt>Retention</dt><dd>Deletes in 30 days unless used</dd></dl>
+            <div class="acts"><span class="btn small">Rename</span><span class="btn small">Share</span><span class="btn small">Download all transcripts</span></div>
+          </div>
+          <div class="block">
+            <h4>Team <span class="muted" style="font-weight: 400">2 people</span></h4>
+            <div class="team"><ul>
+              <li><b>D. Meehan</b> <span class="muted tiny">(you)</span> <span class="pill on">Owner</span><span style="flex: 1"></span><span class="muted tiny">4 of 5 reviewed</span></li>
+              <li><b>J. Brennan</b><span style="flex: 1"></span><label class="tiny muted"><input type="checkbox"> Also an owner</label> <span class="btn ghost small">Remove</span><span class="muted tiny">opened 27 Oct 2026 16:40</span></li>
+            </ul></div>
+            <div class="acts"><span class="btn ghost small">Transfer</span></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div class="block vocab">
+            <h4>Names and places <span class="muted" style="font-weight: 400">2 people · 2 places or terms</span></h4>
+            <p class="muted tiny" style="margin: 0">What the recogniser is told to listen for on every recording added here and with Process again, and what Search and Gideon know. No transcript is ever rewritten by it.</p>
+            <div class="tiny"><b>People</b> <span class="muted">· named and renamed on the Speakers tab, where a nickname or a spelling is added</span></div>
+            <div class="row"><span class="chip"><b>Marisol Reyes</b> <span class="muted">Witness · also called Mari · heard as Marisol Reyez, Mary Sol</span></span><span class="chip"><b>Esteban Reyes</b> <span class="muted">Defendant · heard as Stefan Reyes</span></span></div>
+            <div class="muted tiny">Their names and nicknames go to recognition. A spelling the recogniser got wrong is kept against the person as "also heard as", for Search; it is never put into a transcript.</div>
+            <div style="border-top: 1px solid var(--line); padding-top: 6px"><b>Harbour car park</b> <span class="muted tiny">· also heard as harbor car park, harbour carpark</span></div>
+            <div class="row" style="padding-left: 10px"><input type="text" value="harbor car park, harbour carpark" style="flex: 1; font-size: 12px" aria-label="Also heard as"><span class="btn small">Save</span><span class="btn ghost danger small">Remove</span></div>
+            <div style="border-top: 1px solid var(--line); padding-top: 6px"><b>the blue folder</b> <span class="muted tiny">· no other spelling yet</span></div>
+            <div class="row" style="border-top: 1px solid var(--line); padding-top: 8px"><input type="text" placeholder="A place or a term" style="flex: 1; font-size: 12px"><input type="text" placeholder="Also heard as, with commas" style="flex: 1.4; font-size: 12px"><span class="btn small">Add</span></div>
+            <div class="tiny muted" style="display: grid; gap: 2px"><div><b>Recognition</b> the names, nicknames and terms, with the office's list ahead of them</div><div><b>Search and Find</b> the "also heard as" spellings stand for the name, marked</div><div><b>Gideon</b> is told the people and the terms, never a spelling</div></div>
+          </div>
+          <div class="block">
+            <h4>Downloads</h4>
+            <div class="acts"><span class="btn small">Download the list (.csv)</span><span class="btn small">Download notes (Word)</span><span class="btn small">All transcripts (.zip)</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span class="btn ghost danger">Delete case</span></div>
+    </div>
+    <div class="caption">
+      <p><b>Where.</b> A last tab, Details, with no count, after Documents. The word is the one the Notes page and the incident page already use for the same kind of panel; the glossary needs nothing new.</p>
+      <p><b>What it holds.</b> Everything the column held, as blocks in two columns: the case's facts and its actions; the Team as it is, with Also an owner, Remove, Leave and Transfer; Names and places as it is; the downloads gathered in one block, which the case list and the notes downloads join from their tabs' heads (they stay there too). Delete case alone at the foot, after everything, as before.</p>
+      <p><b>What changes elsewhere.</b> Nothing in behaviour. Rename, Share, Transfer, Delete and the Team's buttons keep their script; the page simply draws them on one tab. The head's pills, the One reading strip and the tab bar stay on every tab.</p>
+      <p><b>The Preview.</b> It opened at the top of the right column for a citation or a hit. Without the column it floats as it does on pages with no right column, over the page's corner, and the Chronology's play uses the same.</p>
+      <p><b>On a narrow window</b> the two columns of blocks stack into one, facts first.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

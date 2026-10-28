@@ -80,7 +80,8 @@ def test_the_cases_pages_share_the_strip_and_the_chooser():
     bin_page = page("recycle-bin.html")
     assert '{% include "cases-tabs.html" %}' in bin_page
     one = page("case.html")
-    assert 'class="pane-detail about-case"' in one
+    # About this case is the Details tab since v1.165.0, no right column.
+    assert 'class="case-details about-case"' in one and "pane-detail" not in one
     # The case page's rows open under themselves: no pane for them.
     assert 'id="recordings"' in one and 'id="detail-pane"' not in one
     js = script("recordings.js")
