@@ -38,7 +38,7 @@ from core import (
     waiting,
     whisperx,
 )
-from core.jobs import JobState
+from core.jobs import JobState, Reason
 from core.recordings import Batch, MediaState, Recording, Refusal
 
 log = logging.getLogger("transcribe.pages")
@@ -194,6 +194,12 @@ def _with_their_state(recordings):
             job is not None and job.is_live and job.batch.is_reprocessing
         )
         one.in_the_queue = bool(job is not None and job.is_live)
+        # A hand-over held (v1.163.1) says what it waits for; a Job that
+        # failed says so, rather than Ready for a recording never transcribed.
+        one.job_waiting = (
+            job.failure_class if one.in_the_queue and job.held_since is not None else ""
+        )
+        one.job_failed = bool(job is not None and job.state == JobState.FAILED)
         if not hasattr(one, "clips_count"):
             one.clips_count = one.clips.count()
         # A length, not a count of seconds: the same shape a Citation and an
@@ -212,7 +218,16 @@ def state_words(one) -> tuple[str, str]:
     if one.being_replaced:
         return "Processing again", "warn"
     if one.in_the_queue:
+        # A hand-over held while the service or a container of its own was
+        # not answering (v1.163.1): what it waits for, not "In the queue".
+        waiting = Reason.WAITING_WORDS.get(getattr(one, "job_waiting", ""))
+        if waiting:
+            return waiting, "warn"
         return "In the queue", "warn"
+    if getattr(one, "job_failed", False) and not hasattr(one, "transcript"):
+        # The media is ready, the Job failed, nothing was transcribed: say so
+        # (v1.163.1; before, the row read Ready and could not be opened).
+        return "Failed", "danger"
     if hasattr(one, "transcript"):
         # A video whose picture is still being prepared (Phase 4 chapter 7)
         # is not ready for everything: its transcript can be read, but its

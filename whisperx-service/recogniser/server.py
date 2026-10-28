@@ -30,6 +30,7 @@ from importlib.metadata import version as package_version
 import numpy as np
 import torch
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 log = logging.getLogger("recogniser")
@@ -201,6 +202,22 @@ def _items(stamps) -> list[dict]:
     return out
 
 
+def _recognise_piece(audio: np.ndarray, context: str, language: str | None):
+    """The model's work on one piece, under the lock: called on a thread."""
+    _ensure_loaded()
+    with _lock:
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+        with torch.inference_mode():
+            results = _model.transcribe(
+                audio=(audio, RATE),
+                context=context,
+                language=language,
+                return_time_stamps=True,
+            )
+    return results[0]
+
+
 @app.post("/v1/recognise")
 async def recognise(request: Request) -> JSONResponse:
     """One piece in; the text, the language and the timed words out. One at
@@ -221,19 +238,14 @@ async def recognise(request: Request) -> JSONResponse:
         )
     if len(audio) == 0:
         raise HTTPException(status_code=400, detail="no audio in the piece")
-    _ensure_loaded()
     began = time.monotonic()
-    with _lock:
-        if torch.cuda.is_available():
-            torch.cuda.reset_peak_memory_stats()
-        with torch.inference_mode():
-            results = _model.transcribe(
-                audio=(audio, RATE),
-                context=context,
-                language=language,
-                return_time_stamps=True,
-            )
-    result = results[0]
+    # The model's work runs on a thread, off the event loop, so /healthz is
+    # answered while a piece is recognised or the models load. Before this
+    # (v1.163.1) the loop was blocked for the length of a piece, the WhisperX
+    # service's three-second health probe at submit went unanswered, and a
+    # job that arrived while another's pieces ran was refused as
+    # recogniser_unavailable. The lock still runs one piece at a time.
+    result = await run_in_threadpool(_recognise_piece, audio, context, language)
     return JSONResponse(
         {
             "text": result.text or "",

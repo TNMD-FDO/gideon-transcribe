@@ -63,12 +63,23 @@ def lane_for(recording) -> str:
     return ""
 
 
+# The reason classes that are trouble of the moment (v1.163.1): the service or
+# one of its containers was not answering. A hand-over that meets one is held
+# and tried again by the minute sweep rather than failed.
+WAITS_FOR = frozenset(
+    {"service_unreachable", "recogniser_unavailable", "diarizer_unavailable"}
+)
+
+
 class ServiceError(Exception):
-    """The service could not be reached, or refused this app."""
+    """The service could not be reached, or refused this app. `wait` says
+    the trouble is of the moment: a hand-over is held and tried again rather
+    than failed."""
 
     def __init__(self, message: str, reason_class: str) -> None:
         super().__init__(message)
         self.reason_class = reason_class
+        self.wait = reason_class in WAITS_FOR
 
 
 @dataclass(frozen=True)
@@ -219,13 +230,19 @@ def submit(audio: Path, request: dict[str, Any], lane: str = "") -> Submitted:
         raise ServiceError(
             "the service does not know this app's token", "service_refused"
         )
-    if status in (400, 413) and answer:
+    if status in (400, 413, 503) and isinstance(answer, dict):
         # The service refused the request itself, and its reason class is the
-        # Job's reason class.
+        # Job's reason class. A 503 (v1.163.1) names the container that was
+        # not answering, recogniser_unavailable or diarizer_unavailable, and
+        # is trouble of the moment: the hand-over is held, not failed.
         raise ServiceError(
             answer.get("error", "the service refused the request"),
             answer.get("reason_class", "service_refused"),
         )
+    if status in (502, 503, 504):
+        # The service, or whatever stands in front of it, was not there to
+        # answer; nothing the app did was refused.
+        raise ServiceError(f"the service answered {status}", "service_unreachable")
     raise ServiceError(f"the service answered {status}", "service_refused")
 
 

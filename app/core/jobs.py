@@ -59,6 +59,11 @@ class Reason:
     SERVICE_REFUSED = "service_refused"
     RESULT_EXPIRED = "result_expired"
     MERGE_FAILED = "merge_failed"
+    # The service's two more from 0.8.0, met at the hand-over (v1.163.1): a
+    # container of its own was not answering. Held and tried again for a
+    # while before they are a failure.
+    RECOGNISER_UNAVAILABLE = "recogniser_unavailable"
+    DIARIZER_UNAVAILABLE = "diarizer_unavailable"
 
     # One plain message each, for the person; the class itself is for Admins.
     MESSAGES = {
@@ -82,6 +87,21 @@ class Reason:
             "The transcript was not collected in time and is gone. Try again."
         ),
         MERGE_FAILED: "The transcript could not be stored. Try again.",
+        RECOGNISER_UNAVAILABLE: (
+            "The recogniser did not answer for half an hour. Check that its "
+            "container is running, or choose the Whisper recogniser."
+        ),
+        DIARIZER_UNAVAILABLE: (
+            "The diarizer did not answer for half an hour. Check that its "
+            "container is running, or choose the pyannote diarizer."
+        ),
+    }
+
+    # While one of these holds a hand-over, the row says it is waiting.
+    WAITING_WORDS = {
+        SERVICE_UNREACHABLE: "Waiting for the transcription service",
+        RECOGNISER_UNAVAILABLE: "Waiting for the recogniser",
+        DIARIZER_UNAVAILABLE: "Waiting for the diarizer",
     }
 
 
@@ -129,6 +149,11 @@ class Job(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
+    # A hand-over held because the service or one of its containers was not
+    # answering (v1.163.1): when the holding began. The minute sweep hands
+    # the Job over again until it goes through, or until it has been held
+    # for queue.HOLD_LIMIT and fails with the reason in failure_class.
+    held_since = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created"]

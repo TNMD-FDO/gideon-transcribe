@@ -408,7 +408,14 @@ def keep_the_queue_moving(timestamp: int) -> None:
                 hand_over_job.defer(job_id=str(job.pk))
         # A Job whose hand-over was lost is handed over again (v1.131.0).
         for job in queue.never_handed_over():
-            log.warning("job %s was never handed over; again", job.pk)
+            if job.held_since is not None:
+                # Held while the service or a container of its own was not
+                # answering (v1.163.1): tried again every minute.
+                log.info(
+                    "job %s held (%s); handed over again", job.pk, job.failure_class
+                )
+            else:
+                log.warning("job %s was never handed over; again", job.pk)
             hand_over_job.defer(job_id=str(job.pk))
     # A playback copy that never came is made again, three times at most
     # (v1.132.0); each try is counted on the row.

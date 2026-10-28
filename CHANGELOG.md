@@ -19,6 +19,20 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.163.1, 2026-10-28
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Migration 0094: one column on a Job, when a held hand-over began. Nothing already stored changes. The recogniser image is rebuilt; the models do not move.
+
+- **A recording uploaded while the recogniser was busy was refused and failed for good.** On 27 October a body camera in a batch under Qwen3-ASR failed three seconds after its upload as "The transcription service refused this app. Contact IT.", and its row read Ready though nothing had been transcribed. The chain: the recogniser container did the model's work inside its asynchronous handler, so while a piece was recognised it answered nothing, not even its health check; the WhisperX service probes that health check for three seconds when a job is submitted, got no answer, and refused the job with `503 recogniser_unavailable`; the app treated any unexpected status as a refusal of the app itself and failed the Job with no retry.
+- **The recogniser answers its health check while it works.** The model's work on a piece runs on a thread, off the event loop, one piece at a time under the lock as before. A job submitted while another's pieces run is accepted and waits in the service's line.
+- **A service that was there but not answering is a wait, not a refusal.** A `503` at the hand-over carries the service's own reason (`recogniser_unavailable`, `diarizer_unavailable`), and a `502`, `503` or `504` with no body, or an unreachable service, is `service_unreachable`. For those three the Job is held in line and handed over again by the minute sweep, for half an hour at most, then fails with that reason and a plain message ("The recogniser did not answer for half an hour. Check that its container is running, or choose the Whisper recogniser."). A refusal of the request itself or of the app's token fails at once, as before.
+- **The row tells the truth.** A held Job reads "Waiting for the recogniser", "Waiting for the diarizer" or "Waiting for the transcription service"; a Job that failed on a recording never transcribed reads Failed, with Retry in the row's Details, where it used to read Ready and could not be opened.
+
 ## v1.163.0, 2026-10-27
 
 ```

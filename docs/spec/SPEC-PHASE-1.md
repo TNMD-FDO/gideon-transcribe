@@ -2029,8 +2029,9 @@ A Job ends Failed with exactly one reason class. The service's nine classes pass
 | Class | When |
 |---|---|
 | `media_failed` | A media step failed (hash, probe, Sides, ASR audio). |
-| `service_unreachable` | The service could not be reached when the Run was handed over, or two status polls in a row failed to connect. |
-| `service_refused` | The service rejected the app itself: an unknown token, a Run it should know, an API mismatch. |
+| `service_unreachable` | The service could not be reached when the Run was handed over (or answered `502`, `503` or `504` with no body), or two status polls in a row failed to connect. At the hand-over the Job is held in line and handed over again by the minute sweep, for half an hour at most (v1.163.1), before this is a failure. |
+| `service_refused` | The service rejected the app itself: an unknown token, a Run it should know, an API mismatch. Never a `503`: that is the service saying it, or a container of its own, was not answering (below). |
+| `recogniser_unavailable`, `diarizer_unavailable` | The service's own two classes (its 0.8.0), met at the hand-over as a `503` (v1.163.1): the container was not answering, busy or restarting. Held and handed over again as `service_unreachable` is, half an hour at most, the row saying "Waiting for the recogniser" or "Waiting for the diarizer"; then a failure with that class and its message. |
 | `result_expired` | The result was gone before the app collected it (the app was down for over 24 hours). |
 | `merge_failed` | The app could not merge or store the Transcript. |
 
@@ -4347,7 +4348,7 @@ A reason class is the fixed short identifier a row records when something is ref
 | Sign-in failed | wrong password; not in a group; deactivated; blocked; directory unreachable; throttled (identifiers left to the build) | Sign-in, accounts, and roles |
 | Upload refused | `too_large`; `too_long`; `quota_exceeded`; `limit_exceeded`; `batch_in_progress`; `service_unreachable`; `disk_full`; `incomplete_file` (v1.44.0); and one class each for no audio track, undecodable audio, empty file, duplicate file, and archive (identifiers left to the build) | Media handling; Queue and Jobs; Workspace lifecycle |
 | Job failed, from the service | `bad_input`; `too_large`; `too_long`; `model_unavailable`; `gpu_error` (retried once by the service); `timeout`; `cancelled`; `service_restarted`; `internal` | the WhisperX service API document |
-| Job failed, the app's own | `media_failed`; `service_unreachable`; `service_refused`; `result_expired`; `merge_failed` | Queue and Jobs |
+| Job failed, the app's own | `media_failed`; `service_unreachable`; `service_refused`; `result_expired`; `merge_failed`; from v1.163.1 `recogniser_unavailable` and `diarizer_unavailable` after a held hand-over | Queue and Jobs |
 | AI assistant | `llm_unreachable`; `llm_timeout`; `llm_refused`; `llm_too_long`; `llm_bad_output`; `llm_error`; `llm_no_vision` (Phase 4) | AI assistant |
 | Clip render failed | `clip_render_failed` | Clips |
 | Directory check refused; Directory tested; Engine tested; Integrity check run | a reason class on failure (identifiers left to the build) | Sign-in, accounts, and roles; Admin panel |

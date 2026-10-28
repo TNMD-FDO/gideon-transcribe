@@ -190,6 +190,8 @@ def hand_over(job: Job) -> Job:
         try:
             submitted = whisperx.submit(run.audio_path, request_for(run), lane)
         except whisperx.ServiceError as problem:
+            if problem.wait:
+                return hold(job, problem.reason_class)
             return fail(job, problem.reason_class)
         except Exception:  # noqa: BLE001 - the last resort (v1.132.0)
             # A missing prepared file, or an answer of the wrong shape, used
@@ -197,6 +199,11 @@ def hand_over(job: Job) -> Job:
             log.exception("job %s could not be handed over", job.id)
             return fail(job, Reason.INTERNAL)
 
+        if job.held_since is not None:
+            # Through at last: the holding is over.
+            job.held_since = None
+            job.failure_class = ""
+            job.save(update_fields=["held_since", "failure_class"])
         run.service_job_id = submitted.id
         run.lane = lane
         run.state = "queued"
@@ -924,6 +931,32 @@ def _the_batch_may_have_finished(job: Job) -> None:
     from core import mail
 
     mail.note_batch_progress(job.recording)
+
+
+# How long a hand-over is held while the service or one of its containers is
+# not answering (v1.163.1), before the Job fails with that reason. Half an
+# hour covers a restart, a model load and a long piece in hand; the minute
+# sweep tries again throughout.
+HOLD_LIMIT = dt.timedelta(minutes=30)
+
+
+def hold(job: Job, reason_class: str) -> Job:
+    """Keep a Job in line when the service was there but not answering: the
+    recogniser or the diarizer busy or restarting, the service itself
+    unreachable. The row says what it waits for; the sweep hands it over
+    again; past HOLD_LIMIT it fails with the reason."""
+    now = timezone.now()
+    if job.held_since is not None and now - job.held_since > HOLD_LIMIT:
+        log.warning(
+            "job %s held for %s since %s; failed", job.id, reason_class, job.held_since
+        )
+        return fail(job, reason_class)
+    if job.held_since is None:
+        job.held_since = now
+    job.failure_class = reason_class
+    job.save(update_fields=["held_since", "failure_class"])
+    log.warning("job %s held: %s; handed over again by the sweep", job.id, reason_class)
+    return job
 
 
 def fail(job: Job, reason_class: str) -> Job:
