@@ -13,8 +13,7 @@
         {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
       </div>
       <div class="acts">
-        {# The Notes page's door (v1.121.1, from the walk): on every case, seen from every tab. #}
-        <a href="{% url 'case' case.pk %}?tab=notes&shape=page" class="btn" title="The Notes tab's Page shape: the notes on the left, the recording in hand on the right, stepping through them; Listen through the recordings and mark them reviewed without leaving it">{% icon "note" %} Notes page</a>
+        {# The head's Notes page door (v1.121.1) went in v1.173.0: the Page shape is in the Notes tab's toggle. #}
         <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
       </div>
     </header>

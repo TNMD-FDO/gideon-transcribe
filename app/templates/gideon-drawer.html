@@ -7,13 +7,14 @@
 <div id="gideon" data-kind="{{ gideon_kind }}" data-name="{{ chat_name }}"{% if case %} data-case="{{ case.pk }}"{% endif %}{% if incident %} data-incident="{{ incident.pk }}"{% endif %}>
   <button type="button" class="gideon-button" id="gideon-open" aria-expanded="false" aria-controls="gideon-drawer"
           {% if not gideon_on %}disabled title="{{ gideon_why }}"{% else %}title="Ask {{ chat_name }} about {% if gideon_kind == 'case' %}this case{% elif gideon_kind == 'incident' %}this incident{% else %}this recording{% endif %}"{% endif %}>
-    <svg class="i" aria-hidden="true"><use href="#i-chat"></use></svg> <span class="gideon-label">Ask {{ chat_name }}</span>
+    {% comment %}The brand mark on the Ask button and the drawer's head (v1.173.0, at the maintainer's word).{% endcomment %}
+    <svg class="i" aria-hidden="true"><use href="#i-gideon"></use></svg> <span class="gideon-label">Ask {{ chat_name }}</span>
   </button>
   <aside class="gideon-drawer" id="gideon-drawer" hidden aria-label="{{ chat_name }}">
     {% comment %}The handle (Phase 8 chapter 6): drag the panel's left edge to size it; double-press for the usual width.{% endcomment %}
     <div id="gideon-grip" class="gideon-grip" role="separator" aria-label="Resize the panel" tabindex="0" title="Drag to make the panel wider or narrower. Double-press for the usual width."></div>
     <div class="gideon-head">
-      <div class="grow"><b>{{ chat_name }}</b><div class="muted small" id="gideon-head-line">{% if gideon_kind == 'case' %}This case{% elif gideon_kind == 'incident' %}This incident{% else %}This recording{% endif %}</div></div>
+      <div class="grow"><b>{% icon "gideon" %} {{ chat_name }}</b><div class="muted small" id="gideon-head-line">{% if gideon_kind == 'case' %}This case{% elif gideon_kind == 'incident' %}This incident{% else %}This recording{% endif %}</div></div>
       <button type="button" class="small ghost" id="gideon-popout" title="In a window of its own, which follows this page">{% icon "expand" %}</button>
       <button type="button" class="small ghost" id="gideon-close">Close</button>
     </div>

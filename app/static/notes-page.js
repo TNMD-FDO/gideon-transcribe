@@ -268,18 +268,20 @@
     return all ? "call" : "recording";
   }
 
-  function go(index) {
+  // quiet: open the moment without playing it, as the shape does when it is
+  // first shown (v1.173.0); a pressed note or Previous and Next play.
+  function go(index, quiet) {
     if (!state.order.length) { return; }
     state.current = (index + state.order.length) % state.order.length;
     var here = current();
     if (state.mode === "notes") {
-      openAt(recordingOf(here), here.at);
+      openAt(recordingOf(here), here.at, quiet);
       Array.prototype.forEach.call(document.querySelectorAll("#np-list .np-row.on"), function (one) { one.classList.remove("on"); });
       var row = document.querySelector("#np-list .np-row[data-key='" + here.key + "']");
       if (row) { row.classList.add("on"); row.scrollIntoView({ block: "nearest" }); }
     } else {
       var first = state.notes.filter(function (one) { return one.recording === here.id; })[0];
-      openAt(here, first ? first.at : 0);
+      openAt(here, first ? first.at : 0, quiet);
     }
     sayPosition();
   }
@@ -768,7 +770,8 @@
         var opening = desk.dataset.opening;
         var index = opening ? state.order.map(function (one) { return one.key; }).indexOf(opening) : -1;
         if (index < 0 && state.order.length) { index = 0; }
-        if (index >= 0) { state.current = index; go(index); }
+        // Opened quiet: nothing plays until a note is pressed (v1.173.0).
+        if (index >= 0) { state.current = index; go(index, true); }
         else if (state.recordings.length) {
           var first = state.recordings.filter(function (one) { return one.words; })[0];
           if (first) { openAt(first, 0, true); }

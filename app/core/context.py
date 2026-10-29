@@ -23,10 +23,15 @@ def workspace(request) -> dict:
         return {}
     from core import home
 
+    # One query for both rail items (v1.173.0).
+    session = home.session_state(request.user)
     return {
         # The rail's Home item says how many batches wait for their download
         # (Phase 8 chapter 13), until Done with these.
-        "ready_count": home.ready_count(request.user),
+        "ready_count": len(session["ready"]),
+        # The rail's Bulk transcription item (v1.173.0): where this session's
+        # batch stands.
+        "bulk_pill": home.bulk_pill(session),
         "idle_timeout_seconds": int(settings_store.idle_timeout().total_seconds()),
         # What the chat is called on the pages (Phase 7 chapter 5).
         "chat_name": settings_store.chat_name(),

@@ -53,14 +53,17 @@ def session_batches(user):
     return Batch.objects.filter(pk__in=list(ids), is_live=False).order_by("-created")
 
 
-def ready_batches(user) -> list[dict]:
-    """The finished batches of this session with at least one transcript,
-    each with its download, until Done with these takes it."""
+def session_state(user) -> dict:
+    """This session's batches in one query: "ready", the finished ones with
+    at least one transcript, each with its download until Done with these
+    takes it; and "running", the batch in hand with its done and total
+    counts (v1.173.0, for the rail's Bulk transcription pill), or None."""
     from django.db.models import Count, Q
 
     from core.jobs import JobState
 
     out = []
+    running = None
     # Every batch's four counts in one query (v1.124.0): each had asked four
     # questions of its own, and an Admin's Home ran 39 batches through them.
     batches = session_batches(user).annotate(
@@ -70,6 +73,7 @@ def ready_batches(user) -> list[dict]:
             distinct=True,
         ),
         live=Count("jobs", filter=Q(jobs__state__in=JobState.LIVE), distinct=True),
+        total=Count("recordings", distinct=True),
         done_count=Count(
             "recordings",
             filter=Q(
@@ -88,6 +92,8 @@ def ready_batches(user) -> list[dict]:
     )
     for batch in batches:
         if batch.unfinished or batch.live:
+            if running is None:
+                running = {"done": batch.done_count, "total": batch.total}
             continue
         done = batch.done_count
         if not done:
@@ -103,12 +109,30 @@ def ready_batches(user) -> list[dict]:
                 "url": reverse("batch", args=[batch.pk]),
             }
         )
-    return out
+    return {"ready": out, "running": running}
+
+
+def ready_batches(user) -> list[dict]:
+    """The finished batches of this session with at least one transcript,
+    each with its download, until Done with these takes it."""
+    return session_state(user)["ready"]
 
 
 def ready_count(user) -> int:
     """How many batches wait for their download, for the rail's Home item."""
     return len(ready_batches(user))
+
+
+def bulk_pill(state: dict) -> dict | None:
+    """The rail's Bulk transcription pill (v1.173.0), from session_state:
+    where this session's batch stands while one runs ("2 of 5"), else
+    "Ready" while any waits for its download; nothing otherwise."""
+    running = state.get("running")
+    if running:
+        return {"words": f"{running['done']} of {running['total']}", "tone": ""}
+    if state.get("ready"):
+        return {"words": "Ready", "tone": "ok"}
+    return None
 
 
 def running_now(user) -> list[dict]:

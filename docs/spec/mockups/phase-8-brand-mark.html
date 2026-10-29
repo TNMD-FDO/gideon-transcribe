@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The brand mark at the top left</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; color-scheme: dark; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); }
+  .light { --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0; --text: #171b21; --muted: #5b6673; --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff; color-scheme: light; }
+  .dark { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; color-scheme: dark; }
+  /* The gallery: one card per mark. Each card shows the mark large on both themes, then the top bar at 20 px and the browser tab at 16 px on both themes, which is where a mark has to read. */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; }
+  .card.pick { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .card .title { padding: 10px 14px 6px; display: flex; align-items: baseline; gap: 8px; }
+  .card .title b { font-size: 15px; }
+  .card .title .eyebrow { margin-left: auto; }
+  .card .why { padding: 0 14px 10px; color: var(--muted); font-size: 13px; margin: 0; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; }
+  .half { padding: 12px 14px; background: var(--bg); color: var(--text); display: flex; flex-direction: column; gap: 10px; }
+  .half.dark { border-left: 1px solid var(--line); }
+  .large { display: flex; justify-content: center; padding: 6px 0 2px; }
+  .large svg { width: 72px; height: 72px; }
+  .navstrip { display: flex; align-items: center; gap: 12px; padding: 7px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: 14px; }
+  .brand { font-weight: 600; display: inline-flex; align-items: center; gap: 8px; color: var(--text); white-space: nowrap; }
+  .brand .mark { width: 20px; height: 20px; flex: none; }
+  .brand .second { font-weight: 400; color: var(--muted); margin-left: -4px; }
+  .navstrip .who { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .tab { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px 6px 0 0; padding: 3px 10px; font-size: 12px; background: var(--surface-2); align-self: flex-start; color: var(--text); }
+  .tab svg { width: 16px; height: 16px; }
+  .recommend { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .recommend ol { margin: 6px 0 0; padding-left: 20px; } .recommend li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 8 chapter 13, the top bar · a drawing for the maintainer's word · 2026-10-29, third round</span>
+    <h1>The brand mark at the top left, carrying a 6: nine ways</h1>
+    <p class="lede">Every mark below carries a 6 for the Sixth Amendment, in the app's own line style and colours. Each card shows the mark large, then where it has to earn its place: the top bar at 20 pixels and the browser tab at 16, on both themes. The name in two weights, "Gideon" bold and "Transcribe" lighter, goes with every one. Today's mark is the first card for comparison.</p>
+  </header>
+
+  <svg style="display: none" aria-hidden="true">
+    <symbol id="today" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></symbol>
+    <!-- A: the voice in the 6 -->
+    <symbol id="mA" viewBox="0 0 32 32"><circle cx="16.5" cy="20" r="9.2" fill="none" stroke="var(--accent)" stroke-width="2.3"/><path d="M22.5 3.6 C14 4.6 7.3 10.8 7.3 20" fill="none" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round"/><g stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"><line x1="12.5" y1="18" x2="12.5" y2="22"/><line x1="16.5" y1="15.5" x2="16.5" y2="24.5"/><line x1="20.5" y1="18" x2="20.5" y2="22"/></g></symbol>
+    <!-- B: the same 6 on the blue tile -->
+    <symbol id="mB" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="16.5" cy="20" r="8.2" fill="none" stroke="var(--accent-ink)" stroke-width="2.2"/><path d="M22 5 C14.5 6 8.3 11.6 8.3 20" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round"/><g stroke="var(--accent-ink)" stroke-width="2.1" stroke-linecap="round"><line x1="13" y1="18.3" x2="13" y2="21.7"/><line x1="16.5" y1="16" x2="16.5" y2="24"/><line x1="20" y1="18.3" x2="20" y2="21.7"/></g></symbol>
+    <!-- C: VI, the voice in the V's mouth -->
+    <symbol id="mC" viewBox="0 0 32 32"><g fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8 L13 24 L19.5 8"/><line x1="25.5" y1="8" x2="25.5" y2="24"/></g><g stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round"><line x1="10.8" y1="11" x2="10.8" y2="14.5"/><line x1="13" y1="8.5" x2="13" y2="15"/><line x1="15.2" y1="11" x2="15.2" y2="14.5"/></g></symbol>
+    <!-- D: the quotation mark. An opening quote is a 6; the voice sits inside it. Filled, the one solid mark that is not a tile. -->
+    <symbol id="mD" viewBox="0 0 32 32"><path d="M21 4.5 C12 6.5 8.6 12.5 8.6 19.5" fill="none" stroke="var(--accent)" stroke-width="3.6" stroke-linecap="round"/><circle cx="15.2" cy="19.8" r="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="1.9" stroke-linecap="round"><line x1="12.4" y1="18.5" x2="12.4" y2="21.3"/><line x1="15.2" y1="16.6" x2="15.2" y2="23.2"/><line x1="18" y1="18.5" x2="18" y2="21.3"/></g></symbol>
+    <!-- E: the 6 that speaks. One line: the bowl, the tail rising, and the tail going on as a wave. -->
+    <symbol id="mE" viewBox="0 0 32 32"><circle cx="13.5" cy="21" r="8.3" fill="none" stroke="var(--accent)" stroke-width="2.3"/><path d="M5.2 21 C5.2 13.5 9.5 7.2 15.5 6.2 C19.5 5.5 20.2 10.5 23.3 10 S26.5 4.6 28.5 5.2 S30.3 8.8 31 8" fill="none" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <!-- F: the 6 whose tail is the voice. The bowl drawn, the tail as three bars climbing where the tail would rise. -->
+    <symbol id="mF" viewBox="0 0 32 32"><circle cx="17" cy="21" r="8.6" fill="none" stroke="var(--accent)" stroke-width="2.3"/><g stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"><line x1="9.2" y1="13.2" x2="9.2" y2="17"/><line x1="13.4" y1="8.2" x2="13.4" y2="12.4"/><line x1="18.6" y1="4.2" x2="18.6" y2="9.2"/></g></symbol>
+    <!-- G: the G that is a 6. The 6's bowl and tail, with the G's bar: Gideon's initial and the Sixth in one shape. -->
+    <symbol id="mG" viewBox="0 0 32 32"><circle cx="16.5" cy="20" r="9.2" fill="none" stroke="var(--accent)" stroke-width="2.3"/><path d="M22.5 3.6 C14 4.6 7.3 10.8 7.3 20" fill="none" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round"/><line x1="17.5" y1="20" x2="25.7" y2="20" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <!-- H: six bars in a ring. The 6 is counted, not drawn: the voice has six bars. -->
+    <symbol id="mH" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13.25" fill="none" stroke="var(--accent)" stroke-width="2.1"/><g stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round"><line x1="7.6" y1="13.6" x2="7.6" y2="18.4"/><line x1="11" y1="11.2" x2="11" y2="20.8"/><line x1="14.4" y1="9" x2="14.4" y2="23"/><line x1="17.8" y1="8" x2="17.8" y2="24"/><line x1="21.2" y1="11" x2="21.2" y2="21"/><line x1="24.6" y1="13.4" x2="24.6" y2="18.6"/></g></symbol>
+    <!-- I: the 6 in a speech bubble. What was said, and the Sixth. -->
+    <symbol id="mI" viewBox="0 0 32 32"><path d="M8 3.5 h16 a5 5 0 0 1 5 5 v11 a5 5 0 0 1 -5 5 h-10.5 l-5.5 5 v-5 a5 5 0 0 1 -5 -5 v-11 a5 5 0 0 1 5 -5 z" fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linejoin="round"/><circle cx="16.3" cy="16" r="4.4" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M19.6 7.9 C15.2 8.5 11.9 11.5 11.9 16" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The gallery</span><h2>Nine marks, each at the two sizes that matter, on both themes</h2></div>
+    <div class="gallery">
+
+      <div class="card">
+        <div class="title"><b>Today</b><span class="eyebrow">for comparison</span></div>
+        <p class="why">Four bars on the blue tile, the name in one weight.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#today"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#today"/></svg>Gideon Transcribe</span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#today"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#today"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#today"/></svg>Gideon Transcribe</span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#today"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card pick">
+        <div class="title"><b>A. The voice in the 6</b><span class="eyebrow">recommended</span></div>
+        <p class="why">A 6 drawn as one line, its bowl the ring, three bars speaking inside. Nothing filled; it sits beside the rail's icons as one of them.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mA"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mA"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mA"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mA"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mA"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mA"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>B. The 6 on the tile</b></div>
+        <p class="why">The same 6 in white on today's blue tile. The colour people know stays; the mark holds its own in a crowded tab strip.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mB"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mB"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mB"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mB"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mB"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mB"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>C. VI</b></div>
+        <p class="why">The Sixth in the numerals an amendment is written in, the voice held in the V's mouth. Reads as six to a lawyer, as two letters to anyone else.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mC"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mC"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mC"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mC"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mC"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mC"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>D. The quotation mark</b></div>
+        <p class="why">An opening quote is a 6. A transcript is what was said, quoted; the voice sits inside the mark. Solid, so it stays visible at the smallest size without a tile.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mD"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mD"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mD"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mD"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mD"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mD"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>E. The 6 that speaks</b></div>
+        <p class="why">One line: the bowl, the tail rising, and the tail carrying on as a wave of sound. The voice comes out of the 6 rather than sitting in it.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mE"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mE"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mE"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mE"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mE"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mE"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>F. The 6 whose tail is the voice</b></div>
+        <p class="why">The bowl drawn whole; where the tail would rise, three bars climb instead. Drawn and looked at: the eye does not close the 6, and at 16 pixels it reads as a stopwatch. Kept so the choice is made against it.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mF"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mF"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mF"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mF"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mF"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mF"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>G. The G that is a 6</b></div>
+        <p class="why">The 6's bowl and tail with the G's bar across the bowl: Gideon's initial and the Sixth in one shape, no bars of sound. The quietest of the nine.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mG"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mG"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mG"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mG"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mG"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mG"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>H. Six bars</b></div>
+        <p class="why">The 6 counted, not drawn: a voice of exactly six bars in a ring. Nobody sees a number; the office knows it is there. The most understated way to carry it.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mH"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mH"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mH"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mH"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mH"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mH"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title"><b>I. The 6 in a speech bubble</b></div>
+        <p class="why">What was said, and the Sixth inside it. Friendly rather than formal; the 6 is small inside the bubble, which the tab row shows.</p>
+        <div class="pair">
+          <div class="half light"><div class="large"><svg><use href="#mI"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mI"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mI"/></svg>Home · Gideon Transcribe</span></div>
+          <div class="half dark"><div class="large"><svg><use href="#mI"/></svg></div><div class="navstrip"><span class="brand"><svg class="mark"><use href="#mI"/></svg>Gideon <span class="second">Transcribe</span></span><span class="who">Sign out</span></div><span class="tab"><svg><use href="#mI"/></svg>Home · Gideon Transcribe</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="recommend">
+      <span class="eyebrow">Recommendation, and what the pick decides</span>
+      <ol>
+        <li><b>A</b> if the 6 should be seen: a plain 6 anyone reads at 16 pixels, the voice inside it. <b>D</b> if the mark should mean transcription first: the quote that happens to be a 6, and the one solid mark that needs no tile. <b>H</b> if the 6 should be a quiet fact rather than a sign. B, C, E, F, G and I are drawn so the choice is made against them, not without them.</li>
+        <li>The pick changes three things and nothing else: the mark in the top bar (`base.html`), the favicon (`favicon.svg`, drawn by hand as now, no licence), and the sign-in card's mark where no office logo is uploaded. An office logo an Admin has uploaded stays as it is.</li>
+        <li>The two-weight name goes with every mark; say if the name should stay in one weight.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

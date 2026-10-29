@@ -129,9 +129,11 @@ def test_the_notes_tab_offers_the_page_and_a_row_opens_on_its_note(
     line = note_on(call, 1, "worth a look", owner)
     signed_in(client, owner)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=notes").content.decode()
-    # The door is the head's button (v1.121.1), on every tab; it opens the
-    # Page shape (v1.172.0), and the tab's own button went.
-    assert f'href="/case/{a_case.pk}?tab=notes&shape=page" class="btn"' in page
+    # The head's button (v1.121.1) went in v1.173.0: the Page shape is the
+    # Notes tab's third shape (v1.172.0), reached from the tab's toggle, and
+    # the tab's own button went before it.
+    assert f'href="/case/{a_case.pk}?tab=notes&shape=page" class="btn"' not in page
+    assert "Notes page</a>" not in page
     assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' not in page
     assert f"?note=line:{line.pk}" in page
     # The old address with a note lands on the shape with that note.

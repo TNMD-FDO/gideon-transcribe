@@ -19,6 +19,7 @@ SECTIONS = {
     "recordings": "my-recordings",
     "record": "recording-at-your-desk",
     "upload": "uploading-a-batch",
+    "bulk": "bulk-transcription",
     "viewer": "reading-a-transcript",
     "clips": "clips",
     "cases": "cases",

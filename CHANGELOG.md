@@ -17,8 +17,17 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
-## Unreleased
+## v1.173.0, 2026-10-29
 
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **Bulk transcription, a place in the rail.** Under Home, "Files in, transcripts out, nothing kept": one page for the errand of getting transcripts of a set of files. Drop the files, two options (Translate to English, the spoken language), Start; the same page lists each file and where it stands, offers the download of what is ready from the first transcript, and ends as the download with Done with these and Transcribe more. Under it an ordinary batch of this session, never in a case, so it is also under My recordings and on Home's Ready to download. The rail's item carries the count while it runs and Ready while a download waits. Home gains one sentence in This session's empty state. Drawn in `docs/spec/mockups/phase-8-bulk-transcription.html`; Phase 8 chapter 13 amended; the glossary gains Bulk transcription.
+- **The brand mark.** A voice of six bars in a ring, in the accent colour and nothing filled, the Sixth Amendment counted rather than drawn; the name in two weights. The favicon, the sign-in card (where no office logo is uploaded) and the Ask Gideon button and drawer head wear the same mark. Drawn in `docs/spec/mockups/phase-8-brand-mark.html`, option H.
+- **The Notes tab's Page shape opens quiet.** Opening the shape showed the first note's moment and played it; now nothing plays until a note is pressed, or Previous or Next.
+- **The case head's Notes page button is gone.** The Page shape is the Notes tab's third shape, reached from the tab's toggle (Rows | Chronology | Page) and from a note's "on the page" link; the head keeps Add recordings alone.
 - **Phase 11 stage 0: the contracts and the sandbox, no code in the app.** `docs/api/pipeline-v1.yaml` (the pipeline service's API and the Result, version 1), `docs/api/product-v1.yaml` (the product API's sign-in, cases and recordings), `docs/api/README.md` (the rules both keep), `docs/sandbox.md` (the app on a workstation for the front end team), and a test that the documents parse, every reference resolves and the reason classes are the app's own.
 - **Phase 11 specified, nothing built.** `docs/spec/SPEC-PHASE-11.md` and ADR 0028: the pipeline as a service of its own with the app as its first client, the product's records as an API under `/api/v1/`, and the other front end (`gideon-frontend`) on the box behind Caddy; five stages, each waiting for its own word. The glossary gains Pipeline, Pipeline service, Result, Product API, Client and Front end.
 

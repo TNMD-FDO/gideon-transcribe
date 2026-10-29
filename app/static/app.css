@@ -688,9 +688,11 @@ body.session-ended #gideon { pointer-events: none; opacity: 0.45; }
   border-bottom: 1px solid var(--line);
 }
 .nav .brand { font-weight: 600; display: flex; align-items: center; gap: 9px; color: var(--text); text-decoration: none; }
-/* The mark: the favicon's waveform on a rounded square, drawn in the sprite's
- * stroke so it is the same on every page and in the browser tab. */
+/* The mark (v1.173.0): six bars of a voice in a ring, in the accent colour and
+ * nothing filled, the same drawing as the favicon and the sign-in card. The
+ * name in two weights: "Gideon" as before, "Transcribe" lighter and muted. */
 .nav .brand .mark { width: 20px; height: 20px; flex: none; }
+.nav .brand .second { font-weight: 400; color: var(--muted); }
 .nav .who { margin-left: auto; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .nav .who a { text-decoration: none; }
 
@@ -871,6 +873,10 @@ main.wide { max-width: none; }
   .drop.hero { padding: 24px 14px; }
   .steps > li > .dialog { position: sticky; bottom: 0; z-index: 2; background: var(--surface); padding: 10px 0; margin-bottom: -8px; }
 }
+/* Bulk transcription (v1.173.0): the two options in one row under the drop. */
+.bulk .bulk-options { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; margin: 12px 0 14px; }
+.bulk .bulk-options label.row { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.bulk #bulk-rows .pill.acc { background: var(--accent-soft); color: var(--accent); }
 .drop.hero .big { font-size: 1.25em; margin-bottom: 8px; }
 .drop.hero .or { margin-bottom: 14px; }
 

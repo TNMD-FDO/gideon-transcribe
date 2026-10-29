@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk transcription: a place in the rail and one flow</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; color-scheme: dark; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.big { font-size: 15px; padding: 8px 18px; min-height: 36px; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: #b3261e; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  /* The app's frame: the top bar, the rail, the shell. */
+  .app { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg); font-size: 13px; }
+  .nav { display: flex; align-items: center; gap: 18px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line); font-size: 14px; }
+  .nav .who { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .brand { font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .brand svg { width: 18px; height: 18px; }
+  .frame { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 420px; }
+  .rail { border-right: 1px solid var(--line); background: var(--surface); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .rail .do { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+  .rail .do .btn { justify-content: center; padding: 7px 10px; font-size: 13px; }
+  .rail .grp { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; margin: 8px 8px 2px; }
+  .item { display: flex; gap: 10px; align-items: flex-start; padding: 7px 8px; border-radius: var(--radius); color: var(--text); }
+  .item.on { background: var(--accent-soft); } .item.on b { color: var(--accent); }
+  .item.new { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .item .ico { width: 24px; height: 24px; border-radius: 6px; background: var(--surface-2); flex: none; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+  .item.on .ico { background: var(--surface); }
+  .item .ico svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .item .words { display: flex; flex-direction: column; min-width: 0; }
+  .item b { font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .item .line { color: var(--muted); font-size: 11px; line-height: 1.35; }
+  .shell { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .shell h3 { margin: 0; font-size: 22px; }
+  .shell .lead { color: var(--muted); margin: 0; max-width: 64ch; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 34px 20px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+  .drop .big { font-size: 17px; font-weight: 600; }
+  .drop .or a { color: var(--accent); }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .opts { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; color: var(--text); }
+  .opts label { display: inline-flex; align-items: center; gap: 6px; }
+  .opts select, .opts input[type=checkbox] { font: inherit; }
+  .opts select { font-size: 12px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+  .files { display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 6px 10px; }
+  .files .f { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); }
+  .files .f:first-child { border-top: 0; }
+  .files .n { font-weight: 500; }
+  .files .len { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .hero { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+  .hero .tick { width: 36px; height: 36px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .hero h4 { margin: 0; font-size: 20px; }
+  .quiet { display: flex; gap: 8px; margin-top: 4px; }
+  .home-sect { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .home-sect .head { display: flex; gap: 10px; align-items: center; }
+  .home-sect .cap { color: var(--muted); font-size: 12px; display: block; }
+  .empty { text-align: center; color: var(--muted); padding: 12px; }
+  .empty b { display: block; color: var(--text); }
+  .pick { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .pick ol { margin: 6px 0 0; padding-left: 20px; } .pick li { margin: 4px 0; }
+  table.map { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.map th, table.map td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.map th { color: var(--muted); font-weight: 600; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <svg style="display: none" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 3v12M6 9l6-6 6 6M4 21h16"/></symbol>
+    <symbol id="i-recordings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="2"/></symbol>
+    <symbol id="i-case" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 8L20 20M8.5 16L20 4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></symbol>
+    <!-- The new place's icon: files in at the top, a transcript out at the bottom. -->
+    <symbol id="i-bulk" viewBox="0 0 24 24"><path d="M4 4h7l2 2h7v5"/><path d="M4 4v16h8"/><path d="M17 14v7M14 18l3 3 3-3"/></symbol>
+    <symbol id="mark" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13.25" fill="none" stroke="var(--accent)" stroke-width="2.1"/><g stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round"><line x1="9.5" y1="13.5" x2="9.5" y2="18.5"/><line x1="12.75" y1="10.5" x2="12.75" y2="21.5"/><line x1="16" y1="8" x2="16" y2="24"/><line x1="19.25" y1="10.5" x2="19.25" y2="21.5"/><line x1="22.5" y1="13.5" x2="22.5" y2="18.5"/></g></symbol>
+  </svg>
+
+  <header>
+    <span class="eyebrow">Phase 8 chapter 13, amended · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>Bulk transcription: a place in the rail, and one flow made for it</h1>
+    <p class="lede">A person who wants transcripts of a folder of files, and nothing else, today goes Upload files, three steps of settings, the batch page, then Home or My recordings for the download. The drawing adds one place to the rail under Home, <b>Bulk transcription</b>, whose page is that whole errand on one screen: drop the files, press Start, come back for one download. Nothing on Home moves; the cases, the incidents and the rest of the app are untouched. Made-up files.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The rail gains one place under Home, and the page opens on the drop</h2></div>
+    <div class="app">
+      <div class="nav"><span class="brand"><svg><use href="#mark"/></svg>Gideon <span class="muted" style="font-weight: 400; margin-left: -4px">Transcribe</span></span><span class="who">A. Person · Sign out</span></div>
+      <div class="frame">
+        <div class="rail">
+          <div class="do"><span class="btn primary">Upload files</span><span class="btn">Record now</span></div>
+          <div class="grp">Places</div>
+          <div class="item"><span class="ico"><svg><use href="#i-home"/></svg></span><span class="words"><b>Home</b><span class="line">What is running, and what needs you</span></span></div>
+          <div class="item on new"><span class="ico"><svg><use href="#i-bulk"/></svg></span><span class="words"><b>Bulk transcription</b><span class="line">Files in, transcripts out, nothing kept</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-case"/></svg></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-recordings"/></svg></span><span class="words"><b>My recordings</b><span class="line">This session only, then gone</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-clip"/></svg></span><span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span></div>
+        </div>
+        <div class="shell">
+          <div><h3>Bulk transcription</h3><p class="lead">Drop your recordings in, press Start, and come back for one download of every transcript. They are yours for this session and gone when you sign out; nothing goes into a case.</p></div>
+          <div class="drop"><span class="big">Drop recordings here</span><span class="or">or <a>choose files</a></span><span class="muted small">Up to 50 files, 8 GB and 6 hours each. Most audio and video files work; not zip files.</span></div>
+          <div class="opts"><label><input type="checkbox"> Translate to English</label><label>Spoken language <select><option>Detect it</option><option>English</option><option>Spanish</option></select></label><span class="muted small">Speakers, vocabulary, a case or a recording type: use <a>Upload files</a> instead.</span></div>
+          <div class="row"><span class="btn primary big" style="opacity: .5">Start</span><span class="muted small">Lights when a file is in.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One place, one line.</b> Bulk transcription sits under Home in the rail, on every page, lit while the person is on it, with its one line "Files in, transcripts out, nothing kept". The two actions at the top of the rail stay what they are: Upload files is still the full page with its settings and its cases.</p>
+      <p><b>The page opens on the drop.</b> No "where do they go" (always this session only), no steps, no recording type. Two options only, the two a one-off most often needs: Translate to English and the spoken language, both as the Upload page asks them. Anything more sends the person to Upload files, in words on the page.</p>
+      <p><b>Under the hood it is a Batch.</b> The same upload, the same line, the same transcription, the same download; the page is a shorter door to them, so nothing about the queue, the audit rows or the Admin's pages changes.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>After Start: the same page becomes the batch, and the download appears as soon as one transcript is ready</h2></div>
+    <div class="app">
+      <div class="nav"><span class="brand"><svg><use href="#mark"/></svg>Gideon <span class="muted" style="font-weight: 400; margin-left: -4px">Transcribe</span></span><span class="who">A. Person · Sign out</span></div>
+      <div class="frame">
+        <div class="rail">
+          <div class="do"><span class="btn primary">Upload files</span><span class="btn">Record now</span></div>
+          <div class="grp">Places</div>
+          <div class="item"><span class="ico"><svg><use href="#i-home"/></svg></span><span class="words"><b>Home</b><span class="line">What is running, and what needs you</span></span></div>
+          <div class="item on"><span class="ico"><svg><use href="#i-bulk"/></svg></span><span class="words"><b>Bulk transcription <span class="pill acc">2 of 5</span></b><span class="line">Files in, transcripts out, nothing kept</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-case"/></svg></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-recordings"/></svg></span><span class="words"><b>My recordings</b><span class="line">This session only, then gone</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-clip"/></svg></span><span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span></div>
+        </div>
+        <div class="shell">
+          <div><h3>Bulk transcription</h3><p class="lead">2 of 5 transcribed. About 14 minutes to go; the page carries on without you, and the download stays on Home until you press Done with these.</p></div>
+          <div class="row"><span class="btn primary">Download the 2 ready</span><span class="btn ghost danger">Cancel the rest</span></div>
+          <div class="files">
+            <div class="f"><span class="n">interview_0412.m4a</span><span class="len">41:20</span><span class="pill ok">Ready</span></div>
+            <div class="f"><span class="n">interview_0413.m4a</span><span class="len">12:05</span><span class="pill ok">Ready</span></div>
+            <div class="f"><span class="n">site_visit.mp4</span><span class="len">1:02:48</span><span class="pill acc">Transcribing, 40%</span></div>
+            <div class="f"><span class="n">voicemail_3.wav</span><span class="len">0:48</span><span class="pill">Waiting, 4th in line</span></div>
+            <div class="f"><span class="n">meeting_apr.mp3</span><span class="len">28:31</span><span class="pill">Waiting, 5th in line</span></div>
+          </div>
+          <p class="muted small" style="margin: 0">The files also appear under My recordings, as every upload does.</p>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>No batch page to find.</b> Start turns the drop into the list of files with where each one stands, in the words the batch page uses today; the rail's item carries the count while it runs, as Home's does for a download that waits.</p>
+      <p><b>The download from the first transcript.</b> "Download the 2 ready" is the batch's own zip of what has finished, so a person in a hurry need not wait for the slowest file. Cancel the rest stops what has not started, as the batch page's Cancel does.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>When every file is done: the download is the page</h2></div>
+    <div class="app">
+      <div class="nav"><span class="brand"><svg><use href="#mark"/></svg>Gideon <span class="muted" style="font-weight: 400; margin-left: -4px">Transcribe</span></span><span class="who">A. Person · Sign out</span></div>
+      <div class="frame">
+        <div class="rail">
+          <div class="do"><span class="btn primary">Upload files</span><span class="btn">Record now</span></div>
+          <div class="grp">Places</div>
+          <div class="item"><span class="ico"><svg><use href="#i-home"/></svg></span><span class="words"><b>Home <span class="pill ok">1 ready</span></b><span class="line">What is running, and what needs you</span></span></div>
+          <div class="item on"><span class="ico"><svg><use href="#i-bulk"/></svg></span><span class="words"><b>Bulk transcription <span class="pill ok">Ready</span></b><span class="line">Files in, transcripts out, nothing kept</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-case"/></svg></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-recordings"/></svg></span><span class="words"><b>My recordings</b><span class="line">This session only, then gone</span></span></div>
+          <div class="item"><span class="ico"><svg><use href="#i-clip"/></svg></span><span class="words"><b>Clips</b><span class="line">Pieces cut for a hearing</span></span></div>
+        </div>
+        <div class="shell">
+          <div><h3>Bulk transcription</h3></div>
+          <div class="hero">
+            <span class="tick">✓</span>
+            <h4>The 5 transcripts are ready</h4>
+            <span class="muted">Uploaded at 10:02, finished at 10:41. Yours until you sign out or press Done with these.</span>
+            <span class="btn primary big">Download transcripts</span>
+            <span class="quiet"><span class="btn">Done with these</span><span class="btn">Transcribe more</span></span>
+          </div>
+          <div class="files">
+            <div class="f"><span class="n">interview_0412.m4a</span><span class="len">41:20</span><span class="btn" style="min-height: 24px; font-size: 12px">Open</span></div>
+            <div class="f"><span class="n">interview_0413.m4a</span><span class="len">12:05</span><span class="btn" style="min-height: 24px; font-size: 12px">Open</span></div>
+            <div class="f"><span class="n">site_visit.mp4</span><span class="len">1:02:48</span><span class="btn" style="min-height: 24px; font-size: 12px">Open</span></div>
+            <div class="f"><span class="n">voicemail_3.wav</span><span class="len">0:48</span><span class="pill warn">Not transcribed: no speech found</span></div>
+            <div class="f"><span class="n">meeting_apr.mp3</span><span class="len">28:31</span><span class="btn" style="min-height: 24px; font-size: 12px">Open</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The finished state is the download</b>, as the batch page's is today: one zip of every transcript, Done with these to clear them, Transcribe more to drop the next lot. A file that could not be transcribed says why on its row and is left out of the zip.</p>
+      <p><b>Each transcript opens</b> on the recording page as any does, for a person who wants to read one before downloading. The place shows the person's own bulk batches of this session, newest first, so a second lot started while the first runs is listed under it.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Home: one line added, nothing moved</h2></div>
+    <div class="home-sect" style="max-width: 560px">
+      <div class="head"><span class="ico" style="color: var(--accent)"><svg style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round"><use href="#i-upload"/></svg></span><div><b>This session</b><span class="cap">These stay until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it.</span></div><span class="btn ghost" style="margin-left: auto">My recordings</span></div>
+      <div class="empty"><b>Nothing uploaded this session</b>Upload files or record here; they are listed until you sign out or put them in a case. Just want transcripts of some files? <a style="color: var(--accent)">Bulk transcription</a> is made for that.</div>
+    </div>
+    <div class="caption">
+      <p><b>Home keeps its layout.</b> Ready to download, Cases beside This session, Clips: all as they are. The one change is the sentence in This session's empty state, pointing at the new place, since that is the moment a newcomer is looking for it.</p>
+      <p><b>Ready to download stays the catch-all.</b> A bulk batch's download appears there too, as every batch's does, until Done with these; so a person who left the page and forgot the place still finds it on Home.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>What the page is, against Upload files</h2></div>
+    <table class="map">
+      <tr><th></th><th>Upload files (unchanged)</th><th>Bulk transcription (new)</th></tr>
+      <tr><td>Where the files go</td><td>This session, or into a case</td><td>This session, always</td></tr>
+      <tr><td>Steps</td><td>Choose files, Settings, Check and start</td><td>Drop and Start, on one screen</td></tr>
+      <tr><td>Settings asked</td><td>Title, case, recording type, speakers, translate, language, vocabulary, context, clean-up</td><td>Translate to English, spoken language</td></tr>
+      <tr><td>While it runs</td><td>The batch page, two panes</td><td>The same page: the list with each file's state, the download of what is ready</td></tr>
+      <tr><td>When it is done</td><td>The batch page's finished state; Home; My recordings</td><td>The same page's finished state; Home; My recordings</td></tr>
+      <tr><td>The download</td><td colspan="2">The same zip, one per batch</td></tr>
+      <tr><td>Kept after sign-out</td><td>Only what went into a case</td><td>Nothing</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="pick">
+      <span class="eyebrow">Three things only the maintainer can decide</span>
+      <ol>
+        <li><b>The name.</b> "Bulk transcription" is the drawing's, from the ask; "Quick transcripts" or "Just transcribe" are the alternatives. The name goes into the glossary before it goes on a page.</li>
+        <li><b>The two options.</b> Translate to English and the spoken language are drawn; say if the page should ask nothing at all (detect the language, never translate) or one thing more, such as Separate speakers.</li>
+        <li><b>Where in the rail.</b> Under Home, as drawn, so a newcomer sees it second; or last among the places, under Clips, for an office where cases are the day's work and bulk transcription the exception.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

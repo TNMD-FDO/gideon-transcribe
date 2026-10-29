@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Bulk transcription{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Bulk transcription (Phase 8 chapter 13, amended v1.173.0; the drawing
+    docs/spec/mockups/phase-8-bulk-transcription.html): the drop and two
+    options when nothing runs; the batch where it stands while one does; the
+    download when every file has ended. One page, one script (bulk.js), the
+    batch page's own state feed underneath.
+  {% endcomment %}
+  <div class="page workbench upload bulk">
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'home' %}">Home</a></span>
+      <div class="line"><h1>Bulk transcription</h1></div>
+      <p class="lead">
+        Drop your recordings in, press Start, and come back for one download of
+        every transcript. They are yours for this session and gone when you sign
+        out; nothing goes into a case.
+      </p>
+    </header>
+
+    {% if quota_notice %}<p class="notice">{{ quota_notice }}</p>{% endif %}
+    {% if disk_is_low %}
+      <p class="notice danger">
+        Uploading is paused because the server is low on space. Ask IT.{% if user.is_admin %} The data drive has {{ disk_free_gb }} free and the floor is {{ disk_floor_gb }} GB, set on the panel's <a href="{% url 'panel-settings' 'limits' %}">Limits</a> page.{% endif %}
+      </p>
+    {% elif not service_is_up and transcription_installed %}
+      <p class="notice danger">
+        Transcription is not available right now. Uploading is paused until it is back; anything already in the line waits there.
+      </p>
+    {% elif not transcription_installed %}
+      <p class="notice warn">
+        Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.
+      </p>
+    {% endif %}
+    {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
+
+    {# The drop: not offered while uploading is paused; hidden while a batch is shown, and Transcribe more shows it again. A batch already running is shown whatever the service is doing. #}
+    {% if not paused %}
+      <section id="bulk-drop" class="card"{% if shown %} hidden{% endif %}>
+        <div id="drop" class="drop hero">
+          <p class="big"><b>Drop recordings here</b></p>
+          <p class="or">or <label class="link" for="picker">choose files</label></p>
+          <input type="file" id="picker" multiple hidden>
+          <p class="muted small">
+            Up to {{ limits.files_per_batch }} files in a batch,
+            {{ limits.largest_file }} and {{ limits.longest_hours }} hours each.
+            Most audio and video files work; not zip files.
+          </p>
+        </div>
+        <ul id="chosen" class="cards"></ul>
+        <div class="bulk-options">
+          <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
+            <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
+          </label>
+          <label class="row" for="language">Spoken language
+            <select id="language">
+              <option value="">Detect it</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+            </select>
+          </label>
+          <span class="muted small">Speakers, vocabulary, a case or a recording type: use <a href="{% url 'upload' %}">Upload files</a> instead.</span>
+        </div>
+        <div class="dialog">
+          <button type="button" id="start" class="primary big" disabled>Start</button>
+          <span class="muted small" id="start-hint">Lights when a file is in.</span>
+        </div>
+        <p id="submit-problem" class="problem" hidden></p>
+        <ul id="progress" class="cards" hidden></ul>
+      </section>
+    {% endif %}
+
+      {# The batch: where each file stands, the download of what is ready; then the download as the page. #}
+      <section id="bulk-batch" class="card"{% if not shown %} hidden{% endif %}{% if shown %} data-batch="{{ shown.pk }}"{% endif %}>
+        <div id="bulk-done" class="done-hero" hidden>
+          <div class="tick">{% icon "done" %}</div>
+          <h2 id="bulk-done-heading"></h2>
+          <p id="bulk-done-when" class="lead"></p>
+          <a id="bulk-download-done" href="#"><button type="button" class="primary big">Download transcripts</button></a>
+          <div class="quiet-row">
+            <button type="button" class="btn clear-recordings" id="bulk-clear" data-batch="">Done with these</button>
+            <button type="button" class="btn" id="bulk-more">Transcribe more</button>
+          </div>
+        </div>
+        <div id="bulk-running">
+          <p id="bulk-lead" class="lead">Reading the batch...</p>
+          <div class="row" style="gap: 10px; flex-wrap: wrap">
+            <a id="bulk-download" href="#" hidden><button type="button" class="primary">Download what is ready</button></a>
+            <button type="button" id="bulk-cancel" class="ghost danger">Cancel the rest</button>
+          </div>
+        </div>
+        <ul id="bulk-rows" class="cards"></ul>
+        <p class="muted small">The files also appear under My recordings, as every upload does.</p>
+      </section>
+
+      {% if others %}
+        <section class="card">
+          <h2>Earlier this session</h2>
+          {% for one in others %}
+            <div class="row ready-row" data-batch="{{ one.batch.pk }}">
+              <b>{{ one.done }} transcript{{ one.done|pluralize }} ready</b>
+              <span class="muted small">uploaded {{ one.when|date:"j M" }} at {{ one.when|time:"g:i a" }}{% if one.failed %}, {{ one.failed }} not transcribed{% endif %}</span>
+              <span class="grow"></span>
+              <a href="{{ one.download }}" class="btn primary small">{% icon "download" %} Download transcripts</a>
+              <a href="{{ one.url }}" class="btn small">Open the batch</a>
+              <button type="button" class="btn ghost small clear-recordings" data-batch="{{ one.batch.pk }}">Done with these</button>
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+  </div>
+
+  <script src="{% static 'vendor/tus.min.js' %}"></script>
+  <script src="{% static 'clearing.js' %}"></script>
+  <script src="{% static 'bulk.js' %}"></script>
+{% endblock %}

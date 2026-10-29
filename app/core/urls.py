@@ -4,6 +4,7 @@ from django.urls import path
 
 from core import (
     assistant_pages,
+    bulk_pages,
     case_chat_pages,
     case_chronology_pages,
     case_pages,
@@ -40,6 +41,8 @@ urlpatterns = [
     path("", home.home, name="home"),
     path("recordings", pages.recordings, name="recordings"),
     path("upload", pages.upload, name="upload"),
+    # Bulk transcription (v1.173.0): files in, transcripts out, nothing kept.
+    path("bulk", bulk_pages.page, name="bulk"),
     path("start", pages.start, name="start"),
     # The user guide, rendered from docs/user-guide.md (ADR 0012).
     path("help/", pages.user_guide, name="help"),

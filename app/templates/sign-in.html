@@ -17,7 +17,8 @@
         {% if has_logo %}
           <img src="{% url 'logo' %}" alt="" class="office-logo">
         {% else %}
-          <svg class="mark big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><g stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="12" x2="8" y2="20"/><line x1="13" y1="8" x2="13" y2="24"/><line x1="18" y1="11" x2="18" y2="21"/><line x1="23" y1="14" x2="23" y2="18"/></g></svg>
+          {% comment %}The brand mark (v1.173.0), as the top bar draws it.{% endcomment %}
+          <svg class="mark big" viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round"><circle cx="16" cy="16" r="13.25"/><path d="M7.6 13.6v4.8M11 11.2v9.6M14.4 9v14M17.8 8v16M21.2 11v10M24.6 13.4v5.2"/></g></svg>
         {% endif %}
         {% if office_name %}
           <h1 class="office">{{ office_name }}</h1>

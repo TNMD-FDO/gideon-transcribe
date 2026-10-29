@@ -263,12 +263,16 @@ Where sign-in and the brand land, from v1.86.0 (Phase 8 chapter 13): the greetin
 _Avoid_: Start page (v1.29.0 to v1.85.2), dashboard, landing page, menu
 
 **Rail**:
-The column down the left of every page, from v1.86.0: the two actions at its top, Upload files and Record now (with the Record now setting on, or inside a Case with Live recording on), each carrying the Case the person is inside; then the places, each with its icon, its name and one line saying what it is for (Home "What is running, and what needs you"; Cases "Kept for a matter, after sign-out"; My recordings "This session only, then gone"; Clips "Pieces cut for a hearing"; Panel "Settings, status, people"; Help "The guide, at this page"). The place the person is on is lit; an action is not a place and lights nothing. It folds to icons on a narrow window and on the incident page. The top bar keeps the brand, the person's name, Sign out and the theme.
+The column down the left of every page, from v1.86.0: the two actions at its top, Upload files and Record now (with the Record now setting on, or inside a Case with Live recording on), each carrying the Case the person is inside; then the places, each with its icon, its name and one line saying what it is for (Home "What is running, and what needs you"; Bulk transcription "Files in, transcripts out, nothing kept" (from v1.173.0); Cases "Kept for a matter, after sign-out"; My recordings "This session only, then gone"; Clips "Pieces cut for a hearing"; Panel "Settings, status, people"; Help "The guide, at this page"). The place the person is on is lit; an action is not a place and lights nothing. It folds to icons on a narrow window and on the incident page. The top bar keeps the brand, the person's name, Sign out and the theme.
 _Avoid_: sidebar, menu, nav, top bar (for the places)
 
 **Ready to download**:
 Home's first section, when a Batch of this session has finished with at least one Transcript: the batch, how many transcripts are ready, Download transcripts, Open the batch and Done with these. It stays until Done with these; the Rail's Home item counts such batches. The same download is on My recordings, on the batch's group. Phase 8 chapter 13.
 _Avoid_: inbox, notifications, downloads page
+
+**Bulk transcription**:
+The Rail's place under Home, from v1.173.0 (Phase 8 chapter 13 as amended): one page for the errand of getting transcripts of a set of files and nothing else. Drop the files, two options (Translate to English, the spoken language), Start; the same page then lists each file and where it stands, offers the download of what is ready, and ends as the download with Done with these and Transcribe more. Under it a Batch like any other, this session only and never in a Case, so it is also under My recordings and on Home's Ready to download. Upload files stays the full page with its settings and its Cases.
+_Avoid_: quick transcribe, express, simple mode, bulk upload (it is the transcripts the person wants)
 
 **Start page**:
 Where sign-in landed from v1.29.0 to v1.85.2: one question, what do you want to do, and three doors, Upload files, Record now, Cases. Superseded by Home; /start follows to Home.

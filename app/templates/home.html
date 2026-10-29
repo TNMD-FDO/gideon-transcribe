@@ -101,6 +101,8 @@
       {% else %}
         {% url 'upload' as upload_url %}
         {% include "empty.html" with compact=True icon="upload" title="Nothing uploaded this session" line="Upload files or record here; they are listed until you sign out or put them in a case." action="Upload files" action_url=upload_url %}
+        {% comment %}The one change to Home for Bulk transcription (v1.173.0): a sentence where a newcomer is looking for it.{% endcomment %}
+        <p class="muted small empty-line">Just want transcripts of some files? <a href="{% url 'bulk' %}">Bulk transcription</a> is made for that.</p>
       {% endif %}
       {% if recorded_here %}
         <p class="muted small empty-line"><a href="{% url 'recordings' %}#recorded-here">{{ recorded_here }} recorded here</a></p>
