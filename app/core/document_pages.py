@@ -10,7 +10,7 @@ from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core import chronology, documents, incidents
+from core import case_bar, chronology, documents, incidents
 from core import home as home_page
 from core.case_pages import _on_or_404, _their_case
 from core.documents import READY, Document
@@ -288,6 +288,9 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
         {
             "page": "cases",
             "case": document.case,
+            "case_bar": case_bar.bar(
+                document.case, on="documents", here=document.title
+            ),
             "here_case": home_page.here_case_for(request.user, document.case),
             "document": document,
             "rows": rows,

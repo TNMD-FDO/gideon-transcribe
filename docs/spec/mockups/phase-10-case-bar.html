@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The case bar on every page</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --c1: #1f6fb2; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --c1: #7ab4e6; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --c1: #7ab4e6; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 0 0 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; overflow: hidden; }
+  .frame > * { padding-inline: 16px; }
+  .frame .body { padding-top: 2px; }
+  /* the case bar */
+  .casebar { display: flex; align-items: center; gap: 2px; padding: 6px 16px 0; background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; white-space: nowrap; }
+  .casebar .case { font-weight: 600; color: var(--accent); margin-right: 10px; padding-bottom: 6px; display: inline-flex; gap: 6px; align-items: center; }
+  .casebar .case i { width: 14px; height: 14px; border-radius: 3px; background: var(--accent-soft); display: inline-block; }
+  .casebar .tab { padding: 5px 10px; border-radius: 6px 6px 0 0; color: var(--muted); font-size: 13px; }
+  .casebar .tab .count { font-size: 11px; background: var(--surface-2); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+  .casebar .tab.on { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-bottom-color: var(--bg); margin-bottom: -1px; font-weight: 600; }
+  .casebar .here { color: var(--muted); font-size: 12px; margin-left: 8px; padding-bottom: 4px; }
+  .casebar.narrow { max-width: 390px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-top: 10px; }
+  .head h3 { margin: 0; font-size: 17px; }
+  .crumb { color: var(--muted); font-size: 12px; }
+  .player { height: 120px; background: linear-gradient(160deg, #2b3440, #0f141a); border-radius: var(--radius); display: flex; align-items: flex-end; padding: 8px 10px; color: #cfd8e3; font-family: var(--mono); font-size: 11px; margin: 0 16px; }
+  .lines { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 0 16px; padding: 8px 10px; font-size: 12px; }
+  .lines div { display: grid; grid-template-columns: 4.6rem 1fr; gap: 8px; padding: 2px 0; }
+  .lines .t { font-family: var(--mono); color: var(--muted); }
+  .wall { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 16px; }
+  .wall div { height: 70px; background: linear-gradient(160deg, #2b3440, #0f141a); border-radius: var(--radius); color: #cfd8e3; font-size: 11px; padding: 6px; }
+  .tabs2 { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 16px; }
+  .tabs2 span { padding: 4px 10px; color: var(--muted); font-size: 12px; }
+  .tabs2 .on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 8 chapter 1 and Phase 2, amended · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>The case bar on every page inside a case</h1>
+    <p class="lede">Today only the case page draws the case's tabs; the recording page, the incident page, the document page, the Notes page and the Speakers pages each point back a different way, and from some of them the case is two hops away. The drawing puts one bar at the top of every page that belongs to a case: the case's name, then the nine tabs with their counts, the tab the page lives under lit, with the page's own name after it. One press reaches any other part of the case. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The bar itself, wide and narrow</h2></div>
+    <div class="frame" style="padding-bottom: 0">
+      <div class="casebar" style="padding-left: 16px"><span class="case"><i></i>Harbour Street stop</span><span class="tab on">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span><span class="here">› BWC2-1, the recording open below</span></div>
+    </div>
+    <div class="frame" style="padding-bottom: 0; max-width: 390px">
+      <div class="casebar narrow"><span class="case"><i></i>Harbour Street stop</span><span class="tab">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab on">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span></div>
+    </div>
+    <div class="caption">
+      <p><b>One line, the same on every page.</b> The case's name, a link to the case page, then the tabs in the order the case page has them (v1.169.0), each with its count, each a link to that tab of the case page. A tab that is off for the office (Documents, Incidents, Proposed events) is absent, as on the case page.</p>
+      <p><b>The lit tab says where you are.</b> On a page that is not the case page the tab the page lives under is lit, and after the tabs the page's own name in the muted colour: "› BWC2-1, the recording open below", "› Traffic stop, 6 Nov". Pressing the lit tab goes to that tab of the case page, which is the list the page came from.</p>
+      <p><b>Narrow windows</b> scroll the bar sideways instead of wrapping it into three lines; the lit tab is brought into view when the page opens. The case page's own bar keeps wrapping as it does today.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The recording page and the incident page</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="casebar"><span class="case"><i></i>Harbour Street stop</span><span class="tab on">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span></div>
+        <div class="head"><div><h3>BWC2-1</h3><span class="crumb">47 min · body camera · 6 Nov 2025 · Ready</span></div><span><span class="btn tiny">Export ▾</span> <span class="btn tiny">Tools ▾</span></span></div>
+        <div class="player">▶ ──────●──────────────── 00:05:38 / 00:47:12</div>
+        <div class="lines"><div><span class="t">00:05:34</span><span>What did I do?</span></div><div><span class="t">00:05:38</span><span>I got, I got gun, I got gun.</span></div><div><span class="t">00:05:46</span><span>Hands! Hands!</span></div></div>
+      </div>
+      <div class="frame">
+        <div class="casebar"><span class="case"><i></i>Harbour Street stop</span><span class="tab">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab on">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span><span class="here">› Traffic stop, 6 Nov</span></div>
+        <div class="head"><div><h3>Traffic stop, 6 Nov</h3><span class="crumb">3 cameras synced · 5 events · clock 21:56:17</span></div><span><span class="btn tiny">Export ▾</span></span></div>
+        <div class="wall"><div>BWC1-1</div><div>BWC2-1</div><div>BWC3-1</div></div>
+        <div class="tabs2"><span class="on">Chronology</span><span>Cameras</span><span>Report</span><span>Memo</span><span>Details</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The recording page</b> loses the small back arrow and the crumb at its top, since the bar says the case and reaches it; the "This case" link under the video stays, as it also serves a recording in no case. A recording in no case shows no bar, and keeps its My recordings crumb.</p>
+      <p><b>The incident page</b> loses "in the case X" under its name and the Back to the case button at the right; both are the bar now. Its own work panel's tabs (Chronology, Cameras, Report, Memo, Details) stay where they are, a second row that belongs to the incident, not the case.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The document page, the Notes page and the Speakers page</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="casebar"><span class="case"><i></i>Harbour Street stop</span><span class="tab">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab on">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span></div>
+        <div class="head"><div><h3>Report 25-1187</h3><span class="crumb">42 pages · the report for Traffic stop, 6 Nov</span></div><span><span class="btn tiny ghost">Back to the incident</span> <span class="btn tiny">Download</span></span></div>
+        <div class="body muted small">the page pictures and their words, as today</div>
+      </div>
+      <div class="frame">
+        <div class="casebar"><span class="case"><i></i>Harbour Street stop</span><span class="tab">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab on">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span></div>
+        <div class="head"><div><h3>Notes <span class="pill">23</span></h3><span class="crumb">the Notes page: the notes on the left, the recording in hand on the right</span></div><span><span class="btn tiny">Recordings</span> <span class="btn tiny">Details</span></span></div>
+        <div class="body muted small">the notes and the player, as today; Back to the case goes, the bar has it</div>
+      </div>
+      <div class="frame">
+        <div class="casebar"><span class="case"><i></i>Harbour Street stop</span><span class="tab on">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="here">› BWC2-1 › Speakers</span></div>
+        <div class="head"><div><h3>Speakers, BWC2-1</h3><span class="crumb">the guided page: who is who, lane by lane</span></div><span><span class="btn tiny ghost">Back to the recording</span></span></div>
+        <div class="body muted small">the line-up with lanes, as today</div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The document page</b> keeps Back to the incident or Back to the recording, which do a finer job than the bar, and loses the case's name in its head. <b>The Notes page</b> loses Back to the case; its Recordings and Details buttons, which open its own panels, stay.</p>
+      <p><b>The Speakers pages</b> live under the recording, so the bar lights Recordings and says "› BWC2-1 › Speakers"; Back to the recording stays. The case's Speakers tab is one press away, where it was two. In a window of their own (Tools › Open in a window) the pages show no bar, as they show no rail.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>How it is built</h2></div>
+    <div class="cols">
+      <div class="frame" style="padding: 14px 16px"><b>One include, one helper.</b><div class="small muted" style="margin-top: 4px">The case page's tab markup moves into an include, <span class="mono">case-bar.html</span>, drawn from one helper that gathers the counts in a handful of cheap count queries (recordings, proposals waiting, notes, documents, incidents, clips, people named) and says which tabs the office has on. The case page uses it for its own bar, so there is one bar, not two that drift apart.</div></div>
+      <div class="frame" style="padding: 14px 16px"><b>Each page says its tab.</b><div class="small muted" style="margin-top: 4px">A page that belongs to a case hands the include its case, the tab it lives under and its own name: the recording page "recordings", the incident page "incidents", the document page "documents", the Notes page "notes", the Speakers pages "recordings" with the recording's name. The base layout draws the bar above the page's content when a page gives one.</div></div>
+      <div class="frame" style="padding: 14px 16px"><b>What it costs.</b><div class="small muted" style="margin-top: 4px">A handful of count queries on the five pages that did not have them; the recording page and the incident page already measure their queries in the suite, so the ceilings move by that handful. No migration, no new setting, no glossary word: the bar is the case page's tabs, reached from more pages.</div></div>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>The case page as it is, beside a recording opened from it: the same head, the page as the tab's content</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="casebar" style="background: var(--bg); border-bottom: 0; padding-top: 12px"><span class="case" style="font-size: 20px; color: var(--text)">Harbour Street stop</span><span class="here" style="margin-left: auto">14 recordings · 2 to review · enriched tonight</span></div>
+        <div class="casebar"><span class="tab on">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span></div>
+        <div class="body"><div class="lines" style="margin: 0"><div><span class="t">BWC1-1</span><span>47 min · body camera · 6 Nov · Ready</span></div><div><span class="t" style="color: var(--accent)">BWC2-1</span><span>47 min · body camera · 6 Nov · Ready</span></div><div><span class="t">BWC3-1</span><span>22 min · body camera · 6 Nov · Ready</span></div></div></div>
+      </div>
+      <div class="frame">
+        <div class="casebar" style="background: var(--bg); border-bottom: 0; padding-top: 12px"><span class="case">Harbour Street stop</span></div>
+        <div class="casebar"><span class="tab on">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span><span class="here">› BWC2-1</span></div>
+        <div class="head"><div><h3>BWC2-1</h3><span class="crumb">47 min · body camera · 6 Nov 2025 · Ready</span></div><span><span class="btn tiny">Export ▾</span> <span class="btn tiny">Tools ▾</span></span></div>
+        <div class="player">▶ ──────●──────────────── 00:05:38 / 00:47:12</div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The case page is untouched.</b> Its name, its line of counts and its tabs stay exactly where they are; the include only draws what it drew. Left: the case page today, the Recordings tab open on the list.</p>
+      <p><b>A deeper page is that head carried along.</b> Right: BWC2-1 opened from the list. The case's name sits where it sat, smaller and a link; the tabs sit under it in the same place; the lit tab has "› BWC2-1" after it; and the recording's own head and player sit below as the tab's content, the way the list sat below on the left. The eye reads it as the same page gone one level deeper, not a new window with its own navigation: nothing is added on the right, the rail at the left is the only other navigation, and no page opens in a new window.</p>
+      <p><b>What goes, so nothing is doubled.</b> The deeper pages' own ways back to the case (the back arrow and crumb, "in the case X", Back to the case) go, since the head is now the way back. Only the finer links stay, inside the page: Back to the incident on a document, Back to the recording on the Speakers pages. The case's line of counts stays on the case page alone.</p>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices</span><h2>Two things only the maintainer can decide</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>Counts on the bar away from the case page.</b> <b>Recommended:</b> the counts, as the case page shows them, so the bar reads the same everywhere and says at a glance that proposals are waiting. <b>Or:</b> names alone on the other pages, lighter to read and to query.</li>
+        <li><b>What the case's name in the bar opens.</b> <b>Recommended:</b> the case page on its Recordings tab, the case's front door. <b>Or:</b> the tab the person last had open on that case, which the case page already remembers for the Notes tab's shape but not for the tab itself.</li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>What does not change.</b> The pages' own heads, panels, layers and Back links that do a finer job; the rail at the left; the Preview's window; pages opened in a window of their own. The case page's bar is the same bar, drawn in the same place.</p>
+      <p><b>Size.</b> One release, no migration: the include and the helper, six templates, the base layout's one slot, the two query ceilings, the spec's Phase 8 chapter 1 ("The tabs, everywhere") amended to say the bar follows the case onto its pages.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

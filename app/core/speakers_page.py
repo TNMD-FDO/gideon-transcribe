@@ -17,7 +17,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from core import cases, clock_check, viewer
+from core import case_bar, cases, clock_check, viewer
 from core.recordings import Recording
 
 # Samples: up to three lines a Speaker spoke, one from each third of their
@@ -473,6 +473,14 @@ def context(request: HttpRequest, recording: Recording, *, in_window: bool) -> d
         "total": len(made),
         "fold_small": len(made) > MANY,
         "back_url": reverse("viewer", args=[recording.pk]),
+        # The case bar (v1.171.0): under the recording's tab, never in a window.
+        "case_bar": (
+            case_bar.bar(
+                recording.case, on="recordings", here=f"{recording.title} › Speakers"
+            )
+            if recording.case_id and not in_window
+            else None
+        ),
         "window_url": reverse("viewer-window", args=[recording.pk, "speakers"]),
         **page,
     }

@@ -127,6 +127,8 @@
         {% if messages %}
           {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
         {% endif %}
+        {% comment %}The case bar (v1.171.0): the case page's head carried onto a page that belongs to a case.{% endcomment %}
+        {% if case_bar %}{% include "case-bar-head.html" %}{% endif %}
         {% block content %}{% endblock %}
         {% comment %}
           The foot of a page: empty since v1.111.0, when Report a problem

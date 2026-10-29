@@ -19,6 +19,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import (
+    case_bar,
     cases,
     chronology,
     documents,
@@ -68,6 +69,7 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
         "incident.html",
         {
             "page": "cases",
+            "case_bar": case_bar.bar(case, on="incidents", here=incident.name),
             "case": case,
             "here_case": home.here_case_for(request.user, case),
             "incident": incident,

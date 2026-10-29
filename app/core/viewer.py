@@ -21,6 +21,7 @@ from django.views.decorators.http import require_POST
 from core import (
     assistant,
     audit,
+    case_bar,
     cases,
     clock_check,
     documents,
@@ -198,6 +199,12 @@ def viewer(request: HttpRequest, recording_id) -> HttpResponse:
         "viewer.html",
         {
             "page": "viewer",
+            # The case bar (v1.171.0): the case page's head carried along.
+            "case_bar": (
+                case_bar.bar(recording.case, on="recordings", here=recording.title)
+                if recording.case_id
+                else None
+            ),
             "panels_shown": PANELS,
             "here_case": home.here_case_for(request.user, recording.case),
             **_page_context(request, recording),

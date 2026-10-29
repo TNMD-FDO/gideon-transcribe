@@ -24,7 +24,7 @@
     {% endcomment %}
     <header class="page-head">
       <span class="eyebrow doc-ways">
-        <a href="{% url 'case' case.pk %}?tab=documents" title="Back to the case's Documents tab">{{ case.name }}</a>
+        {% comment %}The case bar above reaches the case and its Documents tab (v1.171.0); the finer ways back stay.{% endcomment %}
         {% if back_incident %}<a class="btn small ghost" href="{{ back_incident.url }}">{% icon "camera" %} Back to the incident</a>{% endif %}
         {% if back_recording %}<a class="btn small ghost" href="{% url 'viewer' back_recording.pk %}?panel=details">{% icon "play" %} Back to the recording</a>{% endif %}
       </span>

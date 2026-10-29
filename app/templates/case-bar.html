@@ -1,0 +1,13 @@
+{% load icons %}
+{% comment %}
+  The case's tabs (v1.171.0, the case bar): the same bar on the case page
+  and at the top of every page that belongs to the case, drawn from
+  core.case_bar.bar. The tab the page lives under is lit; away from the case
+  page the page's own name follows the tabs.
+{% endcomment %}
+<div class="tabs case-tabs" id="case-tabs" style="margin-top: 6px">
+  {% for t in bar.tabs %}
+    <a href="{{ t.url }}" class="tab{% if t.on %} on{% endif %}">{% icon t.icon %} {{ t.name }}{% if t.count_shown %} <span class="count">{{ t.count }}</span>{% endif %}</a>
+  {% endfor %}
+  {% if bar.here %}<span class="here muted small" title="Where you are in the case">&rsaquo; {{ bar.here }}</span>{% endif %}
+</div>

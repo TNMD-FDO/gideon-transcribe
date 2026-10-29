@@ -31,9 +31,8 @@
         Export, More). One line had held eleven controls at 1366.
       {% endcomment %}
       <div class="head-title">
-          {% if recording.case_id and in_case %}
-            <a href="{% url 'case' recording.case_id %}" title="Back to the case {{ recording.case.name }}" class="btn ghost icon">{% icon "back" %}</a>
-            <span class="crumb muted small"><a href="{% url 'case' recording.case_id %}">{{ recording.case.name }}</a></span>
+          {% comment %}In a case the case bar above the head is the way back (v1.171.0); the arrow and the crumb that stood here went with it.{% endcomment %}
+          {% if recording.case_id %}
           {% elif recording.is_dictation %}
             <a href="{% url 'recordings' %}" title="Back to My recordings" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'recordings' %}">My recordings</a></span>

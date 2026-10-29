@@ -1,0 +1,14 @@
+{% comment %}
+  The case page's head carried onto a deeper page (v1.171.0; the drawing
+  docs/spec/mockups/phase-10-case-bar.html, figure E): the case's name where
+  it sits on the case page, smaller and a link, then the tabs in the same
+  place; the page's own head follows below as the tab's content. Drawn by
+  base.html when a page gives `case_bar`.
+{% endcomment %}
+<div class="case-bar" id="case-bar">
+  <div class="case-bar-name">
+    <span class="eyebrow"><a href="{{ case_bar.cases_url }}">Cases</a></span>
+    <a class="case-bar-case" href="{{ case_bar.url }}" title="The case page">{{ case_bar.name }}</a>
+  </div>
+  {% include "case-bar.html" with bar=case_bar %}
+</div>

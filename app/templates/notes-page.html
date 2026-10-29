@@ -24,7 +24,7 @@
       buttons in the head that swap the left column's panel.
     {% endcomment %}
     <div class="row np-head-row">
-      <a class="btn small" href="{% url 'case' case.pk %}" title="Back to {{ case.name }}">&lsaquo; Back to the case</a>
+      {% comment %}Back to the case went with the case bar above (v1.171.0).{% endcomment %}
       <div class="grow np-title-box">
         <h1 class="np-title">Notes <span class="count" id="np-count-notes"></span> <span class="muted np-case">&middot; {{ case.name }}</span></h1>
         <p class="lead small muted" id="np-lead">Reading the notes...</p>

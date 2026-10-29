@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from core import (
     assignments,
+    case_bar,
     case_chat,
     case_search,
     cases,
@@ -56,6 +57,7 @@ def page(request: HttpRequest, case_id) -> HttpResponse:
         {
             "page": "cases",
             "case": case,
+            "case_bar": case_bar.bar(case, on="notes", here="Notes page"),
             "role": role,
             "here_case": home.here_case_for(request.user, case),
             "list_url": reverse("notes-page-list", args=[case.pk]),

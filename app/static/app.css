@@ -3671,3 +3671,13 @@ body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
 .compare-layer { margin-top: 12px; }
 .compare-layer .compare-box { margin: 0; }
 [data-case-compare].on { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* The case bar (v1.171.0; the drawing phase-10-case-bar.html): the case page's head carried onto a deeper page, the tabs scrolling sideways on a narrow window, the page's own name after the lit tab. */
+.case-bar { margin: 0 0 14px; }
+.case-bar .case-bar-name { display: flex; align-items: baseline; gap: 10px; }
+.case-bar .case-bar-name .eyebrow a { color: inherit; text-decoration: none; }
+.case-bar .case-bar-case { font-weight: 600; font-size: 15px; color: var(--text); text-decoration: none; }
+.case-bar .case-bar-case:hover { color: var(--accent); }
+.case-bar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+.case-tabs .here { align-self: center; margin-left: 8px; white-space: nowrap; }
+.sp-head.inc-head { margin-top: 0; }

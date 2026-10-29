@@ -19,6 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.171.0, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The case bar (Phase 8 chapter 1 amended; the drawing `docs/spec/mockups/phase-10-case-bar.html`).** Every page that belongs to a case now carries the case page's head at its top: the case's name, a link, then the case's tabs with their counts in the same place, the tab the page lives under lit with the page's own name after it, so a recording, an incident, a document, the Notes page or a Speakers page reads as the tab's content one level deeper and any other part of the case is one press away. The case page's own bar is drawn from the same helper, so there is one bar. The deeper pages' own ways back went with it: the recording page's back arrow and crumb, the incident page's "in the case" and Back to the case, the Notes page's Back to the case; the finer links stay. A narrow window scrolls the bar sideways; a page opened in a window of its own shows none. The case page itself is unchanged.
+
 ## v1.170.1, 2026-10-29
 
 ```

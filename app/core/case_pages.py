@@ -28,6 +28,7 @@ from django.views.decorators.http import require_POST
 from core import (
     assignments,
     audit,
+    case_bar,
     case_search,
     cases,
     dashboard,
@@ -311,6 +312,35 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     counts = dashboard.counts_for([case], request.user)[case.pk]
     # The videos not yet enriched, read once for the line and the offer.
     unenriched = vision.unenriched(case)
+    # The counts the tabs show, gathered once (v1.171.0): the bar's helper
+    # takes them so the page asks nothing twice.
+    speakers_tab = (
+        _speakers_tab(case, request.user)
+        if tab == "speakers"
+        else {"people_count": case.people.count()}
+    )
+    clips_count = _clips_count(case)
+    notes_count = notes.count(case)
+    proposed_count = (
+        proposals.Proposal.objects.filter(case=case, state=proposals.WAITING).count()
+        if proposed_on
+        else 0
+    )
+    documents_count = documents.count(case) if documents.on() else 0
+    incidents_context = _incidents_context(case)
+    case_tabs = case_bar.bar(
+        case,
+        on=tab,
+        counts={
+            "recordings": len(rows),
+            "proposed": proposed_count,
+            "notes": notes_count,
+            "documents": documents_count,
+            "incidents": len(incidents_context.get("incident_rows", [])),
+            "clips": clips_count,
+            "speakers": speakers_tab["people_count"],
+        },
+    )
 
     return render(
         request,
@@ -320,14 +350,12 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "case": case,
             "here_case": home.here_case_for(request.user, case),
             "tab": tab,
+            # The tabs from the one helper (v1.171.0, the case bar).
+            "case_tabs": case_tabs,
             "warned": retention.is_warned(left),
             "deletes_line": retention.deletes_line(left),
             # The Speakers tab: the Case's People and the Recordings still unnamed.
-            **(
-                _speakers_tab(case, request.user)
-                if tab == "speakers"
-                else {"people_count": case.people.count()}
-            ),
+            **speakers_tab,
             "people_said": request.session.pop("people_said", ""),
             "case_chat_available": chat_here,
             # Ask Gideon (Phase 7 chapter 5): on while the case chat is and the
@@ -340,17 +368,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "clips_here": _clips_in(case, request.user) if tab == "clips" else [],
             # The tab says how many on every tab, as Recordings and Speakers do
             # (v1.63.2); the rows themselves are built only on the Clips tab.
-            "clips_count": _clips_count(case),
+            "clips_count": clips_count,
             # The Notes tab (Phase 8 chapter 2): every note in the case.
-            "notes_count": notes.count(case),
+            "notes_count": notes_count,
             "proposed_on": proposed_on,
-            "proposed_count": (
-                proposals.Proposal.objects.filter(
-                    case=case, state=proposals.WAITING
-                ).count()
-                if proposed_on
-                else 0
-            ),
+            "proposed_count": proposed_count,
             "notes": (
                 notes.of_case(case, request.GET.get("kind", ""))
                 if tab == "notes"
@@ -358,7 +380,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             ),
             # Documents beside the cameras (Phase 8 chapter 4, part 1).
             "documents_on": documents.on(),
-            "documents_count": documents.count(case) if documents.on() else 0,
+            "documents_count": documents_count,
             "documents": _documents_with_exports(case) if tab == "documents" else [],
             "document_homes": documents.homes_of(case) if tab == "documents" else [],
             "add_document_url": documents.add_url(case),
@@ -412,7 +434,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "size": uploads.as_size(counts["size_bytes"]),
             # Incidents (Phase 6 chapter 1): the strip under the case name,
             # the offers, and the videos New incident lists.
-            **_incidents_context(case),
+            **incidents_context,
         },
     )
 
