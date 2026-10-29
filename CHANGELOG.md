@@ -19,6 +19,18 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.170.0, 2026-10-29
+
+```
+Models: unchanged
+Database: migrates (0100: a comparison with the case as its home, and its child readings)
+```
+
+- **The comparison against the case (Phase 10 chapter 4, the third release; the drawing `docs/spec/mockups/phase-10-proposed-events-and-comparison.html`).** The Documents tab gains the column Against the case and, per document, Compare with the case or Comparison. The report is read against every recording of the case that has a transcript, one reading each in turn as a recording's comparison reads a transcript and its Digest, the state line saying how far it has got; the findings gather on one layer under the table, each naming its recording, in day and time order on the case's clock with By recording as the other order; a moment plays in the Preview's window. The document keeps its home, and the comparison inside an incident and on a recording are untouched.
+- **The acts on the layer** reach the finding's own reading: Dismiss, Undo, Note, and Make it a note, which writes the note on that recording at the moment, saying it came from the report. A Not on camera finding opens the Preview's window on its recording with Make it a note here in the foot, which writes the note at the moment the player is at.
+- **Stale and again.** A recording landed since the run is counted on the state line; Compare again replaces the run. Comparison to Word for the case names the recordings and adds a Recording column.
+- **Audit rows.** Comparison run per reading as today, and one for the whole case with the recordings count and how many were read. Never a paragraph's words or a claim.
+
 ## v1.169.0, 2026-10-29
 
 ```

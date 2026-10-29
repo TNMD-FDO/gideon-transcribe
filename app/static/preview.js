@@ -276,6 +276,12 @@
       var strip = card.querySelector(".preview-proposed");
       if (!strip) { return; }
       var p = asked && asked.proposed;
+      var f = asked && asked.finding;
+      if (f) {
+        strip.hidden = false;
+        strip.innerHTML = "<b>" + (f.done_words ? "Noted:" : "Not on camera:") + "</b> " + escape(f.claim) + " <span class='muted'>· find the moment on " + escape(f.where || "this recording") + " and make it a note there</span>";
+        return;
+      }
       if (!p) { strip.hidden = true; strip.innerHTML = ""; return; }
       strip.hidden = false;
       strip.innerHTML = "<b>" + (p.state === "accepted" ? "Accepted:" : "Proposed:") + "</b> " + escape(p.text) + (p.source_words ? " <span class='muted'>· " + escape(p.source_words) + "</span>" : "") +
@@ -316,7 +322,35 @@
       box.querySelector("textarea").focus();
     }
 
+    function noteFinding() {
+      var f = asked.finding;
+      var at = media() ? media().currentTime : told.seconds;
+      var body = new URLSearchParams();
+      Object.keys(f.fields).forEach(function (key) { body.append(key, f.fields[key]); });
+      body.append("at", at.toFixed(2));
+      fetch(f.act, { method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": cookie("csrftoken") }, body: body })
+        .then(function (answer) { return answer.json().then(function (said) { return { ok: answer.ok, said: said }; }); })
+        .then(function (got) {
+          if (!card || !asked || asked.finding !== f) { return; }
+          if (!got.ok) { saved((got.said && got.said.error) || "That did not go through.", null); return; }
+          f.done_words = true;
+          drawProposed();
+          drawFoot();
+          saved("A note is written at " + clockOf(at) + ".", null);
+          if (f.done) { f.done(); }
+          read(at, false);
+        })
+        .catch(function () { saved("That did not go through.", null); });
+    }
+
     function drawFoot() {
+      if (asked && asked.finding && !asked.finding.done_words) {
+        card.querySelector(".preview-foot").innerHTML =
+          "<button type='button' class='small primary' data-preview-act='note-finding' title='The claim becomes a note on this recording at the moment the player is at, in your name, saying it came from the report'>Make it a note here</button>" +
+          "<span class='muted tiny'>play to the moment, then press</span>" +
+          (host ? "" : "<a class='btn small ghost' href='" + escape(told.open) + "' style='margin-left: auto'>Open the recording</a>");
+        return;
+      }
       if (asked && asked.proposed && asked.proposed.state !== "accepted" && asked.proposed.state !== "dismissed") {
         card.querySelector(".preview-foot").innerHTML =
           "<button type='button' class='small primary' data-preview-act='accept' title='The sentence becomes a note on this recording at the moment, in your name'>Accept</button>" +
@@ -586,6 +620,7 @@
         else if (act.dataset.previewAct === "accept") { decideProposed("accept"); }
         else if (act.dataset.previewAct === "dismiss") { decideProposed("dismiss"); }
         else if (act.dataset.previewAct === "accept-edit") { drawProposedEdit(); }
+        else if (act.dataset.previewAct === "note-finding") { noteFinding(); }
         else if (act.dataset.previewAct === "accept-edit-save") { var typed = card.querySelector("#preview-note-text"); if (typed && typed.value.trim()) { decideProposed("accept_edit", typed.value); } }
         return;
       }
@@ -677,7 +712,10 @@
         speaker: given.speaker || given.person || "",
         // A proposed event (v1.169.0): its sentence above the lines, and
         // Accept, Accept and edit and Dismiss in the foot.
-        proposed: given.proposed || null
+        proposed: given.proposed || null,
+        // A comparison's finding with no moment (v1.170.0): Choose the
+        // moment, Make it a note here in the foot.
+        finding: given.finding || null
       };
       if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); }
       noting = null;
@@ -686,7 +724,7 @@
       if (card && !host && card.classList.contains("snippet") !== isSnippet()) { close(); asked = {
         recording: given.recording, seconds: seconds, from: given.from || null,
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
-        speaker: given.speaker || given.person || "", proposed: given.proposed || null
+        speaker: given.speaker || given.person || "", proposed: given.proposed || null, finding: given.finding || null
       }; if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); } }
       if (!card) { build(); }
       if (same && media()) {

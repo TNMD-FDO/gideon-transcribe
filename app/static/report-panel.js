@@ -144,8 +144,14 @@
           "<button type='button' class='pill small" + (!kept.filter ? " on" : "") + "' data-filter=''>All (" + Object.keys(counts).reduce(function (n, k) { return n + counts[k]; }, 0) + ")</button>" +
           (C.marks || []).map(function (mark) {
             return "<button type='button' class='pill small " + mark.key + (kept.filter === mark.key ? " on" : "") + "' data-filter='" + mark.key + "'>" + escape(mark.words) + " (" + (counts[mark.key] || 0) + ")</button>";
-          }).join("") + "</div>";
+          }).join("") +
+          // Against the case (v1.170.0): by day and time on the case's clock, or by recording.
+          (C.home === "case" ? "<span class='grow'></span><button type='button' class='pill small" + (kept.order === "recording" ? " on" : "") + "' data-order='recording'>By recording</button><button type='button' class='pill small" + (kept.order !== "recording" ? " on" : "") + "' data-order='time'>By day and time</button>" : "") +
+          "</div>";
         var rows = (C.findings || []).filter(function (one) { return !kept.filter || one.mark === kept.filter; });
+        if (C.home === "case" && kept.order === "recording") {
+          rows = rows.slice().sort(function (a, b) { return (a.recording || "").localeCompare(b.recording || "") || ((a.at === null || a.at === undefined ? -1 : a.at) - (b.at === null || b.at === undefined ? -1 : b.at)); });
+        }
         if (!rows.length) {
           html += "<p class='muted'>" + (C.findings && C.findings.length ? "Nothing with that mark." : "No findings: the report and the record gave the assistant nothing to set beside each other.") + "</p>";
         } else {
@@ -154,7 +160,8 @@
           rows.forEach(function (one) {
             html += "<tr data-finding='" + escape(one.id) + "' class='" + (one.dismissed ? "dismissed" : "") + "'>" +
               "<td class='t'><span class='pill small mark " + escape(one.mark) + "'>" + escape(one.mark_words) + "</span>" +
-              "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'>" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
+              "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'" + (one.recording_id ? " data-recording='" + escape(one.recording_id) + "'" : "") + ">" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
+              (one.recording ? "<div class='muted small'>" + escape(one.recording) + "</div>" : "") +
               (one.note_id ? "<div class='muted small'>a note on " + escape(one.note_on || "the recording") + "</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
               (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted' title='" + quoted(one.paragraph) + "'>" + escape(shorten(one.paragraph, 220)) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
@@ -207,14 +214,29 @@
         }
         var filter = event.target.closest("[data-filter]");
         if (filter) { kept.filter = filter.dataset.filter; render(); return; }
+        var order = event.target.closest("[data-order]");
+        if (order) { kept.order = order.dataset.order; render(); return; }
         var play = event.target.closest(".cite.play[data-at]");
-        if (play) { event.preventDefault(); seekTo(parseFloat(play.dataset.at)); return; }
+        if (play) {
+          event.preventDefault();
+          // On the case's layer (v1.170.0) the moment plays in the Preview's window.
+          if (play.dataset.recording && window.Preview && window.Preview.open) { window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.at), from: play }); return; }
+          seekTo(parseFloat(play.dataset.at));
+          return;
+        }
         var make = event.target.closest("[data-make]");
         if (make) {
           var finding = (kept.state.findings || []).filter(function (one) { return one.id === make.dataset.make; })[0];
           if (finding && (finding.at === null || finding.at === undefined) && window.INCIDENT_PAGE) {
             // Not on camera: the report has no clock, so the event box asks the moment.
             window.INCIDENT_PAGE.addEvent(undefined, finding.claim, "[Report, page " + finding.page + ", paragraph " + finding.n + "] " + finding.paragraph);
+            return;
+          }
+          if (finding && (finding.at === null || finding.at === undefined) && finding.recording_id && window.Preview && window.Preview.open) {
+            // Choose the moment (v1.170.0): the Preview's window on the finding's recording, Make it a note here in its foot.
+            var fields = { action: "make_note", finding: finding.id, home: urls.home };
+            fields[urls.home] = urls.homeId;
+            window.Preview.open({ recording: finding.recording_id, seconds: 0, from: make, finding: { claim: finding.claim, where: finding.recording, act: urls.act || (urls.comparison + "/act"), fields: fields, done: load } });
             return;
           }
           act({ action: "make_note", finding: make.dataset.make }).then(function () {

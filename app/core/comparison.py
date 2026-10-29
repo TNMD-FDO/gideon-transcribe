@@ -12,6 +12,7 @@ the cameras or the Chronology change, as the memo is.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import logging
 import re
@@ -85,6 +86,24 @@ class Comparison(models.Model):
         blank=True,
         related_name="comparisons",
     )
+    # The whole case as the home (Phase 10 chapter 4, v1.170.0): one row that
+    # reads the document against every recording of the case in turn, each
+    # reading a child row of its own with `parent` set; the parent holds the
+    # findings merged, each naming its recording, by day and time.
+    case = models.ForeignKey(
+        "core.Case",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="comparisons",
+    )
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
     asked_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -128,7 +147,7 @@ class Comparison(models.Model):
         return f"comparison of {self.document_id}"
 
     def home(self):
-        return self.incident or self.recording
+        return self.incident or self.recording or self.case
 
     def counts(self) -> dict:
         out = {mark: 0 for mark in MARKS}
@@ -169,14 +188,37 @@ def possible(document: Document, home) -> tuple[bool, str]:
         ):
             return False, "Sync a camera that has a transcript first."
         return True, ""
+    if _is_case(home):
+        if not _readable(home):
+            return False, "No recording in the case has a transcript yet."
+        return True, ""
     if getattr(home, "transcript", None) is None:
         return False, "The recording has no transcript to compare against yet."
     return True, ""
 
 
+def _is_case(home) -> bool:
+    from core.cases import Case
+
+    return isinstance(home, Case)
+
+
+def _readable(case) -> list:
+    """The recordings a case comparison reads: those with a transcript."""
+    return [
+        one
+        for one in case.recordings.select_related("transcript").order_by(
+            "created", "title"
+        )
+        if getattr(one, "transcript", None) is not None
+    ]
+
+
 def of(document: Document, home) -> Comparison | None:
     if isinstance(home, incidents.Incident):
         return document.comparisons.filter(incident=home).first()
+    if _is_case(home):
+        return document.comparisons.filter(case=home).first()
     return document.comparisons.filter(recording=home).first()
 
 
@@ -190,16 +232,22 @@ def ask_for(document: Document, home, *, by) -> Comparison | None:
     if old is not None and old.state in (QUEUED, RUNNING):
         return old
     if old is not None:
-        # Every older one, not the first found (v1.131.0).
-        document.comparisons.filter(
-            incident=home if isinstance(home, incidents.Incident) else None,
-            recording=home if not isinstance(home, incidents.Incident) else None,
-        ).delete()
-    fields = (
-        {"incident": home}
-        if isinstance(home, incidents.Incident)
-        else {"recording": home}
-    )
+        # Every older one, not the first found (v1.131.0); a case row's
+        # children go with it.
+        if _is_case(home):
+            document.comparisons.filter(case=home).delete()
+        else:
+            document.comparisons.filter(
+                incident=home if isinstance(home, incidents.Incident) else None,
+                recording=home if not isinstance(home, incidents.Incident) else None,
+                parent__isnull=True,
+            ).delete()
+    if isinstance(home, incidents.Incident):
+        fields = {"incident": home}
+    elif _is_case(home):
+        fields = {"case": home}
+    else:
+        fields = {"recording": home}
     comparison = Comparison.objects.create(
         document=document,
         asked_by=by,
@@ -208,7 +256,10 @@ def ask_for(document: Document, home, *, by) -> Comparison | None:
     )
     from core import tasks
 
-    tasks.compare_report.defer(comparison_id=str(comparison.pk))
+    if _is_case(home):
+        tasks.compare_report_case.defer(comparison_id=str(comparison.pk))
+    else:
+        tasks.compare_report.defer(comparison_id=str(comparison.pk))
     return comparison
 
 
@@ -221,6 +272,9 @@ def _size_of(document: Document, home) -> int:
     from core import sitting
 
     windows = _paragraph_windows(document)
+    if _is_case(home):
+        # Every recording read in turn (v1.170.0): the sum of their readings.
+        return sum(_size_of(document, one) for one in _readable(home))
     if isinstance(home, incidents.Incident):
         record = sitting.record_tokens(home)
     else:
@@ -999,6 +1053,178 @@ def compare(comparison_id, attempt: int = 1) -> None:
         )
 
 
+# The case as the home (Phase 10 chapter 4, v1.170.0) -----------------------------
+
+
+def compare_for_case(comparison_id, attempt: int = 1) -> None:
+    """One run per recording, in turn: each a child comparison of the parent
+    row, read as a recording's comparison reads a transcript and its Digest,
+    since one record of a whole case does not fit a call. The parent says
+    how far it has got, and when every child is done holds their findings
+    merged, each naming its recording, by day and time on the case's clock."""
+    parent = (
+        Comparison.objects.filter(pk=comparison_id, case__isnull=False)
+        .select_related("document", "document__case", "case", "asked_by")
+        .first()
+    )
+    if parent is None or parent.state not in (QUEUED, RUNNING):
+        return
+    document = parent.document
+    recordings = _readable(parent.case)
+    parent.state = RUNNING
+    parent.stage = f"Reading recording 1 of {len(recordings)}"
+    parent.expectation = expectation.started(parent.expectation)
+    parent.save(update_fields=["state", "stage", "expectation"])
+    read = 0
+    failed = ""
+    for number, recording in enumerate(recordings, 1):
+        if not Comparison.objects.filter(pk=parent.pk).exists():
+            return
+        child = Comparison.objects.create(
+            document=document,
+            recording=recording,
+            parent=parent,
+            asked_by=parent.asked_by,
+            expectation=expectation.note(
+                "compare_report", _size_of(document, recording)
+            ),
+        )
+        compare(child.pk)
+        child.refresh_from_db()
+        if child.state == DONE:
+            read += 1
+        else:
+            failed = child.reason_class or failed
+        Comparison.objects.filter(pk=parent.pk).update(
+            stage=f"Read {number} of {len(recordings)} recordings"
+        )
+    parent.refresh_from_db()
+    if not read:
+        parent.state = FAILED
+        parent.stage = ""
+        parent.reason_class = failed or engine.ERROR
+        parent.save(update_fields=["state", "stage", "reason_class"])
+        return
+    _merge(parent)
+    parent.cameras_used = [
+        _recording_words(child.recording)
+        for child in parent.children.filter(state=DONE)
+        .order_by("created")
+        .select_related("recording")
+    ]
+    parent.windows = max((child.windows for child in parent.children.all()), default=0)
+    parent.cut_short = sum(child.cut_short for child in parent.children.all())
+    parent.record_lines = sum(child.record_lines for child in parent.children.all())
+    parent.stage = ""
+    parent.state = DONE
+    parent.reason_class = ""
+    parent.written_at = timezone.now()
+    parent.save()
+    counts = parent.counts()
+    audit.write(
+        audit.Category.CASES,
+        "Comparison run",
+        actor=parent.asked_by,
+        affected_user=(
+            document.case.owner
+            if parent.asked_by is not None
+            and document.case.owner_id != parent.asked_by.pk
+            else None
+        ),
+        object_type="document",
+        object_id=document.pk,
+        object_label=document.title,
+        whole_case=True,
+        recordings=len(recordings),
+        read=read,
+        findings=len(parent.findings),
+        **{mark: counts[mark] for mark in MARKS},
+    )
+
+
+def _recording_words(recording) -> str:
+    return str((recording.stamp or {}).get("camera") or recording.title)
+
+
+def _merge(parent: Comparison) -> None:
+    """The children's findings as one list on the parent: each id the
+    child's and the finding's joined, the recording named, the moment as
+    the case's clock has it, in day and time order with the recordings' own
+    order inside a moment; a Not on camera finding first on its recording."""
+    from core import case_chronology, exports
+
+    rows = []
+    for child in (
+        parent.children.filter(state=DONE)
+        .order_by("created")
+        .select_related("recording")
+    ):
+        recording = child.recording
+        name = _recording_words(recording)
+        date, start, how = case_chronology.clock_of(recording)
+        for one in child.findings:
+            at = one.get("at")
+            # The key: the day, the moment on the case's clock, then the
+            # recording; a finding with no moment sorts at its recording's
+            # start, before its timed ones.
+            day = date or dt.date.max
+            if at is None:
+                key = (day, start or 0.0, -1, name)
+                clock = ""
+            elif date is not None and start is not None:
+                key = (day, start + float(at), 0, name)
+                clock = (
+                    f"{case_chronology.day_words(date)} "
+                    f"{case_chronology.hms(start + float(at))}"
+                )
+            elif date is not None:
+                key = (day, float(at), 0, name)
+                clock = (
+                    f"{case_chronology.day_words(date)} · "
+                    f"{exports.clock(float(at))} into {name}"
+                )
+            else:
+                key = (day, float(at), 0, name)
+                clock = f"{exports.clock(float(at))} into {name}"
+            rows.append(
+                (
+                    key,
+                    {
+                        **one,
+                        "id": f"{child.pk}:{one['id']}",
+                        "recording": name,
+                        "recording_id": str(recording.pk),
+                        "child": str(child.pk),
+                        "clock_words": clock,
+                    },
+                )
+            )
+    rows.sort(key=lambda row: row[0])
+    parent.findings = [row[1] for row in rows]
+    parent.save(update_fields=["findings"])
+
+
+def _resolve(parent: Comparison, finding_id: str):
+    """A merged finding's child comparison and its own id there."""
+    child_id, _, own = str(finding_id).partition(":")
+    if not own:
+        return None, ""
+    try:
+        uuid.UUID(child_id)
+    except ValueError:
+        return None, ""
+    child = parent.children.filter(pk=child_id).first()
+    return child, own
+
+
+def not_yet_compared(parent: Comparison) -> int:
+    """Recordings with a transcript the case run has not read: landed since."""
+    if not parent.case_id:
+        return 0
+    read = set(parent.children.values_list("recording_id", flat=True))
+    return sum(1 for one in _readable(parent.case) if one.pk not in read)
+
+
 def sitting_read_words(comparison: Comparison) -> str:
     """ "everything said on 12 cameras and what 7 of them showed" (Phase 8
     chapter 9), for the state line and the Word export."""
@@ -1097,6 +1323,14 @@ def second_look_words(comparison: Comparison) -> str:
 
 
 def stale_words(comparison: Comparison) -> str:
+    if comparison.state == DONE and comparison.case_id:
+        left = not_yet_compared(comparison)
+        return (
+            f"{left} recording{'' if left == 1 else 's'} landed since and "
+            "not yet compared"
+            if left
+            else ""
+        )
     if comparison.state != DONE or not comparison.incident_id:
         return ""
     from core.incident_assistant import cameras_signature, events_signature
@@ -1132,7 +1366,11 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
         "act_url": reverse(
             "document-comparison-act", args=[document.case_id, document.pk]
         ),
-        "home": "incident" if isinstance(home, incidents.Incident) else "recording",
+        "home": (
+            "incident"
+            if isinstance(home, incidents.Incident)
+            else ("case" if _is_case(home) else "recording")
+        ),
         "home_id": str(home.pk),
         "can_make_note": True,
         "marks": [{"key": mark, "words": MARK_WORDS[mark]} for mark in MARKS],
@@ -1150,6 +1388,27 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
         words = "Waiting for the engine..."
     elif comparison.state == RUNNING:
         words = comparison.stage or "Reading..."
+    elif comparison.state == DONE and comparison.case_id:
+        counts = comparison.counts()
+        when = (
+            timezone.localtime(comparison.written_at).strftime("%H:%M")
+            if comparison.written_at
+            else ""
+        )
+        read = len(comparison.cameras_used)
+        words = (
+            f"{document.pages} pages against {read} "
+            f"{'recording' if read == 1 else 'recordings'}, read one at a time; "
+            + counts_words(counts)
+            + (f"; written at {when}" if when else "")
+            + (
+                f"; {comparison.cut_short} answer"
+                f"{'' if comparison.cut_short == 1 else 's'} cut short, "
+                "raise the Comparison answer cap"
+                if comparison.cut_short
+                else ""
+            )
+        )
     elif comparison.state == FAILED:
         words = assistant.what_to_say(comparison.reason_class)
     else:
@@ -1201,7 +1460,11 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
             {
                 **one,
                 "mark_words": MARK_WORDS.get(one["mark"], one["mark"]),
-                "clock": clock_words(comparison, one.get("at")),
+                "clock": (
+                    one.get("clock_words", "")
+                    if comparison.case_id
+                    else clock_words(comparison, one.get("at"))
+                ),
                 "paragraph_url": (
                     f"{document.url()}?page={one['page']}&para={one['n']}"
                     if one.get("page")
@@ -1222,7 +1485,25 @@ def _finding(comparison: Comparison, finding_id: str) -> dict | None:
     return next((one for one in comparison.findings if one["id"] == finding_id), None)
 
 
+def _on_child(comparison: Comparison, finding_id: str, act):
+    """An act on a case row's finding: done on the child's own, then merged."""
+    child, own = _resolve(comparison, finding_id)
+    if child is None:
+        return None
+    out = act(child, own)
+    _merge(comparison)
+    return out
+
+
 def set_dismissed(comparison: Comparison, finding_id: str, dismissed: bool) -> bool:
+    if comparison.case_id:
+        return bool(
+            _on_child(
+                comparison,
+                finding_id,
+                lambda child, own: set_dismissed(child, own, dismissed),
+            )
+        )
     one = _finding(comparison, finding_id)
     if one is None:
         return False
@@ -1232,6 +1513,12 @@ def set_dismissed(comparison: Comparison, finding_id: str, dismissed: bool) -> b
 
 
 def set_note(comparison: Comparison, finding_id: str, note: str) -> bool:
+    if comparison.case_id:
+        return bool(
+            _on_child(
+                comparison, finding_id, lambda child, own: set_note(child, own, note)
+            )
+        )
     one = _finding(comparison, finding_id)
     if one is None:
         return False
@@ -1246,6 +1533,13 @@ def make_note(comparison: Comparison, finding_id: str, *, at=None, by, request=N
     from the report, page and paragraph; on an incident the note goes on
     the camera running at the moment, the one with a line being spoken
     first. The chronology shows it as a note event resting on the paragraph."""
+    if comparison.case_id:
+        child, own = _resolve(comparison, finding_id)
+        if child is None:
+            raise ValueError("no such finding")
+        home = make_note(child, own, at=at, by=by, request=request)
+        _merge(comparison)
+        return home
     one = _finding(comparison, finding_id)
     if one is None:
         raise ValueError("no such finding")
@@ -1327,7 +1621,9 @@ def word(comparison: Comparison, exported_by: str) -> bytes:
 
     document = comparison.document
     home = comparison.home()
-    home_name = home.name if comparison.incident_id else home.title
+    home_name = (
+        home.name if (comparison.incident_id or comparison.case_id) else home.title
+    )
     doc = exports._open_record_document()
     exports._office_head(doc)
     heading = doc.add_paragraph(f"Comparison: {document.title}")
@@ -1340,9 +1636,17 @@ def word(comparison: Comparison, exported_by: str) -> bytes:
         [
             (
                 "Against",
-                f"{'Incident' if comparison.incident_id else 'Recording'} {home_name}",
+                (
+                    f"the case {home_name}, every recording with a transcript"
+                    if comparison.case_id
+                    else f"{'Incident' if comparison.incident_id else 'Recording'} "
+                    f"{home_name}"
+                ),
             ),
-            ("Cameras", ", ".join(comparison.cameras_used) or "none"),
+            (
+                "Recordings" if comparison.case_id else "Cameras",
+                ", ".join(comparison.cameras_used) or "none",
+            ),
             ("Report", f"{document.title}, {document.pages_line()}"),
             ("Findings", counts_words(counts)),
             (
@@ -1362,26 +1666,33 @@ def word(comparison: Comparison, exported_by: str) -> bytes:
         "paragraph and the moment; a person marks them. Not a legal conclusion."
     )
     notice.runs[0].italic = True
-    table = doc.add_table(rows=1, cols=6)
+    whole = bool(comparison.case_id)
+    table = doc.add_table(rows=1, cols=7 if whole else 6)
     table.style = "Light Grid Accent 1"
-    for cell, title in zip(
-        table.rows[0].cells,
-        ("Mark", "Paragraph", "Claim", "Moment", "Why", "Note"),
-        strict=True,
-    ):
+    titles = ("Mark", "Paragraph", "Claim", "Moment", "Why", "Note")
+    if whole:
+        titles = ("Mark", "Recording", "Paragraph", "Claim", "Moment", "Why", "Note")
+    for cell, title in zip(table.rows[0].cells, titles, strict=True):
         cell.text = title
     for one in comparison.findings:
-        cells = table.add_row().cells
+        cells = list(table.add_row().cells)
         cells[0].text = MARK_WORDS.get(one["mark"], one["mark"]) + (
             " (dismissed)" if one.get("dismissed") else ""
         )
+        if whole:
+            cells[1].text = one.get("recording", "")
+            cells = [cells[0]] + cells[2:]
         cells[1].text = (
             f"Page {one['page']}, paragraph {one['n']}: {one['paragraph']}"
             if one.get("page")
             else ""
         )
         cells[2].text = one["claim"]
-        cells[3].text = clock_words(comparison, one.get("at"))
+        cells[3].text = (
+            one.get("clock_words", "")
+            if whole
+            else clock_words(comparison, one.get("at"))
+        )
         cells[4].text = one.get("why", "")
         cells[5].text = one.get("note", "")
     exports.stamp_pages(

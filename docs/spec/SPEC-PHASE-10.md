@@ -163,10 +163,14 @@ Written 2026-10-29 from the maintainer's ask of the same day, after v1.167.0: th
 - A proposal on a camera of an incident says so with the incident's pill ("on a camera of Stop"); a spell whose proposals are all on cameras of one incident wears it on its heading.
 - Audit: **events proposed** with `whole_case` and the counts; **AI assistant call** with the case as its object; the proposal rows as the first release has them.
 
-### The comparison against the case (the third release)
+### The comparison against the case (the third release, built as v1.170.0)
 
-- The Documents tab gains the column Against the case and, per document, Compare with the case or Comparison; the layer opens over the table in the shape every layer has, with Documents as its Back. The document keeps its home; the comparison inside an incident and on a recording are untouched.
-- The document is read against each recording of the case in turn, one run per recording, the way a recording's comparison reads a transcript and its Digest, since one record of a whole case does not fit a call; the findings gather on one layer, each naming its recording, by day and time on the case's clock with By recording as the other order. Make it a note as above; Choose the moment for a Not on camera finding opens the Preview's window on a recording the person picks. Stale as today, and Compare again.
+- **Where it sits.** The Documents tab gains the column **Against the case**: not compared yet, running, did not finish, or the count of findings with the state line under it; per document, **Compare with the case** or **Comparison** (and To Word when done). The layer opens under the table for the document pressed, drawn by the same script as the incident's layer and the recording's block (`report-panel.js`, the case as the home), with **‹ Documents** as its Back; `?compare=<document>` on the tab's address opens it. The document keeps its home; the comparison inside an incident and on a recording are untouched.
+- **How it reads.** One Comparison row with the case as its home (`Comparison.case`, migration 0100) whose run reads the document against each recording of the case that has a transcript in turn, each reading a child row of its own (`Comparison.parent`) made and run as a recording's comparison is, since one record of a whole case does not fit a call; the state line says "Read 3 of 14 recordings" as it goes. When every child is done the parent holds their findings merged, each id the child's and the finding's joined, each naming its recording, in day and time order on the case's clock (a recording placed by its stamp or by hand: the day and time of day; by the day alone: the day and the time into the recording; not placed: the time into the recording), a Not on camera finding first on its recording; **By recording** is the other order on the layer. The time expectation is the sum of the readings. A run with no child done fails with the last reason.
+- **The acts** (Dismiss, Undo, Note, Make it a note) on a merged finding are done on the child's own finding and merged again; Make it a note writes the note on that finding's recording at the moment, as the first release has it, and a moment on the layer plays in the Preview's window. **Choose the moment**: a Not on camera finding on the case's layer opens the Preview's window on its recording with the claim above the lines and **Make it a note here** in the foot, which writes the note at the moment the player is at.
+- **Stale and again.** A recording with a transcript that landed since the run is counted ("1 recording landed since and not yet compared, Compare again to refresh"); Compare again replaces the parent and its children. Compare again on the recording page replaces only that recording's own row; a child row is never that page's.
+- **The export.** Comparison to Word for the case: Against the case and every recording with a transcript, the recordings read, the counts, and the table with a Recording column and the moment on the case's clock.
+- **Audit:** **Comparison run** per child as today, and one with `whole_case`, the recordings count and how many read; the export's row as today.
 
 ### Left to the build
 
@@ -185,6 +189,7 @@ Written 2026-10-29 from the maintainer's ask of the same day, after v1.167.0: th
 | Proposal accepted (v1.168.0) | Cases | the recording, the source, whether on a line or at a moment, the incident, the case | the sentence, the why, a word of a note |
 | Proposal dismissed (v1.168.0) | Cases | the recording, the source, the incident, the case | the sentence |
 | Events proposed (whole_case; v1.169.0) | Cases | the case, how many found, recordings read, watch hits, windows | a sentence, a line, the Look for's words |
+| Comparison run (whole_case; v1.170.0) | Cases | the document, the recordings, how many read, the findings by mark | a paragraph's words, a claim |
 
 ## Appendix B. Settings added or changed in Phase 10
 

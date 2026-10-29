@@ -1541,6 +1541,19 @@ def _documents_with_exports(case) -> list:
     rows = documents.of_case(case)
     for document in rows:
         document.comparison_export = ""
+        # Against the case (Phase 10 chapter 4, v1.170.0): the state words
+        # and the export when done.
+        whole = comparison.of(document, case)
+        told = comparison.as_json(whole, document, case)
+        document.case_words = told.get("words") or (
+            "" if told.get("possible") else told.get("why", "")
+        )
+        document.case_state = told.get("state", "")
+        document.case_busy = bool(told.get("busy"))
+        document.case_findings = sum((told.get("counts") or {}).values())
+        document.case_comparison_export = (
+            told.get("export_url", "") if told.get("state") == "done" else ""
+        )
         home = document.incident or document.recording
         if home is None:
             continue

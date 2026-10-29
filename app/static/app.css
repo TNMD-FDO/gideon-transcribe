@@ -3666,3 +3666,8 @@ body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
 .chron .entry.prop .words textarea { width: 100%; min-height: 60px; }
 .preview-proposed { flex: none; padding: 6px 10px; background: var(--warn-soft); color: var(--text); border-bottom: 1px solid var(--line); font-size: var(--t-small); }
 .preview-proposed b { color: var(--warn); }
+
+/* The comparison against the case (Phase 10 chapter 4, v1.170.0): the layer under the Documents table, the pressed row's button. */
+.compare-layer { margin-top: 12px; }
+.compare-layer .compare-box { margin: 0; }
+[data-case-compare].on { outline: 2px solid var(--accent); outline-offset: 1px; }

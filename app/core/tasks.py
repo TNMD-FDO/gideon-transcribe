@@ -219,6 +219,16 @@ def compare_report(comparison_id: str, attempt: int = 1) -> None:
         comparison.compare(comparison_id, attempt=attempt)
 
 
+@app.task(queue="llm", name="compare_report_case")
+def compare_report_case(comparison_id: str, attempt: int = 1) -> None:
+    """Compare with the case (Phase 10 chapter 4, v1.170.0): one child run
+    per recording, in turn."""
+    from core import comparison
+
+    with or_failed(comparison.Comparison, comparison_id):
+        comparison.compare_for_case(comparison_id, attempt=attempt)
+
+
 @app.task(queue="llm", name="write_incident_memo")
 def write_incident_memo(
     memo_id: str, attempt: int = 1, from_sheet: bool = False

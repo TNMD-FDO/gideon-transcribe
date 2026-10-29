@@ -9,6 +9,7 @@ drill's checks against a manifest.
 from __future__ import annotations
 
 import json
+import re
 from datetime import timedelta
 from io import StringIO
 
@@ -79,7 +80,8 @@ def test_the_manifest_counts_rows_and_hashes_the_cases_files(on, owner, tmp_path
     assert "manifest written" in out.getvalue()
     manifest = json.loads((tmp_path / "backup" / "manifest.json").read_text())
     assert manifest["release"] == "v1.19.0"
-    assert manifest["migration"].startswith("00")
+    # The latest migration, four digits then its name (0100 from v1.170.0).
+    assert re.match(r"^\d{4}_", manifest["migration"])
     assert manifest["dump"] == "nightly-2026-09-05.dump" and manifest["dump_size"] == 10
     assert manifest["tables"]["core_case"] == 1
     import hashlib

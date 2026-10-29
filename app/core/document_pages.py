@@ -120,8 +120,12 @@ def _compare_home(request: HttpRequest, document: Document, source):
         source.get("recording")
     ):
         return document.recording
+    # The whole case (Phase 10 chapter 4, v1.170.0): the document keeps its
+    # home; only the reading widens.
+    if source.get("case") and str(document.case_id) == str(source.get("case")):
+        return document.case
     raise Http404(
-        "the comparison is against the incident or recording the report is for"
+        "the comparison is against the incident, recording or case the report is for"
     )
 
 

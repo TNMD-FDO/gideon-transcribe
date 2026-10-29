@@ -188,13 +188,20 @@
           {% if documents %}
             <div class="card" style="overflow-x: auto">
               <table class="tbl as-cards" id="documents">
-                <thead><tr><th>Document</th><th>Pages</th><th>The report for</th><th>Added</th><th></th></tr></thead>
+                <thead><tr><th>Document</th><th>Pages</th><th>The report for</th><th>Against the case</th><th>Added</th><th></th></tr></thead>
                 <tbody>
                   {% for one in documents %}
                     <tr class="document-row" data-state="{{ one.state }}">
                       <td><a href="{{ one.url }}"><b>{{ one.title }}</b></a><div class="muted small">{{ one.original_filename }}</div></td>
                       <td class="small{% if one.state == 'failed' %} warn-ink{% endif %}">{{ one.pages_line }}</td>
                       <td class="small">{% if one.home_name %}<a href="{{ one.home_url }}">{{ one.home_name }}</a> <span class="muted">({{ one.home_kind }})</span>{% else %}<span class="muted">nothing yet</span>{% endif %}</td>
+                      {% comment %}Against the case (Phase 10 chapter 4, v1.170.0): the comparison read against every recording of the case, one at a time, its findings on one layer under the table.{% endcomment %}
+                      <td class="small">
+                        {% if one.case_state == "done" %}<span class="pill small ok">{{ one.case_findings }} finding{{ one.case_findings|pluralize }}</span>{% elif one.case_busy %}<span class="pill small warn">running</span>{% elif one.case_state == "failed" %}<span class="pill small warn">did not finish</span>{% else %}<span class="muted">not compared yet</span>{% endif %}
+                        {% if one.case_words %}<div class="muted tiny">{{ one.case_words|truncatechars:120 }}</div>{% endif %}
+                        <div style="margin-top: 4px"><button type="button" class="btn small{% if one.case_state == 'done' %} primary{% endif %}" data-case-compare data-comparison="{% url 'document-comparison' case.pk one.pk %}" data-compare="{% url 'document-compare' case.pk one.pk %}" data-title="{{ one.title }}" title="The report read against every recording of the case that has a transcript, one at a time; every finding cites the paragraph and the moment">{% if one.case_state == "done" %}Comparison{% elif one.case_busy %}Comparison, running{% else %}Compare with the case{% endif %}</button>
+                        {% if one.case_comparison_export %}<a class="btn small ghost" href="{{ one.case_comparison_export }}">{% icon "word" %} To Word</a>{% endif %}</div>
+                      </td>
                       <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
                       <td class="nowrap">
                         <a class="btn small" href="{{ one.url }}">Open</a>
@@ -211,6 +218,11 @@
                   {% endfor %}
                 </tbody>
               </table>
+            </div>
+            {% comment %}The comparison against the case (v1.170.0): one layer under the table for the document pressed, drawn by report-panel.js as the incident's and the recording's are, with Documents as its Back.{% endcomment %}
+            <div id="case-compare" class="card compare-layer" hidden data-case="{{ case.pk }}">
+              <div class="row" style="align-items: baseline; gap: 10px; margin-bottom: 8px"><button type="button" class="btn small ghost" data-case-compare-back>&lsaquo; Documents</button><b id="case-compare-title" class="grow"></b><span class="muted small">against every recording of the case, one at a time</span></div>
+              <div class="compare-box" id="case-compare-box" data-home="case" data-home-id="{{ case.pk }}"></div>
             </div>
           {% endif %}
         {% elif tab == "notes" %}
@@ -1070,6 +1082,8 @@
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
   <script src="{% static 'chronology.js' %}"></script>
+  <script src="{% static 'report-panel.js' %}"></script>
+  <script src="{% static 'case-compare.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
   {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}
