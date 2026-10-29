@@ -474,7 +474,9 @@ def test_the_incident_state_asks_a_handful_and_the_busy_form_three(
     assert len(told["cameras"]) == 8 and len(told["others"]) == 30
     assert told["cameras"][0]["media_url"].endswith("/playback.mp4")
     assert told["cameras"][0]["clock_reading"] is False
-    assert count < 40, count
+    # v1.168.0 reads the Proposal table twice more (the rows waiting and
+    # their count), and nothing per camera.
+    assert count < 42, count
     with CaptureQueriesContext(connection) as asked:
         busy = incident_pages.busy_json(incident)
     assert busy == {"busy": False} and len(asked) <= 3, len(asked)

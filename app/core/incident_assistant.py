@@ -35,6 +35,7 @@ from core import (
     expectation,
     incidents,
     prompts,
+    proposals,
     settings_store,
 )
 from core.assistant import DONE, FAILED, QUEUED, RUNNING, PromptTemplate
@@ -500,6 +501,13 @@ def _chronology_lines(incident) -> tuple[list[str], dict]:
                 f"the office's own note, written by {chronology.note_writer(event)} "
                 f"on the line at {_clock(incident, event.at)} on {camera}"
             )
+            came = chronology.note_origin(event)
+            if came.get("kind") == "finding":
+                origin += ", accepted from the report, which says: " + (
+                    came.get("rests_on") or ""
+                )
+            elif came:
+                origin += ", accepted from a proposed event"
         else:
             origin = "added by a person"
         when = _clock(incident, event.at) + (
@@ -914,9 +922,16 @@ def propose(incident_id, attempt: int = 1) -> None:
         # seconds of one.
         if not looked:
             incident.events.filter(proposed=True, dismissed=False).delete()
+            proposals.Proposal.objects.filter(
+                incident=incident, state=proposals.WAITING
+            ).delete()
         standing = list(incident.events.filter(proposed=False))
-        dismissed = list(incident.events.filter(proposed=True, dismissed=True))
-        pending = list(incident.events.filter(proposed=True, dismissed=False))
+        dismissed = list(
+            incident.events.filter(proposed=True, dismissed=True)
+        ) + _placed(incident, proposals.DISMISSED)
+        pending = list(
+            incident.events.filter(proposed=True, dismissed=False)
+        ) + _placed(incident, proposals.WAITING)
         most = LOOK_MOST if looked else WINDOW_MOST
 
         # The floor: the watch phrases, found by the app itself and saved as
@@ -926,16 +941,7 @@ def propose(incident_id, attempt: int = 1) -> None:
             for fields in watch_hits(camera, phrases):
                 if any(abs(fields["at"] - other) < NEAR_SECONDS for other in taken):
                     continue
-                event = chronology.Event.objects.create(
-                    incident=incident,
-                    source=chronology.WATCH,
-                    camera=camera,
-                    cameras=chronology.running_cameras(incident, fields["at"]),
-                    proposed=True,
-                    added_by=incident.proposals_by,
-                    **fields,
-                )
-                made.append(event)
+                made.append(_propose(incident, camera, chronology.WATCH, fields))
                 taken.append(fields["at"])
                 watch_found += 1
 
@@ -1041,22 +1047,16 @@ def propose(incident_id, attempt: int = 1) -> None:
                             fields = _keep_proposal(item, camera, given, taken)
                             if fields is None:
                                 continue
-                            event = chronology.Event.objects.create(
-                                incident=incident,
-                                source=(
+                            made.append(
+                                _propose(
+                                    incident,
+                                    camera,
                                     chronology.LOOKED
                                     if looked
-                                    else chronology.ASSISTANT
-                                ),
-                                camera=camera,
-                                cameras=chronology.running_cameras(
-                                    incident, fields["at"]
-                                ),
-                                proposed=True,
-                                added_by=incident.proposals_by,
-                                **fields,
+                                    else chronology.ASSISTANT,
+                                    fields,
+                                )
                             )
-                            made.append(event)
                             taken.append(fields["at"])
                             kept_here += 1
                             mine.append(f"{item.get('time', '')} {fields['text']}")
@@ -1066,6 +1066,51 @@ def propose(incident_id, attempt: int = 1) -> None:
         # What the search and the earlier cameras proposed is kept: every one
         # passed the checks.
         finish(FAILED, problem.reason)
+
+
+class _Placed:
+    """A Proposal row as the run reads it: on the incident clock, with its
+    camera, the way an Event row reads (v1.168.0)."""
+
+    __slots__ = ("at", "camera_id", "text", "note")
+
+    def __init__(self, at: float, camera_id, text: str):
+        self.at = at
+        self.camera_id = camera_id
+        self.text = text
+        self.note = ""
+
+
+def _placed(incident, state: str) -> list:
+    cameras = {
+        one.recording_id: one for one in incident.cameras.all() if one.is_synced()
+    }
+    rows = []
+    for one in proposals.Proposal.objects.filter(incident=incident, state=state):
+        camera = cameras.get(one.recording_id)
+        if camera is not None:
+            rows.append(_Placed(one.at_on(camera), camera.pk, one.text))
+    return rows
+
+
+def _propose(incident, camera, source: str, fields: dict) -> _Placed:
+    """One proposal kept: a Proposal row on the camera's recording, its time
+    seconds into the recording (v1.168.0); the run reads it on the clock."""
+    proposals.Proposal.objects.create(
+        case=incident.case,
+        recording=camera.recording,
+        incident=incident,
+        at=max(0.0, fields["at"] - camera.starts_at),
+        until=(
+            None if fields.get("until") is None else fields["until"] - camera.starts_at
+        ),
+        text=fields["text"],
+        why=fields.get("why", ""),
+        rests_on=fields.get("rests_on", ""),
+        source=source,
+        proposed_by=incident.proposals_by,
+    )
+    return _Placed(fields["at"], camera.pk, fields["text"])
 
 
 def _events_proposed_row(incident, made, cameras_read, watch_found, windows) -> None:
@@ -1087,7 +1132,7 @@ def _events_proposed_row(incident, made, cameras_read, watch_found, windows) -> 
 def proposals_json(incident) -> dict:
     """The run's state for the page: the button's line and whether to poll."""
     state = incident.proposals_state
-    pending = incident.events.filter(proposed=True, dismissed=False).count()
+    pending = proposals.waiting_count(incident)
     if state == QUEUED:
         words = "Waiting for the engine..."
     elif state == RUNNING:
@@ -1157,40 +1202,21 @@ def proposals_json(incident) -> dict:
     }
 
 
-def accept(event, *, by, request=None):
-    """A proposal joins the Chronology as an Event with source assistant."""
-    if not event.proposed:
-        return event
-    event.proposed = False
-    event.dismissed = False
-    event.added_by = by
-    event.added = timezone.now()
-    if not event.cameras:
-        event.cameras = chronology.running_cameras(event.incident, event.at)
-    event.save()
-    audit.write(
-        incidents.CATEGORY,
-        "event added",
-        actor=by,
-        affected_user=event.incident.case.owner,
-        object_type="incident",
-        object_id=event.incident_id,
-        object_label=event.incident.name,
-        request=request,
-        source=(
-            chronology.LOOKED
-            if event.source == chronology.LOOKED
-            else chronology.ASSISTANT
-        ),
-    )
-    from core import cases
-
-    cases.note_activity(event.incident.case, by=by)
-    return event
+def accept(one, *, by, request=None):
+    """Accepted (Phase 10 chapter 4, v1.168.0): the sentence becomes a note on
+    the camera's recording at the line, in the acceptor's name, and the
+    chronology shows the note event. A Proposal row stays, marked accepted;
+    an Event row from before v1.168.0 goes, the note event in its place."""
+    if isinstance(one, proposals.Proposal):
+        return proposals.accept(one, by=by, request=request)
+    return proposals.accept_old(one, by=by, request=request)
 
 
 def dismiss(event, *, by, request=None) -> None:
     """A proposal put away: kept as dismissed so a later run does not offer it again."""
+    if isinstance(event, proposals.Proposal):
+        proposals.dismiss(event, by=by, request=request)
+        return
     if not event.proposed:
         return
     event.dismissed = True
@@ -1209,8 +1235,14 @@ def dismiss(event, *, by, request=None) -> None:
 
 def accept_all(incident, *, by, request=None) -> int:
     count = 0
+    for one, _camera in proposals.waiting(incident):
+        accept(one, by=by, request=request)
+        count += 1
     for event in list(incident.events.filter(proposed=True, dismissed=False)):
-        accept(event, by=by, request=request)
+        try:
+            accept(event, by=by, request=request)
+        except ValueError:
+            continue
         count += 1
     return count
 
@@ -1222,6 +1254,9 @@ def dismiss_all(incident, *, by, request=None) -> int:
     count = incident.events.filter(proposed=True, dismissed=False).update(
         dismissed=True
     )
+    count += proposals.Proposal.objects.filter(
+        incident=incident, state=proposals.WAITING
+    ).update(state=proposals.DISMISSED, decided_by=by, decided=timezone.now())
     if count:
         audit.write(
             incidents.CATEGORY,

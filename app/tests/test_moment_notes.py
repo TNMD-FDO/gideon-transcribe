@@ -172,6 +172,7 @@ def test_a_note_in_a_silence_is_kept_at_the_moment(camera, person, client):
             "at": 210.0,
             "clock": "00:03:30",
             "note": WORDS,
+            "note_from": "",
             "note_by": person.shown_name,
             "note_on": notes.date_of(kept.note_changed),
         }

@@ -460,7 +460,7 @@
   }
 
   function noteHead(segment) {
-    return "Note" + (segment.note_by ? ", " + segment.note_by : "") + (segment.note_on ? ", " + segment.note_on : "");
+    return "Note" + (segment.note_by ? ", " + segment.note_by : "") + (segment.note_on ? ", " + segment.note_on : "") + (segment.note_from ? " · " + segment.note_from : "");
   }
 
   // A note where nothing was said: its own time, its writer, its words, and
@@ -477,7 +477,7 @@
     // Where a speaker's name goes: that it is a note, and whose.
     var head = document.createElement("span");
     head.className = "mwho";
-    head.textContent = "Note" + (one.note_by ? ", " + one.note_by : "");
+    head.textContent = "Note" + (one.note_by ? ", " + one.note_by : "") + (one.note_from ? " · " + one.note_from : "");
     head.title = one.note_on ? "Written " + one.note_on : "";
     var said = document.createElement("span");
     said.className = "mtxt";
@@ -1519,6 +1519,7 @@
         segment.note = told.note || "";
         segment.note_by = told.note_by || "";
         segment.note_on = told.note_on || "";
+        segment.note_from = told.note_from || "";
         redrawRow(segment);
         here = -1;
         follow();
@@ -1608,6 +1609,7 @@
         segment.note = told.note || "";
         segment.note_by = told.note_by || "";
         segment.note_on = told.note_on || "";
+        segment.note_from = told.note_from || "";
         noting = null;
         redrawRow(segment);
         here = -1;

@@ -159,7 +159,7 @@ def compare(request: HttpRequest, case_id, document_id) -> HttpResponse:
 @login_required
 @require_POST
 def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
-    """Dismiss, undo, a note, Make it an event, on one finding."""
+    """Dismiss, undo, a note, Make it a note, on one finding."""
     from django.http import JsonResponse
 
     from core import comparison
@@ -178,10 +178,10 @@ def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
         ok = comparison.set_dismissed(made, finding, False)
     elif action == "note":
         ok = comparison.set_note(made, finding, request.POST.get("note", ""))
-    elif action == "make_event":
+    elif action == "make_note":
         at = request.POST.get("at", "")
         try:
-            comparison.make_event(
+            comparison.make_note(
                 made,
                 finding,
                 at=chronology.a_moment(at) if at not in ("", None) else None,

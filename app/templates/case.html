@@ -237,6 +237,7 @@
                     {% comment %}A note at a moment (v1.99.0) rests on no line and says nothing here (v1.99.1).{% endcomment %}
                     {% if one.rests_on %}&middot; {% if one.kind == "event" %}on the event: {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>{% endif %}
                     {% if one.by or one.on %}&middot; {{ one.by }}{% if one.by and one.on %}, {% endif %}{{ one.on }}{% endif %}
+                    {% if one.from %}&middot; {{ one.from }}{% endif %}
                   </div>
                 </li>
               {% endfor %}

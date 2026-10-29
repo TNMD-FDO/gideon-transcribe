@@ -684,19 +684,32 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
             status=409,
         )
     elif action in ("event_accept", "event_dismiss"):
-        event = get_object_or_404(
-            chronology.Event,
-            pk=request.POST.get("event"),
-            incident=incident,
-            proposed=True,
-        )
-        if action == "event_accept":
-            incident_assistant.accept(event, by=user, request=request)
-        else:
-            incident_assistant.dismiss(event, by=user, request=request)
+        # A Proposal row (v1.168.0), else an Event row from before it.
+        from core import proposals
+
+        asked = request.POST.get("event", "")
+        try:
+            uuid.UUID(str(asked))
+        except ValueError:
+            raise Http404("no such proposal") from None
+        try:
+            one = proposals.Proposal.objects.get(
+                pk=asked, incident=incident, state=proposals.WAITING
+            )
+        except proposals.Proposal.DoesNotExist:
+            one = get_object_or_404(
+                chronology.Event, pk=asked, incident=incident, proposed=True
+            )
+        try:
+            if action == "event_accept":
+                incident_assistant.accept(one, by=user, request=request)
+            else:
+                incident_assistant.dismiss(one, by=user, request=request)
+        except ValueError as why:
+            return JsonResponse({"error": str(why)}, status=400)
     elif action == "event_accept_all":
         count = incident_assistant.accept_all(incident, by=user, request=request)
-        said = f"{count} event{'' if count == 1 else 's'} added."
+        said = f"{count} note{'' if count == 1 else 's'} written."
     elif action == "event_dismiss_all":
         # v1.96.0: every pending proposal put away at once.
         count = incident_assistant.dismiss_all(incident, by=user, request=request)

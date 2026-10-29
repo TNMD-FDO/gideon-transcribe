@@ -6,8 +6,9 @@ record merges the cameras' Digests onto the clock, reads a camera with no
 Digest from its words with numbered labels dropped and names kept, and is
 never stored; Propose events runs one call per camera, keeps only the
 proposals that pass the checks, replaces the pending ones and offers a
-dismissed one again never; Accept makes an Event with source assistant and
-its row, Dismiss puts one away; the memo is written on the chronology with
+dismissed one again never; Accept writes a note on the camera's recording
+(v1.168.0) and its row, Dismiss puts one away; the memo is written on the
+chronology with
 its citations and its event marks, says what it was written from, says when
 the chronology changed since, exports to Word with the Chronology, and
 counts nowhere until written; a numbered label does not show under a tile;
@@ -36,6 +37,7 @@ from core.cases import Case
 from core.chronology import Event
 from core.jobs import Segment, Transcript
 from core.models import User
+from core.proposals import Proposal
 from core.recordings import Batch, MediaState, Recording
 from tests.helpers import signed_in, stamp
 from tests.test_prepare import engine_answering
@@ -277,16 +279,22 @@ def test_proposals_are_checked_kept_replaced_and_never_offered_again_once_dismis
     assert "21:56:27 Asked out of the car" in user
     # The second camera is told the first camera's proposal as well.
     assert "21:56:47 Hands asked into view" in asked[1]["messages"][-1]["content"]
-    pending = list(incident.events.filter(proposed=True, dismissed=False))
+    # The proposals are Proposal rows on the recordings (v1.168.0), their
+    # times seconds into each recording; the chronology reads them on its
+    # clock through the cameras.
+    assert not incident.events.filter(proposed=True).exists()
+    pending = list(Proposal.objects.filter(state="waiting").order_by("made"))
     assert [one.text for one in pending] == [
         "Hands asked into view",
         "Passenger told to stay",
     ]
-    assert pending[0].source == "assistant" and pending[0].camera == cams["BWC2-1"]
+    assert pending[0].source == "assistant"
+    assert pending[0].recording == cams["BWC2-1"].recording
+    assert pending[0].incident == incident and pending[0].proposed_by == person
     assert (
         pending[0].at == 30.0 and pending[0].rests_on == "Officer Hale asked for hands"
     )
-    assert pending[1].until == cams["BWC2-2"].starts_at + 9.0
+    assert pending[1].until == 9.0 and pending[1].at == 5.0
     words = incident_assistant.proposals_json(incident)
     assert words["pending"] == 2 and words["words"].startswith("Proposed 2 events at ")
     # The state carries them as proposed, with the words each rests on; the
@@ -297,22 +305,38 @@ def test_proposals_are_checked_kept_replaced_and_never_offered_again_once_dismis
     assert rows[1]["rests_on"] == "Officer Hale asked for hands"
     assert len(chronology._rows(incident)) == 1
     assert incidents.strip_rows(incident.case)[0]["events"] == 1
-    # Dismiss one; Accept the other: an Event with source assistant, its row,
-    # and the person who accepted it.
+    # Dismiss one; Accept the other: a note on the line at 30 s of the first
+    # camera in the acceptor's name (v1.168.0), which the chronology shows as
+    # a note event saying where it came from; the proposal stays, accepted.
     incident_assistant.dismiss(pending[1], by=person)
     incident_assistant.accept(pending[0], by=person)
+    line = Segment.objects.get(start=30.0)
+    assert line.note == "Hands asked into view" and line.note_by == person
+    assert line.note_from["source"] == "assistant"
+    assert line.note_from["words"] == "from a proposed event"
+    pending[0].refresh_from_db()
+    assert pending[0].state == "accepted" and pending[0].note_segment == line
+    assert pending[0].decided_by == person
     kept = incident.events.filter(proposed=False).order_by("at")
     assert [one.text for one in kept] == [
         "Asked out of the car",
         "Hands asked into view",
     ]
-    assert kept[1].source == "assistant" and kept[1].added_by == person
-    assert chronology.events_json(incident)[1]["source_words"] == "Assistant, BWC2-1"
+    assert kept[1].source == "note" and kept[1].added_by == person
+    assert kept[1].segment == line
+    assert kept[1].rests_on == "Officer Hale asked for hands"
+    assert (
+        chronology.events_json(incident)[1]["source_words"]
+        == f"Note by {person.shown_name}, BWC2-1, from a proposed event"
+    )
     assert chronology._rows(incident)[1]["assistant"]
     events = list(Row.objects.filter(category="cases").values_list("event", flat=True))
-    assert "events proposed" in events and "event dismissed" in events
-    added = Row.objects.filter(event="event added").order_by("-at").first()
+    assert "events proposed" in events and "proposal dismissed" in events
+    added = Row.objects.filter(event="proposal accepted").order_by("-at").first()
     assert added.details.get("source") == "assistant"
+    assert added.details.get("how") == "line"
+    assert added.details.get("incident") == "Stop"
+    assert Row.objects.filter(event="Note added", details__where="proposal").exists()
     assert Row.objects.filter(
         event="AI assistant call", details__feature="incident_events"
     ).exists()
@@ -336,8 +360,9 @@ def test_proposals_are_checked_kept_replaced_and_never_offered_again_once_dismis
     incident.save()
     assert incident_assistant.ask_for_proposals(incident, by=person)
     incident_assistant.propose(incident.pk)
-    assert not incident.events.filter(proposed=True, dismissed=False).exists()
-    assert incident.events.filter(proposed=True, dismissed=True).count() == 1
+    assert not Proposal.objects.filter(state="waiting").exists()
+    assert Proposal.objects.filter(state="dismissed").count() == 1
+    assert Proposal.objects.filter(state="accepted").count() == 1
 
 
 def test_proposals_need_the_switch_and_a_synced_camera_with_words(
@@ -393,7 +418,7 @@ def test_the_watch_phrases_are_searched_by_the_app_itself(person, a_case):
     incident_assistant.propose(made.pk)
     made.refresh_from_db()
     assert made.proposals_state == "done"
-    pending = list(made.events.filter(proposed=True).order_by("at"))
+    pending = list(Proposal.objects.filter(state="waiting").order_by("at"))
     assert [(one.at, one.source) for one in pending] == [
         (10.0, "watch"),
         (270.0, "watch"),
@@ -411,11 +436,9 @@ def test_the_watch_phrases_are_searched_by_the_app_itself(person, a_case):
     assert made.proposals_watch == 2 and made.proposals_found == 2
     words = incident_assistant.proposals_json(made)
     assert words["on"] and "2 from the watch phrases" in words["words"]
-    names = {str(camera.pk): camera.camera_id()}
-    assert (
-        chronology.source_words(pending[1], names)
-        == f"Watch phrase, {camera.camera_id()}"
-    )
+    rows = chronology.events_json(made)
+    assert rows[1]["source_words"] == f"Watch phrase, {camera.camera_id()}"
+    assert rows[1]["proposed"] and rows[1]["at"] == 270.0
     # No engine call, so no AI assistant call row; the run's own row counts the hits.
     assert not Row.objects.filter(event="AI assistant call").exists()
     proposed = Row.objects.filter(event="events proposed").order_by("-at").first()
@@ -424,12 +447,18 @@ def test_the_watch_phrases_are_searched_by_the_app_itself(person, a_case):
     )
     for row in Row.objects.all():
         assert "gun" not in json.dumps(row.details)
-    # Accepted, the Event keeps its source and its why, and Edit keeps the source.
+    # Accepted, the note's event carries the why from its origin, and Edit
+    # keeps it (the edit writes the note).
     incident_assistant.accept(pending[1], by=person)
-    pending[1].refresh_from_db()
-    chronology.change(pending[1], {"at": "270", "text": "Gun found"}, by=person)
-    pending[1].refresh_from_db()
-    assert pending[1].source == "watch" and pending[1].why.startswith("The office")
+    event = made.events.get(source="note")
+    assert event.why == 'The office watches for "gun".' and event.at == 270.0
+    chronology.change(event, {"at": "270", "text": "Gun found"}, by=person)
+    event.refresh_from_db()
+    assert event.source == "note" and event.why.startswith("The office")
+    assert event.anchor().note == "Gun found"
+    assert chronology.note_origin(event)["words"] == (
+        "from a proposed event (a watch phrase)"
+    )
     rows = chronology._rows(made)
     assert rows[0]["why"] == 'The office watches for "gun".'
     assert "Why it matters" in chronology.spreadsheet(made).decode("utf-8-sig")
@@ -510,7 +539,7 @@ def test_the_run_reads_in_windows_with_a_second_look_and_says_why(
     second = [one for one in asked if "You proposed" in one and "I got gun" in one][0]
     assert "00:11:40 An officer said he had found a gun." in second
     assert made.proposals_look_for == "" and made.proposals_cut == 1
-    pending = list(made.events.filter(proposed=True))
+    pending = list(Proposal.objects.filter(state="waiting"))
     assert len(pending) == 1 and pending[0].why == "A weapon changes the stop."
     assert pending[0].at == 700.0 and pending[0].source == "assistant"
     words = incident_assistant.proposals_json(made)["words"]
@@ -613,17 +642,17 @@ def test_a_look_for_run_proposes_only_what_was_looked_for(person, a_case, monkey
     # at 10 s is in the first window's head and not the later windows'.
     assert "A man was told to step out." in asked[0]
     assert not any("A man was told to step out." in one for one in asked[1:])
-    pending = list(made.events.filter(proposed=True).order_by("at"))
-    assert [(one.at, one.source) for one in pending] == [
+    # The row from before v1.168.0 stays as it was; the new one is a
+    # Proposal row, and the page reads both.
+    assert list(made.events.filter(proposed=True)) == [waiting]
+    looked = Proposal.objects.get()
+    assert (looked.at, looked.source) == (1300.0, "looked")
+    rows = chronology.events_json(made)
+    assert [(one["at"], one["source"]) for one in rows] == [
         (10.0, "assistant"),
         (1300.0, "looked"),
     ]
-    assert pending[0].pk == waiting.pk
-    names = {str(camera.pk): camera.camera_id()}
-    assert (
-        chronology.source_words(pending[1], names)
-        == f"Looked for, {camera.camera_id()}"
-    )
+    assert rows[1]["source_words"] == f"Looked for, {camera.camera_id()}"
     # The watch phrase was not searched, and the run says what it was.
     assert made.proposals_watch == 0 and made.proposals_found == 1
     assert made.proposals_looked is True and made.proposals_full_at is None
@@ -1309,13 +1338,22 @@ def test_the_page_and_the_act_endpoint_carry_chapter_3(incident, person, client)
         "Two": True,
         "Three": True,
     }
+    # Nothing is being said at 20 s, so the note sits at the moment, and
+    # the row from before v1.168.0 is gone with the note event in its place.
+    from core.notes import MomentNote
+
+    assert MomentNote.objects.get().note == "One"
+    assert not Event.objects.filter(pk=one.pk).exists()
+    assert Event.objects.get(source="note").moment_note == MomentNote.objects.get()
     got = client.post(
         url + "/act", {"action": "event_dismiss", "event": str(two.pk)}
     ).json()
     assert sorted(e["text"] for e in got["state"]["events"]) == ["One", "Three"]
     got = client.post(url + "/act", {"action": "event_accept_all"}).json()
-    assert got["said"] == "1 event added."
+    assert got["said"] == "1 note written."
     assert all(not e["proposed"] for e in got["state"]["events"])
+    # At the same moment, the second accepted joins the first's note.
+    assert MomentNote.objects.get().note == "One\n\nThree"
     # An Event that is not a proposal cannot be accepted.
     assert (
         client.post(

@@ -72,7 +72,7 @@
   // One drawing for the layer on the incident page and the block on the
   // recording page: the state line, Compare (again), the marks as pills that
   // filter, one row per finding with the paragraph and the moment as
-  // citations, and on each row Make it an event, a note and Dismiss.
+  // citations, and on each row Make it a note, a note and Dismiss.
 
   function cookie(name) {
     var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -155,13 +155,13 @@
             html += "<tr data-finding='" + escape(one.id) + "' class='" + (one.dismissed ? "dismissed" : "") + "'>" +
               "<td class='t'><span class='pill small mark " + escape(one.mark) + "'>" + escape(one.mark_words) + "</span>" +
               "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'>" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
-              (one.event ? "<div class='muted small'>on the chronology</div>" : "") + "</td>" +
+              (one.note_id ? "<div class='muted small'>a note on " + escape(one.note_on || "the recording") + "</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
               (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted' title='" + quoted(one.paragraph) + "'>" + escape(shorten(one.paragraph, 220)) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
               (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
               (one.note ? "<div class='small note'><b>Note:</b> " + escape(one.note) + "</div>" : "") +
               "<div class='acts'>" +
-              (C.can_make_event && !one.event ? "<button type='button' class='tiny primary' data-make='" + escape(one.id) + "'>Make it an event</button> " : "") +
+              (C.can_make_note && !one.note_id ? "<button type='button' class='tiny primary' data-make='" + escape(one.id) + "'>Make it a note</button> " : "") +
               "<button type='button' class='tiny ghost' data-note='" + escape(one.id) + "'>Note</button> " +
               (one.dismissed ? "<button type='button' class='tiny ghost' data-undismiss='" + escape(one.id) + "'>Undo</button>" : "<button type='button' class='tiny ghost' data-dismiss='" + escape(one.id) + "'>Dismiss</button>") +
               "</div></td></tr>";
@@ -217,7 +217,7 @@
             window.INCIDENT_PAGE.addEvent(undefined, finding.claim, "[Report, page " + finding.page + ", paragraph " + finding.n + "] " + finding.paragraph);
             return;
           }
-          act({ action: "make_event", finding: make.dataset.make }).then(function () {
+          act({ action: "make_note", finding: make.dataset.make }).then(function () {
             if (window.INCIDENT_PAGE && window.INCIDENT_PAGE.refresh) { window.INCIDENT_PAGE.refresh(); }
             UI.toast("On the chronology.");
           });

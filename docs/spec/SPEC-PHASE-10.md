@@ -16,12 +16,14 @@ Nothing in this document is office-specific. No new environment key, no new serv
 
 - **The case's chronology** (chapter 1): the Notes tab's second shape, Rows | Chronology, and a tab of the Notes page: the case's notes on their recordings' clocks, one day at a time; recordings placed by their read clocks or by hand once; the Notes lane's marks; a band that keeps one height whatever the day holds; the Preview as the snippet; Chronology to Word with a still per entry, and the spreadsheet.
 - **An incident from a span** (chapter 2, the second release): a span drawn across the ruler becomes an Incident whose cameras arrive already placed from their clocks and whose notes are already its events.
+- **Proposed events and the comparison over the whole case** (chapter 4, three releases from v1.168.0): a proposal is a moment on a Recording, accepting it writes a Note there, and the note follows the recording everywhere; a Proposed events tab on the case in the chronology's shape; the comparison on the Documents tab read against every recording.
 
 ## Contents
 
 1. The case's chronology
 2. An incident from a span (the second release)
 3. Deferred and ruled out
+4. Proposed events and the comparison over the whole case
 
 Appendix A. Audit rows added in Phase 10
 Appendix B. Settings added or changed in Phase 10
@@ -96,7 +98,7 @@ In the lead's **Export**, the incident's two, for the day in hand or every day:
 
 - Incident events (a person's, the words', the assistant's) are not on the case's chronology; only the office's notes, including notes on events. Chapter 2's bridge runs the other way first.
 - No date read from a file's name or header (Phase 9 chapter 7 deferred it); a jail call is placed by hand until that returns.
-- No proposals by Gideon; the chronology is the office's notes.
+- No proposals by Gideon on the chronology itself; the chronology is the office's notes. (Chapter 4 gives the proposals a tab of their own, and an accepted one is a note like any other.)
 - Nothing crosses a case's edge.
 
 ### Left to the build
@@ -126,6 +128,49 @@ Written with chapter 1 and held for a second release at the maintainer's word of
 - **A chronology across cases**: ruled out (Phase 2).
 - **A date read from a file**: deferred as in Phase 9 chapter 7.
 
+## 4. Proposed events and the comparison over the whole case
+
+Written 2026-10-29 from the maintainer's ask of the same day, after v1.167.0: the assistant proposes events and compares a report only inside an incident; both should have a place on the case, the comparison on the Documents tab read over the whole case and the proposed events on a tab of their own, both in the chronology's shape, both verified through the Preview's window with the transcript, and anything accepted from either added as a note on the recording; nothing shows on a recording unless a person accepts it. The drawing is `docs/spec/mockups/phase-10-proposed-events-and-comparison.html`; it stands with the four answers recorded on it. Three releases: the store and the note (v1.168.0, this release), the Proposed events tab and the case-wide run, the comparison against the case on the Documents tab.
+
+### Principles
+
+1. **One rule under both.** A proposal, from the proposer, the watch phrases, a Look for or a comparison, is a moment on one Recording with a sentence and a why, kept in a list of its own. It touches nothing until a person accepts it. Accepting writes a Note on that Recording at the line being spoken, or at the moment when nothing was said, in the acceptor's name.
+2. **A note already goes everywhere.** A Note follows its Recording onto the case's chronology and onto every Incident the Recording is a synced camera of, now or later (Phase 8 chapter 11). So an accepted proposal appears wherever it should with nothing else kept, and the other way round is already true: a note written anywhere is an event of any incident its recording is in.
+3. **The note says where it came from.** One small thing is kept with the note: its origin, the source, the why and what it rested on. The source pill, the why line and the AI notice on the exports survive the change from an Event of its own source to a note, and the memo reads it.
+4. **Nothing is proposed onto a recording page.** A proposal is listed on its tab and its layer and nowhere else; the recording page shows only notes, and only the ones a person wrote or accepted.
+
+### Words
+
+**Proposed event**: a moment on a Recording the assistant, the watch phrases, a Look for run or the comparison put forward, waiting for a person's Accept or Dismiss; the code and the database call the row a Proposal. **From a proposed event**, **from the report, page 4, paragraph 2**: the words a note shows for its origin. **Make it a note**: the comparison's button, where it read Make it an event. The pages never say suggestion, candidate, auto event or AI event.
+
+### The store and the note (v1.168.0)
+
+- **The Proposal row**: the Case, the Recording, the Incident it was proposed for when a run on an incident made it (kept as a name if the incident goes), the time in seconds into the recording and an optional end, the sentence, the why, what it rests on, the source (assistant, watch, looked, report), the state (waiting, accepted, dismissed), who proposed it and when, who decided and when, and the note it became. Its time is never a clock: each incident reads it on its clock through its camera, and the case's chronology by the recording's own placing (chapter 1).
+- **The runs write Proposal rows.** Propose events and Look for on an incident write them with the incident set, as the Event rows with `proposed` were written until v1.167.0; the run's checks, its replacing of the waiting rows and its keeping of the dismissed ones are unchanged. The incident's Proposed events layer and its strip read the Proposal rows on the clock and, until they are gone, the Event rows waiting from before the upgrade, which stay as they are until accepted or dismissed (the maintainer's answer 4).
+- **Accept is one press** (answer 1): the sentence becomes a note on the recording at the line it rested on, or the line being spoken at the moment, or at the moment itself when nothing was said; in the acceptor's name, with the origin kept. A line or moment already noted keeps its note and the new words join it after a blank line. The Proposal row stays, marked accepted, pointing at the note; an Event row from before goes, the note event in its place. Dismiss and Dismiss all put a Proposal row away as before. Accept all accepts every waiting row.
+- **The incident's own Accept writes the note too** (answer 3): the Chronology's row for it is the note event the page already draws, its source pill reading "Note by D. Meehan, BWC2-1, from a proposed event" (or "from a proposed event (a watch phrase)", "(looked for)"), the why on the lane's hover and in the exports under the line as before, what it rested on kept. The memo's chronology lines say "accepted from a proposed event". The AI notice prints on the Chronology's exports when any note came from the assistant's judgement, a Look for or the report, as it printed for an Event with source assistant; never for a watch phrase, since the app's search is not the assistant.
+- **Make it a note** replaces Make it an event on the comparison, on the incident page and on the recording page alike (so a recording's comparison, which could make nothing before, can): the claim becomes a note on the recording at the moment, in the person's name, its origin "from the report, page 4, paragraph 2" with the mark and the assistant's why, resting on the paragraph. On an incident the note goes on the camera running at the moment, the one with a line being spoken first; a Not on camera finding, which has no moment, asks for one as before. The finding says which recording the note is on; the office's own note on the finding stays on the finding.
+- **Where the origin shows**: under the line on the recording page after the writer and date ("Note, D. Meehan, 29 Oct 2026 · from a proposed event"), on the Notes tab's row, on the chronology's source pill, in Download notes under the writer, in the Chronology's exports as the source and the why. A note cleared forgets its origin. The case's chronology entry, the Notes page and the transcript exports with notes show the note as any note for now.
+- **What changes from earlier phases.** Phase 6 chapter 3 and Phase 7 chapter 2: Accept writes a note and the Chronology shows a note event, not an Event with source assistant or watch phrase; the why and the source live on the note's origin. Phase 8 chapter 2, principle 1: a note may be an assistant's sentence a person adopted by accepting it, and says so. Phase 8 chapter 4, part 3: Make it a note; a recording's comparison can make one. The audit rows: **proposal accepted** (the source, whether on a line or at a moment, the incident, the case) and **proposal dismissed**, and the note's own row with where "proposal"; "event added" with source assistant is no longer written.
+
+### The Proposed events tab (the second release)
+
+- In the order Recordings, Search, Proposed events, Notes, Documents, Incidents, Clips, Speakers, Details; hidden when the assistant is Off and no watch phrases are listed, its count the proposals waiting.
+- The chronology's shape: the days, the ruler, the recordings' band on the case's clock, a lane of the proposals above the Notes lane, the incidents lane under it; the entries by time of day with the sentence, the why, the line it rests on, the source pill, and Accept, Accept and edit (the note box with the sentence in it) and Dismiss; a recording with no day yet under Not yet placed. An accepted entry stays, greyed, saying which note it became and whose.
+- **Propose events reads every recording in the case** that has a transcript (answer 2), the watch-phrase search over all of them first, the engine's windows after, the time expectation under the button; running again replaces the waiting proposals and never proposes again what was dismissed; a recording landed since the last run shows as not yet read.
+- A press on a proposal's time opens the Preview's window (v1.166.0) at the moment with the lines under it, one strip above the lines saying what is proposed and where it came from, and the three choices in its foot.
+- A proposal on a camera of an incident says so with the incident's pill; a spell inside an incident's span wears it on its heading.
+
+### The comparison against the case (the third release)
+
+- The Documents tab gains the column Against the case and, per document, Compare with the case or Comparison; the layer opens over the table in the shape every layer has, with Documents as its Back. The document keeps its home; the comparison inside an incident and on a recording are untouched.
+- The document is read against each recording of the case in turn, one run per recording, the way a recording's comparison reads a transcript and its Digest, since one record of a whole case does not fit a call; the findings gather on one layer, each naming its recording, by day and time on the case's clock with By recording as the other order. Make it a note as above; Choose the moment for a Not on camera finding opens the Preview's window on a recording the person picks. Stale as today, and Compare again.
+
+### Left to the build
+
+- The second and third releases' addresses, the lane's drawing and the layer's filters, within the drawing.
+- Whether the case's chronology entry and the Notes page show the origin's words (a later release).
+
 ## Appendix A. Audit rows added in Phase 10
 
 | Row | Category | Details kept | Never |
@@ -135,6 +180,8 @@ Written with chapter 1 and held for a second release at the maintainer's word of
 | Chronology exported (the case's) | Exports | the case, the format, whether one day or every day | a word, a date |
 | Incident made (how: chronology; v1.167.0) | Cases | the case, the incident, the day, the span, the camera count | a word of a note |
 | Incident widened from the chronology (v1.167.0) | Cases | the case, the incident, the span before and after, the cameras added | a word of a note |
+| Proposal accepted (v1.168.0) | Cases | the recording, the source, whether on a line or at a moment, the incident, the case | the sentence, the why, a word of a note |
+| Proposal dismissed (v1.168.0) | Cases | the recording, the source, the incident, the case | the sentence |
 
 ## Appendix B. Settings added or changed in Phase 10
 
@@ -143,4 +190,5 @@ None. The Reading of the exports uses the Incidents page's report settings as th
 ## Sources
 
 - The maintainer's asks and answers of 2026-10-28, recorded in the office's planning note and in `docs/spec/mockups/phase-10-case-chronology.html`.
+- The maintainer's ask and four answers of 2026-10-29, recorded on `docs/spec/mockups/phase-10-proposed-events-and-comparison.html` (chapter 4).
 - Phase 6 chapter 2, Phase 8 chapters 11, 12 and 14, Phase 9 chapter 4, Phase 4 chapter 3, ADR 0027.

@@ -174,9 +174,11 @@ def test_only_accept_makes_an_event_the_assistants(incident, person):
     assert event.source == "person"
 
 
-def test_an_accepted_proposal_keeps_its_source_when_edited(incident, person):
+def test_an_accepted_proposal_is_a_note_and_keeps_its_origin_when_edited(
+    incident, person
+):
     cams = {one.camera_id(): one for one in incident.cameras.all()}
-    event = Event.objects.create(
+    proposed = Event.objects.create(
         incident=incident,
         at=20.0,
         text="Proposed line",
@@ -185,14 +187,21 @@ def test_an_accepted_proposal_keeps_its_source_when_edited(incident, person):
         proposed=True,
         rests_on="a line",
     )
-    incident_assistant.accept(event, by=person)
+    # Accepted (v1.168.0): a note on the camera's recording, shown as a note
+    # event; the row from before goes. Edit writes the note and the origin
+    # stays with it.
+    incident_assistant.accept(proposed, by=person)
+    assert not Event.objects.filter(pk=proposed.pk).exists()
+    event = incident.events.get(source="note")
+    assert event.text == "Proposed line" and event.at == 20.0
     chronology.change(
         event,
         {"at": "20", "text": "Proposed line, edited", "source": "person"},
         by=person,
     )
     event.refresh_from_db()
-    assert event.source == "assistant" and event.text == "Proposed line, edited"
+    assert event.source == "note" and event.text == "Proposed line, edited"
+    assert chronology.note_origin(event)["source"] == "assistant"
 
 
 # The exports -----------------------------------------------------------------------

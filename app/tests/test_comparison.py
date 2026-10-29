@@ -651,7 +651,7 @@ def test_the_comparison_reads_windows_keeps_cited_findings_and_drops_the_rest(
     assert "bag" not in json.dumps(run.details).lower()
     # The page's JSON.
     got = comparison.as_json(made, report, incident)
-    assert got["state"] == "done" and got["can_make_event"] is True
+    assert got["state"] == "done" and got["can_make_note"] is True
     assert got["counts"]["agrees"] == 1 and got["stale"] == ""
     assert (
         "4 findings: 1 agree, 1 differ, 1 not on camera, 1 not in the report"
@@ -728,22 +728,32 @@ def test_a_finding_is_dismissed_noted_and_made_an_event_that_rests_on_the_paragr
         act, {"incident": str(incident.pk), "action": "undismiss", "finding": second_id}
     ).json()
     assert got["findings"][1]["dismissed"] is False
-    # Make it an event: on the chronology at the moment, source report,
-    # resting on the paragraph, the mark as its why, the note carried.
+    # Make it a note (v1.168.0): a note on the camera's line at the moment,
+    # in the person's name, saying it came from the report; the chronology
+    # shows it as a note event resting on the paragraph with the mark as
+    # its why. The office's own note on the finding stays on the finding.
     got = client.post(
-        act, {"incident": str(incident.pk), "action": "make_event", "finding": first_id}
+        act, {"incident": str(incident.pk), "action": "make_note", "finding": first_id}
     ).json()
-    assert got["findings"][0]["event"]
-    event = chronology.Event.objects.get(pk=got["findings"][0]["event"])
-    assert event.source == "report" and event.at == 60.0 and event.proposed is False
+    assert got["findings"][0]["note_id"] and got["findings"][0]["note_kind"] == "line"
+    from core.jobs import Segment
+
+    line = Segment.objects.get(pk=got["findings"][0]["note_id"])
+    assert line.start == 60.0 and line.note == "The driver said the bag was not his"
+    assert line.note_by == person
+    assert line.note_from["words"] == "from the report, page 1, paragraph 3"
+    assert got["findings"][0]["note"] == "Check the audio."
+    event = chronology.Event.objects.get(segment=line)
+    assert event.source == "note" and event.at == 60.0 and event.proposed is False
     assert event.text == "The driver said the bag was not his"
     assert event.rests_on.startswith("[Report, page 1, paragraph 3] A small bag")
-    assert event.why == "Differs: Heard on camera." and event.note == "Check the audio."
+    assert event.why == "Differs: Heard on camera."
     state = client.get(f"{incident.url()}/state").json()
     row = next(one for one in state["events"] if one["id"] == str(event.pk))
-    assert row["source_words"] == "From the report" and row["rests_on"].startswith(
-        "[Report"
+    assert row["source_words"].startswith("Note by ") and row["source_words"].endswith(
+        ", from the report, page 1, paragraph 3"
     )
+    assert row["rests_on"].startswith("[Report")
     # The memo reads the paragraph the event rests on.
     from core.incident_assistant import _chronology_lines
 
@@ -752,23 +762,25 @@ def test_a_finding_is_dismissed_noted_and_made_an_event_that_rests_on_the_paragr
         "from the report, which says: [Report, page 1, paragraph 3]" in one
         for one in lines
     )
-    # Not on camera needs a moment; a stray finding is refused.
+    # Not on camera needs a moment; a stray finding is refused. At 45 s
+    # nothing is being said, so the note sits at the moment.
     told = client.post(
         act,
-        {"incident": str(incident.pk), "action": "make_event", "finding": second_id},
+        {"incident": str(incident.pk), "action": "make_note", "finding": second_id},
     )
     assert told.status_code == 400 and "moment" in told.json()["error"]
     told = client.post(
         act,
         {
             "incident": str(incident.pk),
-            "action": "make_event",
+            "action": "make_note",
             "finding": second_id,
             "at": "45",
         },
     )
     assert told.status_code == 200
-    assert chronology.Event.objects.filter(source="report").count() == 2
+    assert told.json()["findings"][1]["note_kind"] == "moment"
+    assert chronology.Event.objects.filter(source="note").count() == 2
     assert (
         client.post(
             act, {"incident": str(incident.pk), "action": "dismiss", "finding": "nope"}
@@ -800,11 +812,8 @@ def test_the_comparison_runs_against_a_recording_and_refuses_when_it_cannot(
     signed_in(client, person)
     base = f"/case/{a_case.pk}/document/{report.pk}"
     got = client.get(f"{base}/comparison?recording={recording.pk}").json()
-    assert (
-        got["state"] == ""
-        and got["possible"] is True
-        and got["can_make_event"] is False
-    )
+    assert got["state"] == "" and got["possible"] is True
+    assert got["can_make_note"] is True
     told = client.post(f"{base}/compare", {"recording": str(recording.pk)}).json()
     assert told["state"] == "queued" and told["busy"] is True
     made = Comparison.objects.get()

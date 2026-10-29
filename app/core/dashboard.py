@@ -90,6 +90,16 @@ def incident_counts_for(cases) -> dict:
         .annotate(n=Count("id"))
     ).items():
         bump(incident_id, "proposals", n)
+    # The Proposal rows (v1.168.0), with the Event rows from before it.
+    from core.proposals import WAITING, Proposal
+
+    for incident_id, n in _grouped(
+        Proposal.objects.filter(state=WAITING, incident__case_id__in=ids)
+        .order_by()
+        .values("incident")
+        .annotate(n=Count("id"))
+    ).items():
+        bump(incident_id, "proposals", n)
     for incident_id, n in _grouped(
         incident_assistant.IncidentMemo.objects.filter(
             state__in=(incident_assistant.QUEUED, incident_assistant.RUNNING),

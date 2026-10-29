@@ -32,6 +32,7 @@ from core import (
     expectation,
     incidents,
     prompts,
+    proposals,
     settings_store,
 )
 from core.assistant import DONE, FAILED, QUEUED, RUNNING, PromptTemplate
@@ -428,7 +429,7 @@ def _keep_or_why(
         "why": why,
         "dismissed": False,
         "note": "",
-        "event": "",
+        "note_id": "",
     }, ""
 
 
@@ -1133,7 +1134,7 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
         ),
         "home": "incident" if isinstance(home, incidents.Incident) else "recording",
         "home_id": str(home.pk),
-        "can_make_event": isinstance(home, incidents.Incident),
+        "can_make_note": True,
         "marks": [{"key": mark, "words": MARK_WORDS[mark]} for mark in MARKS],
     }
     if comparison is None:
@@ -1239,15 +1240,52 @@ def set_note(comparison: Comparison, finding_id: str, note: str) -> bool:
     return True
 
 
-def make_event(comparison: Comparison, finding_id: str, *, at=None, by, request=None):
-    """Make it an event: on the chronology at the moment, the claim as its
-    line, source report, resting on the paragraph, the mark as its why."""
+def make_note(comparison: Comparison, finding_id: str, *, at=None, by, request=None):
+    """Make it a note (Phase 10 chapter 4, v1.168.0): the claim becomes a note
+    on the recording at the moment, in the person's name, saying it came
+    from the report, page and paragraph; on an incident the note goes on
+    the camera running at the moment, the one with a line being spoken
+    first. The chronology shows it as a note event resting on the paragraph."""
     one = _finding(comparison, finding_id)
-    if one is None or not comparison.incident_id:
+    if one is None:
         raise ValueError("no such finding")
+    if one.get("note_id"):
+        return None
     moment = one.get("at") if at is None else at
     if moment is None:
-        raise ValueError("Say the moment on the incident clock this event is at.")
+        raise ValueError("Say the moment this note is at.")
+    moment = float(moment)
+    if comparison.incident_id:
+        incident = comparison.incident
+        running = [
+            cam
+            for cam in incident.cameras.select_related("recording")
+            if str(cam.pk) in chronology.running_cameras(incident, moment)
+        ]
+        if not running:
+            raise ValueError(
+                "No camera runs at that moment, so there is no line to note."
+            )
+        from core import notes
+
+        camera = next(
+            (
+                cam
+                for cam in running
+                if notes.spoken_at(
+                    getattr(cam.recording, "transcript", None), moment - cam.starts_at
+                )
+                is not None
+            ),
+            running[0],
+        )
+        recording = camera.recording
+        seconds = max(0.0, moment - camera.starts_at)
+        where = camera.camera_id()
+    else:
+        recording = comparison.recording
+        seconds = max(0.0, moment)
+        where = recording.title or recording.original_filename
     rests = (
         f"[Report, page {one['page']}, paragraph {one['n']}] {one['paragraph']}"
         if one.get("page")
@@ -1256,22 +1294,23 @@ def make_event(comparison: Comparison, finding_id: str, *, at=None, by, request=
     why = MARK_WORDS.get(one["mark"], "") + (
         f": {one['why']}" if one.get("why") else ""
     )
-    event = chronology.add(
-        comparison.incident,
-        {
-            "at": str(float(moment)),
-            "text": one["claim"],
-            "source": chronology.REPORT,
-            "rests_on": rests,
-            "why": why,
-            "note": one.get("note", ""),
-        },
-        by=by,
-        request=request,
+    origin = {
+        "kind": "finding",
+        "source": "report",
+        "why": why,
+        "rests_on": rests,
+        "comparison": str(comparison.pk),
+        "finding": one["id"],
+        "words": proposals.origin_words("report", page=one.get("page"), n=one.get("n")),
+    }
+    kind, home = proposals.write_note(
+        recording, seconds, one["claim"], origin=origin, by=by, request=request
     )
-    one["event"] = str(event.pk)
+    one["note_id"] = str(home.pk)
+    one["note_kind"] = kind
+    one["note_on"] = where
     comparison.save(update_fields=["findings"])
-    return event
+    return home
 
 
 # The export ---------------------------------------------------------------------------

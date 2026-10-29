@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposed events and the comparison, for the whole case</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #7b4ea3; --sys: #6b7480; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --now: #fff3c4;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+      --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --now: #4a3f12; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3b1f1d;
+    --c1: #7ab4e6; --c2: #f0956a; --c3: #7bc67e; --c4: #b79be0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --now: #4a3f12; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .btn.off { opacity: .5; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+
+  .frame { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; overflow: hidden; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tabs span { padding: 5px 10px; border-radius: 6px 6px 0 0; color: var(--muted); font-size: 13px; }
+  .tabs .on { background: var(--surface); color: var(--text); border: 1px solid var(--line); border-bottom-color: var(--surface); margin-bottom: -1px; font-weight: 600; }
+  .tabs .count { font-size: 11px; background: var(--surface-2); border-radius: 999px; padding: 0 6px; margin-left: 4px; color: var(--muted); }
+  .tabs .new { outline: 2px dashed var(--accent); outline-offset: 2px; }
+  input[type=text] { font: inherit; font-size: 12px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+
+  .chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+  .days .on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .band { position: relative; display: grid; gap: 4px; padding: 6px 0; }
+  .band .bar { position: relative; height: 10px; }
+  .band .bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; display: block; }
+  .band .bar b { position: absolute; left: 0; top: -1px; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); }
+  .lane { position: relative; height: 14px; }
+  .lane i { position: absolute; top: 3px; width: 8px; height: 8px; border-radius: 50%; }
+  .lane i.p { width: 0; height: 0; border-radius: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--warn); background: none; top: 2px; }
+  .lane i.p.w { border-bottom-color: var(--c4); }
+  .lane .lbl, .inc-lane .lbl { position: absolute; right: 0; top: 0; font-size: 10px; color: var(--muted); }
+  .inc-lane { position: relative; height: 18px; }
+  .inc-lane .br { position: absolute; top: 2px; height: 12px; border: 2px solid var(--inc); border-top: 0; border-radius: 0 0 4px 4px; background: var(--inc-soft); }
+  .inc-lane .br b { position: absolute; left: 6px; top: -2px; font-size: 10px; color: var(--inc); white-space: nowrap; font-weight: 600; }
+  .spell { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .spell .sh { display: flex; gap: 10px; align-items: baseline; }
+  .entry { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
+  .entry.lit { background: var(--accent-soft); }
+  .entry.done { opacity: .75; }
+  .entry .num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: var(--sys); }
+  .entry .top { display: flex; gap: 8px; align-items: baseline; }
+  .entry .t { font-family: var(--mono); color: var(--accent); }
+  .entry .play { color: var(--accent); font-size: 11px; }
+  .entry .line { color: var(--muted); font-size: 12px; }
+  .entry .why { font-size: 12px; }
+  .entry .meta { display: flex; gap: 6px; margin-top: 3px; flex-wrap: wrap; align-items: center; }
+  .entry .meta .btn { margin-right: 2px; }
+
+  /* the Preview's window, as v1.166.0 draws it */
+  .pv { width: 420px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; font-size: 13px; }
+  .pv .head { display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .pv .head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pv .media { height: 180px; background: linear-gradient(160deg, #2b3440, #0f141a); display: flex; align-items: flex-end; padding: 8px 10px; color: #cfd8e3; font-family: var(--mono); font-size: 11px; }
+  .pv .prop { padding: 6px 10px; background: var(--warn-soft); color: var(--warn); border-bottom: 1px solid var(--line); font-size: 12px; }
+  .pv .lines { max-height: 150px; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .pv .ln { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr); gap: 8px; padding: 4px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+  .pv .ln:first-child { border-top: 0; }
+  .pv .ln .t { font-family: var(--mono); color: var(--muted); }
+  .pv .ln.now { background: var(--now); }
+  .pv .ln.cited { box-shadow: inset 3px 0 0 var(--accent); }
+  .pv .ln .who { color: var(--muted); }
+  .pv .foot { display: flex; gap: 6px; padding: 8px 10px; align-items: center; flex-wrap: wrap; }
+  .pv .notebox { margin: 0 10px 10px; border: 1px solid var(--accent); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; background: var(--surface); }
+
+  .tbl { border-collapse: collapse; width: 100%; font-size: 12px; background: var(--surface); }
+  .tbl th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  .tbl td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tbl tr.dim td { opacity: .6; }
+  .mark { font-size: 11px; padding: 0 7px; border-radius: 999px; display: inline-block; white-space: nowrap; }
+  .mark.agrees { background: var(--ok-soft); color: var(--ok); } .mark.differs { background: var(--bad-soft); color: var(--bad); } .mark.noc { background: var(--warn-soft); color: var(--warn); } .mark.nir { background: var(--inc-soft); color: var(--inc); }
+  .layer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .layer .lh { display: flex; gap: 10px; align-items: center; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .layer .lh b { flex: 1; }
+  .layer .body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filters .pill.on { background: var(--accent); color: var(--accent-ink); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; }
+  .card h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+  .nline { font-style: italic; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 10, a new chapter · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>Proposed events and the comparison, read over the whole case</h1>
+    <p class="lede">Today the assistant proposes events and compares a report only inside an incident. This drawing gives both a place on the case: a Proposed events tab in the chronology's shape, and the comparison on the Documents tab read against every recording of the case. One rule stands under both: a proposal is a moment on a recording, it touches nothing until a person accepts it, and accepting writes a note on that recording. A note already follows its recording everywhere, onto the case's chronology and onto any incident the recording is synced into, so the accepted item appears wherever it should with nothing else built. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The case's tabs in the new order, and the Proposed events tab in the chronology's shape</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <span class="count">14</span></span><span>Search</span><span class="on new">Proposed events <span class="count">11</span></span><span>Notes <span class="count">23</span></span><span>Documents <span class="count">2</span></span><span>Incidents <span class="count">2</span></span><span>Clips <span class="count">4</span></span><span>Speakers</span><span>Details</span></div>
+      <div class="lead">
+        <span style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span class="btn tiny">Propose events</span><input type="text" placeholder="Look for, this run only" style="width: 200px"><span class="muted">Proposed 11 events at 14:02 from 14 recordings, 3 from the watch phrases · <b>2 recordings not yet read</b></span></span>
+        <span style="display: flex; gap: 8px; align-items: center"><span class="btn tiny ghost">Dismiss all</span><span class="btn tiny ghost">Accept all</span></span>
+      </div>
+      <div class="chron">
+        <div class="days"><span class="on">6 Nov 2025 · 7</span><span>7 Nov · 2</span><span>12 Nov · 1</span><span>Not yet placed · 1</span></div>
+        <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:30</span><span style="left: 50%">21:00</span><span style="left: 75%">21:30</span><span style="left: 100%">22:00</span></div>
+        <div class="band">
+          <div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1</b></div>
+          <div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1</b></div>
+          <div class="bar"><i class="c3" style="left: 34%; width: 30%"></i><b style="left: 34%">BWC3-1</b></div>
+          <div class="bar"><i class="c4" style="left: 62%; width: 30%"></i><b style="left: 62%">Dash-4</b></div>
+        </div>
+        <div class="lane"><i class="p" style="left: 22%"></i><i class="p" style="left: 25.9%"></i><i class="p w" style="left: 30%"></i><i class="p" style="left: 36%"></i><i class="p" style="left: 54.1%"></i><i class="p w" style="left: 57%"></i><i class="p" style="left: 70%"></i><span class="lbl">proposed</span></div>
+        <div class="lane"><i class="c1" style="left: 20.5%"></i><i class="c2" style="left: 21.8%"></i><i class="c1" style="left: 24%"></i><i class="c3" style="left: 40%"></i><i class="c4" style="left: 74%"></i><span class="lbl">notes</span></div>
+        <div class="inc-lane"><div class="br" style="left: 52%; width: 28%"><b>Traffic stop, 6 Nov · 3 cameras · 5 events</b></div><span class="lbl">incidents</span></div>
+        <div class="spell">
+          <div class="sh"><b>20:26:10 to 20:36:00</b><span class="muted">3 proposed</span></div>
+          <div class="entry"><span class="num c1">1</span><div><div class="top"><span class="t">20:26:10</span><span class="play">▶</span></div><div>Officer asked to search the car before rights were read.</div><div class="why">Why it matters: the answer to a consent question before an advisement bears on the motion.</div><div class="line">"Mind if I take a look in the trunk" · BWC1-1</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+          <div class="entry lit"><span class="num c2">2</span><div><div class="top"><span class="t">20:29:48</span><span class="play">▶</span></div><div>A handgun was mentioned by the second officer.</div><div class="line">"I got, I got gun" · BWC2-1</div><div class="meta"><span class="pill inc">Watch phrase: gun</span><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+          <div class="entry done"><span class="num c3">3</span><div><div class="top"><span class="t">20:36:00</span><span class="play">▶</span></div><div>Third officer arrived and took over the passenger.</div><div class="line">"Dispatch, 3-1 on scene" · BWC3-1</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="pill ok">accepted · a note on BWC3-1 by J. Brennan, today</span><span class="btn tiny ghost">Open the note</span></div></div></div>
+        </div>
+        <div class="spell">
+          <div class="sh"><b>21:06:52 to 21:09:40</b><span class="muted">2 proposed</span><span class="pill inc">inside Traffic stop, 6 Nov</span></div>
+          <div class="entry"><span class="num c1">4</span><div><div class="top"><span class="t">21:09:40</span><span class="play">▶</span></div><div>Rights were read after the search had begun.</div><div class="why">Why it matters: the order of the advisement and the search.</div><div class="line">"You have the right to remain silent" · BWC1-1</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="pill inc">on a camera of Traffic stop, 6 Nov</span><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The order you gave.</b> Recordings, Search, Proposed events, Notes, Documents, Incidents, Clips, Speakers, Details. Proposed events hides as the button does today: when the assistant is Off and no watch phrases are listed. Its count is the proposals waiting.</p>
+      <p><b>The chronology's shape, with a proposed lane.</b> The same days, ruler and band as the Notes tab's Chronology, the recordings on the case's clock, so a proposal is placed by the clock its recording already has. Above the notes lane a lane of small triangles for the proposals, the assistant's in the warning tone and the watch phrases' in the incident colour. A recording with no day yet puts its proposals under <b>Not yet placed</b>, in order of time into the recording, as the chronology does with its unplaced notes.</p>
+      <p><b>Propose events reads every recording in the case</b> that has a transcript (answer 2), the watch-phrase search over all of them first, the engine's windows after, with the time expectation under the button. Running again replaces the proposals still waiting and never proposes again what was dismissed, as the incident's run has it. A recording that landed since the last run shows as "not yet read".</p>
+      <p><b>Accept is one press</b> (answer 1): the sentence becomes a note on that recording at that line, or at the moment when nothing was said, in the acceptor's name. <b>Accept and edit</b> opens the note box with the sentence in it first. The accepted entry stays in the list, greyed, saying what it became and whose; its why line stays readable here.</p>
+      <p><b>A proposal on a camera of an incident</b> says so with the incident's pill, and the spell inside an incident's span wears it on its heading, as the Notes tab does. Accepting it writes the note, and the note is an event of that incident at once (Phase 8 chapter 11).</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Verifying one: the Preview's window at the moment, the lines under it, Accept from there</h2></div>
+    <div class="cols">
+      <div class="pv">
+        <div class="head"><b>BWC2-1 · 20:29:48</b><span class="mono muted">00:05:38</span><span class="btn tiny ghost">Close ✕</span></div>
+        <div class="media">▶ ──────●──────────────── 00:05:38 / 00:47:12</div>
+        <div class="prop"><b>Proposed:</b> A handgun was mentioned by the second officer. <span class="muted">· Watch phrase: gun</span></div>
+        <div class="lines">
+          <div class="ln"><span class="t">00:05:29</span><span><span class="who">Speaker 1</span> Step out for me. Keep your hands where I can see them.</span></div>
+          <div class="ln"><span class="t">00:05:34</span><span><span class="who">Speaker 2</span> What did I do?</span></div>
+          <div class="ln now cited"><span class="t">00:05:38</span><span><span class="who">Speaker 1</span> I got, I got gun, I got gun.</span></div>
+          <div class="ln"><span class="t">00:05:41</span><span><span class="who">Seen</span> a dark object on the passenger seat</span></div>
+          <div class="ln"><span class="t">00:05:46</span><span><span class="who">Speaker 3</span> Hands! Hands!</span></div>
+        </div>
+        <div class="foot"><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span><span class="muted tiny" style="margin-left: auto">Open the recording</span></div>
+      </div>
+      <div class="pv">
+        <div class="head"><b>BWC2-1 · 20:29:48</b><span class="mono muted">00:05:38</span><span class="btn tiny ghost">Close ✕</span></div>
+        <div class="media">▶ ──────●──────────────── 00:05:38 / 00:47:12</div>
+        <div class="lines">
+          <div class="ln"><span class="t">00:05:34</span><span><span class="who">Speaker 2</span> What did I do?</span></div>
+          <div class="ln now cited"><span class="t">00:05:38</span><span><span class="who">Speaker 1</span> I got, I got gun, I got gun.</span></div>
+          <div class="ln"><span class="t">00:05:41</span><span><span class="who">Seen</span> a dark object on the passenger seat</span></div>
+        </div>
+        <div class="notebox"><div class="muted tiny">A note on this line</div><div>A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px"><span class="btn tiny ghost">Cancel</span><span class="btn tiny primary">Save</span></div></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One door.</b> A press on a proposal's time opens the Preview's window the Notes tab got in v1.166.0: the recording at the moment, the lines moving under it with the cited line lit, what the camera showed among them. Nothing new is drawn; the window gains one strip above the lines saying what is proposed and where it came from, and its foot carries the same three choices as the row.</p>
+      <p><b>Accept and edit</b> (right) is the window's own note box, already there since v1.98.0, opened with the sentence in it. Save writes the note; the proposal is then marked accepted. The same window serves a comparison's finding (figure C) and the incident's layer.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The Documents tab: the comparison against the case, one layer per document</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <span class="count">14</span></span><span>Search</span><span>Proposed events <span class="count">11</span></span><span>Notes <span class="count">23</span></span><span class="on">Documents <span class="count">2</span></span><span>Incidents <span class="count">2</span></span><span>Clips <span class="count">4</span></span><span>Speakers</span><span>Details</span></div>
+      <table class="tbl">
+        <tr><th>Document</th><th>Pages</th><th>The report for</th><th>Against the case</th><th></th></tr>
+        <tr><td><b>Report 25-1187</b><div class="muted">report_25-1187.pdf</div></td><td>42 pages</td><td>Traffic stop, 6 Nov <span class="muted">(incident)</span></td><td><span class="pill ok">31 findings</span> <span class="muted">14 recordings, 14:20</span></td><td><span class="btn tiny">Open</span> <span class="btn tiny primary">Comparison</span> <span class="btn tiny ghost">Comparison to Word</span></td></tr>
+        <tr><td><b>Supplement, Ofc. Reyes</b><div class="muted">supp_reyes.pdf</div></td><td>6 pages, read by OCR</td><td>BWC3-1 <span class="muted">(camera)</span></td><td><span class="muted">not compared yet</span></td><td><span class="btn tiny">Open</span> <span class="btn tiny">Compare with the case</span></td></tr>
+      </table>
+      <div class="layer">
+        <div class="lh"><span class="btn tiny ghost">‹ Documents</span><b>Comparison against the case, Report 25-1187</b><span class="btn tiny">Compare again</span><span class="btn tiny ghost">Comparison to Word</span></div>
+        <div class="body">
+          <div class="muted small">42 pages against 14 recordings, read one recording at a time; 31 findings: 12 agree, 6 differ, 9 not on camera, 4 not in the report. Every row cites the report's paragraph and the recording's moment; read both before trusting a mark. Nothing becomes a note until you make it one.</div>
+          <div class="filters"><span class="pill on">All (31)</span><span class="pill">Agrees (12)</span><span class="pill">Differs (6)</span><span class="pill">Not on camera (9)</span><span class="pill">Not in the report (4)</span><span class="pill" style="margin-left: auto">By recording</span><span class="pill on">By day and time</span></div>
+          <table class="tbl">
+            <tr><td style="width: 150px"><span class="mark differs">Differs</span><div class="mono"><span style="color: var(--accent)">6 Nov 20:26:10</span></div><div class="muted">BWC1-1</div></td><td><div>The report says consent to search was given before the officer asked.</div><div class="small"><span style="color: var(--accent)">page 4, para 2</span> · "Driver consented to a search of the vehicle at which time..."</div><div class="small">The record has the question at 20:26:10 and no answer before the trunk is opened at 20:27:30.</div><div style="margin-top: 4px; display: flex; gap: 6px"><span class="btn tiny primary">Make it a note</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></td></tr>
+            <tr><td><span class="mark agrees">Agrees</span><div class="mono"><span style="color: var(--accent)">6 Nov 20:29:48</span></div><div class="muted">BWC2-1</div></td><td><div>A firearm was observed on the passenger seat.</div><div class="small"><span style="color: var(--accent)">page 5, para 1</span> · "Ofc. Reyes observed a black handgun on the front passenger seat..."</div><div style="margin-top: 4px; display: flex; gap: 6px"><span class="btn tiny primary">Make it a note</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></td></tr>
+            <tr><td><span class="mark noc">Not on camera</span><div class="muted small">no moment</div></td><td><div>The report says the driver was identified by a records check at the scene.</div><div class="small"><span style="color: var(--accent)">page 6, para 3</span></div><div class="small">No recording carries a records check or a name read back.</div><div style="margin-top: 4px; display: flex; gap: 6px"><span class="btn tiny">Choose the moment</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></td></tr>
+            <tr class="dim"><td><span class="mark nir">Not in the report</span><div class="mono"><span style="color: var(--accent)">6 Nov 21:09:40</span></div><div class="muted">BWC1-1</div></td><td><div>Rights were read after the search had begun.</div><div class="small">The record has the advisement at 21:09:40; the report does not mention when rights were read.</div><div class="small"><span class="pill ok">a note on BWC1-1 by A. Ortiz, today</span></div></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Where it sits.</b> The Documents tab gains one column, Against the case, and one button per document: Compare with the case, or Comparison when one exists. The layer opens over the table in the shape every layer has, with Documents as its Back. The comparison inside an incident and on a recording are untouched.</p>
+      <p><b>How it reads.</b> The document is read against each recording of the case in turn, one run per recording, the way the recording's comparison already reads a transcript and its Digest, because one record of the whole case does not fit a call. The findings gather on one layer, each naming its recording, ordered by day and time on the case's clock, with By recording as the other order. The state line says the count of recordings and the time it took; the time expectation shows while it runs.</p>
+      <p><b>Make it a note</b> replaces Make it an event: the claim becomes a note on that recording at the moment, in the person's name, with "from the report, page 4, paragraph 2" kept on the note's link back. A <b>Not on camera</b> finding has no moment, so Choose the moment opens the Preview's window on a recording the person picks, and Make it a note sits in its foot. A finding already made a note says so and dims.</p>
+      <p><b>Stale.</b> As today: a comparison goes stale when a recording's transcript is made again or a recording joins or leaves the case; the state line says so and Compare again refreshes.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Where an accepted item goes: one note, seen in four places</h2></div>
+    <div class="cols">
+      <div class="card"><h3>The recording page</h3><div>00:05:38 <b>Speaker 1</b> I got, I got gun, I got gun.</div><div class="nline">Note, J. Brennan, 29 Oct 2026: A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div class="muted tiny" style="margin-top: 4px">from a proposed event · watch phrase: gun</div></div>
+      <div class="card"><h3>The Notes tab</h3><div><span class="mono" style="color: var(--accent)">6 Nov 20:29:48</span> · BWC2-1</div><div>A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div class="meta" style="margin-top: 3px"><span class="pill">J. Brennan, today</span> <span class="pill warn">from a proposed event</span></div></div>
+      <div class="card"><h3>The incident's chronology</h3><div><span class="mono">20:29:48</span> <b>7</b> A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div class="meta" style="margin-top: 3px"><span class="pill">Note, J. Brennan</span> <span class="pill warn">from a proposed event</span></div><div class="muted tiny">hover: why it matters, in the assistant's words</div></div>
+      <div class="card"><h3>The exports</h3><div class="small">Chronology to Word, the Timeline report and Download notes print the note as a note, with "from a proposed event" and the why line under it where the Chronology's exports print a why today. The AI notice on the cover prints when any note came from the assistant, as it does for an assistant's event now.</div></div>
+    </div>
+    <div class="caption">
+      <p><b>Nothing new is carried.</b> The note is a note (Phase 8 chapter 2) and follows its recording wherever the recording is used: the Notes tab, the case's chronology, every incident the recording is synced into, now or later (answer 3). That is the rule the app already keeps.</p>
+      <p><b>One small thing kept on the note:</b> which proposal or finding it came from, so the source pill, the why line and the AI notice survive the change from an Event to a note. The inside of an incident reads them through that link and loses nothing it prints today.</p>
+      <p><b>The other way round</b> is already true: a note written on the recording page, in the Preview's window or on the Notes page is an event of any incident the recording is synced into, and sits on the case's chronology, the moment it is saved.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>Inside an incident: the same look, the same outcome</h2></div>
+    <div class="cols">
+      <div class="card"><h3>The Proposed events layer</h3><div class="small">Unchanged in look: Propose again, Look for, the rows with Accept and Dismiss, Accept all and Dismiss all. Propose again reads the incident's synced cameras as it does today. <b>Accept</b> now writes the note on the camera's line, and the row on the Chronology is the note event the page already draws, with "from a proposed event" and the why on hover. A proposal made here also appears on the case's Proposed events tab, on that camera, saying which incident it was proposed for.</div></div>
+      <div class="card"><h3>The Report tab's comparison</h3><div class="small">Unchanged in look. <b>Make it a note</b> replaces Make it an event; the note lands on the camera's line at the moment, and the Chronology shows it as a note event resting on the paragraph. A Not on camera finding still asks for the moment, on the incident's clock as today, and the note goes on the camera running then.</div></div>
+      <div class="card"><h3>The proposals waiting today</h3><div class="small">Stay as they are until accepted or dismissed (answer 4). Accepting one of them from now on writes a note, as above; nothing moves in the database on the upgrade.</div></div>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices, answered 2026-10-29</span><h2>The four answers, recorded</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>Accept.</b> <span class="pill acc">Answered: one press writes the note; Accept and edit beside it.</span></li>
+        <li><b>What the whole-case runs read.</b> <span class="pill acc">Answered: every recording in the case.</span> No picker; the time expectation says how long.</li>
+        <li><b>The incident's own Accept.</b> <span class="pill acc">Answered: it becomes a note too, and a note added anywhere follows its recording everywhere, including an incident it is in.</span> The second half is already the app's rule since Phase 8 chapter 11.</li>
+        <li><b>The proposals waiting on incidents today.</b> <span class="pill acc">Answered: stay as they are until accepted or dismissed.</span></li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>What the spec changes.</b> Phase 7 chapter 2 and Phase 6 chapter 3: an accepted proposal is a note, not an Event of its own source; the source and the why live on the note's link. Phase 8 chapter 2, principle 1: a note may be an assistant's sentence a person adopted by accepting it, and says so. Phase 8 chapter 4: the comparison may read a document against the case, one recording at a time; "a document for the whole case" stays ruled out, since the document keeps its home. Phase 10 chapter 1: the chronology stays notes only; the proposals have a tab of their own. Each amendment is written into the chapter it changes, and the glossary gains Proposed events tab and amends Event, Note and Comparison.</p>
+      <p><b>What does not change.</b> The proposer's judgement, the watch phrases, Look for, the four marks, the memo, the incident page's layers in look, the Notes tab, the case's chronology. No proposal or finding is ever shown on a recording page until accepted.</p>
+      <p><b>Size.</b> Three releases, each walked locally first. One: a Proposal table on the recording with the link from a note, the incident's layer and comparison writing notes, nothing else visible changing; one migration. Two: the Proposed events tab, the case-wide run, the Preview's window's strip and foot, the tab order. Three: the comparison against the case on the Documents tab and its export.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

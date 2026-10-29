@@ -66,6 +66,8 @@ class MomentNote(models.Model):
     note_changed = models.DateTimeField(null=True, blank=True)
     # To check (Phase 10 chapter 1, v1.164.0), as on a line's note.
     note_to_check = models.BooleanField(default=False)
+    # As the Segment's (v1.168.0).
+    note_from = models.JSONField(default=dict, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -97,10 +99,30 @@ def date_of(when) -> str:
     return f"{timezone.localtime(when):%d %b %Y}"
 
 
+def origin_words(anchor) -> str:
+    """Where the note came from, in a few words, or nothing (v1.168.0)."""
+    if not anchor.note:
+        return ""
+    return (anchor.note_from or {}).get("words", "")
+
+
+def _origin_fields(anchor) -> dict:
+    """What a note event carries from the note's origin: the why and what
+    it rested on, so the chronology's hover and the exports have them."""
+    from core import chronology
+
+    origin = anchor.note_from or {}
+    return {
+        "why": (origin.get("why") or "")[: chronology.WHY_MOST],
+        "rests_on": (origin.get("rests_on") or "")[: chronology.TEXT_MOST],
+    }
+
+
 def line_json(segment) -> dict:
     """The note's fields as the page and the tab read them."""
     return {
         "note": segment.note,
+        "note_from": origin_words(segment),
         "note_by": (
             segment.note_by.shown_name if segment.note and segment.note_by else ""
         ),
@@ -122,7 +144,9 @@ def set_note(segment, text, *, by, request=None, where: str = "") -> dict:
     # The writer is whoever last wrote it; a cleared note has no writer.
     segment.note_by = by if wanted else None
     segment.note_changed = timezone.now() if wanted else None
-    segment.save(update_fields=["note", "note_by", "note_changed"])
+    if not wanted:
+        segment.note_from = {}
+    segment.save(update_fields=["note", "note_by", "note_changed", "note_from"])
     reflect_line(segment)
     recording = segment.transcript.recording
     audit.write(
@@ -194,6 +218,7 @@ def moment_json(one) -> dict:
         "at": one.at,
         "clock": exports.clock(one.at),
         "note": one.note,
+        "note_from": origin_words(one),
         "note_by": one.note_by.shown_name if one.note_by else "",
         "note_on": date_of(one.note_changed),
     }
@@ -308,13 +333,16 @@ def reflect_moment(one) -> None:
                 camera=camera,
                 cameras=[str(camera.pk)],
                 added_by=one.note_by,
+                **_origin_fields(one),
             )
             continue
         event.at = at
         event.text = one.note
         event.source = NOTE
         event.camera = camera
-        event.save(update_fields=["at", "text", "source", "camera"])
+        for key, value in _origin_fields(one).items():
+            setattr(event, key, value)
+        event.save(update_fields=["at", "text", "source", "camera", "why", "rests_on"])
 
 
 # The note on the chronology (chapter 11) -------------------------------------------
@@ -349,13 +377,16 @@ def reflect_line(segment) -> None:
                 # read as if the note were on each. The person may add more.
                 cameras=[str(camera.pk)],
                 added_by=segment.note_by,
+                **_origin_fields(segment),
             )
             continue
         event.at = at
         event.text = segment.note
         event.source = NOTE
         event.camera = camera
-        event.save(update_fields=["at", "text", "source", "camera"])
+        for key, value in _origin_fields(segment).items():
+            setattr(event, key, value)
+        event.save(update_fields=["at", "text", "source", "camera", "why", "rests_on"])
 
 
 def reflect_camera(camera) -> None:
@@ -525,6 +556,7 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.start),
                 "rests_on": one.text,
                 "who": one.speaker,
+                "from": origin_words(one),
                 # The clock verdict of the line (ADR 0023), for the export's pill.
                 "verdict": clock_check.verdict_json(one),
             }
@@ -546,6 +578,7 @@ def _moment_rows(case, links: dict | None = None) -> list[dict]:
         rows.append(
             {
                 "kind": "moment",
+                "from": origin_words(one),
                 "id": one.pk,
                 "text": one.note,
                 "by": one.note_by.shown_name if one.note_by else "",
@@ -940,6 +973,10 @@ def _note_block(document, one: dict, still, Inches, Pt, RGBColor) -> None:
     who = by.add_run(f"{one['by']}, {one['on']}" if one.get("by") else one["on"])
     who.font.size = Pt(8.5)
     who.font.color.rgb = muted
+    if one.get("from"):
+        came = by.add_run(f" · {one['from']}")
+        came.font.size = Pt(8.5)
+        came.font.color.rgb = muted
     document.add_paragraph().paragraph_format.space_after = Pt(2)
 
 

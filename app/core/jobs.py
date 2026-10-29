@@ -408,6 +408,11 @@ class Segment(models.Model):
     # the note, pressed on or off by anyone on the case from the case's
     # chronology, as the incident's events carry it.
     note_to_check = models.BooleanField(default=False)
+    # Where the note came from when a person accepted it from a proposed
+    # event or a comparison's finding (Phase 10 chapter 4, v1.168.0): the
+    # source, the why and what it rested on, so the pill, the why line and
+    # the AI notice survive. Empty for a note a person typed.
+    note_from = models.JSONField(default=dict, blank=True)
 
     # The other Side said the same words at the same moment, which is what a
     # phone system's recorded announcement does: both parties hear it, so both

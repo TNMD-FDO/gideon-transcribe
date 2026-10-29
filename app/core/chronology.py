@@ -19,7 +19,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
-from core import audit, incidents
+from core import audit, incidents, proposals
 
 PERSON = "person"
 WORDS = "words"
@@ -459,8 +459,20 @@ def source_words(event: Event, names: dict) -> str:
     if event.source == REPORT:
         return "From the report"
     if event.source == NOTE:
-        return f"Note by {note_writer(event)}, {camera}"
+        came = note_origin(event).get("words", "")
+        return f"Note by {note_writer(event)}, {camera}" + (f", {came}" if came else "")
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
+
+
+def note_origin(event: Event) -> dict:
+    """Where a note event's note came from (v1.168.0): the proposal or the
+    finding a person accepted, else empty for a note they typed."""
+    anchor = event.anchor()
+    return (anchor.note_from or {}) if anchor is not None else {}
+
+
+def _assistants_note(event: Event) -> bool:
+    return event.source == NOTE and proposals.is_assistants(note_origin(event))
 
 
 def note_writer(event: Event) -> str:
@@ -538,10 +550,8 @@ def events_json(incident) -> list[dict]:
 
     from core import notes
 
-    names = {
-        str(one.pk): one.camera_id()
-        for one in incident.cameras.select_related("recording")
-    }
+    cameras = list(incident.cameras.select_related("recording"))
+    names = {str(one.pk): one.camera_id() for one in cameras}
     clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
@@ -577,7 +587,9 @@ def events_json(incident) -> list[dict]:
                 ),
                 "proposed": event.proposed,
                 "rests_on": (
-                    event.rests_on if event.proposed or event.source == REPORT else ""
+                    event.rests_on
+                    if event.proposed or event.source in (REPORT, NOTE)
+                    else ""
                 ),
                 "why": event.why,
                 "added_by": event.added_by.shown_name if event.added_by else "",
@@ -620,6 +632,50 @@ def events_json(incident) -> list[dict]:
                 ),
             }
         )
+    # The Proposal rows waiting on the incident (v1.168.0), on its clock
+    # through their cameras, drawn as the proposals always were.
+    for one, camera in proposals.waiting(incident, cameras):
+        line, detail = line_and_detail(one.text)
+        label = names.get(str(camera.pk), "")
+        if one.source == WATCH:
+            words = f"Watch phrase, {label}"
+        elif one.source == LOOKED:
+            words = f"Looked for, {label}"
+        else:
+            words = f"Proposed from {label}"
+        rows.append(
+            {
+                "id": str(one.pk),
+                "at": one.at_on(camera),
+                "until": None if one.until is None else camera.starts_at + one.until,
+                "text": one.text,
+                "line": line,
+                "detail": detail,
+                "source": one.source,
+                "source_words": words,
+                "camera": str(camera.pk),
+                "cameras": [str(camera.pk)],
+                "seen_on": label,
+                "proposed": True,
+                "rests_on": one.rests_on,
+                "why": one.why,
+                "added_by": one.proposed_by.shown_name if one.proposed_by else "",
+                "note": "",
+                "to_check": False,
+                "note_by": "",
+                "clips": 0,
+                "clips_rendering": 0,
+                "clips_words": "",
+                "segment_id": "",
+                "recording_id": str(one.recording_id),
+                "at_a_moment": False,
+                "line_start": None,
+                "line_url": "",
+                "line_words": "",
+                "note_on": "",
+            }
+        )
+    rows.sort(key=lambda row: row["at"])
     return rows
 
 
@@ -721,7 +777,8 @@ def _rows(incident) -> list[dict]:
                 ),
                 "added_by": event.added_by.shown_name if event.added_by else "",
                 "added": event.added,
-                "assistant": event.source in (ASSISTANT, LOOKED),
+                "assistant": event.source in (ASSISTANT, LOOKED)
+                or _assistants_note(event),
                 "is_note": event.is_note(),
                 "why": event.why,
                 "note": event.note,

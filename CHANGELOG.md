@@ -19,6 +19,19 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.168.0, 2026-10-29
+
+```
+Models: unchanged
+Database: migrates (0098: the proposed events as rows on the recordings, and a note's origin)
+```
+
+- **A proposed event is a moment on a recording, and accepting it writes a note there (Phase 10 chapter 4, the first of three releases; the drawing `docs/spec/mockups/phase-10-proposed-events-and-comparison.html`).** Propose events and Look for on an incident now write Proposal rows on the cameras' recordings, their times seconds into each recording, and the incident's layer and strip read them on its clock as before. Accept is one press: the sentence becomes a note on the camera's line, or at the moment when nothing was said, in the acceptor's name; the Chronology shows it as the note event it already draws, its pill saying "from a proposed event" (a watch phrase, looked for), the why on the hover and in the exports, what it rested on kept; the memo's lines say it was accepted from a proposed event. The proposals waiting from before the upgrade stay as they are until accepted or dismissed; Accept on one writes the note too and the row goes.
+- **Make it a note.** The comparison's Make it an event is Make it a note, on the incident page and on the recording page alike: the claim becomes a note on the recording at the moment, saying it came from the report, page and paragraph, with the mark and the why; a Not on camera finding still asks for the moment, and on an incident the note goes on the camera running then. The finding says which recording the note is on.
+- **Where a note came from** shows under the line on the recording page, on the Notes tab's row, on the chronology's source pill and in Download notes; the AI notice prints on the Chronology's exports when any note came from the assistant's judgement, a Look for or the report. A note cleared forgets its origin.
+- **Audit rows.** Proposal accepted (the source, on a line or at a moment, the incident, the case) and Proposal dismissed; the note's own row says it was written from a proposal. Never the sentence.
+- Nothing else changes on the pages until the second release (the Proposed events tab) and the third (the comparison against the case on the Documents tab).
+
 ## v1.167.0, 2026-10-28
 
 ```
