@@ -3701,3 +3701,8 @@ nav.rail { view-transition-name: rail; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* The Notes page as the Page shape of the Notes tab (v1.172.0; the drawing phase-10-notes-page-as-a-shape.html): the desk inside the tab's content, the case bar and the head above it. */
+#case-notes-desk .notes-desk { padding: 0; margin-top: 4px; }
+#case-notes-desk .np-notes, #case-notes-desk .np-left, #case-notes-desk .np-notes.inc-work { max-height: calc(100vh - 250px); min-height: 420px; }
+#case-notes-desk .np-notes-bar .np-panel-button { margin-right: 4px; }

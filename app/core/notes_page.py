@@ -14,28 +14,23 @@ calls and 1,200 notes is the design point); the page keeps it and draws.
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
 from core import (
     assignments,
-    case_bar,
-    case_chat,
     case_search,
-    cases,
-    engine,
     exports,
-    home,
     incidents,
     notes,
-    sharing,
-    vocabulary,
 )
 from core.assistant import DONE, Summary
-from core.case_pages import _on_or_404, _sharing_context, _their_case
+from core.case_pages import _on_or_404, _their_case
 from core.jobs import Segment
 from core.notes import MomentNote
 
@@ -44,39 +39,29 @@ LINES_MOST = 20000
 
 @login_required
 def page(request: HttpRequest, case_id) -> HttpResponse:
+    """The old address (v1.172.0): the page is the Notes tab's Page shape
+    now, so a bookmark or a guide's link lands there, with the note it
+    named."""
     _on_or_404()
     case = _their_case(request, case_id)
-    cases.note_activity(case, by=request.user)
-    role = case.role_of(request.user)
-    if role == "collaborator":
-        sharing.note_opened(case, request.user)
-    chat_here = case_chat.available()
-    return render(
-        request,
-        "notes-page.html",
-        {
-            "page": "cases",
-            "case": case,
-            "case_bar": case_bar.bar(case, on="notes", here="Notes page"),
-            "role": role,
-            "here_case": home.here_case_for(request.user, case),
-            "list_url": reverse("notes-page-list", args=[case.pk]),
-            "find_url": reverse("notes-page-find", args=[case.pk]),
-            "notes_url": reverse("case-notes", args=[case.pk]),
-            "csv_url": reverse("case-list", args=[case.pk]),
-            # ?note=line:<id> or moment:<id> opens on that note.
-            "opening": request.GET.get("note", "")[:40],
-            "case_chat_available": chat_here,
-            "gideon_on": bool(chat_here and engine.is_reachable()),
-            "gideon_why": (
-                "" if engine.is_reachable() else engine.WHAT_TO_SAY[engine.UNREACHABLE]
-            ),
-            "vocabulary": vocabulary.entries(case),
-            "may_remove_terms": role != "collaborator",
-            **_sharing_context(case, role, request.user),
-            **_facts(case),
-        },
-    )
+    opening = request.GET.get("note", "")[:40]
+    url = reverse("case", args=[case.pk]) + "?tab=notes&shape=page"
+    if opening:
+        url += "&note=" + quote(opening)
+    return redirect(url)
+
+
+def desk_context(request: HttpRequest, case) -> dict:
+    """What the Page shape's desk is drawn from, for the case page's Notes
+    tab (v1.172.0): the list and find addresses and the note to open on."""
+    return {
+        "list_url": reverse("notes-page-list", args=[case.pk]),
+        "find_url": reverse("notes-page-find", args=[case.pk]),
+        "notes_url": reverse("case-notes", args=[case.pk]),
+        "csv_url": reverse("case-list", args=[case.pk]),
+        # ?note=line:<id> or moment:<id> opens on that note.
+        "opening": request.GET.get("note", "")[:40],
+    }
 
 
 def _facts(case) -> dict:

@@ -19,6 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.172.0, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Notes page is the Notes tab's third shape (Phase 9 chapter 4 amended; the drawing `docs/spec/mockups/phase-10-notes-page-as-a-shape.html`).** The toggle reads Rows | Chronology | Page, remembered per person as before, and the address carries the shape. The Notes page button beside Add recordings opens the tab in the Page shape; the tab's own Notes page button went. Everything the page does stays, drawn inside the tab: the notes as the left column with the pills, Find, the Recordings list with Listen through and Previous and Next; the recording in hand on the right with its one player bar, the waveform, the lines around the moment, Note at this moment, Mark reviewed, the Overview fold, Open the call over the page, the grip and the keyboard, which are the shape's alone while it is open. Its Chronology and Details panels went, being the Chronology shape and the Details tab; its Export menu's two downloads sit on the tab's lead, where Download the list joins Download notes. The old address redirects to the shape with the note it named.
+
 ## v1.171.1, 2026-10-29
 
 ```

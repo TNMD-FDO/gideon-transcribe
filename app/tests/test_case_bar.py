@@ -157,10 +157,10 @@ def test_every_page_in_the_case_carries_the_bar_with_its_tab_lit(
     assert 'id="case-bar"' in page and _lit(page) == "Documents"
     assert "Back to the recording" in page
     assert 'title="Back to the case&#x27;s Documents tab"' not in page
-    # The Notes page: Notes lit; Back to the case gone.
-    page = client.get(f"/case/{a_case.pk}/notes-page").content.decode()
-    assert 'id="case-bar"' in page and _lit(page) == "Notes"
-    assert "Back to the case" not in page
+    # The Notes page is the Notes tab's Page shape (v1.172.0): the old
+    # address sends to the tab, whose own bar is the case page's.
+    sent = client.get(f"/case/{a_case.pk}/notes-page")
+    assert sent.status_code == 302 and "shape=page" in sent["Location"]
     # The Speakers page: under the recording; none in a window.
     page = client.get(f"/recording/{cam.pk}/speakers").content.decode()
     assert 'id="case-bar"' in page and _lit(page) == "Recordings"

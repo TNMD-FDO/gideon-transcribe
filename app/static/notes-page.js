@@ -339,7 +339,8 @@
       html = "<p class='muted small' style='margin: 10px 0'>" + (state.notes.length ? "No notes by that filter." : "No notes yet. A note is written under a line of a transcript, here on the left or on the recording's page.") + "</p>";
     }
     box.innerHTML = html;
-    document.getElementById("np-count-notes").textContent = state.notes.length;
+    var countNotes = document.getElementById("np-count-notes");
+    if (countNotes) { countNotes.textContent = state.notes.length; }
     var foot = document.getElementById("np-list-foot");
     var noNote = state.recordings.filter(function (one) { return !one.notes; }).length;
     foot.innerHTML = "<span>" + plural(noNote, "recording") + " " + (noNote === 1 ? "has" : "have") + " no note yet</span>";
@@ -388,7 +389,8 @@
         " &middot; " + (one.assigned ? escape(one.assigned_id === state.me ? "assigned to you" : one.assigned) + (one.reviewed ? " <span class='pill small ok'>" + escape(one.reviewed) + "</span>" : "") : "nobody") +
         " &middot; " + (one.notes ? plural(one.notes, "note") + (one.writers.length ? ", " + escape(one.writers.join(", ")) : "") : "no note yet") + "</div></div>";
     }).join("");
-    document.getElementById("np-count-recordings").textContent = state.recordings.length;
+    var countRecordings = document.getElementById("np-count-recordings");
+    if (countRecordings) { countRecordings.textContent = state.recordings.length; }
     var mine = state.recordings.filter(function (one) { return one.assigned_id === state.me; });
     var left = mine.filter(function (one) { return !one.reviewed; });
     var reviewed = state.recordings.filter(function (one) { return one.reviewed; });
@@ -704,6 +706,8 @@
   if (overlay) { overlay.addEventListener("click", function (event) { if (event.target === overlay) { shortcuts(false); } }); }
 
   document.addEventListener("keydown", function (event) {
+    // Inside the Notes tab (v1.172.0) the keys are the Page shape's alone.
+    if (desk.offsetParent === null) { return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) { return; }
     if (event.key === "?") { shortcuts(overlay && overlay.hidden); return; }
     if (event.key === "Escape") {
@@ -772,5 +776,14 @@
       })
       .catch(function () { document.getElementById("np-lead").textContent = "The notes could not be read."; });
   }
-  load();
+  // Drawn when the Page shape is first shown (v1.172.0): the tab opens on
+  // Rows or Chronology as often as not, and the desk waits hidden.
+  var drawn = false;
+  function show() {
+    if (drawn) { return; }
+    drawn = true;
+    load();
+  }
+  window.NotesPage = { show: show };
+  if (desk.offsetParent !== null) { show(); }
 })();

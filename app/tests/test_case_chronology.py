@@ -364,12 +364,10 @@ def test_the_notes_tab_and_the_notes_page_carry_the_chronology(owner, a_case, cl
     page = client.get(f"/case/{a_case.pk}?tab=notes").content.decode()
     assert 'id="notes-shape"' in page and 'data-shape="chronology"' in page
     assert 'id="case-chronology"' in page and "chronology.js" in page
-    notes_page = client.get(f"/case/{a_case.pk}/notes-page").content.decode()
-    assert (
-        'data-panel="chronology"' in notes_page
-        and 'id="panel-chronology"' in notes_page
-    )
-    assert 'data-player="notes-page"' in notes_page
+    # The Notes page is the tab's Page shape (v1.172.0): its own Chronology
+    # panel went, the Chronology shape beside it is the one drawing.
+    assert 'id="case-notes-desk"' in page and 'id="panel-chronology"' not in page
+    assert page.count('id="case-chronology"') == 1
     # A case with no note has no toggle and no chronology container.
     empty = Case.objects.create(owner=owner, name="Empty")
     page = client.get(f"/case/{empty.pk}?tab=notes").content.decode()

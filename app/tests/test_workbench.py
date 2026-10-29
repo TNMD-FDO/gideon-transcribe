@@ -110,7 +110,7 @@ def test_the_clips_page_is_one_table_with_a_player():
 def test_the_notes_page_bar_has_boost_and_the_sides():
     """v1.122.0: the recording page's two controls on the Notes page's bar,
     the audio graph built again for each player the left side makes."""
-    bar = page("notes-page.html")
+    bar = page("notes-desk.html")
     assert 'id="np-boost"' in bar and 'id="np-balance"' in bar
     assert 'id="np-balance-label" hidden' in bar
     js = script("notes-page.js")

@@ -416,8 +416,12 @@ def test_the_notes_page_has_the_notes_left_the_player_right_and_a_way_back():
     """v1.127.0, the maintainer's pick B: Back to the case in the head, the
     notes column before the grip and the player after it, one player bar
     with the page's Play, and no sentence about the browser's controls."""
-    page = (APP / "templates" / "notes-page.html").read_text(encoding="utf-8")
-    assert "Back to the case" in page
+    # The desk is the Notes tab's Page shape since v1.172.0 (notes-desk.html);
+    # the case bar is the way back, and only the Recordings list keeps a
+    # way back to the notes, the Chronology and Details panels being the
+    # Chronology shape and the Details tab.
+    page = (APP / "templates" / "notes-desk.html").read_text(encoding="utf-8")
+    assert "Back to the case" not in page
     assert (
         page.index('id="np-work"')
         < page.index('id="work-grip"')
@@ -425,8 +429,8 @@ def test_the_notes_page_has_the_notes_left_the_player_right_and_a_way_back():
     )
     assert 'id="np-play"' in page and 'id="np-note-now"' in page
     assert "np-bar-said" not in page
-    # Recordings', Chronology's (Phase 10, v1.164.0) and Details' way back.
-    assert page.count('data-panel="notes"') == 3
+    assert page.count('data-panel="notes"') == 1
+    assert 'data-panel="recordings"' in page
     js = (APP / "static" / "notes-page.js").read_text(encoding="utf-8")
     assert "np-bar-said" not in js and "function wirePlayer" in js
     assert 'KEY = "notes-page-player-width"' in js

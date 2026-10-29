@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Notes page as a shape of the Notes tab</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --c1: #1f6fb2; --c2: #c2410c; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --c1: #7ab4e6; --c2: #f0956a; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --c1: #7ab4e6; --c2: #f0956a; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.on { background: var(--accent); color: var(--accent-ink); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 0 0 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; overflow: hidden; }
+  .frame > * { padding-inline: 16px; }
+  .casebar { display: flex; align-items: center; gap: 2px; padding: 6px 16px 0; background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; white-space: nowrap; }
+  .casebar .tab { padding: 5px 10px; border-radius: 6px 6px 0 0; color: var(--muted); font-size: 13px; }
+  .casebar .tab .count { font-size: 11px; background: var(--surface-2); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+  .casebar .tab.on { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-bottom-color: var(--bg); margin-bottom: -1px; font-weight: 600; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 10px; }
+  .head h3 { margin: 0; font-size: 20px; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle span { padding: 3px 10px; } .toggle .on { background: var(--accent); color: var(--accent-ink); }
+  .toggle .new { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .desk { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px; margin: 0 16px; }
+  .desk.narrow { grid-template-columns: 1fr; }
+  .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type=search] { font: inherit; font-size: 12px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+  .note { display: grid; grid-template-columns: 4.6rem 1fr; gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
+  .note.lit { background: var(--accent-soft); }
+  .note .t { font-family: var(--mono); color: var(--accent); font-size: 12px; }
+  .note .where { color: var(--muted); font-size: 12px; }
+  .note .meta { display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+  .player { height: 110px; background: linear-gradient(160deg, #2b3440, #0f141a); border-radius: var(--radius); display: flex; align-items: flex-end; padding: 8px 10px; color: #cfd8e3; font-family: var(--mono); font-size: 11px; }
+  .wave { height: 26px; border: 1px solid var(--line); border-radius: 4px; position: relative; background: repeating-linear-gradient(90deg, var(--surface-2) 0 2px, transparent 2px 5px); }
+  .wave i { position: absolute; top: 2px; bottom: 2px; width: 2px; background: var(--accent); }
+  .lines { font-size: 12px; }
+  .lines div { display: grid; grid-template-columns: 4.6rem 1fr; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); }
+  .lines .t { font-family: var(--mono); color: var(--muted); }
+  .lines .now { background: var(--accent-soft); }
+  .lines .noted { font-style: italic; color: var(--muted); grid-column: 2; }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 9 chapter 4 and Phase 10 chapter 1, amended · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>The Notes page as a shape of the Notes tab</h1>
+    <p class="lede">Today the Notes page is a page of its own, reached by a button in the case's head and another on the Notes tab, with panels of its own for the Recordings, the Chronology and the Details, which are now tabs and shapes of the case page. The drawing makes it the Notes tab's third shape, Rows | Chronology | Page, drawn inside the tab like the other two; the button beside Add recordings opens the tab in that shape; and the page's own doorways and duplicated panels go. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The head and the Notes tab's lead: one door beside Add recordings, three shapes on the tab</h2></div>
+    <div class="frame">
+      <div class="head"><div><span class="eyebrow">Cases</span><h3>Harbour Street stop</h3></div><span class="bar"><span class="btn">Notes page</span><span class="btn primary">Add recordings</span></span></div>
+      <div class="casebar"><span class="tab">Recordings <span class="count">14</span></span><span class="tab">Search</span><span class="tab">Proposed events <span class="count">11</span></span><span class="tab on">Notes <span class="count">23</span></span><span class="tab">Documents <span class="count">2</span></span><span class="tab">Incidents <span class="count">2</span></span><span class="tab">Clips <span class="count">4</span></span><span class="tab">Speakers</span><span class="tab">Details</span></div>
+      <div class="lead"><span class="muted">23 notes in this case, the office's own words: 19 on lines of transcripts, 4 on events.</span><span class="bar"><span class="toggle"><span>Rows</span><span>Chronology</span><span class="on new">Page</span></span><span class="btn tiny">Search notes</span><span class="btn tiny">Download notes</span></span></div>
+    </div>
+    <div class="caption">
+      <p><b>One door in the head.</b> Notes page stays beside Add recordings, on every tab, and now opens the Notes tab in the Page shape rather than a page of its own. The Notes tab's own Notes page button goes: the shape is in the toggle.</p>
+      <p><b>Three shapes.</b> Rows | Chronology | Page. The toggle remembers the shape per person in the browser, as it does for Rows and Chronology, and the address carries it (<span class="mono">?tab=notes&amp;shape=page</span>), so a link opens the shape. Search notes and Download notes stay on the lead for every shape.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The Page shape inside the tab: the notes on the left, the recording in hand on the right</h2></div>
+    <div class="frame">
+      <div class="lead"><span class="muted">23 notes in this case</span><span class="bar"><span class="toggle"><span>Rows</span><span>Chronology</span><span class="on">Page</span></span><span class="btn tiny">Search notes</span><span class="btn tiny">Download notes</span></span></div>
+      <div class="desk">
+        <div class="col">
+          <div class="bar"><span class="pill on">All 23</span><span class="pill">A. Ortiz 14</span><span class="pill">J. Brennan 9</span><span class="pill">On lines 19</span><span class="pill">On events 4</span><span class="pill warn">To check 2</span><input type="search" placeholder="Find in notes and recordings" style="margin-left: auto; width: 180px"></div>
+          <div class="note"><span class="t">20:24:36</span><div><div>First contact, officer asks for licence.</div><div class="where">BWC1-1 · "Can I see your licence and registration"</div><div class="meta"><span class="pill">A. Ortiz, 2 days ago</span></div></div></div>
+          <div class="note lit"><span class="t">20:29:48</span><div><div>A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div class="where">BWC2-1 · "I got, I got gun, I got gun"</div><div class="meta"><span class="pill">J. Brennan, today</span><span class="pill warn">from a proposed event</span><span class="pill warn">To check</span></div></div></div>
+          <div class="note"><span class="t">20:41:10</span><div><div>Third officer arrives.</div><div class="where">BWC3-1 · "Dispatch, 3-1 on scene"</div><div class="meta"><span class="pill">J. Brennan, today</span></div></div></div>
+          <div class="bar" style="margin-top: 4px"><span class="btn tiny">‹ Previous note</span><span class="btn tiny">Next note ›</span><span class="muted tiny" style="margin-left: auto">J and K step the notes · the recording's own keys play</span></div>
+        </div>
+        <div class="col">
+          <div class="bar"><b>BWC2-1</b><span class="muted tiny">47 min · body camera · 6 Nov 2025</span><span class="btn tiny" style="margin-left: auto">Open the call</span><span class="btn tiny">Mark reviewed</span></div>
+          <div class="player">▶ ──────●──────────────── 00:05:38 / 00:47:12</div>
+          <div class="wave"><i style="left: 12%"></i><i style="left: 23%; background: var(--warn)"></i><i style="left: 61%"></i></div>
+          <div class="lines"><div><span class="t">00:05:34</span><span>What did I do?</span></div><div class="now"><span class="t">00:05:38</span><span>I got, I got gun, I got gun.</span></div><div class="noted">Note, J. Brennan, today · from a proposed event: A handgun was mentioned by the second officer; check whether it was ever recovered.</div><div><span class="t">00:05:46</span><span>Hands! Hands!</span></div></div>
+          <div class="bar"><span class="btn tiny">Note at this moment</span><span class="btn tiny ghost">Listen through the recordings</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What stays.</b> Everything the Notes page does: the notes as the wide left column in call order with the pills by writer and type and To check, the Find box over the notes and the recordings' words, Previous and Next note (or call), the recording in hand on the right with its one player bar, the waveform with the notes marked, the lines around the moment with the note under its line, Note at this moment, Mark reviewed, Open the call, Listen through the recordings. The keys are the page's as before.</p>
+      <p><b>What goes.</b> The page's own panels for Recordings, Chronology and Details, which are the Recordings tab, the Chronology shape and the Details tab now and were duplicates; its Export menu, whose two downloads sit on the lead as Download notes and, in the Rows shape, on the Details tab. The page's own head and its Back to the case went with the case bar already.</p>
+      <p><b>Where it draws.</b> Inside the tab's content, the full width the tab has (the case page is already the wide layout), the two columns side by side from 1100 pixels and stacked below it, the recording in hand first when stacked (figure C). The pressed note on the chronology plays here too when this shape is the one open.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Narrow windows, and where the old address goes</h2></div>
+    <div class="cols">
+      <div class="frame" style="max-width: 420px">
+        <div class="lead"><span class="toggle"><span>Rows</span><span>Chronology</span><span class="on">Page</span></span></div>
+        <div class="desk narrow">
+          <div class="col"><div class="bar"><b>BWC2-1</b><span class="btn tiny" style="margin-left: auto">Mark reviewed</span></div><div class="player" style="height: 80px">▶ ────●──── 00:05:38</div><div class="lines"><div class="now"><span class="t">00:05:38</span><span>I got, I got gun, I got gun.</span></div><div class="noted">Note, J. Brennan, today: A handgun was mentioned…</div></div></div>
+          <div class="col"><div class="bar"><span class="pill on">All 23</span><span class="pill warn">To check 2</span></div><div class="note lit"><span class="t">20:29:48</span><div><div>A handgun was mentioned by the second officer…</div><div class="where">BWC2-1</div></div></div><div class="bar"><span class="btn tiny">‹ Previous</span><span class="btn tiny">Next ›</span></div></div>
+        </div>
+      </div>
+      <div class="frame" style="padding: 14px 16px; gap: 6px">
+        <b>The old address keeps working.</b>
+        <div class="small muted"><span class="mono">/case/&lt;id&gt;/notes-page</span> goes to <span class="mono">/case/&lt;id&gt;?tab=notes&amp;shape=page</span>, so a bookmark or a link in a guide still lands on the notes. The page's own template and its list and find addresses are kept for the shape's script, which draws the same thing in the tab; nothing is rebuilt.</div>
+        <b style="margin-top: 8px">The glossary.</b>
+        <div class="small muted">Notes page keeps its name and becomes "the Notes tab's third shape"; the toggle's word is Page. Nothing else changes its name.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Stacked below 1100 pixels</b> the recording in hand comes first, so the player is at the top where the thumb is, and the notes scroll under it; the Notes page already stacks this way on a phone. From 1100 the columns sit side by side.</p>
+      <p><b>Size.</b> One release, no migration: the shape in the toggle and the address, the page's script mounted into the tab's content with its panels and Export menu dropped, the head's button pointing at the shape, the tab's own Notes page button removed, the old address redirecting; Phase 9 chapter 4 amended to say the page is the tab's third shape.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Every feature of the Notes page today, and where it is in the Page shape</h2></div>
+    <table style="border-collapse: collapse; width: 100%; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg)">
+      <thead><tr><th style="text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line)">On the Notes page today</th><th style="text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line)">In the Page shape</th></tr></thead>
+      <tbody>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The notes list</b>, grouped by recording in call order, with its position words</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> the left column, as it is</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The pills</b> by writer, by type (on lines, at moments, on events) and To check, and the order switch</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> over the list</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>Find</b> in the notes and the recordings' words, the hits as a layer, Enter stepping them, / to focus</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> the box over the list, the hits in place of it</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>Previous and Next</b> note, or call, with J and K</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> under the list</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The Recordings panel</b>: the case's recordings as cards with Listen, a filter box and pills, <b>Listen through the recordings</b> one after another</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> as a second list in the left column, Notes | Recordings, since Listen through is the page's own and not the Recordings tab's</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The Chronology panel</b></td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill">goes</span> it is the Chronology shape beside this one; a pressed entry there plays in the Preview as today</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The Details panel</b>: the case's figures, the Team, the vocabulary, the downloads</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill">goes</span> it is the Details tab; its two downloads sit on the lead (below)</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The Export menu</b>: Download notes (Word), Download the list (.csv)</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> Download notes is on the lead already; Download the list joins it in this shape</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The recording in hand</b>: its title, pills and facts, <b>Open the call</b> (the whole call over the page, Esc returns exactly, Open the full call leaves)</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> the right column's head and the same window over the page</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The one player bar</b>: Play, the time, back and forward five seconds, Speed, Boost and the sides' balance, kept from recording to recording</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> as it is</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The waveform</b> with the notes marked, and <b>the lines around the moment</b> with the note under its line</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> as it is</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>Note at this moment</b> (N), <b>Mark reviewed</b> and Not reviewed after all (R), the <b>Overview from the summary</b> fold</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> under the player</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The grip</b> between the columns: drag to widen the player, double-press for the usual width</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> between the two columns</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>The keyboard</b>: Space, the arrows, J K, N, R, O, /, Esc, and ? for the list</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> whenever the Page shape is the one open and you are not typing</td></tr>
+        <tr><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><b>Ask Gideon</b> and the case's scope</td><td style="padding: 6px 10px; border-bottom: 1px solid var(--line)"><span class="pill ok">kept</span> the case page's own</td></tr>
+        <tr><td style="padding: 6px 10px"><b>The page's own head</b>: its title, Back to the case, the Recordings, Chronology and Details buttons</td><td style="padding: 6px 10px"><span class="pill">goes</span> the case bar and the tabs are the head now; the three buttons were the three panels above</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">
+      <p><b>Nothing a person does on the page is lost.</b> Thirteen things stay as they are, one is reached a different way (the two downloads on the lead), and three go because the case page already has them as a tab or a shape: the Chronology panel, the Details panel and the head's three buttons. The script that draws the page is mounted into the tab unchanged except for those three.</p>
+      <p><b>Listen through the recordings</b> is the one I nearly dropped: it is the page's own flow, the recordings as cards with Listen and Mark reviewed, stepping call by call, and not the Recordings tab's list. It stays, as the left column's second list.</p>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices</span><h2>Two things only the maintainer can decide</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>The shape's word on the toggle.</b> <b>Recommended:</b> Page, short beside Rows and Chronology, and the glossary's Notes page is "the Page shape of the Notes tab". <b>Or:</b> Work, saying what the shape is for.</li>
+        <li><b>Where the head's Notes page button lands.</b> <b>Recommended:</b> the Notes tab in the Page shape, which is what the button has always opened. <b>Or:</b> the Notes tab in whichever shape the person last used, with the Page shape only from the toggle.</li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>What does not change.</b> The Rows and Chronology shapes, the Preview's window from a note's time in the Rows shape, the Notes tab's pills, Search notes and Download notes, the recording page's notes, the exports.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

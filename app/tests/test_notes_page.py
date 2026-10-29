@@ -100,16 +100,21 @@ def test_the_page_opens_for_the_team_and_an_admin_with_its_row(
 ):
     sharing.grant(a_case, friend, actor=owner)
     a_call(owner, a_case, "Call 0409")
+    # The page is the Notes tab's Page shape (v1.172.0): the old address
+    # sends there, and the desk is in the tab.
     for who in (owner, friend):
         signed_in(client, who)
         page = client.get(reverse("notes-page", args=[a_case.pk]))
-        assert page.status_code == 200
-        assert 'id="notes-desk"' in page.content.decode()
+        assert page.status_code == 302
+        assert page["Location"] == f"/case/{a_case.pk}?tab=notes&shape=page"
+        tab = client.get(f"/case/{a_case.pk}?tab=notes").content.decode()
+        assert 'id="notes-desk"' in tab and 'id="case-notes-desk" hidden' in tab
+        assert 'data-shape="page"' in tab
     from core import audit
 
     before = audit.Row.objects.filter(event="admin access").count()
     signed_in(client, admin)
-    assert client.get(reverse("notes-page", args=[a_case.pk])).status_code == 200
+    assert client.get(reverse("notes-page", args=[a_case.pk])).status_code == 302
     assert audit.Row.objects.filter(event="admin access").count() == before + 1
     # A stranger is told nothing.
     stranger = person("np-stranger", "Cy Dale")
@@ -124,15 +129,20 @@ def test_the_notes_tab_offers_the_page_and_a_row_opens_on_its_note(
     line = note_on(call, 1, "worth a look", owner)
     signed_in(client, owner)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=notes").content.decode()
-    # The door is the head's button (v1.121.1), on every tab.
-    assert f'href="/case/{a_case.pk}/notes-page" class="btn"' in page
-    # And the Notes tab's toolbar keeps a link to it (v1.121.3).
-    assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' in page
+    # The door is the head's button (v1.121.1), on every tab; it opens the
+    # Page shape (v1.172.0), and the tab's own button went.
+    assert f'href="/case/{a_case.pk}?tab=notes&shape=page" class="btn"' in page
+    assert f'class="btn small" href="/case/{a_case.pk}/notes-page"' not in page
     assert f"?note=line:{line.pk}" in page
+    # The old address with a note lands on the shape with that note.
+    sent = client.get(reverse("notes-page", args=[a_case.pk]) + f"?note=line:{line.pk}")
+    assert sent["Location"].endswith(f"&note=line%3A{line.pk}")
     page = client.get(
-        reverse("notes-page", args=[a_case.pk]) + f"?note=line:{line.pk}"
+        f"/case/{a_case.pk}?tab=notes&shape=page&note=line:{line.pk}"
     ).content.decode()
     assert f'data-opening="line:{line.pk}"' in page
+    # The desk is drawn by the page's script, loaded with the tab.
+    assert "notes-page" in page and "waveform" in page
 
 
 def test_the_page_is_gone_with_folder_management(owner, a_case, client):

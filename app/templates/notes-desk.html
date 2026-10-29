@@ -1,50 +1,17 @@
-{% extends "base.html" %}
 {% load static icons %}
-{% block title %}Notes, {{ case.name }}{% endblock %}
-{% block body_class %}viewer incident-page notes-page{% endblock %}
-{% block main_class %}wide{% endblock %}
-
-{% block foot %}{% endblock %}
-{% block content %}
-  {% comment %}
-    The Notes page (Phase 9 chapter 4): the incident page's shape without the
-    wall. Left, one recording at one moment, the Preview mounted into the
-    page, with the note under its line and Previous and Next; right, the
-    work panel with Notes, Recordings, Details and a Find box. Open the call
-    opens the whole call in a pop-out over the page, never a jump away.
-    notes-page.js draws everything below the head from one reading of the
-    case (list_json) and the Preview's own readings of a moment.
-  {% endcomment %}
-  <div class="page-head np-head">
-    {% comment %}
-      v1.127.0 (the maintainer's pick, B of three mock-ups): the notes are the
-      page, so they are the wide left column and the recording in hand the
-      right; the head is one line with Back to the case; the player has one
-      bar (Play and the time are the page's); Recordings and Details are
-      buttons in the head that swap the left column's panel.
-    {% endcomment %}
-    <div class="row np-head-row">
-      {% comment %}Back to the case went with the case bar above (v1.171.0).{% endcomment %}
-      <div class="grow np-title-box">
-        <h1 class="np-title">Notes <span class="count" id="np-count-notes"></span> <span class="muted np-case">&middot; {{ case.name }}</span></h1>
-        <p class="lead small muted" id="np-lead">Reading the notes...</p>
-      </div>
-      <div class="actions row np-actions">
-        {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
-        <button type="button" class="btn small np-panel-button" data-panel="recordings" title="The case's recordings, with Listen">{% icon "recordings" %} Recordings <span class="count" id="np-count-recordings"></span></button>
-        <button type="button" class="btn small np-panel-button" data-panel="chronology" title="The case's notes on the recordings' own clocks, one day at a time (Phase 10)">{% icon "note" %} Chronology</button>
-        <button type="button" class="btn small np-panel-button" data-panel="details" title="The case's figures, its Team, its vocabulary and the downloads">{% icon "info" %} Details</button>
-        <details class="menu" id="np-export">
-          <summary class="btn small" title="Download the notes or the list">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
-          <ul>
-            <li><a href="{{ notes_url }}">{% icon "word" %} Download notes (Word)</a></li>
-            <li><a href="{{ csv_url }}">{% icon "text" %} Download the list (.csv)</a></li>
-          </ul>
-        </details>
-      </div>
-    </div>
-  </div>
-
+{% comment %}
+  The Notes page as the Page shape of the Notes tab (v1.172.0; the drawing
+  docs/spec/mockups/phase-10-notes-page-as-a-shape.html). The desk the
+  Notes page drew, mounted inside the tab: the notes on the left with the
+  pills, Find, the Recordings list and Previous and Next; the recording in
+  hand on the right with its one player bar, the waveform, the lines
+  around the moment, Note at this moment and Mark reviewed; Open the call
+  over the page; the keyboard. Its Chronology and Details panels went:
+  they are the Chronology shape and the Details tab. notes-page.js draws
+  it when the shape is opened.
+{% endcomment %}
+<div id="case-notes-desk" hidden>
+  <p class="lead small muted" id="np-lead" style="margin: 0 0 8px">Reading the notes...</p>
   <div class="inc-desk notes-desk" id="notes-desk"
        data-list="{{ list_url }}" data-find="{{ find_url }}" data-opening="{{ opening }}" data-case="{{ case.pk }}">
     <div class="np-notes inc-work" id="np-work" data-showing="notes">
@@ -52,6 +19,8 @@
         <div class="row np-pills" id="np-pills" style="gap: 6px; flex-wrap: wrap"></div>
         <div class="row np-pills" id="np-type-pills" style="gap: 6px; flex-wrap: wrap"></div>
         <span class="grow"></span>
+        {% comment %}The Recordings list (v1.172.0): the page's own Listen through flow, once a button in the page's head.{% endcomment %}
+        <button type="button" class="small np-panel-button" data-panel="recordings" title="The case's recordings as cards with Listen; Listen through them one after another and mark them reviewed">{% icon "recordings" %} Recordings <span class="count" id="np-count-recordings"></span></button>
         <input type="search" id="np-find" class="small inc-find" maxlength="200" placeholder="Find in notes and recordings" aria-label="Find in the notes and the recordings' words" title="Words in a note or in any recording's lines; press a hit and it plays on the right. Enter for the next hit, Escape to clear.">
       </div>
       <div class="inc-layer" id="np-layer-find" hidden>
@@ -70,38 +39,6 @@
             {# Cards, not a table (v1.121.1): Listen is the point. #}
             <div class="np-recs" id="np-recordings"></div>
             <div class="row small muted" id="np-rec-foot" style="margin-top: 6px"></div>
-          </div>
-        </div>
-        <div class="panel" id="panel-chronology" hidden>
-          <div class="layer-head np-panel-head"><button type="button" class="back" data-panel="notes">&lsaquo; Notes</button><b>Chronology</b><span class="grow"></span></div>
-          {% comment %}The case's chronology (Phase 10 chapter 1), the same drawing as the Notes tab's, the pressed entry playing on the left.{% endcomment %}
-          <div id="case-chronology" class="chron" data-case="{{ case.pk }}" data-json="{% url 'case-chronology' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export="{% url 'case-chronology-export' case.pk 'docx' %}" data-player="notes-page"></div>
-        </div>
-        <div class="panel" id="panel-details" hidden>
-          <div class="layer-head np-panel-head"><button type="button" class="back" data-panel="notes">&lsaquo; Notes</button><b>Details</b><span class="grow"></span></div>
-          <div class="np-panel-body">
-            <div class="label">This case</div>
-            <p class="small" style="margin: 2px 0 10px">{{ facts.recordings }} recording{{ facts.recordings|pluralize }}, {{ facts.hours }} hours of talk, {{ facts.summarised }} summarised, {{ facts.notes }} note{{ facts.notes|pluralize }}.</p>
-            {% if sharing_on %}
-              <div class="label">Team</div>
-              <ul class="plain team-list" style="margin-bottom: 10px">
-                {% for row in team %}
-                  <li{% if row.status %} class="muted"{% endif %}>
-                    <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
-                    {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" %}<span class="pill small">Also an owner</span>{% endif %}
-                    {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
-                    <div class="muted small">{{ row.assigned }} assigned &middot; {{ row.reviewed }} reviewed &middot; {{ row.noted }} noted</div>
-                  </li>
-                {% endfor %}
-              </ul>
-              <p class="muted small">Share and assign on <a href="{% url 'case' case.pk %}">the case page</a>.</p>
-            {% endif %}
-            {% include "case-vocabulary.html" %}
-            <div class="label" style="margin-top: 12px">Downloads</div>
-            <div class="row" style="gap: 6px; margin-top: 4px; flex-wrap: wrap">
-              <a class="btn small" href="{{ notes_url }}">{% icon "word" %} Download notes</a>
-              <a class="btn small" href="{{ csv_url }}">{% icon "text" %} Download the list</a>
-            </div>
           </div>
         </div>
       </div>
@@ -196,16 +133,4 @@
     </div>
   </div>
 
-  {% if case_chat_available %}{% include "gideon-drawer.html" with gideon_kind="case" gideon_on=gideon_on gideon_why=gideon_why %}{% endif %}
-  <script src="{% static 'case-scope.js' %}"></script>
-  <script src="{% static 'preview.js' %}"></script>
-  <script src="{% static 'waveform.js' %}"></script>
-  <script src="{% static 'chronology.js' %}"></script>
-  <script src="{% static 'notes-page.js' %}"></script>
-  {% if case_chat_available %}
-    <script src="{% static 'expectation.js' %}"></script>
-    <script src="{% static 'chat-ui.js' %}"></script>
-    <script src="{% static 'case-chat.js' %}"></script>
-    <script src="{% static 'gideon.js' %}"></script>
-  {% endif %}
-{% endblock %}
+</div>

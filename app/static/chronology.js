@@ -679,18 +679,30 @@
   var toggle = document.getElementById("notes-shape");
   if (toggle) {
     var rowsOf = host.dataset.rows ? document.querySelectorAll(host.dataset.rows) : [];
+    // Three shapes (v1.172.0): Rows, Chronology, and Page, the Notes page
+    // drawn inside the tab by notes-page.js when first shown.
+    var deskWrap = document.getElementById("case-notes-desk");
     function setShape(shape) {
+      if (shape === "page" && !deskWrap) { shape = "rows"; }
       toggle.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b.dataset.shape === shape); });
-      var chron = shape === "chronology";
-      Array.prototype.forEach.call(rowsOf, function (el) { el.hidden = chron; });
+      var chron = shape === "chronology", pageShape = shape === "page";
+      Array.prototype.forEach.call(rowsOf, function (el) { el.hidden = chron || pageShape; });
       host.hidden = !chron;
-      if (chron) { show(); } else if (!onNotesPage) { var p = new URLSearchParams(location.search); p.delete("shape"); p.delete("day"); p.delete("from"); p.delete("to"); history.replaceState(null, "", location.pathname + "?" + p.toString()); }
+      if (deskWrap) { deskWrap.hidden = !pageShape; }
+      if (chron) { show(); }
+      else if (pageShape) {
+        var q = new URLSearchParams(location.search); q.set("tab", "notes"); q.set("shape", "page"); q.delete("day"); q.delete("from"); q.delete("to");
+        history.replaceState(null, "", location.pathname + "?" + q.toString());
+        if (window.NotesPage && window.NotesPage.show) { window.NotesPage.show(); }
+      }
+      else if (!onNotesPage) { var p = new URLSearchParams(location.search); p.delete("shape"); p.delete("day"); p.delete("from"); p.delete("to"); history.replaceState(null, "", location.pathname + "?" + p.toString()); }
       try { localStorage.setItem(keyShape, shape); } catch (e) { /* no storage */ }
     }
     toggle.addEventListener("click", function (ev) { var b = ev.target.closest("[data-shape]"); if (b) { setShape(b.dataset.shape); } });
-    var wanted = params().day || new URLSearchParams(location.search).get("shape") === "chronology" ? "chronology" : null;
+    var askedShape = new URLSearchParams(location.search).get("shape");
+    var wanted = params().day || askedShape === "chronology" ? "chronology" : (askedShape === "page" ? "page" : null);
     if (!wanted) { try { wanted = localStorage.getItem(keyShape); } catch (e) { wanted = null; } }
-    if (wanted === "chronology") { setShape("chronology"); }
+    if (wanted === "chronology" || wanted === "page") { setShape(wanted); }
   }
   }
 

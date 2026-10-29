@@ -312,6 +312,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     counts = dashboard.counts_for([case], request.user)[case.pk]
     # The videos not yet enriched, read once for the line and the offer.
     unenriched = vision.unenriched(case)
+    # The Page shape's desk (v1.172.0): a lazy import, since notes_page
+    # reads this module.
+    from core import notes_page
+
     # The counts the tabs show, gathered once (v1.171.0): the bar's helper
     # takes them so the page asks nothing twice.
     speakers_tab = (
@@ -378,6 +382,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 if tab == "notes"
                 else None
             ),
+            # The Page shape's desk (v1.172.0), drawn by notes-page.js.
+            **(notes_page.desk_context(request, case) if tab == "notes" else {}),
             # Documents beside the cameras (Phase 8 chapter 4, part 1).
             "documents_on": documents.on(),
             "documents_count": documents_count,

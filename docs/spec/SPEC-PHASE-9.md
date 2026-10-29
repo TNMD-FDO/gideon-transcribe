@@ -214,6 +214,8 @@ None. The Team needs Sharing, as the panel did; assigning needs Folder managemen
 
 ## 4. The Notes page
 
+(Amended v1.172.0, the drawing `docs/spec/mockups/phase-10-notes-page-as-a-shape.html`: the Notes page is the Notes tab's third shape, Rows | Chronology | Page, drawn inside the tab by the page's own script when the shape is first shown; the head's Notes page button opens that shape (`?tab=notes&shape=page`) and the tab's own button went; the old address redirects to the shape with the note it named. Everything the page does stays: the notes as the left column with the pills, Find, the Recordings list with Listen through and Previous and Next; the recording in hand on the right with its one player bar, the waveform, the lines around the moment, Note at this moment, Mark reviewed, the Overview fold, Open the call over the page, the grip and the keyboard. Its Chronology and Details panels went, being the Chronology shape and the Details tab; its Export menu's two downloads sit on the tab's lead. The keys are the shape's alone while it is open.)
+
 Written 2026-10-04 from the maintainer's question of 2026-10-03, "how do we have that info land in a single pane, something like we already do for incidents without the video features", and from three mock-ups and a working demo, of which A was picked: the incident page's shape without the wall. On 2026-10-04 the maintainer asked that Open the call never leave the page abruptly: "a popout like we've already done for case chat, with the option to open the full call from that popout". The Memo tab the first drawing carried was dropped the same day: the maintainer saw no purpose in a memo across the case, and Gideon over the transcripts and the notes, with Download notes, is enough.
 
 ### Principles
