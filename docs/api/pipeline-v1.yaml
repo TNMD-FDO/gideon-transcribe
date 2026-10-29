@@ -1,0 +1,519 @@
+openapi: 3.1.0
+info:
+  title: Gideon Transcribe pipeline service
+  version: "1.0"
+  summary: One file in, one Result out, on the office's own engines.
+  description: |
+    The pipeline service (Phase 11 chapter 1, ADR 0028) owns what turns a file
+    into a transcript: preparing the sound, the line, the hand-over to the
+    WhisperX service and the engines behind it, the merge of the Sides into
+    one list of Segments, the English to follow and the clock reading. It
+    holds no titles, file names, cases or people. Audio is deleted when a job
+    ends; a Result waits at most 24 hours. Written at stage 0; served from
+    stage 2.
+servers:
+  - url: http://pipeline:8000/v1
+    description: On the engines' network. Never reached from the office network except through a Client.
+security:
+  - bearer: []
+tags:
+  - name: transcriptions
+  - name: service
+
+paths:
+  /transcriptions:
+    post:
+      tags: [transcriptions]
+      summary: Submit a file
+      description: |
+        A multipart body with the `file` part and a `request` JSON part (the
+        options). Answers `202` at once with the id, the position in the line
+        and the audio minutes ahead. A submission whose `client_reference`
+        matches a job of this Client still preparing, queued or running
+        returns that job's state with `200`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, request]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Any audio or video ffmpeg reads.
+                request:
+                  $ref: "#/components/schemas/Options"
+      responses:
+        "202":
+          description: Accepted into the line.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "200":
+          description: The same reference is already in hand; its state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "400":
+          $ref: "#/components/responses/Refused"
+        "401":
+          $ref: "#/components/responses/NoToken"
+        "413":
+          description: Over the size or length a Client may submit; the reason class says which.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      tags: [transcriptions]
+      summary: This Client's transcriptions, newest first
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/per_page"
+      responses:
+        "200":
+          description: A page of states.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, pages, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/State"
+                  page: { type: integer }
+                  pages: { type: integer }
+                  total: { type: integer }
+
+  /transcriptions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/id"
+    get:
+      tags: [transcriptions]
+      summary: The state of one transcription
+      responses:
+        "200":
+          description: The state body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [transcriptions]
+      summary: Cancel, or delete a finished one and its Result
+      responses:
+        "204":
+          description: Cancelled or deleted; the Result, if any, is released at once.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /transcriptions/{id}/result:
+    parameters:
+      - $ref: "#/components/parameters/id"
+    get:
+      tags: [transcriptions]
+      summary: The Result, once done
+      responses:
+        "200":
+          description: The Result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+        "409":
+          description: Not done yet; the state body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "410":
+          description: The Result was deleted, by the Client or by the 24-hour rule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /transcriptions/{id}/again:
+    parameters:
+      - $ref: "#/components/parameters/id"
+    post:
+      tags: [transcriptions]
+      summary: Process again, with new options
+      description: |
+        The file is kept until the new Result lands, then the old Result is
+        released. Refused with `409` while the job is still preparing, queued
+        or running.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Options"
+      responses:
+        "202":
+          description: Back in the line.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "409":
+          description: Still in hand.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+        "410":
+          description: The file is gone (the job ended more than 24 hours ago); submit it again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /status:
+    get:
+      tags: [service]
+      summary: The line, the speed and the engines
+      responses:
+        "200":
+          description: The service's status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+
+  /healthz:
+    get:
+      tags: [service]
+      summary: Liveness, unauthenticated
+      security: []
+      servers:
+        - url: http://pipeline:8000
+      responses:
+        "200":
+          description: The API is up and the engines answer or are loading.
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: One token per Client, from the service's tokens file, as the WhisperX service has it.
+
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    per_page:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  responses:
+    Refused:
+      description: Refused at submit, with the reason class.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoToken:
+      description: No token, or not this Client's token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Not this Client's transcription, or none with that id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Options:
+      type: object
+      description: The request JSON part. Every field is optional; the defaults are the app's Panel defaults.
+      properties:
+        language:
+          type: string
+          description: A two-letter language code, or empty to detect the language.
+          default: ""
+        recogniser:
+          type: string
+          enum: [whisper, qwen3-asr]
+          default: whisper
+          description: Which model writes the words (ADR 0025).
+        model:
+          type: string
+          enum: [large-v3, large-v3-turbo]
+          default: large-v3-turbo
+          description: Whisper's model; ignored under qwen3-asr.
+        diarize:
+          type: boolean
+          default: true
+          description: Tell the voices apart into Speakers.
+        diarizer:
+          type: string
+          enum: [nemotron, pyannote]
+          default: nemotron
+          description: Which model tells voices apart (ADR 0014).
+        speakers:
+          oneOf:
+            - type: "null"
+            - type: object
+              properties:
+                exactly: { type: integer, minimum: 1 }
+            - type: object
+              properties:
+                between:
+                  type: array
+                  items: { type: integer, minimum: 1 }
+                  minItems: 2
+                  maxItems: 2
+          description: A speaker-count hint; refused without `diarize`.
+        two_sides:
+          type: boolean
+          default: false
+          description: A two-channel call, each channel a Side transcribed on its own and merged.
+        vocabulary:
+          type: array
+          items: { type: string }
+          maxItems: 200
+          description: Names and terms to help recognition, under the same 200-term rule as the WhisperX service.
+        translate:
+          type: boolean
+          default: false
+          description: The English to follow, written by the chat engine from the words as spoken (ADR 0026); the Result's `segments[].english` fills as the windows land.
+        read_clock:
+          type: boolean
+          default: true
+          description: The clock verdict on each line's time and the re-read of the marked blocks (ADR 0022, 0023).
+        client_reference:
+          type: string
+          maxLength: 200
+          description: The Client's own id for this request, used for duplicate protection and echoed in the Result.
+        callback:
+          type: string
+          format: uri
+          description: An address on the Client the service posts the State body to whenever the state changes. A Client that gives none polls.
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 0
+
+    State:
+      type: object
+      required: [id, state]
+      properties:
+        id: { type: string }
+        client_reference: { type: string }
+        state:
+          type: string
+          enum: [preparing, queued, running, translating, done, held, failed, cancelled]
+          description: |
+            `preparing`: the sound is being prepared. `queued`: in the line.
+            `running`: on the engines. `translating`: the words are in; the
+            English to follow is being written. `done`: the Result is there.
+            `held`: waiting for an engine that is not answering; tried again
+            by itself. `failed`: ended with a reason class. `cancelled`.
+        stage:
+          type: string
+          description: While running, the step in plain words (loading the model, transcribing, aligning, telling the voices apart, merging, reading the clock).
+        percent:
+          type: number
+          description: While running, how far along.
+        position:
+          type: integer
+          description: While queued, the place in the line.
+        audio_minutes_ahead:
+          type: number
+        expectation:
+          type: object
+          description: What the Client may tell a person, as the app's time expectation gives it.
+          properties:
+            seconds: { type: integer }
+            measured: { type: boolean }
+            words: { type: string }
+        failure:
+          type: object
+          properties:
+            reason_class:
+              $ref: "#/components/schemas/ReasonClass"
+            words:
+              type: string
+              description: A short safe sentence; never a file name or a word of the recording.
+        submitted_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+
+    ReasonClass:
+      type: string
+      enum:
+        - bad_input
+        - too_large
+        - too_long
+        - model_unavailable
+        - gpu_error
+        - timeout
+        - cancelled
+        - service_restarted
+        - internal
+        - media_failed
+        - service_unreachable
+        - service_refused
+        - result_expired
+        - merge_failed
+        - diarizer_unavailable
+        - recogniser_unavailable
+      description: The app's own reason classes (`core/jobs.py`), unchanged.
+
+    Result:
+      type: object
+      required: [result_version, id, audio, language, speakers, segments, provenance, timing]
+      properties:
+        result_version:
+          type: integer
+          const: 1
+        id: { type: string }
+        client_reference: { type: string }
+        audio:
+          type: object
+          properties:
+            seconds: { type: number }
+            sides: { type: integer, enum: [1, 2] }
+            sample_rate: { type: integer }
+        language:
+          type: object
+          properties:
+            code: { type: string }
+            probability: { type: number }
+            mixed: { type: boolean }
+            per_piece:
+              type: array
+              description: Under qwen3-asr, each piece's language (Phase 1 chapter 7 as amended).
+              items:
+                type: object
+                properties:
+                  start: { type: number }
+                  end: { type: number }
+                  code: { type: string }
+        speakers:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string, description: "SPEAKER_00 and so on; one Side's label is that Side's alone." }
+              side: { type: integer }
+              seconds: { type: number, description: How long this Speaker spoke. }
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+        provenance:
+          type: object
+          description: Every setting used, so a Client's Provenance can name them without guessing.
+          properties:
+            service: { type: string, description: "The WhisperX service's version." }
+            pipeline: { type: string, description: "This service's version." }
+            recogniser: { type: string }
+            diarizer: { type: string }
+            settings_used:
+              type: object
+              description: The WhisperX service's `settings_used`, as echoed.
+            vocabulary_terms: { type: integer }
+            translation:
+              type: object
+              properties:
+                engine: { type: string }
+                windows: { type: integer }
+                checked: { type: boolean }
+            clock:
+              type: object
+              properties:
+                marked: { type: integer }
+                reread: { type: integer }
+        timing:
+          type: object
+          properties:
+            prepared_seconds: { type: number }
+            queued_seconds: { type: number }
+            run_seconds: { type: number }
+            translated_seconds: { type: number }
+
+    Segment:
+      type: object
+      required: [n, side, start, end, text]
+      properties:
+        n: { type: integer, description: The Segment's number in time order. }
+        side: { type: integer }
+        start: { type: number, description: Seconds into the recording. }
+        end: { type: number }
+        speaker: { type: string }
+        language: { type: string }
+        text: { type: string, description: The words as spoken. }
+        english:
+          type: string
+          description: The English to follow, when asked for and once written; empty until then and for a line already in English.
+        words:
+          type: array
+          items:
+            type: object
+            properties:
+              w: { type: string }
+              start: { type: number }
+              end: { type: number }
+              p: { type: number, description: The engine's confidence, stored and never read by the app. }
+        clock:
+          type: object
+          description: The clock verdict (ADR 0022) and whether the re-read moved the line (ADR 0023).
+          properties:
+            verdict: { type: string, enum: [fine, uncertain, squeezed] }
+            retimed: { type: boolean }
+            was: { type: number, description: The start before the re-read, when retimed. }
+
+    Status:
+      type: object
+      properties:
+        line:
+          type: object
+          properties:
+            queued: { type: integer }
+            running: { type: integer }
+            audio_minutes: { type: number }
+        speed:
+          type: number
+          description: Audio minutes processed per wall-clock minute, a rolling average.
+        engines:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              version: { type: string }
+              state: { type: string, enum: [up, loading, down] }
+              models_loaded:
+                type: array
+                items: { type: string }
+        version: { type: string }
+
+    Error:
+      type: object
+      required: [error, reason_class]
+      properties:
+        error: { type: string, description: The reason in words, as the pages would say it. }
+        reason_class:
+          $ref: "#/components/schemas/ReasonClass"

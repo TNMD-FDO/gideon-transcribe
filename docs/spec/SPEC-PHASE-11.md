@@ -240,7 +240,7 @@ API is on the office network behind Caddy, like the pages.
 
 | Stage | What ships | Proven by |
 |---|---|---|
-| 0 | The contracts: the Result shape and the pipeline API (chapter 1) and the product API's first two sections (chapter 2) as OpenAPI documents under `docs/api/`; a sandbox the team can run, the local walk's seed (`manage.py seed_demo`) behind the app | the team builds against the documents; nothing in the app changes |
+| 0 | The contracts: the Result shape and the pipeline API (chapter 1) and the product API's first two sections (chapter 2) as OpenAPI documents under `docs/api/`; a sandbox the team can run, the local walk's seed (`manage.py seed_demo`) behind the app. Shipped 2026-10-29: `docs/api/pipeline-v1.yaml`, `docs/api/product-v1.yaml`, `docs/api/README.md`, `docs/sandbox.md`, and `tests/test_api_contracts.py` pinning the documents' shape and the reason classes. | the team builds against the documents; nothing in the app changes |
 | 1 | The pipeline library: preparing, the line, the merge, the English and the clock moved out of Django into `pipeline/` with no Django in it; the app rewired onto it; the Result as the app's own reading | the suite green and unchanged; a recording processed on the server reads the same as before |
 | 2 | The pipeline service: the HTTP shell over the library, its container, token and Compose entry; the app its first client over HTTP | the server's upgrade; test_3 processed through the service |
 | 3 | The product API, section by section in the order above, each with its document, each used by a page of the app | the suite; the team's front end on the sandbox |

@@ -19,6 +19,7 @@ installs or upgrades to.
 
 ## Unreleased
 
+- **Phase 11 stage 0: the contracts and the sandbox, no code in the app.** `docs/api/pipeline-v1.yaml` (the pipeline service's API and the Result, version 1), `docs/api/product-v1.yaml` (the product API's sign-in, cases and recordings), `docs/api/README.md` (the rules both keep), `docs/sandbox.md` (the app on a workstation for the front end team), and a test that the documents parse, every reference resolves and the reason classes are the app's own.
 - **Phase 11 specified, nothing built.** `docs/spec/SPEC-PHASE-11.md` and ADR 0028: the pipeline as a service of its own with the app as its first client, the product's records as an API under `/api/v1/`, and the other front end (`gideon-frontend`) on the box behind Caddy; five stages, each waiting for its own word. The glossary gains Pipeline, Pipeline service, Result, Product API, Client and Front end.
 
 ## v1.172.1, 2026-10-29

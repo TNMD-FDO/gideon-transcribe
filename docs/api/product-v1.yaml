@@ -1,0 +1,497 @@
+openapi: 3.1.0
+info:
+  title: Gideon Transcribe product API
+  version: "1.0"
+  summary: The records Transcribe keeps, as JSON, under the same sign-in and the same rules as the pages.
+  description: |
+    Phase 11 chapter 2. Sections 1 (sign-in and who I am) and 2 (cases and
+    recordings) of eight; the later sections join this document as they are
+    built. Written at stage 0; served from stage 3. Every answer is
+    `Cache-Control: private, no-store`; every read of a record is the use of
+    a Case the page's read is (the retention clock, the Admin's access row,
+    the share's rows), with the client named in the row.
+servers:
+  - url: https://<the app's hostname>:<port>/api/v1
+    description: The app's own origin behind Caddy, on the office network.
+security:
+  - session: []
+tags:
+  - name: sign-in
+    description: Section 1.
+  - name: cases
+    description: Section 2.
+  - name: recordings
+    description: Section 2.
+
+paths:
+  /sign-in:
+    post:
+      tags: [sign-in]
+      summary: Sign in with the office account
+      description: |
+        The same sign-in the pages have: the directory for a directory
+        account, the Local admin's password otherwise, the throttle and the
+        audit rows unchanged. Sets the session cookie on the app's origin and
+        makes the Login session; the answer is `/me`. A client in a browser
+        on the app's origin needs nothing else; the CSRF token comes with the
+        cookie and goes back in `X-CSRFToken` on every later POST.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, description: "user, user@domain or DOMAIN\\user: all become user." }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          description: Wrong, or throttled; the reason class says which, never which of the two was wrong.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sign-out:
+    post:
+      tags: [sign-in]
+      summary: End the Login session
+      responses:
+        "204":
+          description: Signed out; the cookie is cleared.
+  /me:
+    get:
+      tags: [sign-in]
+      summary: Who I am and what I may do
+      responses:
+        "200":
+          description: The person.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/NotSignedIn"
+
+  /cases:
+    get:
+      tags: [cases]
+      summary: My cases and the cases shared with me
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/per_page"
+        - name: q
+          in: query
+          schema: { type: string }
+          description: A name to look for.
+      responses:
+        "200":
+          description: A page of case rows, as the Cases page lists them.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CaseRow"
+    post:
+      tags: [cases]
+      summary: Make a case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: Made, with its row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "400":
+          $ref: "#/components/responses/Refused"
+
+  /cases/{case_id}:
+    parameters:
+      - $ref: "#/components/parameters/case_id"
+    get:
+      tags: [cases]
+      summary: The case
+      description: "Opening a case is a use of it: the retention clock moves; an Admin opening somebody else's is recorded."
+      responses:
+        "200":
+          description: The case, its facts, its Team and the counts its tabs show.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [cases]
+      summary: Rename the case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Renamed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "403":
+          $ref: "#/components/responses/NotAllowed"
+    delete:
+      tags: [cases]
+      summary: Delete the case into the Recycle bin
+      description: The owner, or an Admin; asks nothing, since the client asked; restorable from the Recycle bin until the deletion date.
+      responses:
+        "204":
+          description: In the Recycle bin.
+        "403":
+          $ref: "#/components/responses/NotAllowed"
+
+  /cases/{case_id}/recordings:
+    parameters:
+      - $ref: "#/components/parameters/case_id"
+    get:
+      tags: [recordings]
+      summary: The case's recordings, as the Recordings tab lists them
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/per_page"
+        - name: who
+          in: query
+          schema: { type: string }
+          description: "The assignment pills: `mine`, `unassigned`, or a username."
+        - name: state
+          in: query
+          schema: { type: string, enum: ["", not_reviewed, reviewed] }
+      responses:
+        "200":
+          description: A page of recording rows.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RecordingRow"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /recordings/{recording_id}:
+    parameters:
+      - $ref: "#/components/parameters/recording_id"
+    get:
+      tags: [recordings]
+      summary: The recording's facts and where it stands
+      responses:
+        "200":
+          description: The recording.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [recordings]
+      summary: Rename, or change the type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 200 }
+                recording_type:
+                  type: string
+                  description: One of the office's recording types (the Panel's list); the glossary's Type.
+      responses:
+        "200":
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+    delete:
+      tags: [recordings]
+      summary: Delete the recording into the Recycle bin
+      responses:
+        "204":
+          description: In the Recycle bin.
+
+  /recordings/{recording_id}/again:
+    parameters:
+      - $ref: "#/components/parameters/recording_id"
+    post:
+      tags: [recordings]
+      summary: Process again
+      description: The recording goes back into the Queue with the Panel's current settings; its notes follow the words (Phase 8 chapter 2). Refused while it is in the Queue.
+      responses:
+        "202":
+          description: In the Queue; the recording's state says so.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "409":
+          description: Already in the Queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /uploads:
+    get:
+      tags: [recordings]
+      summary: How to upload
+      description: |
+        Uploads go through tusd at `/files/` on the app's origin, as the
+        pages' upload does (Phase 1, the media handling chapter): the tus
+        protocol, resumable, with the size limit enforced by the app's
+        pre-create hook. This answer tells a client the endpoint, the limit
+        and the metadata keys to send with the creation request. When the
+        upload finishes, the post-finish hook makes the Recording in a Batch,
+        prepares it and puts it in the Queue; the client then finds it under
+        the case's recordings.
+      responses:
+        "200":
+          description: Where and how.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  endpoint: { type: string, example: "/files/" }
+                  max_bytes: { type: integer }
+                  metadata:
+                    type: object
+                    description: The keys the creation request's `Upload-Metadata` carries, base64 as tus has it.
+                    properties:
+                      filename: { type: string }
+                      filetype: { type: string }
+                      case: { type: string, description: The case's id, or empty for the Workspace. }
+                      recording_type: { type: string }
+                      live: { type: string, enum: ["", "1"], description: A live recording transcribed in stretches. }
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: The office sign-in's session cookie on the app's origin, with the Login session behind it. Never a token in a browser.
+
+  parameters:
+    case_id:
+      name: case_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    recording_id:
+      name: recording_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    per_page:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  responses:
+    NotSignedIn:
+      description: No Login session.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotAllowed:
+      description: Not this person's to do.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Not this person's record, or none with that id; the same answer for both, as the pages give.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Refused:
+      description: Refused with the reason.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: The reason in words, as the pages would say it. }
+        reason_class: { type: string }
+
+    Page:
+      type: object
+      required: [page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+
+    Me:
+      type: object
+      required: [username, shown_name, is_admin]
+      properties:
+        username: { type: string }
+        shown_name: { type: string }
+        is_admin: { type: boolean }
+        unit: { type: string, description: The person's unit, from the directory, or empty. }
+        quota:
+          type: object
+          properties:
+            bytes: { type: integer }
+            used_bytes: { type: integer }
+            raised_until: { type: string, format: date, description: When a Raise runs out, or empty. }
+        features:
+          type: object
+          description: What the office has on, so a client shows only what exists.
+          properties:
+            incidents: { type: boolean }
+            documents: { type: boolean }
+            clips: { type: boolean }
+            assistant: { type: boolean }
+            proposed_events: { type: boolean }
+
+    CaseRow:
+      type: object
+      required: [id, name, role, updated]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [owner, collaborator, admin] }
+        owner: { type: string, description: The owner's shown name. }
+        updated: { type: string, format: date-time }
+        recordings: { type: integer }
+        notes: { type: integer }
+        deletes_on: { type: string, format: date, description: When the Retention policy deletes it, as the Cases page shows. }
+        warned: { type: boolean }
+
+    Case:
+      allOf:
+        - $ref: "#/components/schemas/CaseRow"
+        - type: object
+          properties:
+            team:
+              type: array
+              items:
+                type: object
+                properties:
+                  username: { type: string }
+                  shown_name: { type: string }
+                  role: { type: string, enum: [owner, also-owner, collaborator] }
+                  status: { type: string, description: Empty, or the words the Team shows for a person no longer in the group. }
+            tabs:
+              type: array
+              description: The case bar's tabs with their counts, as the pages show them (v1.171.0).
+              items:
+                type: object
+                properties:
+                  key: { type: string }
+                  name: { type: string }
+                  count: { type: [integer, string, "null"] }
+            facts:
+              type: object
+              properties:
+                recordings: { type: integer }
+                hours: { type: number }
+                summarised: { type: integer }
+                notes: { type: integer }
+                size_bytes: { type: integer }
+
+    RecordingRow:
+      type: object
+      required: [id, title, state, state_tone, created]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        recording_type: { type: string }
+        is_video: { type: boolean }
+        two_sides: { type: boolean }
+        seconds: { type: number }
+        created: { type: string, format: date-time }
+        state:
+          type: string
+          description: "The row's own words, as the pages give them (`pages.state_words`): Preparing, In the queue, Processing again, Transcribing, Ready, Failed, and the waiting words."
+        state_tone: { type: string, enum: [ok, warn, danger, muted] }
+        has_transcript: { type: boolean }
+        playback_ready: { type: boolean }
+        assigned_to: { type: string, description: A username, or empty. }
+        reviewed: { type: boolean }
+        notes: { type: integer }
+        summary: "{ type: string, enum: [\"\", tonight, written], description: Where the Summary stands. }"
+
+    Recording:
+      allOf:
+        - $ref: "#/components/schemas/RecordingRow"
+        - type: object
+          properties:
+            case: { type: [string, "null"], format: uuid }
+            original_filename: { type: string }
+            language: { type: string }
+            pipeline:
+              type: object
+              description: Where it stands in the Queue, when it is there.
+              properties:
+                state: { type: string }
+                position: { type: integer }
+                reason_class: { type: string }
+                expectation:
+                  type: object
+                  properties:
+                    seconds: { type: integer }
+                    words: { type: string }
+            provenance:
+              type: object
+              description: The transcript's Provenance (the service, the model, the settings used), when there is a transcript.
+            clock:
+              type: object
+              description: "The recording's clock as the case chronology keeps it (ADR 0027): the date, the start, how it was placed."
+              properties:
+                date: { type: [string, "null"], format: date }
+                start_seconds: { type: [number, "null"] }
+                how: { type: string, enum: ["", clock, hand, day, file] }
