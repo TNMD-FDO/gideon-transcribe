@@ -54,13 +54,14 @@ def page(request: HttpRequest, case_id) -> HttpResponse:
 def desk_context(request: HttpRequest, case) -> dict:
     """What the Page shape's desk is drawn from, for the case page's Notes
     tab (v1.172.0): the list and find addresses and the note to open on."""
+    # Keys of their own (v1.172.1): the case page already has a `list_url`,
+    # the recordings' CSV download, which overrode the desk's and made it
+    # fetch a spreadsheet instead of the notes.
     return {
-        "list_url": reverse("notes-page-list", args=[case.pk]),
-        "find_url": reverse("notes-page-find", args=[case.pk]),
-        "notes_url": reverse("case-notes", args=[case.pk]),
-        "csv_url": reverse("case-list", args=[case.pk]),
+        "desk_list_url": reverse("notes-page-list", args=[case.pk]),
+        "desk_find_url": reverse("notes-page-find", args=[case.pk]),
         # ?note=line:<id> or moment:<id> opens on that note.
-        "opening": request.GET.get("note", "")[:40],
+        "desk_opening": request.GET.get("note", "")[:40],
     }
 
 

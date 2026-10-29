@@ -141,8 +141,11 @@ def test_the_notes_tab_offers_the_page_and_a_row_opens_on_its_note(
         f"/case/{a_case.pk}?tab=notes&shape=page&note=line:{line.pk}"
     ).content.decode()
     assert f'data-opening="line:{line.pk}"' in page
-    # The desk is drawn by the page's script, loaded with the tab.
+    # The desk is drawn by the page's script, loaded with the tab, from the
+    # notes' list address and not the recordings' CSV (v1.172.1).
     assert "notes-page" in page and "waveform" in page
+    assert f'data-list="/case/{a_case.pk}/notes-page/list"' in page
+    assert f'data-find="/case/{a_case.pk}/notes-page/find"' in page
 
 
 def test_the_page_is_gone_with_folder_management(owner, a_case, client):

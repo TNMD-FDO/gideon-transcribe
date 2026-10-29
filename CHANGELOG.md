@@ -19,6 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.172.1, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Page shape read the wrong address.** On the server the shape said "The notes could not be read" and drew nothing: the case page already carries a `list_url`, the recordings' CSV download, and it overrode the desk's list address in the page's context, so the desk fetched a spreadsheet and could not read it as the notes. The desk's addresses have keys of their own now, and a test pins that the desk reads the notes' list address.
+
 ## v1.172.0, 2026-10-29
 
 ```
