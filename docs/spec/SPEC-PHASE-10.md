@@ -59,6 +59,8 @@ A note's time of day is its recording's clock (ADR 0027) plus the note's moment 
 
 ### Placing by hand
 
+(Amended v1.170.1, the drawing `docs/spec/mockups/phase-10-place-without-a-day.html`: the rail is drawn whether or not a day exists, so a case whose first note lands on a recording with no clock can be placed from the page; with no day the place box's date is typed, never today's; after a placing the chronology opens on the day typed; the Proposed events tab's Not yet placed group carries Place recordings for the recordings with proposals and no clock, and stays on the tab, redrawn on that day.)
+
 - **The rail**, above the ruler: a chip per unplaced recording that has notes, with its note count, five shown and "and N more"; recordings with no notes are not on it (the chronology is of notes). **Place recordings** beside it.
 - **The drag**: a chip dragged onto the ruler follows the pointer with a guide line and the time it would start at; letting go opens the box **Place <recording> by hand?** with Date (the day in hand), Starts at (the time let go at), and "The day alone; the time is not known"; the sentence "Its N notes land from then on. It reads Placed by hand, <name>, and anyone on the case may move it or take it off the clock."; Cancel and Place. The incident page's gesture and box, with a date, since a case runs over days.
 - **The typed way**: a chip pressed opens the same box with the day in hand and the time empty, for a call whose time is known from a log.

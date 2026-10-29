@@ -15,7 +15,7 @@
   var caseId = host.dataset.case;
   var proposed = host.dataset.mode === "proposed";
   var onNotesPage = host.dataset.player === "notes-page";
-  var state = { days: [], day: null, span: null, showAll: false, lit: null, open: {}, loaded: false, me: null, unplaced: [], run: null };
+  var state = { days: [], day: null, span: null, showAll: false, lit: null, open: {}, loaded: false, me: null, unplaced: [], run: null, railOnly: { rail: [], rail_more: 0, rail_all: [] } };
   var pollTimer = null;
   var keyShape = "notes-shape:" + caseId, keyAll = "chron-all:" + caseId;
   try { state.showAll = localStorage.getItem(keyAll) === "1"; } catch (e) { /* no storage */ }
@@ -55,6 +55,8 @@
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
       state.unplaced = told.unplaced || []; state.run = told.run || null;
+      // The rail on its own (v1.170.1): the recordings to place, day or no day.
+      state.railOnly = { rail: told.rail || [], rail_more: told.rail_more || 0, rail_all: told.rail_all || [] };
       state.lit = null; if (!quiet) { state.open = {}; }
       setAddress(state.day ? state.day.date : "", state.span);
       draw();
@@ -65,7 +67,13 @@
   function draw() {
     var d = state.day;
     if (proposed) { drawProposed(d); return; }
-    if (!d) { host.innerHTML = "<p class='muted small'>No note of this case is on a recording with a clock yet. A video whose clock was read places itself; anything else is placed from the rail once it has a note.</p>"; return; }
+    if (!d) {
+      // No day yet (v1.170.1): the message, and the rail under it so the
+      // first placing can happen from here.
+      host.innerHTML = "<p class='muted small'>No note of this case is on a recording with a clock yet. A video whose clock was read places itself; " + (state.railOnly.rail.length ? "place the rest from the rail below, and the day opens." : "anything else is placed from the rail once it has a note.") + "</p>" + rail(state.railOnly);
+      wire();
+      return;
+    }
     var html = "";
     html += leadRow(d);
     html += strip();
@@ -117,7 +125,8 @@
   }
   function unplacedHtml() {
     if (!proposed || !state.unplaced.length) { return ""; }
-    var html = "<div class='unknown'><div class='sh' style='display: flex; gap: 10px; align-items: baseline'><b style='font-family: var(--mono); font-size: 13px'>Not yet placed</b><span class='muted'>" + plural(state.unplaced.length, "proposed event") + " on recordings with no day yet; the time is into the recording. Place them from the Notes tab's chronology.</span></div>";
+    var html = "<div class='unknown'><div class='sh' style='display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap'><b style='font-family: var(--mono); font-size: 13px'>Not yet placed</b><span class='muted'>" + plural(state.unplaced.length, "proposed event") + " on recordings with no day yet; the time is into the recording.</span>" +
+      (state.railOnly.rail_all.length ? "<button type='button' class='small' data-act='sheet' style='margin-left: auto' title='Place these recordings on the clock by date and start, or by the day alone'>Place recordings</button>" : "") + "</div>";
     state.unplaced.forEach(function (e) { html += entry(e); });
     return html + "</div>";
   }
@@ -402,7 +411,10 @@
     });
   }
 
-  function findRail(id) { return (state.day.rail_all || state.day.rail).filter(function (one) { return one.id === id; })[0]; }
+  function railRows() { return state.day && (state.day.rail_all || state.day.rail).length ? (state.day.rail_all || state.day.rail) : state.railOnly.rail_all; }
+  function findRail(id) { return railRows().filter(function (one) { return one.id === id; })[0]; }
+  // The day to open after a placing: the one typed, else the day shown.
+  function afterPlacing(dateTyped) { load(dateTyped || (state.day ? state.day.date : ""), state.span); }
   function light(e) { host.querySelectorAll(".entry.lit").forEach(function (one) { one.classList.remove("lit"); }); e.classList.add("lit"); }
   function goTo(n, play) {
     var e = host.querySelector(".entry[data-n='" + n + "']");
@@ -438,7 +450,9 @@
   }
   function placeBox(one, at) {
     if (!one) { return; }
-    var day = state.day.date;
+    // With no day to borrow from (v1.170.1) the date is typed; a recording
+    // is rarely made today, so today is never assumed.
+    var day = state.day ? state.day.date : "";
     var wrap = layer("<div class='box chron'><h4 style='margin: 0'>Place " + esc(one.title) + (at !== null ? " by hand?" : "") + "</h4>" +
       "<div class='field'><span class='muted'>Date</span><input type='date' name='date' value='" + day + "'></div>" +
       "<div class='field'><span class='muted'>Starts at</span><input type='text' name='start' placeholder='hh:mm' value='" + (at !== null ? hms(at) : "") + "'></div>" +
@@ -453,7 +467,7 @@
     wrap.querySelector("[data-place]").addEventListener("click", function () {
       var alone = wrap.querySelector("[name=alone]").checked;
       post("/recording/" + one.id + "/clock", { date: wrap.querySelector("[name=date]").value, start: wrap.querySelector("[name=start]").value, day_alone: alone, how: alone ? "day" : how })
-        .then(function () { wrap.remove(); load(state.day.date, state.span); })
+        .then(function () { wrap.remove(); afterPlacing(wrap.querySelector("[name=date]").value); })
         .catch(function (err) { wrap.querySelector("[data-error]").textContent = err.message; });
     });
   }
@@ -473,7 +487,7 @@
     });
   }
   function sheet() {
-    var rows = state.day.rail_all || state.day.rail;
+    var rows = railRows();
     var html = "<div class='sheet chron'><div class='row' style='justify-content: space-between; align-items: baseline'><b>Place recordings</b><button type='button' class='small ghost' data-close>Close</button></div>" +
       "<div class='muted tiny'>" + rows.length + " recordings with notes are not on the clock. Type what you know; a row with nothing typed is left as it is. Press ▶ to hear the date said.</div><table><tr><th></th><th>Recording</th><th>Notes</th><th>Date</th><th>Starts at</th><th>Day alone</th></tr>";
     rows.forEach(function (one) {
@@ -491,7 +505,7 @@
       if (!todo.length) { wrap.querySelector("[data-error]").textContent = "Nothing typed yet."; return; }
       var chain = Promise.resolve();
       todo.forEach(function (t) { chain = chain.then(function () { return post("/recording/" + t.id + "/clock", t.body); }); });
-      chain.then(function () { wrap.remove(); load(state.day.date, state.span); }).catch(function (err) { wrap.querySelector("[data-error]").textContent = err.message; });
+      chain.then(function () { wrap.remove(); afterPlacing(todo.length ? todo[0].body.date : ""); }).catch(function (err) { wrap.querySelector("[data-error]").textContent = err.message; });
     });
   }
   function runningList(at) {

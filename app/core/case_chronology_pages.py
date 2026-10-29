@@ -63,6 +63,9 @@ def day(request: HttpRequest, case_id) -> JsonResponse:
             "may_place": True,
             "fold_notes": case_chronology.FOLD_NOTES,
             "bars_most": case_chronology.BARS_MOST,
+            # The rail whether or not a day exists (v1.170.1), so the first
+            # placing can happen from the page.
+            **case_chronology.rail_of(case),
         }
     )
 

@@ -346,3 +346,17 @@ def test_the_run_reads_every_recording_and_keeps_clear_of_what_stands(
     run.refresh_from_db()
     assert run.state == "done" and not asked and run.read == 3
     assert Proposal.objects.filter(state="waiting", source="watch").count() == 1
+
+
+def test_the_tab_carries_the_rail_for_the_recordings_with_no_clock(
+    person, a_case, client
+):
+    """v1.170.1: the recordings with proposals and no clock, to place from
+    the tab's Not yet placed group."""
+    loose = video(person, a_case, "Call", lines=((40.0, "Hello."),))
+    proposal(a_case, loose, at=40.0, text="A greeting.")
+    signed_in(client, person)
+    told = client.get(f"/case/{a_case.pk}/proposed.json").json()
+    assert told["day"] is None and len(told["unplaced"]) == 1
+    assert [one["title"] for one in told["rail"]] == ["Call"]
+    assert told["rail"][0]["notes"] == 1 and told["rail_all"] == told["rail"]

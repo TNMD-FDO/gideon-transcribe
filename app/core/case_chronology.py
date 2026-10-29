@@ -226,6 +226,33 @@ def days_of(case, rows: list[dict] | None = None) -> list[dict]:
     ]
 
 
+def rail_of(case, rows: list[dict] | None = None) -> dict:
+    """The rail on its own (v1.170.1): every recording with a note (or a row
+    given, chapter 4) and no clock, so the first placing can happen before
+    any day exists. The same rows the day's reading puts on its rail."""
+    recordings, by_recording = _noted(case, rows)
+    placements = _placements(recordings)
+    rail = []
+    for one in recordings:
+        key = str(one.pk)
+        if placements[key][0] is not None or not by_recording.get(key):
+            continue
+        rail.append(
+            {
+                "id": key,
+                "title": exports.title_of(one),
+                "notes": len(by_recording[key]),
+                "file": file_suggestion(one),
+                "video": incidents.is_video(one),
+            }
+        )
+    return {
+        "rail": rail[:RAIL_MOST],
+        "rail_more": max(0, len(rail) - RAIL_MOST),
+        "rail_all": rail,
+    }
+
+
 def _running(one, date, start, placements_date, span) -> tuple[float, float] | None:
     """The seconds of `date` a placed recording runs across, clipped to the
     day; None when it does not touch the day."""
@@ -458,6 +485,9 @@ def proposed_day_of(case, date: dt.date | None, span=None) -> dict:
         "day": day,
         "unplaced": unplaced,
         "run": proposals.run_json(case),
+        # The recordings with proposals and no clock, to place from here
+        # (v1.170.1).
+        **rail_of(case, rows),
     }
 
 

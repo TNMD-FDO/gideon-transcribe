@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placing a recording before any day exists</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --c1: #1f6fb2; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+      --c1: #7ab4e6; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12;
+    --c1: #7ab4e6; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { font-size: 12px; padding: 1px 8px; min-height: 24px; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.inc { background: var(--inc-soft); color: var(--inc); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .lead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle span { padding: 3px 10px; } .toggle .on { background: var(--accent); color: var(--accent-ink); }
+  .chron { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .notice { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; color: var(--muted); }
+  .rail { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 10px; border: 1px dashed var(--line); border-radius: var(--radius); }
+  .rail .chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: var(--surface); }
+  .rail .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .rail .chip.lit { border-color: var(--accent); background: var(--accent-soft); }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 520px; font-size: 13px; }
+  .field { display: flex; gap: 10px; align-items: center; }
+  .field span { width: 110px; color: var(--muted); }
+  input[type=text], input[type=date] { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+  .box table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .box th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .box td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+  .days .on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .ruler { position: relative; height: 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .band { position: relative; height: 10px; }
+  .band i { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--c1); }
+  .band b { position: absolute; top: -1px; font-size: 10px; color: var(--surface); padding-left: 6px; line-height: 12px; }
+  .entry { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
+  .entry .num { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: var(--c1); }
+  .entry .t { font-family: var(--mono); color: var(--accent); }
+  .entry .line { color: var(--muted); font-size: 12px; }
+  .entry .meta { display: flex; gap: 6px; margin-top: 3px; flex-wrap: wrap; align-items: center; }
+  .unknown { border-top: 1px dashed var(--line); padding-top: 8px; }
+  .unknown .sh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .note-box { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .note-box ol { margin: 6px 0 0; padding-left: 20px; }
+  .note-box li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 10 chapter 1, amended · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>Placing a recording on the clock before any day exists</h1>
+    <p class="lede">The chronology works one day at a time, and a day exists only when a note sits on a recording with a clock. A case whose first note lands on a recording with no clock, which is what accepting a proposed event on a phone call does, has no day, so today the page shows a message that points at a rail it never draws. The drawing puts the rail and Place recordings under the message, lets the first placing happen from there and from the Proposed events tab, and opens the day just made. Made-up case.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The Notes tab's Chronology with no day: the message, and the rail under it</h2></div>
+    <div class="frame">
+      <div class="lead">
+        <span class="muted">1 note in this case, the office's own words: 1 on a line of a transcript, 0 on events.</span>
+        <span style="display: flex; gap: 8px; align-items: center"><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span><span class="btn tiny">Notes page</span><span class="btn tiny">Download notes</span></span>
+      </div>
+      <div class="chron">
+        <div class="notice">No note of this case is on a recording with a clock yet. A video whose clock was read places itself; place the rest from the rail below, and the day opens.</div>
+        <div class="rail"><span class="muted">Not on the clock yet:</span><span class="chip lit"><i></i>Call_20251107_0915 · 1 note</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What changes.</b> The rail is drawn whenever the case has a recording with a note and no clock, day or no day. Its chips and Place recordings work as they do on a day: a press on a chip opens the place box (figure B), Place recordings the sheet for all of them. The message says what to do instead of pointing at nothing.</p>
+      <p><b>What does not.</b> The strip, the ruler and the band stay absent until a day exists; there is nothing to draw them from. A video whose clock was read still places itself.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The place box from a chip, and the sheet from Place recordings</h2></div>
+    <div class="cols">
+      <div class="box">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><b>Place Call_20251107_0915 on the clock</b><span class="btn tiny ghost">Close</span></div>
+        <div class="muted tiny">The date it was recorded, and the time of day it starts; or the day alone when the time is not known. The file's name suggests 7 Nov 2025, 09:15.</div>
+        <div class="field"><span>Date</span><input type="date" value="2025-11-07"> <span class="btn tiny ghost">Use the file's date</span></div>
+        <div class="field"><span>Starts at</span><input type="text" value="09:15:00" style="width: 110px"> <span class="btn tiny ghost">Use the file's time</span></div>
+        <div class="field"><span></span><label class="small"><input type="checkbox"> the day alone; the time is not known</label></div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px"><span class="btn">Cancel</span><span class="btn primary">Place</span></div>
+      </div>
+      <div class="box">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><b>Place recordings</b><span class="btn tiny ghost">Close</span></div>
+        <div class="muted tiny">2 recordings with notes are not on the clock. Type what you know; a row with nothing typed is left as it is. Press ▶ to hear the date said.</div>
+        <table>
+          <tr><th>Recording</th><th>Notes</th><th>Date</th><th>Starts at</th><th>Day alone</th><th></th></tr>
+          <tr><td>Call_20251107_0915</td><td>1</td><td><input type="date" value="2025-11-07"></td><td><input type="text" value="09:15:00" style="width: 90px"></td><td><input type="checkbox"></td><td><span class="btn tiny ghost">▶</span></td></tr>
+          <tr><td>Interview_room_2.mp4</td><td>2</td><td><input type="date"></td><td><input type="text" style="width: 90px"></td><td><input type="checkbox"></td><td><span class="btn tiny ghost">▶</span></td></tr>
+        </table>
+        <div style="display: flex; justify-content: flex-end; gap: 8px"><span class="btn">Cancel</span><span class="btn primary">Place</span></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The first date.</b> With no day to borrow, the box starts from what the file suggests when its name or header carries a date and time (Phase 9 chapter 7's reading, where the rail already shows "Use the file's time"); otherwise the date is empty and must be typed. Today's date is never assumed: a recording is rarely made today. (Choice 1 below.)</p>
+      <p><b>After Place</b> the chronology opens on the day just typed, with the note's entry on it (figure C). Nothing else about the place box, the sheet or the clock changes; these are chapter 1's as built, reached from one more place.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The Proposed events tab: Place recordings under Not yet placed, and the day after placing</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="chron">
+          <div class="unknown">
+            <div class="sh"><b class="mono" style="font-size: 13px">Not yet placed</b><span class="muted">1 proposed event on a recording with no day yet; the time is into the recording.</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+            <div class="entry"><span class="num" style="background: var(--muted)">1</span><div><div><span class="t">00:04:12</span> ▶</div><div>The caller said the money was already paid.</div><div class="line">"I already paid him, that was last week" · Call_20251107_0915</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="pill ok">accepted · a note on Call_20251107_0915 by D. Meehan, today</span><span class="btn tiny ghost">Open the note</span></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="chron">
+          <div class="days"><span class="on">7 Nov 2025 · 1</span></div>
+          <div class="ruler"><span style="left: 0%">09:10</span><span style="left: 50%">09:25</span><span style="left: 100%">09:40</span></div>
+          <div class="band"><i style="left: 16%; width: 60%"></i><b style="left: 16%">Call_20251107_0915</b></div>
+          <div class="entry"><span class="num">1</span><div><div><span class="t">09:19:12</span> ▶ <span class="pill acc">placed by hand</span></div><div>The caller said the money was already paid.</div><div class="line">"I already paid him, that was last week" · Call_20251107_0915</div><div class="meta"><span class="pill">D. Meehan, today</span><span class="pill warn">from a proposed event</span></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>On the Proposed events tab</b> the Not yet placed group gains the same Place recordings, opening the sheet for the recordings with proposals and no clock. The words no longer send you to another tab. After Place the tab redraws on the day just made and the entry moves onto it. (Choice 2 below.)</p>
+      <p><b>On the Notes tab</b> the same placing opens the day with the note's entry, "placed by hand" on it, and the accepted proposal's origin on its pill. The bar's start is the time typed; a placing by the day alone lists the entry under Time unknown on that day instead.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>A mixed case: cameras placed by their clocks, a phone call waiting on the rail, on both tabs</h2></div>
+    <div class="cols">
+      <div class="frame">
+        <div class="lead"><span class="muted">4 notes on 3 recordings, 6 Nov 2025</span><span class="toggle"><span>Rows</span><span class="on">Chronology</span></span></div>
+        <div class="chron">
+          <div class="days"><span class="on">6 Nov 2025 · 3</span><span>7 Nov · 1</span></div>
+          <div class="rail"><span class="muted">Not on the clock yet:</span><span class="chip"><i></i>Call_20251109_1420 · 1 note</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+          <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 50%">21:00</span><span style="left: 100%">22:00</span></div>
+          <div class="band"><i style="left: 20%; width: 55%"></i><b style="left: 20%">BWC1-1 · by clock</b></div>
+          <div class="band" style="margin-top: 4px"><i style="left: 34%; width: 30%; background: var(--inc)"></i><b style="left: 34%">BWC3-1 · by clock</b></div>
+          <div class="entry"><span class="num">1</span><div><div><span class="t">20:24:36</span> ▶</div><div>First contact, officer asks for licence.</div><div class="line">"Can I see your licence and registration" · BWC1-1</div><div class="meta"><span class="pill">A. Ortiz, 2 days ago</span></div></div></div>
+          <div class="entry"><span class="num" style="background: var(--inc)">2</span><div><div><span class="t">20:41:10</span> ▶</div><div>Third officer arrives.</div><div class="line">"Dispatch, 3-1 on scene" · BWC3-1</div><div class="meta"><span class="pill">J. Brennan, today</span><span class="pill warn">from a proposed event</span></div></div></div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="lead"><span class="muted">3 proposed events on 2 recordings, 6 Nov 2025</span><span class="btn tiny primary">Propose again</span></div>
+        <div class="chron">
+          <div class="days"><span class="on">6 Nov 2025 · 2</span><span>Not yet placed · 1</span></div>
+          <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 50%">21:00</span><span style="left: 100%">22:00</span></div>
+          <div class="band"><i style="left: 20%; width: 55%"></i><b style="left: 20%">BWC1-1</b></div>
+          <div class="band" style="margin-top: 4px"><i style="left: 34%; width: 30%; background: var(--inc)"></i><b style="left: 34%">BWC3-1</b></div>
+          <div class="entry"><span class="num">1</span><div><div><span class="t">20:26:10</span> ▶</div><div>Officer asked to search the car before rights were read.</div><div class="line">"Mind if I take a look in the trunk" · BWC1-1</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+          <div class="entry"><span class="num" style="background: var(--inc)">2</span><div><div><span class="t">20:41:10</span> ▶</div><div>Third officer arrives.</div><div class="line">"Dispatch, 3-1 on scene" · BWC3-1</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="pill ok">accepted · a note on BWC3-1 by J. Brennan, today</span></div></div></div>
+          <div class="unknown">
+            <div class="sh"><b class="mono" style="font-size: 13px">Not yet placed</b><span class="muted">1 proposed event on a recording with no day yet</span><span class="btn tiny" style="margin-left: auto">Place recordings</span></div>
+            <div class="entry"><span class="num" style="background: var(--muted)">3</span><div><div><span class="t">00:04:12</span> ▶</div><div>The caller said the money was already paid.</div><div class="line">"I already paid him, that was last week" · Call_20251109_1420</div><div class="meta"><span class="pill warn">Proposed by the assistant</span><span class="btn tiny primary">Accept</span><span class="btn tiny">Accept and edit</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The cameras place themselves.</b> BWC1-1 and BWC3-1 had their clocks read from the picture, so they are on 6 Nov by themselves, bars and entries, nothing to do. The accepted proposal on BWC3-1 is entry 2 on both tabs: a note on the Notes tab, with its origin; an accepted entry on the Proposed events tab.</p>
+      <p><b>The call waits on the rail.</b> Call_20251109_1420 has no clock to read, so on the Notes tab it sits on the rail above the ruler with its note count, and on the Proposed events tab its proposal sits under Not yet placed by its own time. Place recordings on either tab opens the sheet (figure B) for it alone; placed, by date and start or by the day alone, it joins its day on both tabs, and a day that did not exist yet appears on the strip.</p>
+      <p><b>Nothing else moves.</b> The rail is per recording, as chapter 1 has it; this drawing only adds it to the no-day state (figure A) and to the Proposed events tab's group. A mixed case already shows it on a day.</p>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Choices</span><h2>Two things only the maintainer can decide</h2></div>
+    <div class="note-box">
+      <ol>
+        <li><b>The first date in the box when there is no day.</b> <b>Recommended:</b> the file's own date and time when it suggests one, else empty and typed. <b>Or:</b> today's date, as a day's box borrows the day shown.</li>
+        <li><b>After placing from the Proposed events tab.</b> <b>Recommended:</b> stay on the tab, redrawn on the day just made. <b>Or:</b> go to the Notes tab's chronology on that day, where the note now sits.</li>
+      </ol>
+    </div>
+    <div class="caption">
+      <p><b>Size.</b> One small release, no migration: the day address returns the rail with no day; the chronology draws it with the message; the place box and the sheet take their first date as chosen and open the day placed; the Proposed events tab's group gets the button. Phase 10 chapter 1's Placing by hand gains a sentence.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -19,6 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.170.1, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **Placing a recording before any day exists (Phase 10 chapter 1 amended; the drawing `docs/spec/mockups/phase-10-place-without-a-day.html`).** The Notes tab's chronology drew the rail of recordings to place only inside a day, so a case whose first note landed on a recording with no clock, which is what accepting a proposed event on a phone call does, showed a message pointing at a rail it never drew. The rail and Place recordings now show with the message; with no day to borrow from, the place box's date is typed, never today's, and after a placing the chronology opens on the day typed. The Proposed events tab's Not yet placed group carries Place recordings too, and stays on the tab, redrawn on that day. In a mixed case nothing moves: cameras whose clocks were read place themselves, the rest wait on the rail as before.
+
 ## v1.170.0, 2026-10-29
 
 ```

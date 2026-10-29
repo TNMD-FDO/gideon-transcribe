@@ -374,3 +374,27 @@ def test_the_notes_tab_and_the_notes_page_carry_the_chronology(owner, a_case, cl
     empty = Case.objects.create(owner=owner, name="Empty")
     page = client.get(f"/case/{empty.pk}?tab=notes").content.decode()
     assert 'id="notes-shape"' not in page and 'id="case-chronology"' not in page
+
+
+def test_the_rail_shows_before_any_day_exists_and_the_first_placing_makes_one(
+    owner, a_case, client
+):
+    """v1.170.1: a case whose only note is on a recording with no clock has
+    no day; the day address still returns the rail, so the first placing
+    can happen from the page, and the placing makes the day."""
+    call = a_recording(owner, a_case, "Call_20251107_0915")
+    a_note(owner, call, 30.0, "He says he was never there.")
+    quiet = a_recording(owner, a_case, "Call_20251108_1133")
+    assert quiet.pk
+    signed_in(client, owner)
+    told = client.get(f"/case/{a_case.pk}/chronology.json").json()
+    assert told["days"] == [] and told["day"] is None
+    assert [one["title"] for one in told["rail"]] == ["Call_20251107_0915"]
+    assert told["rail"][0]["notes"] == 1 and told["rail_more"] == 0
+    assert told["rail_all"] == told["rail"]
+    # Placed by hand, the day exists and the note is on it.
+    case_chronology.place(call, DAY, 9 * 3600 + 15 * 60.0, by=owner, how="hand")
+    told = client.get(f"/case/{a_case.pk}/chronology.json").json()
+    assert [d["date"] for d in told["days"]] == [DAY.isoformat()]
+    assert told["day"]["count"] == 1 and told["rail"] == []
+    assert told["day"]["spells"][0]["entries"][0]["time"] == "09:15:30"
