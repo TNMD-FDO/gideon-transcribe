@@ -19,6 +19,8 @@ installs or upgrades to.
 
 ## Unreleased
 
+- **Phase 11 specified, nothing built.** `docs/spec/SPEC-PHASE-11.md` and ADR 0028: the pipeline as a service of its own with the app as its first client, the product's records as an API under `/api/v1/`, and the other front end (`gideon-frontend`) on the box behind Caddy; five stages, each waiting for its own word. The glossary gains Pipeline, Pipeline service, Result, Product API, Client and Front end.
+
 ## v1.172.1, 2026-10-29
 
 ```

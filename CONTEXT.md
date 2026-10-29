@@ -298,6 +298,30 @@ The set of Recordings a user submits together, with shared settings and per-Reco
 **Job**:
 One Recording's pass through the Queue, holding one Run per Side. A Job is Queued, Running, Done, Failed, or Cancelled.
 
+**Pipeline**:
+What turns a file into a Transcript: preparing the sound, the Queue's line, the engines (the WhisperX service, the diarizer, the recogniser), the merge of the Runs into Segments, the English to follow and the clock reading. Inside the app until Phase 11; then a service of its own (ADR 0028).
+_Avoid_: backend, microservices, the engine (that is one of the three)
+
+**Pipeline service**:
+The container that owns the Pipeline from Phase 11 (ADR 0028): one API (submit a file with options, poll, fetch the Result, cancel, process again, a callback when the state changes), a bearer token per Client, its own small line, holding no titles, names or people. Transcribe's app is its first Client. Phase 11 chapter 1.
+_Avoid_: pipeline server, transcription API, gateway
+
+**Result**:
+The Pipeline service's answer for one file, one versioned JSON document (the audio, the language, the speakers, the Segments with their words and English, the Provenance, the timing), the same whatever the Client; the app reads it into its own Segments. Phase 11 chapter 1.
+_Avoid_: output, response (that is the HTTP word), payload
+
+**Product API**:
+Transcribe's records as JSON under `/api/v1/` on the app, answered by the app's own views under the same sign-in, audit rows and rules as the pages, section by section (Phase 11 chapter 2), documented by an OpenAPI document under `docs/api/`.
+_Avoid_: REST API (on a page), backend, the API (which one: the Pipeline service's or the Product API)
+
+**Client**:
+A program that calls the Pipeline service or the Product API: Transcribe's own app, or the Front end. The WhisperX service keeps its own word, Consumer, for whoever calls it. Phase 11.
+_Avoid_: consumer (the WhisperX service's), integration, caller
+
+**Front end**:
+The `gideon-frontend` application (the CSC 4610 Team 8 repository), one front end for GIDEON and Gideon Transcribe, served by Caddy on the app's origin and signing in as the pages do; a Client of the Product API and never of the engines directly. Phase 11 chapter 3.
+_Avoid_: SPA, UI, the website
+
 **Queue**:
 The single office-wide line of Jobs, one at a time and first come first served, with no priority for anyone. It is the WhisperX service's line seen through the app.
 
