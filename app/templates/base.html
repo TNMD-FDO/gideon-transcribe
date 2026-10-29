@@ -4,6 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% comment %}The blank between two pages is drawn in the scheme's colour, never white (v1.171.1).{% endcomment %}
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}{% endblock %}{% block title_suffix %} &middot; Gideon Transcribe{% endblock %}</title>
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'app.css' %}">

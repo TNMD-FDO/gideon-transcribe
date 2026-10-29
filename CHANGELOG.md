@@ -19,6 +19,15 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.171.1, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **A smoother page change.** Every press loads a whole page, and between the old paint and the new the browser showed its own blank canvas: a white flash in the dark theme, a flicker in the light. The page's root now takes the theme's background and the page says it supports both schemes, so the blank is the theme's colour; and the browser is asked to crossfade from one page to the next, with the top line, the rail and the case's tabs held still while only the content fades (cross-document view transitions, in Chrome and Edge since mid-2024 and Safari since late 2024; a browser without them keeps the old behaviour, and a person who asked their system for less motion gets none). Nothing is prefetched or prerendered: opening a page is a use of the case and, for an Admin, an audit row, and a hover must open nothing.
+
 ## v1.171.0, 2026-10-29
 
 ```

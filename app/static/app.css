@@ -3681,3 +3681,23 @@ body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
 .case-bar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
 .case-tabs .here { align-self: center; margin-left: 8px; white-space: nowrap; }
 .sp-head.inc-head { margin-top: 0; }
+
+/* The page change (v1.171.1). Every press loads a whole page, and between
+   the old paint and the new the browser showed its own blank canvas: a white
+   flash in the dark theme, a flicker in the light. The root takes the
+   theme's background so the blank is the theme's colour; and the browser is
+   asked to crossfade from one page to the next, with the top line, the rail
+   and the case's tabs named as the same elements on both pages so they hold
+   still while only the content fades. A browser without view transitions
+   keeps today's behaviour; a person who asked for less motion gets none.
+   Nothing is prefetched or prerendered: opening a page here is a use of the
+   case and, for an Admin, an audit row, and a hover must open nothing. */
+html { background: var(--bg); }
+@view-transition { navigation: auto; }
+.nav { view-transition-name: top-line; }
+nav.rail { view-transition-name: rail; }
+#case-tabs { view-transition-name: case-tabs; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

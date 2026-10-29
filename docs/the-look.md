@@ -90,3 +90,15 @@ chip, a pressed filter). Everything that says a state says it in the pills'
 four colours. Light and dark are two palettes for the same roles, not an
 inversion, and a colour written into a rule rather than a token is a
 mistake.
+
+## The page change (v1.171.1)
+
+Every press loads a whole page. The browser crossfades from the old page to
+the new (cross-document view transitions, `@view-transition { navigation:
+auto }` in `app.css`), with the top line, the rail and the case's tabs named
+so they hold still while only the content fades; the root carries the theme's
+background and the page declares both colour schemes, so the blank between
+two paints is never white. A browser without view transitions keeps the plain
+load; a person who asked their system for less motion gets no animation.
+Nothing is prefetched or prerendered, on purpose: opening a page is a use of
+the case, and for an Admin an audit row, and a hover must open nothing.
