@@ -176,14 +176,16 @@ def day_words(date: dt.date) -> str:
     return date.strftime("%d %b %Y").lstrip("0")
 
 
-def _noted(case):
-    """The case's recordings and every note on them, once."""
+def _noted(case, rows: list[dict] | None = None):
+    """The case's recordings and every note on them, once; or the rows given
+    in the notes' shape (the proposals, chapter 4), laid out the same way."""
     from core.notes_page import note_rows_of
 
     recordings = list(
         case.recordings.select_related("clock_by").order_by("created", "title")
     )
-    rows = note_rows_of(case, recordings)
+    if rows is None:
+        rows = note_rows_of(case, recordings)
     by_recording: dict = defaultdict(list)
     for row in rows:
         by_recording[row["recording"]].append(row)
@@ -195,10 +197,10 @@ def _placements(recordings) -> dict:
     return {str(one.pk): clock_of(one) for one in recordings}
 
 
-def days_of(case) -> list[dict]:
+def days_of(case, rows: list[dict] | None = None) -> list[dict]:
     """The Date strip: each day that has notes on a placed recording, with
     its counts; a recording that runs past midnight counts on both days."""
-    recordings, by_recording = _noted(case)
+    recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
     counts: dict = defaultdict(lambda: {"notes": 0, "recordings": set()})
     for one in recordings:
@@ -245,10 +247,16 @@ def _running(one, date, start, placements_date, span) -> tuple[float, float] | N
     return a, b
 
 
-def day_of(case, date: dt.date, span: tuple[float, float] | None = None) -> dict:
+def day_of(
+    case,
+    date: dt.date,
+    span: tuple[float, float] | None = None,
+    rows: list[dict] | None = None,
+) -> dict:
     """Everything the page draws for one day (and a span of it): the rail,
-    the ruler, the band in its shape, the marks, the hints and the spells."""
-    recordings, by_recording = _noted(case)
+    the ruler, the band in its shape, the marks, the hints and the spells.
+    Given rows in the notes' shape, it lays those out instead (chapter 4)."""
+    recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
     colours: dict = {}
     bars: list[dict] = []
@@ -394,6 +402,62 @@ def _entry(note: dict, recording, when: float | None, colour: str, how: str) -> 
         "how": how,
         "to_check": bool(note.get("to_check")),
         "event_time": note.get("event_time", ""),
+        # A proposal's own fields (chapter 4), carried as given.
+        **{
+            key: note[key]
+            for key in (
+                "why",
+                "source",
+                "source_words",
+                "state",
+                "became",
+                "note_url",
+                "for_incident",
+            )
+            if key in note
+        },
+    }
+
+
+# The Proposed events tab (chapter 4, the second release, v1.169.0) ---------------
+
+
+def proposed_day_of(case, date: dt.date | None, span=None) -> dict:
+    """The tab's reading: the proposals of the case laid out as the notes
+    are, the day's notes as a second lane of marks, and the proposals on
+    recordings not yet placed, listed under Not yet placed by their own
+    times. With no day given, the latest day that has one."""
+    from core import proposals
+
+    rows = proposals.day_rows(case)
+    days = days_of(case, rows)
+    if date is None and days:
+        date = dt.date.fromisoformat(days[-1]["date"])
+    day = day_of(case, date, span, rows=rows) if date is not None else None
+    if day is not None:
+        notes_day = day_of(case, date, span)
+        day["notes_marks"] = notes_day["marks"]
+        day["hints"] = []
+        day["rail"] = []
+        day["rail_more"] = 0
+        day["rail_all"] = []
+    recordings, by_recording = _noted(case, rows)
+    placements = _placements(recordings)
+    unplaced = []
+    for one in recordings:
+        key = str(one.pk)
+        if placements[key][0] is not None:
+            continue
+        for row in sorted(by_recording.get(key, []), key=lambda r: r["at"]):
+            unplaced.append(_entry(row, one, None, "", "none"))
+    for number, row in enumerate(unplaced, start=1):
+        row["number"] = number
+        row["time"] = hms(row["at"])
+    return {
+        "days": days,
+        "day": day,
+        "unplaced": unplaced,
+        "run": proposals.run_json(case),
     }
 
 

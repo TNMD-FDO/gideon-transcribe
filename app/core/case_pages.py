@@ -272,11 +272,18 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
     # Details (v1.165.0): the case's facts, actions, Team and Names and
     # places, which sat in a right column on every tab, as a tab of their own.
+    # The order (Phase 10 chapter 4, v1.169.0): Recordings, Search, Proposed
+    # events, Notes, Documents, Incidents, Clips, Speakers, Details.
+    from core import proposals
+
+    proposed_on = proposals.tab_offered()
     tabs = (
-        ("search", "clips", "notes", "speakers")
-        + (("incidents",) if incidents.on() else ())
+        ("search",)
+        + (("proposed",) if proposed_on else ())
+        + ("notes",)
         + (("documents",) if documents.on() else ())
-        + ("details",)
+        + (("incidents",) if incidents.on() else ())
+        + ("clips", "speakers", "details")
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
@@ -336,6 +343,14 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "clips_count": _clips_count(case),
             # The Notes tab (Phase 8 chapter 2): every note in the case.
             "notes_count": notes.count(case),
+            "proposed_on": proposed_on,
+            "proposed_count": (
+                proposals.Proposal.objects.filter(
+                    case=case, state=proposals.WAITING
+                ).count()
+                if proposed_on
+                else 0
+            ),
             "notes": (
                 notes.of_case(case, request.GET.get("kind", ""))
                 if tab == "notes"

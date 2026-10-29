@@ -19,6 +19,19 @@ installs or upgrades to.
 
 ## Unreleased
 
+## v1.169.0, 2026-10-29
+
+```
+Models: unchanged
+Database: migrates (0099: one Propose events run per case)
+```
+
+- **The Proposed events tab (Phase 10 chapter 4, the second release; the drawing `docs/spec/mockups/phase-10-proposed-events-and-comparison.html`).** The case's tabs run Recordings, Search, Proposed events, Notes, Documents, Incidents, Clips, Speakers, Details. The new tab lists every proposed event of the case in the chronology's shape: the days with proposals, the ruler and the span drag, the recordings' band on the case's clock, a lane of the proposals above a quiet lane of the day's notes, the incidents lane, and the entries in spells with the sentence, Why it matters, the line it rests on, the source pill, the incident it was proposed for or its camera is in, and Accept, Accept and edit (the sentence in a box to write over) and Dismiss; an accepted entry stays, greyed, saying which note it became and whose; one on a recording with no clock waits under Not yet placed. Accept all and Dismiss all on the lead.
+- **Propose events over the whole case.** The button on the tab reads every recording in the case that has a transcript: the watch phrases first, saved as found, then the assistant's judgement in windows with the second look, each recording on its own times, told what the office has noted on it; Look for as on an incident. The run's own waiting proposals are replaced, an incident's and the dismissed stay, and nothing is proposed within five seconds of a note or a proposal already there. One run at a time per case, on the llm queue, with the time expectation under the button and "Not yet read" naming recordings landed since the last run.
+- **The Preview's window from a proposal.** A press on a proposal's time opens the window at the moment with the lines under it, the proposal, its source and why in a strip above them, and Accept, Accept and edit and Dismiss in its foot; the tab redraws behind it.
+- The tab is hidden when the assistant is Off and no watch phrases are listed; its count is the proposals waiting in the case.
+- **Audit rows.** Events proposed with whole_case and the counts; the AI assistant call with the case as its object. Never a sentence or the Look for's words.
+
 ## v1.168.0, 2026-10-29
 
 ```

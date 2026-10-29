@@ -21,6 +21,7 @@ from core import (
     panel,
     panel_pages,
     people_pages,
+    proposed_pages,
     reports,
     speakers_page,
     system_voices_pages,
@@ -392,6 +393,13 @@ urlpatterns = [
         "case/<uuid:case_id>/incident/<uuid:incident_id>/add-from-chronology",
         case_chronology_pages.add_to_incident,
         name="incident-add-from-chronology",
+    ),
+    # The Proposed events tab (Phase 10 chapter 4, v1.169.0).
+    path("case/<uuid:case_id>/proposed.json", proposed_pages.tab, name="case-proposed"),
+    path(
+        "case/<uuid:case_id>/proposed/act",
+        proposed_pages.act,
+        name="case-proposed-act",
     ),
     path(
         "case/<uuid:case_id>/chronology.<str:kind>",

@@ -3654,3 +3654,15 @@ body.gideon-open .preview-card.window { right: calc(var(--gideon, 420px) + 28px)
 }
 /* The floating Ask Gideon button never covers a page's last row (v1.123.0). */
 body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
+
+/* The Proposed events tab (Phase 10 chapter 4, v1.169.0; the drawing phase-10-proposed-events-and-comparison.html): the proposed lane's triangles, the notes lane under it, the entry's why and its choices, the Preview's strip. */
+.chron .notes-lane.prop-lane i { width: 0; height: 0; border-radius: 0; background: none !important; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid var(--warn); top: 2px; }
+.chron .notes-lane.quiet-lane { border-top: 0; height: 12px; opacity: .55; }
+.chron .notes-lane.quiet-lane i { height: 7px; top: 2px; cursor: default; }
+.chron .notes-lane.quiet-lane em { cursor: default; }
+.chron .entry.prop .why { color: var(--text); }
+.chron .entry.prop .meta .ghost { display: inline-flex; }
+.chron .entry.prop.done { opacity: .7; }
+.chron .entry.prop .words textarea { width: 100%; min-height: 60px; }
+.preview-proposed { flex: none; padding: 6px 10px; background: var(--warn-soft); color: var(--text); border-bottom: 1px solid var(--line); font-size: var(--t-small); }
+.preview-proposed b { color: var(--warn); }

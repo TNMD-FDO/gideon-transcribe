@@ -1786,6 +1786,32 @@ def incident_events_input(
     return "\n\n".join(parts)
 
 
+def case_events_input(
+    recording: str,
+    length: str,
+    nature: str,
+    known: list[str],
+    context: str = "",
+    look_for: str = "",
+) -> str:
+    """One recording as the case's run reads it (Phase 10 chapter 4): no
+    incident clock, so its times are its own from its start, and what
+    stands is the office's notes on it and the proposals made so far."""
+    listed = "\n".join(known) if known else "none yet"
+    parts = [
+        f"Recording {recording} runs from 00:00:00 to {length}. Times in the "
+        "lines below are this recording's own, from its start.",
+        "What the office has already noted on it, and what you have proposed "
+        f"so far, by its own times:\n{listed}",
+    ]
+    if context:
+        parts.append(f"About the office and its cases: {context}")
+    if look_for:
+        parts.append(INCIDENT_EVENTS_LOOK_FOR.replace("{look_for}", look_for))
+    parts.append(f"What follows is one stretch of {nature}:")
+    return "\n\n".join(parts)
+
+
 def comparison_input(
     head: str, events: list[str], record: str, paragraphs: str, *, first: int, last: int
 ) -> str:

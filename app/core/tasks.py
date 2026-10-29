@@ -198,6 +198,18 @@ def propose_incident_events(incident_id: str, attempt: int = 1) -> None:
         incident_assistant.propose(incident_id, attempt)
 
 
+@app.task(queue="llm", name="propose_case_events")
+def propose_case_events(case_id: str, attempt: int = 1) -> None:
+    """Propose events over a whole case (Phase 10 chapter 4, v1.169.0)."""
+    from core import proposals
+
+    run = proposals.ProposalRun.objects.filter(case_id=case_id).first()
+    if run is None:
+        return
+    with or_failed(proposals.ProposalRun, run.pk, state="state", reason="reason"):
+        proposals.propose_for_case(case_id, attempt)
+
+
 @app.task(queue="llm", name="compare_report")
 def compare_report(comparison_id: str, attempt: int = 1) -> None:
     """Compare with the report (Phase 8 chapter 4, part 3)."""

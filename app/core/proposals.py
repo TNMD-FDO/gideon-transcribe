@@ -215,11 +215,13 @@ def write_note(
 # Accept and dismiss ----------------------------------------------------------------
 
 
-def accept(proposal: Proposal, *, by, request=None):
+def accept(proposal: Proposal, *, by, request=None, text: str | None = None):
     """One press: the sentence becomes a note on the recording in the
-    acceptor's name; the proposal stays, marked accepted, pointing at it."""
+    acceptor's name; the proposal stays, marked accepted, pointing at it.
+    Accept and edit (v1.169.0) gives the words the person wrote instead."""
     if proposal.state != WAITING:
         return proposal
+    words = " ".join(text.split()) if text else proposal.text
     segment = None
     if proposal.rests_on and hasattr(proposal.recording, "transcript"):
         from core import notes
@@ -228,7 +230,7 @@ def accept(proposal: Proposal, *, by, request=None):
     kind, home = write_note(
         proposal.recording,
         proposal.at,
-        proposal.text,
+        words,
         origin=proposal.origin(),
         by=by,
         request=request,
@@ -327,3 +329,569 @@ def accept_old(event, *, by, request=None):
 
     cases.note_activity(incident.case, by=by)
     return event
+
+
+# The case's run and the tab (Phase 10 chapter 4, the second release, v1.169.0) --
+
+
+class ProposalRun(models.Model):
+    """Propose events over the whole case: one run at a time per Case, kept
+    the way an Incident keeps its proposals_* columns, so the page has the
+    same words and the same expectation."""
+
+    case = models.OneToOneField(
+        "core.Case", on_delete=models.CASCADE, related_name="proposal_run"
+    )
+    state = models.CharField(max_length=10, blank=True, default="")
+    reason = models.CharField(max_length=40, blank=True, default="")
+    at = models.DateTimeField(null=True, blank=True)
+    by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    found = models.IntegerField(default=0)
+    read = models.IntegerField(default=0)
+    cut = models.IntegerField(default=0)
+    watch = models.IntegerField(default=0)
+    look_for = models.CharField(max_length=300, blank=True, default="")
+    looked = models.BooleanField(default=False)
+    expectation = models.JSONField(default=dict, blank=True)
+    # When a full run (not a Look for) last finished: a recording whose
+    # transcript landed since is "not yet read".
+    full_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"proposal run on {self.case_id}"
+
+
+def tab_offered() -> bool:
+    """The Proposed events tab shows as the incident's button does: with the
+    assistant's judgement on, or the watch phrases listed."""
+    from core import incident_assistant, settings_store
+
+    return incident_assistant.proposals_on() or bool(settings_store.watch_phrases())
+
+
+def readable(case) -> list:
+    """The case's recordings a run reads: those with a transcript."""
+    return [
+        one
+        for one in case.recordings.select_related("transcript").order_by(
+            "created", "title"
+        )
+        if hasattr(one, "transcript")
+    ]
+
+
+def run_possible(case) -> bool:
+    return tab_offered() and bool(readable(case))
+
+
+def ask_for_run(case, *, by, look_for: str = "") -> bool:
+    """Propose events pressed on the case: one run at a time; the Look for is
+    this run's alone, as the incident's is."""
+    if not run_possible(case):
+        return False
+    from core import expectation, incident_assistant, sitting
+
+    run, _made = ProposalRun.objects.get_or_create(case=case)
+    if run.state in ("queued", "running"):
+        return True
+    run.state = "queued"
+    run.reason = ""
+    run.by = by
+    run.look_for = " ".join(str(look_for or "").split())[:300]
+    looking = bool(run.look_for) and incident_assistant.proposals_on()
+    tokens = 0
+    for one in readable(case):
+        share = sitting._share_of_recording(one)
+        tokens += share["record"] if share else 0
+    run.expectation = expectation.note(
+        "case_look_for" if looking else "case_events", tokens
+    )
+    run.save()
+    from core import tasks
+
+    tasks.propose_case_events.defer(case_id=str(case.pk))
+    return True
+
+
+class _Lone:
+    """A recording read on its own, in the shape the proposer reads a camera
+    (starts_at, length, camera_id): its times are its own, from zero."""
+
+    def __init__(self, recording):
+        self.recording = recording
+        self.pk = recording.pk
+        self.starts_at = 0.0
+
+    def length(self) -> float:
+        return float(self.recording.duration_seconds or 0.0)
+
+    def ends_at(self) -> float:
+        return self.length()
+
+    def camera_id(self) -> str:
+        return str((self.recording.stamp or {}).get("camera") or self.recording.title)
+
+
+def _taken_on(recording, made: list[float]) -> list[float]:
+    """The moments on a recording a new proposal must keep clear of: its
+    notes, and every Proposal row on it, of either run and any state."""
+    from core import notes
+
+    transcript = getattr(recording, "transcript", None)
+    taken = list(made)
+    if transcript is not None:
+        taken += [
+            float(start)
+            for start in transcript.segments.exclude(note="")
+            .filter(same_as_other_side=False)
+            .values_list("start", flat=True)
+        ]
+    taken += [one.at for one in notes.moments_of(recording)]
+    taken += list(
+        Proposal.objects.filter(recording=recording).values_list("at", flat=True)
+    )
+    return taken
+
+
+def _known_on(recording, made: list) -> list[str]:
+    """What a window's head lists for a recording: its notes and the
+    proposals made so far on it, at their times into the recording."""
+    from core import exports, notes
+
+    rows = []
+    transcript = getattr(recording, "transcript", None)
+    if transcript is not None:
+        for start, note in (
+            transcript.segments.exclude(note="")
+            .filter(same_as_other_side=False)
+            .values_list("start", "note")
+        ):
+            rows.append((float(start), f"the office's note: {note}"))
+    for one in notes.moments_of(recording):
+        rows.append((one.at, f"the office's note: {one.note}"))
+    for at, text in made:
+        rows.append((at, text))
+    return [f"{exports.clock(at)} {text}" for at, text in sorted(rows)]
+
+
+def propose_for_case(case_id, attempt: int = 1) -> None:
+    """The run over every recording of the case that has a transcript: the
+    watch phrases first, by the app itself; then the engine's judgement, each
+    recording in windows with a second look, the answers checked as the
+    incident's run checks them (Phase 7 chapter 2). This run's own waiting
+    rows are replaced; an incident's waiting rows and every dismissed row
+    stay, and nothing is proposed within a few seconds of one, of a note, or
+    of an accepted proposal. A Look for run proposes only what was looked
+    for and replaces nothing."""
+    import json
+    import time
+
+    from django.utils import timezone as tz
+
+    from core import (
+        assistant,
+        engine,
+        expectation,
+        exports,
+        incident_assistant,
+        prompts,
+        settings_store,
+    )
+    from core.assistant import DONE, FAILED, QUEUED, RUNNING, PromptTemplate
+    from core.cases import Case
+
+    case = Case.objects.filter(pk=case_id).select_related("owner").first()
+    if case is None:
+        return
+    run = ProposalRun.objects.filter(case=case).select_related("by").first()
+    if run is None or run.state not in (QUEUED, RUNNING):
+        return
+    started = time.monotonic()
+    ground = PromptTemplate.named(PromptTemplate.GROUND_RULES)
+    template = PromptTemplate.named(PromptTemplate.INCIDENT_EVENTS)
+    templates_line = (
+        f"ground-rules v{ground.version}; Proposed events v{template.version}"
+    )
+    run.state = RUNNING
+    run.expectation = expectation.started(run.expectation)
+    run.save(update_fields=["state", "expectation"])
+    looked = bool(run.look_for) and incident_assistant.proposals_on()
+    look_for = run.look_for if looked else ""
+    usage = {"input_tokens": 0, "output_tokens": 0}
+    model = ""
+    calls = cut = windows = second_looks = watch_found = read = 0
+    found = 0
+    phrases = settings_store.watch_phrases()
+
+    def finish(state: str, reason: str = "") -> None:
+        run.state = state
+        run.reason = reason
+        run.at = tz.now()
+        run.looked = looked
+        if not looked:
+            run.full_at = run.at
+        run.found = found
+        run.read = read
+        run.cut = cut
+        run.watch = watch_found
+        run.look_for = ""
+        run.save()
+        if calls:
+            audit.write(
+                audit.Category.LLM,
+                "AI assistant call",
+                actor=run.by,
+                outcome=(
+                    audit.Outcome.SUCCESS if state == DONE else audit.Outcome.FAILURE
+                ),
+                reason_class="" if state == DONE else reason,
+                affected_user=(
+                    case.owner
+                    if run.by is not None and case.owner_id != run.by.pk
+                    else None
+                ),
+                object_type="case",
+                object_id=case.pk,
+                object_label=case.name,
+                feature=incident_assistant.FEATURE_EVENTS,
+                templates=templates_line,
+                model=model,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
+                duration_seconds=round(time.monotonic() - started, 1),
+                calls=calls,
+                cameras=read,
+                found=found,
+                cut_short=cut,
+                windows=windows,
+                second_looks=second_looks,
+                watch_hits=watch_found,
+                **expectation.for_audit(run.expectation),
+                look_for=bool(look_for),
+                looked=looked,
+                case_run=True,
+            )
+        audit.write(
+            incidents.CATEGORY,
+            "events proposed",
+            actor=run.by,
+            affected_user=case.owner,
+            object_type="case",
+            object_id=case.pk,
+            object_label=case.name,
+            found=found,
+            cameras=read,
+            watch_hits=watch_found,
+            windows=windows,
+            whole_case=True,
+        )
+
+    def keep(lone: _Lone, source: str, fields: dict) -> None:
+        Proposal.objects.create(
+            case=case,
+            recording=lone.recording,
+            incident=None,
+            at=fields["at"],
+            until=fields.get("until"),
+            text=fields["text"],
+            why=fields.get("why", ""),
+            rests_on=fields.get("rests_on", ""),
+            source=source,
+            proposed_by=run.by,
+        )
+
+    try:
+        recordings = readable(case)
+        if not recordings:
+            raise engine.Problem(engine.ERROR, "no recording has a transcript")
+        if not incident_assistant.proposals_on() and not phrases:
+            raise engine.Problem(engine.ERROR, "proposals are off")
+        if not looked:
+            Proposal.objects.filter(
+                case=case, incident__isnull=True, state=WAITING
+            ).delete()
+        made_on: dict = {}
+
+        # The floor: the watch phrases, saved as they are found.
+        for recording in [] if looked else recordings:
+            lone = _Lone(recording)
+            mine = made_on.setdefault(str(recording.pk), [])
+            taken = _taken_on(recording, [at for at, _ in mine])
+            for fields in incident_assistant.watch_hits(lone, phrases):
+                if any(
+                    abs(fields["at"] - other) < incident_assistant.NEAR_SECONDS
+                    for other in taken
+                ):
+                    continue
+                keep(lone, "watch", fields)
+                mine.append((fields["at"], fields["text"]))
+                taken.append(fields["at"])
+                watch_found += 1
+                found += 1
+
+        if not incident_assistant.proposals_on():
+            read = len(recordings)
+            finish(DONE)
+            return
+
+        problem = assistant._unreachable()
+        if problem:
+            raise problem
+        system = prompts.system_message(
+            ground.text, template.text, prompts.INCIDENT_EVENTS_FORMAT
+        )
+        context = settings_store.incident_events_context()
+        answer_cap = settings_store.incident_events_answer_cap()
+        window_seconds = settings_store.incident_events_window()
+        second = settings_store.second_look()
+        schema = prompts.incident_events_schema()
+        most = (
+            incident_assistant.LOOK_MOST if looked else incident_assistant.WINDOW_MOST
+        )
+        for recording in recordings:
+            lone = _Lone(recording)
+            transcript = recording.transcript
+            digest = assistant.digest_text(transcript) if assistant.digests_on() else ""
+            if digest:
+                body_lines = [line for line in digest.splitlines() if line.strip()]
+                nature = (
+                    "the record of this recording (a condensation of its words "
+                    "and its picture)"
+                )
+            else:
+                body_lines = prompts.render(prompts.lines_of(transcript)).splitlines()
+                nature = "the transcript of this recording"
+            if not body_lines:
+                continue
+            read += 1
+            mine = made_on.setdefault(str(recording.pk), [])
+            for window in incident_assistant._windows(body_lines, window_seconds):
+                windows += 1
+                kept_here = 0
+                said: list[str] = []
+                for look in ("first", "second"):
+                    if kept_here >= most:
+                        break
+                    if look == "second" and (not second or looked):
+                        break
+                    taken = _taken_on(recording, [at for at, _ in mine])
+                    head = prompts.case_events_input(
+                        lone.camera_id(),
+                        exports.clock(lone.length()),
+                        nature,
+                        _known_on(recording, mine),
+                        context=context,
+                        look_for=look_for,
+                    )
+                    for chunk in incident_assistant._chunks(
+                        system, head, window, answer_cap
+                    ):
+                        given = incident_assistant._folded("\n".join(chunk))
+                        user = head + "\n\n" + "\n".join(chunk)
+                        if look == "second":
+                            second_looks += 1
+                            user += (
+                                "\n\n"
+                                + prompts.INCIDENT_EVENTS_SECOND_LOOK
+                                + "\n\nYou proposed:\n"
+                                + ("\n".join(said) or "none")
+                            )
+                        answer = engine.complete(
+                            assistant._messages(system, user),
+                            max_completion_tokens=assistant.cap(answer_cap),
+                            thinking=False,
+                            timeout=assistant.time_limit(
+                                incident_assistant.FEATURE_EVENTS
+                            ),
+                            schema=schema,
+                            **assistant.SUGGESTION_SAMPLING,
+                        )
+                        calls += 1
+                        if answer.get("finish_reason") == "length":
+                            cut += 1
+                        model = answer.get("model", "") or model
+                        usage["input_tokens"] += answer.get("input_tokens", 0) or 0
+                        usage["output_tokens"] += answer.get("output_tokens", 0) or 0
+                        try:
+                            try:
+                                parsed = json.loads(answer["text"])
+                            except ValueError:
+                                parsed = json.loads(
+                                    prompts.salvage_json(answer["text"])
+                                )
+                            raw = (
+                                parsed.get("events", [])
+                                if isinstance(parsed, dict)
+                                else []
+                            )
+                            if not isinstance(raw, list):
+                                raise ValueError("not a list")
+                        except (ValueError, AttributeError):
+                            continue
+                        for item in raw:
+                            if kept_here >= most:
+                                break
+                            fields = incident_assistant._keep_proposal(
+                                item, lone, given, taken
+                            )
+                            if fields is None:
+                                continue
+                            keep(lone, "looked" if looked else "assistant", fields)
+                            mine.append((fields["at"], fields["text"]))
+                            taken.append(fields["at"])
+                            kept_here += 1
+                            found += 1
+                            said.append(f"{item.get('time', '')} {fields['text']}")
+        finish(DONE)
+    except engine.Problem as problem:
+        finish(FAILED, problem.reason)
+
+
+def run_json(case) -> dict:
+    """The run's state for the tab: the button's line and whether to poll."""
+    from django.utils import timezone as tz
+
+    from core import assistant, expectation, incident_assistant
+
+    run = ProposalRun.objects.filter(case=case).first()
+    state = run.state if run else ""
+    pending = Proposal.objects.filter(case=case, state=WAITING).count()
+    words = ""
+    if state == "queued":
+        words = "Waiting for the engine..."
+    elif state == "running":
+        words = "Reading the recordings..."
+    elif state == "done":
+        when = tz.localtime(run.at).strftime("%H:%M") if run.at else ""
+        if run.looked:
+            words = (
+                f"Looked on {run.read} recording{'' if run.read == 1 else 's'} at "
+                f"{when}: {run.found} proposed"
+                if run.found
+                else f"Nothing found on what you looked for ({when})"
+            )
+        else:
+            words = (
+                f"Proposed {run.found} event{'' if run.found == 1 else 's'} at {when} "
+                f"from {run.read} recording{'' if run.read == 1 else 's'}"
+                if run.found
+                else f"Nothing to propose ({when})"
+            )
+        if run.watch:
+            words += f", {run.watch} from the watch phrases"
+        if run.cut:
+            words += (
+                f"; {run.cut} answer{'' if run.cut == 1 else 's'} cut short, "
+                "raise Proposed events answer cap"
+            )
+    elif state == "failed":
+        words = assistant.what_to_say(run.reason)
+    never_read = [
+        (one.stamp or {}).get("camera") or one.title
+        for one in readable(case)
+        if run is None
+        or run.full_at is None
+        or (one.transcript.created and one.transcript.created > run.full_at)
+    ]
+    if never_read and state not in ("queued", "running"):
+        shown = ", ".join(never_read[:4]) + (
+            f" and {len(never_read) - 4} more" if len(never_read) > 4 else ""
+        )
+        words = (words + " " if words else "") + f"Not yet read: {shown}."
+    return {
+        "on": tab_offered(),
+        "possible": run_possible(case),
+        "state": state,
+        "words": words,
+        "pending": pending,
+        "busy": state in ("queued", "running"),
+        "never_read": len(never_read),
+        "expectation": expectation.json_of(
+            run.expectation if run else {}, state, "proposals"
+        ),
+        "assistant": incident_assistant.proposals_on(),
+    }
+
+
+def day_rows(case) -> list[dict]:
+    """The case's proposals in the shape the chronology lays notes out in:
+    the waiting and the accepted, never the dismissed; each with its why, its
+    source words, what it became, and the incident it was proposed for."""
+    from django.urls import reverse
+
+    from core import notes
+
+    rows = []
+    for one in (
+        Proposal.objects.filter(case=case)
+        .exclude(state=DISMISSED)
+        .select_related("recording", "incident", "proposed_by", "decided_by")
+        .select_related("note_segment", "note_moment")
+    ):
+        became = ""
+        note_url = ""
+        if one.state == ACCEPTED:
+            who = one.decided_by.shown_name if one.decided_by else "a person"
+            when = notes.date_of(one.decided) if one.decided else ""
+            became = f"a note on {_title(one.recording)} by {who}" + (
+                f", {when}" if when else ""
+            )
+            note_url = (
+                reverse("viewer", args=[one.recording_id]) + f"?t={one.at:.1f}&note=1"
+            )
+        rows.append(
+            {
+                "key": f"proposal:{one.pk}",
+                "kind": "proposal",
+                "id": str(one.pk),
+                "recording": str(one.recording_id),
+                "at": float(one.at),
+                "text": one.text,
+                "said": one.rests_on,
+                "who": "",
+                "to_check": False,
+                "by": one.proposed_by.shown_name if one.proposed_by else "",
+                "by_id": one.proposed_by_id,
+                "when": notes.date_of(one.made),
+                "why": one.why,
+                "source": one.source,
+                "source_words": source_words(one.source),
+                "state": one.state,
+                "became": became,
+                "note_url": note_url,
+                "for_incident": one.incident.name if one.incident_id else "",
+            }
+        )
+    return rows
+
+
+def _title(recording) -> str:
+    return str((recording.stamp or {}).get("camera") or recording.title)
+
+
+def source_words(source: str) -> str:
+    return {
+        "watch": "Watch phrase",
+        "looked": "Looked for",
+        "report": "From the report",
+    }.get(source, "Proposed by the assistant")
+
+
+def decide_all(case, action: str, *, by, request=None) -> int:
+    """Accept all or Dismiss all on the tab: every waiting row of the case."""
+    count = 0
+    for one in list(
+        Proposal.objects.filter(case=case, state=WAITING).select_related("recording")
+    ):
+        if action == "accept":
+            accept(one, by=by, request=request)
+        else:
+            dismiss(one, by=by, request=request)
+        count += 1
+    return count

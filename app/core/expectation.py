@@ -57,6 +57,14 @@ KEYS = {
     "incident_look_for": Key(
         "incident_events", 90, 20, "incident_events", "proposals", looked=True
     ),
+    # The case's run (Phase 10 chapter 4, v1.169.0): every recording, so
+    # the incident's figures stand with a wider reading.
+    "case_events": Key(
+        "incident_events", 180, 40, "incident_events", "proposals", looked=False
+    ),
+    "case_look_for": Key(
+        "incident_events", 90, 20, "incident_events", "proposals", looked=True
+    ),
     "compare_report": Key("compare_report", 180, 12, "compare_report", "comparison"),
     # The English from the words as spoken (ADR 0026, v1.162.0): a call per
     # window, a half-hour call about eight of them.

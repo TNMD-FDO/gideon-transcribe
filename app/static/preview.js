@@ -111,6 +111,7 @@
         "<div class='preview-person' id='preview-person' hidden></div>" +
         "<div class='preview-samples' id='preview-samples' hidden></div>" +
         "<div class='preview-media'></div>" +
+        "<div class='preview-proposed' hidden></div>" +
         "<div class='preview-lines' id='preview-lines'></div>" +
         "<div class='preview-foot'></div>" +
         "<div class='preview-note' hidden></div>";
@@ -269,7 +270,61 @@
       return found;
     }
 
+    // The proposed event this window was opened from (v1.169.0): one strip
+    // above the lines, and the three choices in the foot until decided.
+    function drawProposed() {
+      var strip = card.querySelector(".preview-proposed");
+      if (!strip) { return; }
+      var p = asked && asked.proposed;
+      if (!p) { strip.hidden = true; strip.innerHTML = ""; return; }
+      strip.hidden = false;
+      strip.innerHTML = "<b>" + (p.state === "accepted" ? "Accepted:" : "Proposed:") + "</b> " + escape(p.text) + (p.source_words ? " <span class='muted'>· " + escape(p.source_words) + "</span>" : "") +
+        (p.why ? "<div class='muted tiny'>Why it matters: " + escape(p.why) + "</div>" : "");
+    }
+    function postJson(url, body) {
+      return fetch(url, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") }, body: JSON.stringify(body || {}) })
+        .then(function (answer) { return answer.json().then(function (told) { if (!answer.ok) { throw new Error(told.error || "That did not work."); } return told; }); });
+    }
+    function decideProposed(action, text) {
+      var p = asked.proposed;
+      var body = { action: action, id: p.id };
+      if (text !== undefined) { body.text = text; }
+      postJson(p.act, body).then(function (told) {
+        if (!card || !asked || asked.proposed !== p) { return; }
+        p.state = action === "dismiss" ? "dismissed" : "accepted";
+        p.text = text !== undefined ? text : p.text;
+        noting = null;
+        drawProposed();
+        drawFoot();
+        saved(told.said || (action === "dismiss" ? "Dismissed." : "A note is written."), null);
+        if (p.done) { p.done(); }
+        read(told_seconds(), false);
+      }).catch(function (err) { saved(err.message, null); });
+    }
+    function told_seconds() { return media() ? media().currentTime : told.seconds; }
+    function drawProposedEdit() {
+      var box = card.querySelector(".preview-note");
+      window.clearTimeout(doneTimer);
+      box.classList.remove("done");
+      box.hidden = false;
+      box.innerHTML =
+        "<label class='small muted' for='preview-note-text'>The note, in your words; it goes on the line being spoken at this moment, or at the moment itself.</label>" +
+        "<textarea id='preview-note-text' maxlength='2000' rows='3'>" + escape(asked.proposed.text) + "</textarea>" +
+        "<div class='row' style='gap: 6px; align-items: center; flex-wrap: wrap'>" +
+        "<button type='button' class='small primary' data-preview-act='accept-edit-save'>Accept as written</button>" +
+        "<button type='button' class='small ghost' data-preview-act='cancel'>Cancel</button></div>";
+      box.querySelector("textarea").focus();
+    }
+
     function drawFoot() {
+      if (asked && asked.proposed && asked.proposed.state !== "accepted" && asked.proposed.state !== "dismissed") {
+        card.querySelector(".preview-foot").innerHTML =
+          "<button type='button' class='small primary' data-preview-act='accept' title='The sentence becomes a note on this recording at the moment, in your name'>Accept</button>" +
+          "<button type='button' class='small' data-preview-act='accept-edit' title='Write the note in your own words first'>Accept and edit</button>" +
+          "<button type='button' class='small ghost' data-preview-act='dismiss'>Dismiss</button>" +
+          (host ? "" : "<a class='btn small ghost' href='" + escape(told.open) + "' style='margin-left: auto'>Open the recording</a>");
+        return;
+      }
       if (isSnippet()) {
         card.querySelector(".preview-foot").innerHTML =
           "<span class='muted tiny grow'>the line heard, with a line either side</span>" +
@@ -355,6 +410,7 @@
       card.querySelector("#preview-title").textContent = isSnippet() && asked.person ? "Hearing " + asked.person : told.title;
       card.querySelector("#preview-clock").textContent = told.clock;
       drawPerson();
+      drawProposed();
       if (first) {
         var holder = card.querySelector(".preview-media");
         if (!told.media) {
@@ -527,6 +583,10 @@
         if (act.dataset.previewAct === "close") { close(); }
         else if (act.dataset.previewAct === "cancel") { noting = null; drawNote(null); }
         else if (act.dataset.previewAct === "save") { save(); }
+        else if (act.dataset.previewAct === "accept") { decideProposed("accept"); }
+        else if (act.dataset.previewAct === "dismiss") { decideProposed("dismiss"); }
+        else if (act.dataset.previewAct === "accept-edit") { drawProposedEdit(); }
+        else if (act.dataset.previewAct === "accept-edit-save") { var typed = card.querySelector("#preview-note-text"); if (typed && typed.value.trim()) { decideProposed("accept_edit", typed.value); } }
         return;
       }
       var atMoment = event.target.closest("[data-preview-moment]");
@@ -614,7 +674,10 @@
       asked = {
         recording: given.recording, seconds: seconds, from: given.from || null,
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
-        speaker: given.speaker || given.person || ""
+        speaker: given.speaker || given.person || "",
+        // A proposed event (v1.169.0): its sentence above the lines, and
+        // Accept, Accept and edit and Dismiss in the foot.
+        proposed: given.proposed || null
       };
       if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); }
       noting = null;
@@ -623,7 +686,7 @@
       if (card && !host && card.classList.contains("snippet") !== isSnippet()) { close(); asked = {
         recording: given.recording, seconds: seconds, from: given.from || null,
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
-        speaker: given.speaker || given.person || ""
+        speaker: given.speaker || given.person || "", proposed: given.proposed || null
       }; if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); } }
       if (!card) { build(); }
       if (same && media()) {

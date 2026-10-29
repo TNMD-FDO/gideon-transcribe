@@ -7,11 +7,16 @@
 // the day alone or the file's time.
 (function () {
   "use strict";
-  var host = document.getElementById("case-chronology");
-  if (!host) { return; }
+  // Two hosts share this script (v1.169.0, Phase 10 chapter 4): the Notes
+  // tab's chronology, and the Proposed events tab, which lays the case's
+  // proposals out the same way (data-mode="proposed") with Accept, Accept
+  // and edit and Dismiss on each entry, and the Preview's window on a press.
+  function mount(host) {
   var caseId = host.dataset.case;
+  var proposed = host.dataset.mode === "proposed";
   var onNotesPage = host.dataset.player === "notes-page";
-  var state = { days: [], day: null, span: null, showAll: false, lit: null, open: {}, loaded: false, me: null };
+  var state = { days: [], day: null, span: null, showAll: false, lit: null, open: {}, loaded: false, me: null, unplaced: [], run: null };
+  var pollTimer = null;
   var keyShape = "notes-shape:" + caseId, keyAll = "chron-all:" + caseId;
   try { state.showAll = localStorage.getItem(keyAll) === "1"; } catch (e) { /* no storage */ }
 
@@ -37,19 +42,20 @@
   function setAddress(day, span) {
     if (onNotesPage) { return; }
     var p = new URLSearchParams(location.search);
-    p.set("tab", "notes"); p.set("shape", "chronology");
+    p.set("tab", proposed ? "proposed" : "notes"); if (!proposed) { p.set("shape", "chronology"); }
     if (day) { p.set("day", day); } else { p.delete("day"); }
     if (span) { p.set("from", hm(span[0])); p.set("to", hm(span[1])); } else { p.delete("from"); p.delete("to"); }
     history.replaceState(null, "", location.pathname + "?" + p.toString());
   }
 
-  function load(day, span) {
+  function load(day, span, quiet) {
     var url = host.dataset.json + "?day=" + encodeURIComponent(day || "");
     if (span) { url += "&from=" + encodeURIComponent(hm(span[0])) + "&to=" + encodeURIComponent(hm(span[1])); }
-    host.innerHTML = "<p class='muted small'>Reading the notes...</p>";
+    if (!quiet) { host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : "Reading the notes...") + "</p>"; }
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
-      state.lit = null; state.open = {};
+      state.unplaced = told.unplaced || []; state.run = told.run || null;
+      state.lit = null; if (!quiet) { state.open = {}; }
       setAddress(state.day ? state.day.date : "", state.span);
       draw();
     }).catch(function () { host.innerHTML = "<p class='muted small'>The chronology could not be read. Try again.</p>"; });
@@ -58,6 +64,7 @@
   // Drawing ------------------------------------------------------------------
   function draw() {
     var d = state.day;
+    if (proposed) { drawProposed(d); return; }
     if (!d) { host.innerHTML = "<p class='muted small'>No note of this case is on a recording with a clock yet. A video whose clock was read places itself; anything else is placed from the rail once it has a note.</p>"; return; }
     var html = "";
     html += leadRow(d);
@@ -71,6 +78,90 @@
     html += spellsHtml(d);
     host.innerHTML = html;
     wire();
+  }
+
+  // The Proposed events tab (v1.169.0): the run's button and words, then
+  // the day as the chronology draws it with the proposals as its entries, a
+  // lane of the day's notes under the proposed lane, and the proposals on
+  // recordings not yet placed under Not yet placed.
+  function drawProposed(d) {
+    var typed = host.querySelector("#proposed-look-for") ? host.querySelector("#proposed-look-for").value : "";
+    var html = proposedLead(d);
+    if (d) {
+      html += strip() + ruler(d) + band(d) + marksLane(d.marks, "proposed", "prop-lane", true) + marksLane(d.notes_marks || [], "notes", "quiet-lane", false) + incidentsLane(d) + spellsHtml(d);
+    } else if (!state.unplaced.length) {
+      html += "<p class='muted small'>Nothing waiting. Propose events reads every recording in the case that has a transcript and proposes what it finds; nothing becomes a note until you accept it.</p>";
+    }
+    html += unplacedHtml();
+    host.innerHTML = html;
+    var box = host.querySelector("#proposed-look-for");
+    if (box && typed) { box.value = typed; }
+    wire();
+    window.clearTimeout(pollTimer);
+    if (state.run && state.run.busy) { pollTimer = window.setTimeout(function () { load(state.day ? state.day.date : "", state.span, true); }, 5000); }
+  }
+  function proposedLead(d) {
+    var r = state.run || {};
+    var left = "<span class='row' style='gap: 8px; align-items: center; flex-wrap: wrap'>";
+    if (r.on) {
+      left += "<button type='button' class='small primary' data-act='propose'" + (r.possible && !r.busy ? "" : " disabled") + " title='Reads every recording in the case that has a transcript: the watch phrases first, then the assistant in stretches with a second look; nothing becomes a note until you accept it'>" + (r.state === "done" ? "Propose again" : "Propose events") + "</button>";
+      if (r.assistant) { left += "<input type='text' id='proposed-look-for' class='small' maxlength='300' placeholder='Look for, this run only' aria-label='Look for, this run only' title='With something typed the run reads every recording once and proposes only what bears on it'" + (r.possible && !r.busy ? "" : " disabled") + ">"; }
+    }
+    left += "<span class='muted small' id='proposed-said'>" + (r.busy && r.expectation && r.expectation.words && window.Expectation ? window.Expectation.html({ step: (r.words || "").replace(/\.\.\.$/, ""), state: r.state, expectation: r.expectation, inline: true }) : esc(r.words || (r.possible === false && r.on ? "Nothing to read yet: no recording has a transcript." : ""))) + "</span></span>";
+    var right = "";
+    if (d) { right += "<span class='muted small'>" + esc(plural(d.count, "proposed event") + (d.recordings ? " on " + plural(d.recordings, "recording") : "") + (d.span ? ", " + hm(d.ruler.from) + " to " + hm(d.ruler.to) : ", " + d.words)) + "</span> "; }
+    if (d && d.span) { right += "<button type='button' class='small' data-act='back'>Back to the day</button> "; }
+    if (d && d.fold) { right += "<button type='button' class='small ghost' data-act='open-all'>Open all</button> "; }
+    if (r.pending) { right += "<button type='button' class='small ghost' data-act='dismiss-all'" + (r.busy ? " disabled" : "") + " title='Every waiting proposal in the case put away'>Dismiss all</button> <button type='button' class='small ghost' data-act='accept-all'" + (r.busy ? " disabled" : "") + " title='Every waiting proposal in the case written as a note'>Accept all</button>"; }
+    return "<div class='lead-row'>" + left + "<span class='row' style='gap: 8px; align-items: center'>" + right + "</span></div>";
+  }
+  function unplacedHtml() {
+    if (!proposed || !state.unplaced.length) { return ""; }
+    var html = "<div class='unknown'><div class='sh' style='display: flex; gap: 10px; align-items: baseline'><b style='font-family: var(--mono); font-size: 13px'>Not yet placed</b><span class='muted'>" + plural(state.unplaced.length, "proposed event") + " on recordings with no day yet; the time is into the recording. Place them from the Notes tab's chronology.</span></div>";
+    state.unplaced.forEach(function (e) { html += entry(e); });
+    return html + "</div>";
+  }
+  function proposalEntry(e) {
+    var cls = "entry prop" + (e.state === "accepted" ? " done" : "") + (state.lit ? (e.recording === state.lit ? " lit" : " dim") : "");
+    var acts = e.state === "accepted"
+      ? "<span class='pill small ok'>accepted · " + esc(e.became) + "</span>" + (e.note_url ? "<a class='small' href='" + esc(e.note_url) + "'>Open the note</a>" : "")
+      : "<button type='button' class='small primary' data-act='accept' title='The sentence becomes a note on the recording at this moment, in your name'>Accept</button><button type='button' class='small' data-act='accept-edit' title='Write the note in your own words first'>Accept and edit</button><button type='button' class='small ghost' data-act='dismiss' title='Put away; a later run does not offer it again'>Dismiss</button>";
+    return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-id='" + esc(e.id) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'>" +
+      "<span class='num' style='background: " + (e.colour || "var(--muted)") + "'>" + e.number + "</span>" +
+      "<div><div class='top'><button type='button' class='t' data-act='play' title='Play the moment, with the lines'>" + (e.time || "the day") + "</button><button type='button' class='play' data-act='play' title='Play the moment'>▶</button>" + (e.how === "day" ? "<span class='pill small'>placed by the day</span>" : "") + "</div>" +
+      "<div class='words'>" + esc(e.text) + "</div>" +
+      (e.why ? "<div class='why small'>Why it matters: " + esc(e.why) + "</div>" : "") +
+      "<div class='line'>" + (e.said ? "“" + esc(e.said) + "”" : "at a moment, nothing said") + " · " + esc(e.title) + "</div>" +
+      "<div class='meta'><span class='pill small " + (e.source === "watch" ? "inc" : "warn") + "'>" + esc(e.source_words) + "</span><span class='chip'><i style='background: " + (e.colour || "var(--muted)") + "'></i>" + esc(e.title) + "</span>" +
+      (e.for_incident ? "<span class='pill small inc' title='Proposed by a run on this incident'>for " + esc(e.for_incident) + "</span>" : "") +
+      (e.incident ? (e.incident.event ? "<span class='pill small inc' title='Its camera is on the incident&#39;s clock; accepted, the note is an event of it'>on a camera of " + esc(e.incident.name) + "</span>" : "<span class='pill small inc' title='Its camera is in the incident but not on its clock yet'>in " + esc(e.incident.name) + ", not synced yet</span>") : "") +
+      acts + "</div></div></div>";
+  }
+  function proposalOf(e) {
+    var key = e.dataset.entry;
+    var all = (state.day ? state.day.spells.reduce(function (acc, g) { return acc.concat(g.entries); }, []).concat(state.day.unknown || []) : []).concat(state.unplaced);
+    var one = all.filter(function (p) { return p.key === key; })[0];
+    if (!one) { return null; }
+    return { id: one.id, text: one.text, why: one.why, source_words: one.source_words, state: one.state, act: host.dataset.act, done: function () { load(state.day ? state.day.date : "", state.span, true); } };
+  }
+  function say(words) { var s = host.querySelector("#proposed-said"); if (s && words) { s.textContent = words; } }
+  function decide(action, e, text) {
+    var body = { action: action };
+    if (e) { body.id = e.dataset.id; }
+    if (text !== undefined) { body.text = text; }
+    return post(host.dataset.act, body).then(function (told) { say(told.said); load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { alert(err.message); });
+  }
+  function acceptEdit(e) {
+    var words = e.querySelector(".words"); if (words.querySelector("textarea")) { return; }
+    var was = words.textContent;
+    words.innerHTML = "<textarea maxlength='2000'></textarea><div class='row' style='gap: 6px; margin-top: 4px'><button type='button' class='small primary' data-save>Accept as written</button><button type='button' class='small' data-cancel>Cancel</button></div>";
+    var box = words.querySelector("textarea"); box.value = was; box.focus();
+    words.querySelector("[data-cancel]").addEventListener("click", function (ev) { ev.stopPropagation(); words.textContent = was; });
+    words.querySelector("[data-save]").addEventListener("click", function (ev) { ev.stopPropagation(); decide("accept_edit", e, box.value); });
+  }
+  function propose() {
+    var box = host.querySelector("#proposed-look-for");
+    post(host.dataset.act, { action: "propose", look_for: box ? box.value : "" }).then(function () { load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { alert(err.message); });
   }
 
   function leadRow(d) {
@@ -195,9 +286,11 @@
     return "<div class='legend'>" + parts.map(function (p) { return "<span>" + p + "</span>"; }).join("") + "</div>";
   }
 
-  function notesLane(d) {
-    var html = "<div class='notes-lane' id='chron-marks'>";
-    var marks = d.marks.slice().sort(function (a, b) { return a.seconds - b.seconds; });
+  function notesLane(d) { return marksLane(d.marks, "notes", "", true); }
+  function marksLane(given, label, cls, live) {
+    var d = state.day;
+    var html = "<div class='notes-lane " + cls + "'" + (live ? " id='chron-marks'" : "") + ">";
+    var marks = (given || []).slice().sort(function (a, b) { return a.seconds - b.seconds; });
     var width = host.clientWidth || 900, px = (d.ruler.to - d.ruler.from) / width;
     var clusters = [];
     marks.forEach(function (m) {
@@ -207,10 +300,10 @@
     });
     clusters.forEach(function (c) {
       var mid = (c.first + c.last) / 2;
-      if (c.items.length === 1) { html += "<i data-mark='" + c.items[0].n + "' style='left: " + x(mid, d) + "%; background: " + (c.items[0].colour || "var(--muted)") + "' title='Note " + c.items[0].n + " at " + hms(mid) + "'></i>"; }
-      else { html += "<em data-marks='" + c.items.map(function (m) { return m.n; }).join(",") + "' style='left: " + inside(x(mid, d)) + "%' title='" + c.items.length + " notes, " + hm(c.first) + " to " + hm(c.last) + "; press to open them'>×" + c.items.length + "</em>"; }
+      if (c.items.length === 1) { html += "<i " + (live ? "data-mark='" + c.items[0].n + "' " : "") + "style='left: " + x(mid, d) + "%; background: " + (c.items[0].colour || "var(--muted)") + "' title='" + (label === "notes" ? "Note " : "Proposed event ") + c.items[0].n + " at " + hms(mid) + "'></i>"; }
+      else { html += "<em " + (live ? "data-marks='" + c.items.map(function (m) { return m.n; }).join(",") + "' " : "") + "style='left: " + inside(x(mid, d)) + "%' title='" + c.items.length + " " + label + ", " + hm(c.first) + " to " + hm(c.last) + (live ? "; press to open them" : "") + "'>×" + c.items.length + "</em>"; }
     });
-    html += "<span class='lbl'>notes</span></div>";
+    html += "<span class='lbl'>" + label + "</span></div>";
     return html;
   }
 
@@ -232,7 +325,7 @@
       var folded = d.fold && !state.open[index] && !state.open.all;
       var title = group.notes === 1 ? group.from : group.from + " to " + group.to;
       var inc = sameIncident(group.entries);
-      html += "<div class='spell' data-spell='" + index + "'><div class='sh'><span class='chev'>" + (folded ? "›" : "⌄") + "</span><b>" + esc(title) + "</b><span class='muted'>" + plural(group.notes, "note") + " · " + plural(group.recordings, "recording") + (state.lit ? litWords(group) : "") + "</span>" + (inc ? "<span class='pill small inc' title='Every note here is an event of this incident'>" + esc(inc.name) + "</span>" : "") + "</div>";
+      html += "<div class='spell' data-spell='" + index + "'><div class='sh'><span class='chev'>" + (folded ? "›" : "⌄") + "</span><b>" + esc(title) + "</b><span class='muted'>" + plural(group.notes, proposed ? "proposed event" : "note") + " · " + plural(group.recordings, "recording") + (state.lit ? litWords(group) : "") + "</span>" + (inc ? "<span class='pill small inc' title='" + (proposed ? "Every proposal here is on a camera of this incident" : "Every note here is an event of this incident") + "'>" + esc(inc.name) + "</span>" : "") + "</div>";
       if (!folded) { group.entries.forEach(function (e) { html += entry(e); }); }
       html += "</div>";
     });
@@ -246,6 +339,7 @@
   function litWords(group) { var n = group.entries.filter(function (e) { return e.recording === state.lit; }).length; return n ? " · " + n + " lit" : ""; }
 
   function entry(e) {
+    if (e.kind === "proposal") { return proposalEntry(e); }
     var cls = "entry" + (state.lit ? (e.recording === state.lit ? " lit" : " dim") : "");
     var under = e.said ? "“" + esc(e.said) + "”" : (e.kind === "event" ? "on the event" + (e.event_time ? " at " + esc(e.event_time) : "") : "at a moment, nothing said");
     return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'" + (e.outside ? " data-outside='" + esc(JSON.stringify(e.outside)) + "'" : "") + ">" +
@@ -295,9 +389,15 @@
         else if (act === "sheet") { sheet(); }
         else if (act === "make-span") { if (state.span) { makeSheet(state.span[0], state.span[1]); } }
         else if (act === "add-outside") { addOutside(b.closest(".entry")); }
-        else if (act === "play") { var e = b.closest(".entry"); open(e.dataset.recording, parseFloat(e.dataset.at)); light(e); }
+        else if (act === "play") { var e = b.closest(".entry"); if (proposed && window.Preview && window.Preview.open) { window.Preview.open({ recording: e.dataset.recording, seconds: parseFloat(e.dataset.at), from: host, proposed: proposalOf(e) }); } else { open(e.dataset.recording, parseFloat(e.dataset.at)); } light(e); }
         else if (act === "check") { check(b.closest(".entry")); }
         else if (act === "edit") { edit(b.closest(".entry")); }
+        else if (act === "propose") { propose(); }
+        else if (act === "accept") { decide("accept", b.closest(".entry")); }
+        else if (act === "dismiss") { decide("dismiss", b.closest(".entry")); }
+        else if (act === "accept-edit") { acceptEdit(b.closest(".entry")); }
+        else if (act === "accept-all") { window.UI.confirm({ title: "Write every waiting proposal in the case as a note?", body: "Each becomes a note on its recording in your name; nothing is lost, and a note can be changed or removed where it sits.", ok: "Accept all" }).then(function (yes) { if (yes) { decide("accept_all"); } }); }
+        else if (act === "dismiss-all") { decide("dismiss_all"); }
       });
     });
   }
@@ -555,6 +655,11 @@
     if (!state.loaded) { var p = params(); var span = (p.from && p.to) ? [toSeconds(p.from), toSeconds(p.to)] : null; load(p.day, span); }
   }
   function toSeconds(text) { var parts = text.split(":"); return parseInt(parts[0], 10) * 3600 + parseInt(parts[1] || "0", 10) * 60 + parseInt(parts[2] || "0", 10); }
+  if (proposed) {
+    window.CaseProposed = { reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", state.span, true); } } };
+    show();
+    return;
+  }
   window.CaseChronology = { show: show, reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", state.span); } } };
 
   var toggle = document.getElementById("notes-shape");
@@ -573,4 +678,10 @@
     if (!wanted) { try { wanted = localStorage.getItem(keyShape); } catch (e) { wanted = null; } }
     if (wanted === "chronology") { setShape("chronology"); }
   }
+  }
+
+  var notesHost = document.getElementById("case-chronology");
+  if (notesHost) { mount(notesHost); }
+  var proposedHost = document.getElementById("case-proposed");
+  if (proposedHost) { mount(proposedHost); }
 })();

@@ -530,6 +530,10 @@ _Avoid_: mark (that is a live recording's), moment (that is a description), book
 A moment on a Recording the assistant's judgement, the Watch phrases, a Look for run or the Comparison put forward, with a sentence and why it matters, waiting for a person's Accept or Dismiss on the Incident's Proposed events layer (and, from the second release of Phase 10 chapter 4, the case's Proposed events tab); the code and the database call the row a Proposal. It touches nothing until accepted; accepted, it is a Note on that Recording in the acceptor's name, saying where it came from. Until v1.167.0 an Event row marked proposed. Phase 10 chapter 4, v1.168.0.
 _Avoid_: suggestion, candidate, auto event, AI event, proposal (on a page; the row's name in code)
 
+**Proposed events tab**:
+The Case page's tab that lists every Proposed event of the Case in the chronology's shape (v1.169.0, Phase 10 chapter 4): by day and time of day on the recordings' clocks, with the recordings' band, a lane of the proposals, a lane of the day's notes and the incidents lane; each entry with its sentence, why it matters, the line it rests on, its source, and Accept, Accept and edit and Dismiss; the ones on recordings with no clock under Not yet placed. Its Propose events reads every recording in the Case that has a transcript. A press on a time opens the Preview's window with the proposal above the lines and the same three choices. Between Search and Notes in the bar; hidden when the assistant is Off and no Watch phrase is listed.
+_Avoid_: suggestions tab, AI tab, proposals list, timeline of proposals
+
 **Watch phrase**:
 A word or phrase the office always wants an Event for, listed one per line in the Watch phrases setting. On every Propose events run the app itself searches each synced camera's transcript, and its Digest's picture lines, for every watch phrase, whole words and any case, before the engine is asked, and proposes an Event at every line that carries one, with the source **watch phrase** and the line it rests on. A promise the engine's judgement cannot break. Phase 7 chapter 2.
 _Avoid_: keyword, trigger, alert, hotword, rule

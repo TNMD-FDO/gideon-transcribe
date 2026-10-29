@@ -82,22 +82,27 @@
              class="tab{% if tab == 'recordings' %} on{% endif %}">{% icon "play" %} Recordings <span class="count">{{ recordings|length }}</span></a>
           <a href="{% url 'case' case.pk %}?tab=search"
              class="tab{% if tab == 'search' %} on{% endif %}">{% icon "search" %} Search</a>
-          {% if clips_available %}
-            <a href="{% url 'case' case.pk %}?tab=clips"
-               class="tab{% if tab == 'clips' %} on{% endif %}">{% icon "clip" %} Clips <span class="count">{{ clips_count }}</span></a>
+          {% comment %}The order from Phase 10 chapter 4 (v1.169.0): Recordings, Search, Proposed events, Notes, Documents, Incidents, Clips, Speakers, Details.{% endcomment %}
+          {% if proposed_on %}
+            <a href="{% url 'case' case.pk %}?tab=proposed"
+               class="tab{% if tab == 'proposed' %} on{% endif %}">{% icon "note" %} Proposed events <span class="count">{{ proposed_count }}</span></a>
           {% endif %}
           <a href="{% url 'case' case.pk %}?tab=notes"
              class="tab{% if tab == 'notes' %} on{% endif %}">{% icon "note" %} Notes <span class="count">{{ notes_count }}</span></a>
-          <a href="{% url 'case' case.pk %}?tab=speakers"
-             class="tab{% if tab == 'speakers' %} on{% endif %}">{% icon "people" %} Speakers <span class="count">{{ people_count }}{% if not people_count %} named{% endif %}</span></a>
-          {% if incidents_on %}
-            <a href="{% url 'case' case.pk %}?tab=incidents"
-               class="tab{% if tab == 'incidents' %} on{% endif %}">{% icon "camera" %} Incidents <span class="count">{{ incident_rows|length }}</span></a>
-          {% endif %}
           {% if documents_on %}
             <a href="{% url 'case' case.pk %}?tab=documents"
                class="tab{% if tab == 'documents' %} on{% endif %}">{% icon "document" %} Documents <span class="count">{{ documents_count }}</span></a>
           {% endif %}
+          {% if incidents_on %}
+            <a href="{% url 'case' case.pk %}?tab=incidents"
+               class="tab{% if tab == 'incidents' %} on{% endif %}">{% icon "camera" %} Incidents <span class="count">{{ incident_rows|length }}</span></a>
+          {% endif %}
+          {% if clips_available %}
+            <a href="{% url 'case' case.pk %}?tab=clips"
+               class="tab{% if tab == 'clips' %} on{% endif %}">{% icon "clip" %} Clips <span class="count">{{ clips_count }}</span></a>
+          {% endif %}
+          <a href="{% url 'case' case.pk %}?tab=speakers"
+             class="tab{% if tab == 'speakers' %} on{% endif %}">{% icon "people" %} Speakers <span class="count">{{ people_count }}{% if not people_count %} named{% endif %}</span></a>
           {% comment %}Details (v1.165.0): the case's facts, actions, Team and Names and places, once a right column on every tab.{% endcomment %}
           <a href="{% url 'case' case.pk %}?tab=details"
              class="tab{% if tab == 'details' %} on{% endif %}">{% icon "info" %} Details</a>
@@ -156,6 +161,16 @@
         {% endif %}
 
         {% if False %}
+        {% elif tab == "proposed" %}
+          {% comment %}
+            The Proposed events tab (Phase 10 chapter 4, v1.169.0; the drawing
+            docs/spec/mockups/phase-10-proposed-events-and-comparison.html):
+            the case's proposals in the chronology's shape, drawn by
+            chronology.js from proposed.json; Propose events reads every
+            recording; Accept writes a note on the recording.
+          {% endcomment %}
+          <p class="lead" style="margin: 14px 0 8px">What the assistant and the watch phrases put forward, by day and time on the recordings' clocks. Nothing here is on a recording until you accept it; accepted, it is a note on that recording in your name, and follows it onto the chronology and any incident it is in.</p>
+          <div id="case-proposed" class="chron" data-mode="proposed" data-case="{{ case.pk }}" data-json="{% url 'case-proposed' case.pk %}" data-act="{% url 'case-proposed-act' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export=""></div>
         {% elif tab == "documents" %}
           {% comment %}
             The Documents tab (Phase 8 chapter 4, part 1): every document in
