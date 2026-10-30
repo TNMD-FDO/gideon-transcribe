@@ -17,6 +17,15 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.179.1, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Search tab shows the search alone.** The case's Search tab drew the whole Recordings tab beneath its box and hits: the list of every recording, its pills and its tools. The tab now shows the box, and the hits once something is asked, and nothing else. A template change, at the maintainer's word; nothing in the search itself changes.
+
 ## v1.179.0, 2026-10-30
 
 ```

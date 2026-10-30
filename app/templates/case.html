@@ -128,9 +128,12 @@
             <p class="muted">Words in every transcript, in what the cameras showed, and in every event, note, memo, summary and clip title of this case. Whole words, in any order; close matches (another form of a word, a near spelling) come after the exact hits; a phrase in quotes for an exact match alone.</p>
           {% endif %}
           <p class="muted small">Search terms are never written to the audit log.</p>
-        {% endif %}
-
-        {% if False %}
+        {% comment %}
+          The Search tab is one branch of the tabs' chain (v1.179.1, at the
+          maintainer's word): it shows the box and the hits and nothing else.
+          Until then it stood before the chain, whose last branch drew the
+          Recordings tab beneath the hits.
+        {% endcomment %}
         {% elif tab == "proposed" %}
           {% comment %}
             The Proposed events tab (Phase 10 chapter 4, v1.169.0; the drawing

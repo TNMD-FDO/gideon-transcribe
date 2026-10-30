@@ -255,6 +255,12 @@ def test_the_search_reads_six_kinds_and_groups_by_where_they_live(
     page = client.get(f"/case/{a_case.pk}?tab=search&q=gun").content.decode()
     assert "7 hits for" in page and "Words (1)" in page and "<mark>gun</mark>" in page
     assert "Search</a>" in page.split('class="tab on">', 1)[1][:300]
+    # The tab shows the search alone (v1.179.1): no recordings table, none of
+    # the Recordings tab's pills or tools, with or without a term asked.
+    assert 'id="recordings"' not in page and 'id="tick-bar"' not in page
+    empty = client.get(f"/case/{a_case.pk}?tab=search").content.decode()
+    assert "Search this case" in empty and 'id="recordings"' not in empty
+    assert 'id="assignment-pills"' not in empty
     page = client.get(f"/case/{a_case.pk}?q=gun").content.decode()
     assert "Search</a>" in page.split('class="tab on">', 1)[1][:300]
     assert "7 hits for" in page
