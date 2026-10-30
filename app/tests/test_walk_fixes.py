@@ -198,7 +198,9 @@ def test_the_four_slips_of_the_system_walk_are_held_in_the_files():
     named .txt where the words sit in .words; the 1400 cap lost to an older
     1600; Recorded here said "nothing" in a plain sentence."""
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
-    assert "#recordings td:first-child { min-width: 12rem; }" in css
+    # The floor moved to the name cell's own class in v1.175.0, since the
+    # first cell is the tick when the person may direct.
+    assert ".tbl td.name { min-width: 12rem; }" in css
     assert ".sp-read .seg .txt { grid-column" not in css
     assert ".page.workbench { max-width: 1400px; }" in css
     assert ".page.workbench { max-width: 100rem; }" not in css

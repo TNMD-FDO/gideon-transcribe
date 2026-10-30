@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.175.0, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The polish run's first release: what a walk of twenty-seven pages at laptop and wide-screen widths measured, light and dark (the findings page is the maintainer's; the app is used on PCs, so nothing is tuned for a phone or a tablet).
+
+- **Tables that ran off the right or crushed a name.** The Panel's Audit log had run off the right at every laptop width: its cells wrap at words, its filters sit above the table until 1500 wide, and the table scrolls inside its own box when it must (it fits at 1912), never the page; the Users table's email and figures cells have a floor and the table scrolls in its box, having wrapped a word a line at every width; the name column of the case's Recordings, Incidents, loose-recordings and clips tables is floored by its own class, since the old floor sat on the tick column, and the notes column beside it has a floor too.
+- **No type under 11 pixels.** The chronology's lane labels (camera names, words, peak marks) and the strip's swap button were 9 and 10 pixels; they are the label size now.
+- **Contrast.** The green "ok" pill's ink is darker in light (5.8 to 1 against its soft background, was 4.4); the Panel's "changed" mark reads as amber ink, not the line's yellow (6.3, was 2.3); citation links have a lighter shade in dark (6.9, was 3.5).
+- **Keyboard focus** is visible again on the incident's event lines, the player bar's buttons and the event card; three rules had removed the ring.
+- **The incident page has an h1**, the incident's name, drawn as before.
+
 ## v1.174.0, 2026-10-29
 
 ```

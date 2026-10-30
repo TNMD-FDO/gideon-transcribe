@@ -19,10 +19,11 @@
   {% endcomment %}
   <div class="sp-head inc-head">
     <span class="lbl">Incident</span>
-    <b class="grow" id="inc-title">{{ incident.name }}
+    {% comment %}The page's h1 (v1.175.0, the polish walk), drawn as the bold line it was.{% endcomment %}
+    <h1 class="grow" id="inc-title">{{ incident.name }}
       {% comment %}The case bar above says the case (v1.171.0); "in the case" and Back to the case went with it.{% endcomment %}
       <span class="muted small" style="font-weight: 400"><span id="inc-facts"></span></span>
-    </b>
+    </h1>
     {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
     <span class="inc-clock" id="inc-clock" title="The incident clock: the time of day the cameras' clocks give">00:00:00</span>
     <span class="muted small" id="inc-date"></span>

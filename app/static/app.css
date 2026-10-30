@@ -86,7 +86,7 @@
   --accent-ink: #ffffff;
   /* The states, each strong and soft, so a pill, a stripe and a message
    * about the same state look related. --warn is the working state. */
-  --ok: #2f7d4f;
+  --ok: #27683f;
   --ok-soft: #e4f2e9;
   /* The card's bar on the Installation page (v1.92.0). */
   --fit-t: #2f6f8f;
@@ -104,6 +104,9 @@
   --clip-soft: rgba(122, 62, 160, 0.18);
   --changed: #fff3c4;
   --changed-line: #d9a400;
+  /* The changed mark's ink (v1.175.0): the line stays yellow, the words read. */
+  --changed-ink: #7a5c00;
+  --cite: var(--accent);
 
   /* One colour per speaker, used for the name and the row's bar, so the
    * same person is the same colour everywhere. They stay apart on both
@@ -176,6 +179,8 @@ html[data-theme="dark"] {
   --clip-soft: rgba(197, 140, 240, 0.22);
   --changed: #3a3208;
   --changed-line: #d9a400;
+  --changed-ink: #f0c419;
+  --cite: #8ec7ea;
   --sp1: #6fb1ea;
   --sp2: #ff9a62;
   --sp3: #7ed492;
@@ -218,6 +223,8 @@ html[data-theme="dark"] {
     --clip-soft: rgba(197, 140, 240, 0.22);
     --changed: #3a3208;
     --changed-line: #d9a400;
+    --changed-ink: #f0c419;
+    --cite: #8ec7ea;
     --sp1: #6fb1ea;
     --sp2: #ff9a62;
     --sp3: #7ed492;
@@ -479,6 +486,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
    view, the rest under More, which opens them in place on a line of their
    own (a floating menu would be clipped by the card that scrolls sideways
    on a narrow window). The quota is set in its own column. */
+/* The Users table's email and figures cells had wrapped a word a line at
+   every width (v1.175.0): a floor each, and the table scrolls in its box. */
+.tbl.users td.small, .tbl.users td.muted { min-width: 9rem; }
 .tbl.users .user-acts { gap: 6px; align-items: center; }
 .tbl.users .user-acts .more-acts { display: contents; }
 .tbl.users .user-acts .more-acts summary { list-style: none; cursor: pointer; }
@@ -1647,7 +1657,7 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
 /* The AI assistant's panels ---------------------------------------------------- */
 .assistant-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .assistant-list .answer p { margin: 0 0 6px; }
-.cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--accent); }
+.cite { text-decoration: none; border-bottom: 1px dotted var(--accent); color: var(--cite); }
 /* A citation of a camera line: the glyph before the time, the description
  * as its title. */
 .cite.camera { white-space: nowrap; }
@@ -1775,8 +1785,13 @@ body.window main { display: flex; flex-direction: column; height: 100%; }
    v1.107.1: "anywhere" also lets the browser shrink the column to a single
    letter when the other columns want the room (one letter a line at 768 and
    1366 on a case with nine columns), so the name keeps a floor. */
-#recordings td:first-child b { overflow-wrap: anywhere; }
-#recordings td:first-child { min-width: 12rem; }
+/* The name column of a table (v1.175.0, the polish walk): floored so a
+   name never wraps a word a line; the cell carries class name, since the
+   Recordings table's first cell is the tick when the person may direct. */
+.tbl td.name { min-width: 12rem; }
+.tbl td.name b { overflow-wrap: anywhere; }
+/* The notes column was the next to be crushed once the name held (39 px at 1024). */
+.tbl td.notes { min-width: 7rem; }
 .tbl tr.pick { cursor: pointer; }
 .tbl tr.pick:hover td { background: var(--surface-2); }
 .tbl tr.pick.on td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -1927,7 +1942,10 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
      the left, the users page's create form and the settings' jump list as
      panes on the right, and the panel page no longer capped at 1100. */
   .panel-page.workbench { max-width: none; }
-  .panes.audit { grid-template-columns: 250px minmax(0, 1fr); }
+  /* The Audit log's filters sit above its table until 1500 wide (v1.175.0): the
+     Panel's own rail and the filters pane left the eight-column table 603 px
+     at 1366, and it scrolled inside its box. */
+  .panes.audit { grid-template-columns: minmax(0, 1fr); }
   .panes.audit .filters { grid-template-columns: minmax(0, 1fr); }
   .pane-filters { position: sticky; top: 12px; }
   .panes.users { grid-template-columns: minmax(0, 1fr) 300px; }
@@ -1989,7 +2007,7 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 .effect { font-size: 0.84em; margin-top: 4px; color: var(--muted); }
 .effect::before { content: "When changed: "; font-weight: 600; color: var(--text); opacity: 0.75; }
 .defmark { font-size: 0.8em; color: var(--muted); }
-.changedmark { font-size: 0.8em; color: var(--changed-line); font-weight: 600; }
+.changedmark { font-size: 0.8em; color: var(--changed-ink); font-weight: 600; }
 
 .switch { position: relative; display: inline-flex; align-items: center; gap: 8px;
   cursor: pointer; user-select: none; }
@@ -2036,6 +2054,13 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 }
 .savebar ul { list-style: none; margin: 0; padding: 0; font-size: 0.85em; }
 
+/* The Audit log's eight columns (v1.175.0, the polish walk): the cells wrap at
+   words rather than run off the right at a laptop width, the time stays on one
+   line, the Event column keeps room, and the box scrolls only when even that is
+   too wide. At every width, not only the wide layout's. */
+.panes.audit .tbl td { white-space: normal; overflow-wrap: break-word; }
+.panes.audit .tbl td.mono { white-space: nowrap; }
+.panes.audit .tbl > thead th:nth-child(4), .panes.audit .tbl > tbody > tr > td:nth-child(4) { min-width: 12rem; }
 .audit-details {
   background: var(--surface-2);
   font-family: var(--mono);
@@ -2683,7 +2708,7 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .picker .opt .nm .pill { font-weight: 400; margin-left: 4px; }
 .picker .opt .facts { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .picker .opt .hear button { font-size: 11px; min-height: 22px; padding: 0 6px; display: inline-flex; gap: 4px; align-items: center; }
-.picker .opt .hear .n { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.picker .opt .hear .n { font-family: var(--mono); font-size: var(--t-label); color: var(--muted); }
 .picker .opt.add { grid-template-columns: 22px minmax(0, 1fr) auto; border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 8px; border-radius: 0; }
 .picker .opt.add .plus { color: var(--accent); font-weight: 700; text-align: center; }
 .picker .newbox { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; padding: 6px 6px 2px; align-items: center; }
@@ -2778,7 +2803,7 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .ruler .tick { position: absolute; top: 0; transform: translateX(-50%); }
 /* The drag track under the ruler (v1.164.1): where a drag across a span looks closer, and a chip is dropped to place a recording. */
 .chron .track { position: relative; height: 14px; border: 1px dashed var(--line); border-radius: 7px; background: var(--surface-2, var(--surface)); cursor: col-resize; user-select: none; overflow: hidden; }
-.chron .track .words { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); pointer-events: none; letter-spacing: .02em; }
+.chron .track .words { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: var(--t-label); color: var(--muted); pointer-events: none; letter-spacing: .02em; }
 .chron .track:hover { border-color: var(--accent); }
 .chron .track:hover .words { color: var(--accent); }
 .chron .track.over { border-style: solid; border-color: var(--accent); }
@@ -2788,12 +2813,12 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .track .sel b { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--accent); white-space: nowrap; background: var(--surface); padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; }
 .chron .cover { position: relative; height: 56px; border-bottom: 1px solid var(--line); overflow: hidden; }
 .chron .cover svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.chron .cover .peak { position: absolute; font-size: 10px; font-weight: 600; color: var(--accent); transform: translateX(-50%); pointer-events: none; }
-.chron .cover .lbl { position: absolute; right: 0; bottom: 2px; font-size: 10px; color: var(--muted); pointer-events: none; }
+.chron .cover .peak { position: absolute; font-size: var(--t-label); font-weight: 600; color: var(--accent); transform: translateX(-50%); pointer-events: none; }
+.chron .cover .lbl { position: absolute; right: 0; bottom: 2px; font-size: var(--t-label); color: var(--muted); pointer-events: none; }
 .chron .band { position: relative; display: grid; gap: 4px; padding: 6px 0; }
 .chron .band.capped { max-height: 126px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 6px; }
 .chron .band .bar { position: relative; height: 12px; }
-.chron .band .bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 5px; display: block; cursor: pointer; overflow: hidden; font-style: normal; font-size: 9px; font-weight: 600; line-height: 10px; color: var(--accent-ink); padding: 0 6px; white-space: nowrap; text-overflow: ellipsis; box-sizing: border-box; }
+.chron .band .bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 5px; display: block; cursor: pointer; overflow: hidden; font-style: normal; font-size: var(--t-label); font-weight: 600; line-height: 12px; color: var(--accent-ink); padding: 0 6px; white-space: nowrap; text-overflow: ellipsis; box-sizing: border-box; }
 .chron .band .bar i.narrow { font-size: 0; }
 .chron .band .bar i.lit { outline: 2px solid var(--text); outline-offset: 1px; }
 .chron .band .bar i.movable { cursor: grab; }
@@ -2803,8 +2828,8 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
 .chron .notes-lane { position: relative; height: 16px; border-top: 1px dashed var(--line); margin-top: 2px; }
 .chron .notes-lane i { position: absolute; top: 3px; width: 3px; height: 10px; border-radius: 1px; background: var(--muted); transform: translateX(-50%); cursor: pointer; }
-.chron .notes-lane em { position: absolute; top: 1px; transform: translateX(-50%); font-style: normal; font-size: 10px; line-height: 14px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
-.chron .notes-lane .lbl { position: absolute; right: 0; top: 1px; font-size: 10px; color: var(--muted); }
+.chron .notes-lane em { position: absolute; top: 1px; transform: translateX(-50%); font-style: normal; font-size: var(--t-label); line-height: 14px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
+.chron .notes-lane .lbl { position: absolute; right: 0; top: 1px; font-size: var(--t-label); color: var(--muted); }
 .chron .hint { position: relative; height: 18px; }
 .chron .hint span { position: absolute; top: 0; border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 6px 6px; height: 6px; }
 .chron .hint b { position: absolute; top: 5px; transform: translateX(-50%); font-size: 11px; color: var(--accent); background: var(--surface); padding: 0 6px; white-space: nowrap; font-weight: 600; }
@@ -2816,7 +2841,7 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .entry .num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--surface); background: var(--muted); }
 .chron .entry .top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .chron .entry .t { font-family: var(--mono); color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; font-size: inherit; }
-.chron .entry .play { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent); font-size: 9px; background: var(--surface); cursor: pointer; padding: 0; }
+.chron .entry .play { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent); font-size: var(--t-label); background: var(--surface); cursor: pointer; padding: 0; }
 .chron .entry .words { font-size: var(--t-base, 1rem); }
 .chron .entry .words textarea { width: 100%; min-height: 60px; }
 .chron .entry .line { color: var(--muted); font-size: 12px; }
@@ -2828,17 +2853,17 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .unknown { border-top: 1px dashed var(--line); padding-top: 8px; }
 .chron .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow: auto; }
 .chron .sheet table { border-collapse: collapse; width: 100%; font-size: 12px; }
-.chron .sheet th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.chron .sheet th { text-align: left; font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .chron .sheet td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .chron .sheet input[type=text] { width: 110px; font-family: var(--mono); }
 /* An incident from a span (Phase 10 chapter 2, v1.167.0; the drawing phase-10-incident-from-span.html): the incidents lane, Make on a hint, the entry's line, the two sheets. */
 .chron .inc-lane { position: relative; height: 18px; margin-top: 2px; }
 .chron .inc-lane .br { position: absolute; top: 2px; height: 12px; border: 2px solid var(--accent); border-top: 0; border-radius: 0 0 4px 4px; background: var(--accent-soft); text-decoration: none; overflow: hidden; }
-.chron .inc-lane .br b { position: absolute; left: 6px; top: -3px; font-size: 10px; color: var(--accent); white-space: nowrap; font-weight: 600; }
-.chron .inc-lane .lbl { position: absolute; right: 0; top: 1px; font-size: 10px; color: var(--muted); }
+.chron .inc-lane .br b { position: absolute; left: 6px; top: -3px; font-size: var(--t-label); color: var(--accent); white-space: nowrap; font-weight: 600; }
+.chron .inc-lane .lbl { position: absolute; right: 0; top: 1px; font-size: var(--t-label); color: var(--muted); }
 .chron .hint .hl { position: absolute; top: 5px; transform: translateX(-50%); display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; background: var(--surface); padding: 0 4px; }
 .chron .hint .hl b { position: static; transform: none; padding: 0; }
-.chron .hint .mk { font-size: 10px; line-height: 14px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); cursor: pointer; }
+.chron .hint .mk { font-size: var(--t-label); line-height: 14px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); cursor: pointer; }
 .chron .hint .mk:hover { background: var(--accent-soft); }
 .chron .entry .outside { font-size: 12px; color: var(--accent); margin-top: 3px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .chron .pill.inc { background: var(--accent-soft); color: var(--accent); }
@@ -2968,7 +2993,7 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .inc-events .what { font-size: var(--t-body); }
 /* The row's line is a press that opens the Event card (Phase 8 chapter 11). */
 .inc-events .line { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: var(--t-body); color: inherit; text-align: left; cursor: pointer; white-space: normal; }
-.inc-events .line:hover, .inc-events .line:focus-visible { text-decoration: underline dotted; outline: none; }
+.inc-events .line:hover, .inc-events .line:focus-visible { text-decoration: underline dotted; }
 .inc-events .tell { margin-left: 6px; }
 .pill.src { white-space: nowrap; font-size: 0.85em; font-weight: 400; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; line-height: 1.6; }
 .pill.src.src-assistant, .pill.src.src-report { background: var(--accent-soft); color: var(--accent); }
@@ -3209,7 +3234,7 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .inc-tile-head .pill { max-width: 6rem; }
 /* One rule for the three (v1.95.1): the clip track's row was 100px and a press on it played from ahead of the lanes. */
 .inc-strip .ruler, .inc-strip .lane, .inc-strip .clip-track-row { grid-template-columns: 150px minmax(0, 1fr); }
-.inc-strip .lane .head .swap { padding: 0 5px; font-size: 10px; flex: none; }
+.inc-strip .lane .head .swap { padding: 0 5px; font-size: var(--t-label); flex: none; }
 .incident-page main.wide { position: relative; }
 /* The clip box (Phase 7 chapter 1): under the event box, its cameras as
    tiles in the picture's order, the first the large one in Focus. */
@@ -3241,7 +3266,7 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .player-bar .scrub .clipping { position: absolute; top: 3px; height: 6px; background: color-mix(in srgb, var(--warn) 80%, var(--knob)); border-radius: 2px; }
 .player-bar .row { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); }
 .player-bar .row button { background: transparent; border: 0; color: var(--knob); padding: 2px 6px; border-radius: 4px; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
-.player-bar .row button:hover, .player-bar .row button:focus-visible { background: rgba(255, 255, 255, 0.18); outline: none; }
+.player-bar .row button:hover, .player-bar .row button:focus-visible { background: rgba(255, 255, 255, 0.18); }
 .player-bar .row button.on { color: var(--accent); }
 .player-bar .row .time { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .player-bar .row select { background: rgba(0, 0, 0, 0.4); color: var(--knob); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; font: inherit; font-size: var(--t-small); padding: 1px 4px; }
@@ -3312,7 +3337,7 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .event-card { position: fixed; z-index: 40; width: 36ch; max-width: calc(100vw - 16px); max-height: 70vh; overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px 10px; font-size: var(--t-small); font-weight: 400; text-align: left; white-space: normal; box-sizing: border-box; }
 .event-card.light { pointer-events: none; width: auto; max-width: 40ch; padding: 6px 10px; border-color: var(--line); }
 .event-card.proposed { border-color: var(--warn); }
-.event-card:focus { outline: none; }
+.event-card:focus:not(:focus-visible) { outline: none; }
 .event-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .event-card .t { font-family: var(--mono); white-space: nowrap; }
 .event-card-line { margin: 4px 0 0; font-size: var(--t-body); }
@@ -3566,7 +3591,7 @@ body.hearing-open::after { content: ''; position: fixed; inset: 0; background: r
 body.gideon-open .preview-card.window { right: calc(var(--gideon, 420px) + 28px); }
 .preview-card.window .noted { font-style: normal; margin-top: 4px; padding: 4px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; }
 /* The Notes tab's rows (v1.166.0): the time is the play mark, and the row whose moment the Preview is playing is lit. */
-.note-row a[data-preview-recording]::before { content: '\25B6 '; font-size: 10px; }
+.note-row a[data-preview-recording]::before { content: '\25B6 '; font-size: var(--t-label); }
 .note-row:has(.previewing) { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .sg-prev.previewing, .hear-else.previewing, .sample.previewing { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* The Preview as a snippet (ADR 0023, v1.152.0): the line heard with one either side; the context lines dim. */
@@ -3693,6 +3718,8 @@ body:has(.gideon-button) .shell > main { padding-bottom: 84px; }
 .case-bar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
 .case-tabs .here { align-self: center; margin-left: 8px; white-space: nowrap; }
 .sp-head.inc-head { margin-top: 0; }
+/* The incident's name is the page's h1 (v1.175.0), drawn as the head's bold line was. */
+.inc-head h1#inc-title { font: inherit; font-weight: 600; margin: 0; }
 
 /* The page change (v1.171.1). Every press loads a whole page, and between
    the old paint and the new the browser showed its own blank canvas: a white
@@ -3718,3 +3745,8 @@ nav.rail { view-transition-name: rail; }
 #case-notes-desk .notes-desk { padding: 0; margin-top: 4px; }
 #case-notes-desk .np-notes, #case-notes-desk .np-left, #case-notes-desk .np-notes.inc-work { max-height: calc(100vh - 250px); min-height: 420px; }
 #case-notes-desk .np-notes-bar .np-panel-button { margin-right: 4px; }
+
+/* The Audit log's two panes, filters beside the table, from 1500 wide (v1.175.0). */
+@media (min-width: 1500px) {
+  .panes.audit { grid-template-columns: 250px minmax(0, 1fr); }
+}

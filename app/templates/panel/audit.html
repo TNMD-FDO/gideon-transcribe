@@ -57,6 +57,8 @@
   </p>
 
   <div class="card">
+    {% comment %}In a scrolling box (v1.175.0): the eight columns wrap first, and the box scrolls only when even that is too wide.{% endcomment %}
+    <div class="tbl-wrap">
     <table class="tbl">
       <thead>
         <tr>
@@ -128,6 +130,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="dialog">

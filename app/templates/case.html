@@ -417,7 +417,7 @@
                 <tbody>
                   {% for row in incident_rows %}
                     <tr class="goes" tabindex="0" data-open="{{ row.url }}">
-                      <td><b>{{ row.incident.name }}</b></td>
+                      <td class="name"><b>{{ row.incident.name }}</b></td>
                       <td>{{ row.cameras }}</td>
                       <td class="mono">{{ row.span }}</td>
                       <td><span class="pill {{ row.tone }} small">{{ row.placed }}</span></td>
@@ -449,7 +449,7 @@
                 <tbody>
                   {% for one in loose %}
                     <tr>
-                      <td><b>{{ one.recording.title }}</b></td>
+                      <td class="name"><b>{{ one.recording.title }}</b></td>
                       <td>{% if one.clock %}<span class="pill {{ one.tone }} small">{{ one.clock }}</span>{% endif %}</td>
                       <td>{% if one.elsewhere %}{{ one.elsewhere }}{% else %}<span class="muted">none</span>{% endif %}</td>
                     </tr>
@@ -770,7 +770,7 @@
                 <tbody>
                   {% for clip in clips_here %}
                     <tr id="clip-{{ clip.id }}">
-                      <td><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
+                      <td class="name"><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
                       <td class="muted">{{ clip.recording_title }}</td>
                       <td class="muted">{{ clip.cameras }}</td>
                       <td class="mono muted">{{ clip.span }}</td>
@@ -935,7 +935,7 @@
                 <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}" data-filter="{{ recording.filter_words }}"
                     {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
                   {% if may_direct %}<td class="col-tick"><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
-                  <td><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
+                  <td class="name"><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted type">{{ recording.recording_type }}</td>{% endif %}
                   <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
