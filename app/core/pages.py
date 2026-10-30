@@ -283,9 +283,25 @@ def greeting() -> str:
     return "Good evening"
 
 
+def batch_mail_for(user) -> dict:
+    """ "Email me when this batch finishes": offered while the Admin's switch
+    is on and mail is configured, greyed for a person with no address, and
+    remembered from their last Batch. For the Upload page and Bulk
+    transcription alike (v1.174.0)."""
+    from core import mail
+
+    last_batch = Batch.objects.filter(user=user, is_reprocessing=False).first()
+    return {
+        "offered": mail.batch_mail_on(),
+        "address": bool(user.email),
+        "ticked": bool(last_batch is not None and last_batch.email_when_done),
+    }
+
+
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
-    """Say what the files are and where they go, choose them, and start."""
+    """Say what the files are and which case they go into, choose them, and
+    start."""
     batch = Batch.unfinished_for(request.user)
     if batch is not None:
         return redirect(reverse("batch", args=[batch.pk]))
@@ -319,15 +335,6 @@ def upload(request: HttpRequest) -> HttpResponse:
     # "Email me when this batch finishes": offered while the Admin's switch
     # is on and mail is configured, greyed for a person with no address, and
     # remembered from their last Batch.
-    from core import mail
-
-    last_batch = Batch.objects.filter(user=request.user, is_reprocessing=False).first()
-    batch_mail = {
-        "offered": mail.batch_mail_on(),
-        "address": bool(request.user.email),
-        "ticked": bool(last_batch is not None and last_batch.email_when_done),
-    }
-
     return render(
         request,
         "upload.html",
@@ -336,7 +343,10 @@ def upload(request: HttpRequest) -> HttpResponse:
             "standing_line": standing_line(),
             "to_a_case": to_a_case,
             "chosen_case": chosen_case,
-            "batch_mail": batch_mail,
+            # Every batch from this page goes into a case (v1.174.0); a person
+            # with none yet is sent to make one, or to Bulk transcription.
+            "no_case": cases.folder_management_on() and not to_a_case,
+            "batch_mail": batch_mail_for(request.user),
             # Enrich with vision (Phase 4 chapter 5): the tick, its start and
             # its caption, from the office's position.
             "vision": vision.tick(request.user),

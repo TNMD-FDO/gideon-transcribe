@@ -116,7 +116,7 @@ Other
 
 #### Add to case, at upload
 
-When Folder management is on, the Upload page carries an "Add to case" dropdown listing the user's existing Cases and every Case shared with the user. Its default is "This session only". It is set once per Batch with a per-Recording override, like the other Batch settings.
+When Folder management is on, the Upload page carries an "Add to case" dropdown listing the user's existing Cases and every Case shared with the user. Its default is "This session only". It is set once per Batch with a per-Recording override, like the other Batch settings. (Amended v1.174.0, Phase 8 chapter 13: the default went with the choice; every batch from the Upload page goes into a case, asked at the top of the page as "Into which case?", and a session's own transcripts are Bulk transcription's.)
 
 - A Recording added this way belongs to the Case from the first byte: its files land in the Case's folder, it appears on the Case page with its Step while its Job runs, and it never appears on the Recordings page. It is never in the Workspace.
 - The Batch page still shows it, since the Batch is the user's.

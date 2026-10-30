@@ -40,43 +40,45 @@
 
     {% if storage_warning %}<p class="notice warn">{{ storage_warning }}</p>{% endif %}
 
+    {% comment %}
+      Which case (v1.174.0, at the maintainer's word): every batch from this
+      page goes into a case now that Bulk transcription is the door for a
+      session's own transcripts, so the one question at the top is which
+      case, with the recording type for the batch beside it (v1.89.0). A
+      person with no case yet is sent to make one, or to Bulk transcription.
+    {% endcomment %}
     <section class="asks">
       {% if to_a_case %}
         <div class="ask">
-          <p class="muted" style="margin: 0 0 6px">Where do they go?</p>
-          <div class="styles wheres" id="wheres" role="radiogroup" aria-label="Where do they go">
-            <label class="style card{% if not chosen_case %} on{% endif %}">
-              <input type="radio" name="where" value=""{% if not chosen_case %} checked{% endif %}>
-              <b>This session only</b>
-              <span class="muted small">Under My recordings until you sign out. You can move them to a case later.</span>
-            </label>
-            <label class="style card{% if chosen_case %} on{% endif %}">
-              <input type="radio" name="where" value="case"{% if chosen_case %} checked{% endif %}>
-              <b>Into a case</b>
-              <span class="muted small">Kept with the case, shared with its people.</span>
-              <select id="which-case" aria-label="Which case" style="margin-top: 6px">
-                {% for one in to_a_case %}
-                  <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
-                {% endfor %}
-              </select>
-              {% comment %}The case's names go with the recordings (Phase 9 chapter 2).{% endcomment %}
-              <span class="muted small" id="case-names-line" style="margin-top: 4px" hidden></span>
-              {% comment %}The type for the batch, asked here where the case is chosen (v1.89.0, from the walk): the case page, the memo and the Timeline report print it, and buried in the options it was mostly left blank.{% endcomment %}
-              <select id="batch-type" aria-label="Recording type for the batch" style="margin-top: 6px">
-                <option value="">No recording type</option>
-                {% for one in recording_types %}
-                  <option value="{{ one }}">{{ one }}</option>
-                {% endfor %}
-              </select>
-            </label>
+          <p class="muted" style="margin: 0 0 6px">Into which case?</p>
+          <div class="row which-case">
+            <select id="which-case" aria-label="Which case">
+              {% for one in to_a_case %}
+                <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+              {% endfor %}
+            </select>
+            <select id="batch-type" aria-label="Recording type for the batch">
+              <option value="">No recording type</option>
+              {% for one in recording_types %}
+                <option value="{{ one }}">{{ one }}</option>
+              {% endfor %}
+            </select>
           </div>
+          <p class="muted small" style="margin: 4px 0 0">Kept with the case, shared with its people. For transcripts you only need this session, use <a href="{% url 'bulk' %}">Bulk transcription</a>.</p>
+          {% comment %}The case's names go with the recordings (Phase 9 chapter 2).{% endcomment %}
+          <span class="muted small" id="case-names-line" style="margin-top: 4px" hidden></span>
         </div>
+      {% elif no_case %}
+        {% url 'cases' as cases_url %}
+        {% include "empty.html" with icon="case" title="No case to upload into yet" line="A batch from this page goes into a case, which keeps it after you sign out. Make one on the Cases page, or use Bulk transcription for transcripts you only need this session." action="New case" action_url=cases_url %}
+        <p class="muted small centre"><a href="{% url 'bulk' %}">Bulk transcription</a></p>
       {% else %}
         <p class="notice" style="margin: 0">{{ standing_line }}</p>
       {% endif %}
     </section>
 
-    <ol class="steps">
+    {% if not no_case %}
+    <ol class="steps">    <ol class="steps">
       <li id="step-1" class="card here">
         <h2>1. Choose files</h2>
         <div id="drop" class="drop hero">
@@ -128,200 +130,8 @@
 
           {# Right: the settings themselves, for the batch or for one file. #}
           <div class="rail-settings">
-            <div class="row">
-              <h3 class="small grow" id="rail-heading">Batch settings</h3>
-              <button type="button" id="back-to-batch" class="ghost tiny" hidden>
-                Back to batch settings
-              </button>
-            </div>
-
-            <label class="row small" id="use-batch-line" hidden>
-              <input type="checkbox" id="use-batch" checked>
-              Use the batch settings for this file
-            </label>
-
-            <div class="field" id="file-title-line" hidden>
-              <label for="file-title">Title</label>
-              <input type="text" id="file-title" maxlength="300">
-            </div>
-
-            <div id="the-settings">
-              {% if to_a_case %}
-                <div class="field" id="case-field" hidden>
-                  <label for="add-to-case">Add to case</label>
-                  <select id="add-to-case">
-                    <option value="">This session only</option>
-                    {% for one in to_a_case %}
-                      <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
-                    {% endfor %}
-                  </select>
-                  <p class="muted small" style="margin: 4px 0 0">
-                    A recording added to a case stays after you sign out. One
-                    left in this session does not.
-                  </p>
-
-                </div>
-
-                <div class="field" id="type-field" hidden>
-                  <label for="recording-type">Recording type</label>
-                  <select id="recording-type">
-                    <option value="">No type</option>
-                    {% for one in recording_types %}
-                      <option value="{{ one }}">{{ one }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              {% endif %}
-
-              {% if vision.offered %}
-                {% comment %}
-                  Enrich with vision (Phase 4 chapter 5): for the videos of
-                  the batch; under a schedule only for a batch going into a
-                  case, and upload.js hides it with This session only chosen.
-                {% endcomment %}
-                <div id="vision-tick" data-needs-case="{% if vision.needs_case %}yes{% else %}no{% endif %}">
-                  <label class="row">
-                    <input type="checkbox" id="enrich-with-vision"{% if vision.ticked %} checked{% endif %}>
-                    <b>Enrich with vision</b>
-                  </label>
-                  <p class="muted small">{{ vision.caption }}</p>
-                </div>
-                {% if vision.session_line %}
-                  <p class="muted small" id="vision-session-line" hidden>{{ vision.session_line }}</p>
-                {% endif %}
-              {% endif %}
-
-              {% if summaries.offered %}
-                {% comment %}
-                  Summaries tonight (Phase 9 chapter 5): each recording's
-                  summary written in the overnight window; only for a batch
-                  going into a case, so upload.js hides it with This session
-                  only chosen.
-                {% endcomment %}
-                <div id="summaries-tick" data-needs-case="yes">
-                  <label class="row">
-                    <input type="checkbox" id="summaries-tonight"{% if summaries.ticked %} checked{% endif %}>
-                    <b>Write each recording's summary tonight</b>
-                  </label>
-                  <p class="muted small">{{ summaries.caption }}</p>
-                </div>
-              {% endif %}
-
-              {% if batch_mail.offered %}
-                <label class="row">
-                  <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>
-                  <b>Email me when this batch finishes</b>
-                </label>
-                <p class="muted small">
-                  {% if batch_mail.address %}
-                    One message with the counts and any failures; never a word of a transcript.
-                  {% else %}
-                    No email address on your account; ask IT.
-                  {% endif %}
-                </p>
-              {% endif %}
-
-              <label class="row">
-                <input type="checkbox" id="diarize"> <b>Tell the speakers apart</b>
-              </label>
-              <p class="muted small">
-                Labels each line with who is speaking. Off unless you turn it on.
-              </p>
-              <p class="notice warn" id="diarize-warning" hidden>
-                Speaker separation is not always right. It can run two people
-                together or split one person in two, and the labels are guesses
-                until somebody checks them against the audio. Use it when you
-                need who said what, and read the result with that in mind.
-              </p>
-
-              <div id="hint-wrap" style="margin-left: 24px"{% if diarizer == "nemotron" %} title="The diarizer counts the speakers itself"{% endif %}>
-                <div class="field">
-                  <label for="hint">Speakers</label>
-                  {% if diarizer == "nemotron" %}
-                    {% comment %}Phase 5 chapter 4: the hint is pyannote's; greyed with the reason, never hidden.{% endcomment %}
-                    <span class="muted small">The diarizer counts the speakers itself; the hint is not used.</span>
-                  {% endif %}
-                  <span class="row">
-                    <select id="hint"{% if diarizer == "nemotron" %} disabled{% endif %}>
-                      <option value="">Let the app decide</option>
-                      <option value="exactly">Exactly</option>
-                      <option value="between">Between</option>
-                    </select>
-                    <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
-                    <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
-                  </span>
-                </div>
-              </div>
-
-              <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
-                <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
-              </label>
-              {% if recogniser == "qwen3-asr" and not translation_offered %}
-                {% comment %}ADR 0026: under the Qwen3-ASR recogniser the English is the chat engine's; with no engine configured it cannot be written. Greyed with the reason, never hidden.{% endcomment %}
-                <p class="muted small">
-                  Not offered: under the Qwen3-ASR recogniser the English is
-                  written by the chat engine from the words as spoken, and no
-                  engine is configured. A recording is transcribed in the
-                  language spoken.
-                </p>
-              {% elif recogniser == "qwen3-asr" %}
-                {% comment %}ADR 0026: the transcript lands in the language spoken and the English follows, written by the chat engine from the words as spoken, which are kept.{% endcomment %}
-                <p class="muted small">
-                  The transcript lands in the language spoken and reads at once;
-                  the English follows, written by the chat engine line by line
-                  from the words as spoken, which are kept and can be shown. A
-                  recording in more than one language is translated whether or
-                  not this is ticked.
-                </p>
-              {% else %}
-                <p class="muted small">
-                  A recording in more than one language is translated whether or
-                  not this is ticked. A translation has no word timing.
-                </p>
-              {% endif %}
-
-              <details id="more" style="margin-top: 10px">
-                <summary>More options</summary>
-
-                <div class="field" style="margin-top: 10px">
-                  <label for="language">Spoken language</label>
-                  <select id="language">
-                    <option value="">Automatic</option>
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                  </select>
-                </div>
-                <p class="muted small">
-                  Choosing a language switches detection off for that
-                  recording.
-                </p>
-
-                <div class="field">
-                  <label for="vocabulary">Vocabulary</label>
-                  <textarea id="vocabulary" rows="4"
-                            placeholder="One name or term per line"></textarea>
-                </div>
-                <p class="muted small">
-                  Office names are added automatically. The engine's prompt is
-                  short, so a long list is cut from the end.
-                </p>
-
-                <div class="field">
-                  <label for="context">Context (one line)</label>
-                  <input type="text" id="context" maxlength="500"
-                         placeholder="Interview of a witness by an investigator about a robbery">
-                </div>
-                <p class="muted small">
-                  Write it in the spoken language, or in English when
-                  translating.
-                </p>
-
-                <div class="field">
-                  <label>Audio clean-up</label>
-                  <span class="muted small">Standard (set by IT)</span>
-                </div>
-              </details>
-            </div>
+            {% comment %}The settings card, shared with Bulk transcription (v1.174.0).{% endcomment %}
+            {% include "upload-settings.html" %}
           </div>
         </div>
 
@@ -352,6 +162,7 @@
       </li>
     </ol>
     {% endif %}
+    {% endif %}
 
     {% comment %}
       Outside the branch above on purpose. It answers a question about the
@@ -365,5 +176,6 @@
   </div>
 
   <script src="{% static 'vendor/tus.min.js' %}"></script>
+  <script src="{% static 'upload-settings.js' %}"></script>
   <script src="{% static 'upload.js' %}"></script>
 {% endblock %}

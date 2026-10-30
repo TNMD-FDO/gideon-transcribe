@@ -22,6 +22,7 @@ from core import (
     settings_store,
     translation,
     uploads,
+    vision,
     whisperx,
 )
 from core.recordings import Batch
@@ -32,7 +33,7 @@ LINE = "Files in, transcripts out, nothing kept"
 @login_required
 def page(request: HttpRequest) -> HttpResponse:
     """The drop, or this session's batch where it stands, or its download."""
-    from core.pages import standing_line
+    from core.pages import batch_mail_for, standing_line
 
     running = Batch.unfinished_for(request.user)
     ready = home.ready_batches(request.user)
@@ -64,6 +65,14 @@ def page(request: HttpRequest) -> HttpResponse:
             # Translate to English greys as the upload page greys it (ADR 0026).
             "translation_offered": translation.offered(),
             "recogniser": settings_store.recogniser(),
+            # The settings card shared with the Upload page (v1.174.0): no
+            # case, no recording type, no Summaries tonight, since a bulk
+            # batch is this session's; the rest as there.
+            "for_bulk": True,
+            "vision": vision.tick(request.user),
+            "summaries": {"offered": False},
+            "batch_mail": batch_mail_for(request.user),
+            "diarizer": settings_store.diarizer(),
             "limits": {
                 "largest_file": uploads.as_gb(settings_store.largest_file_bytes()),
                 "longest_hours": settings_store.longest_recording_seconds() // 3600,

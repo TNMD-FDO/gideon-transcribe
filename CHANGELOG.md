@@ -17,6 +17,16 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.174.0, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **Bulk transcription has the whole settings card.** The Upload page's settings, folded under the files with one line saying what is set: Tell the speakers apart and the speaker count, Translate to English, the spoken language, vocabulary, context, clean-up, and the email and vision ticks when offered; a file's chip (Same as batch, Own settings) opens the card for that file alone, as the Upload page's exceptions do. The case-bound settings (Add to case, Recording type, Summaries tonight) are not there. The card is one piece shared by both pages (`templates/upload-settings.html`, `static/upload-settings.js`). Drawn in `docs/spec/mockups/phase-8-bulk-transcription-settings.html`.
+- **Every batch from Upload files goes into a case.** The "Where do they go?" question with This session only is gone, now that Bulk transcription is the door for a session's own transcripts; the one question at the top is "Into which case?", with the recording type beside it. A person with no case yet is sent to make one, or to Bulk transcription. With Folder management off the page is as it was. Phase 8 chapter 13 amended, with notes on Phase 1, 2 and 4.
+
 ## v1.173.0, 2026-10-29
 
 ```

@@ -1,0 +1,209 @@
+{% comment %}
+  The settings card (Phase 1 chapter 2, the Upload page's step 2), cut out
+  in v1.174.0 so the Upload page and Bulk transcription draw the one card
+  and upload-settings.js reads and writes it on both. The ids are the
+  card's contract with the script; nothing here changes without it.
+
+  The page that includes it passes for_bulk (True on Bulk transcription:
+  no case or recording type, no Summaries tonight, the More options as
+  plain fields), to_a_case, vision, summaries, batch_mail, diarizer,
+  recogniser and translation_offered, as the Upload page always has.
+{% endcomment %}
+<div class="row">
+  <h3 class="small grow" id="rail-heading">Batch settings</h3>
+  <button type="button" id="back-to-batch" class="ghost tiny" hidden>
+    Back to batch settings
+  </button>
+</div>
+
+<label class="row small" id="use-batch-line" hidden>
+  <input type="checkbox" id="use-batch" checked>
+  Use the batch settings for this file
+</label>
+
+<div class="field" id="file-title-line" hidden>
+  <label for="file-title">Title</label>
+  <input type="text" id="file-title" maxlength="300">
+</div>
+
+<div id="the-settings">
+  {% if to_a_case and not for_bulk %}
+    {% comment %}
+      One file's own case (Phase 2 chapter 1): the batch's is chosen at the
+      top of the page, so this box is for a file that goes somewhere else.
+      Since v1.174.0 a batch from this page always goes into a case, so
+      there is no "This session only" here either.
+    {% endcomment %}
+    <div class="field" id="case-field" hidden>
+      <label for="add-to-case">Add to case</label>
+      <select id="add-to-case">
+        {% for one in to_a_case %}
+          <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
+        {% endfor %}
+      </select>
+      <p class="muted small" style="margin: 4px 0 0">
+        A recording added to a case stays after you sign out.
+      </p>
+    </div>
+
+    <div class="field" id="type-field" hidden>
+      <label for="recording-type">Recording type</label>
+      <select id="recording-type">
+        <option value="">No type</option>
+        {% for one in recording_types %}
+          <option value="{{ one }}">{{ one }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
+
+  {% if vision.offered %}
+    {% comment %}
+      Enrich with vision (Phase 4 chapter 5): for the videos of the batch.
+      Under a schedule it needs a case: on the Upload page every batch has
+      one now, so the tick shows; on Bulk transcription, whose batch is this
+      session's, the one line says why there is no tick.
+    {% endcomment %}
+    {% if for_bulk and vision.needs_case %}
+      <p class="muted small" id="vision-session-line">{{ vision.session_line|default:"Vision runs tonight and needs a case; a session's recordings are gone by then. Use Upload files to put it in a case." }}</p>
+    {% else %}
+      <div id="vision-tick" data-needs-case="{% if vision.needs_case %}yes{% else %}no{% endif %}">
+        <label class="row">
+          <input type="checkbox" id="enrich-with-vision"{% if vision.ticked %} checked{% endif %}>
+          <b>Enrich with vision</b>
+        </label>
+        <p class="muted small">{{ vision.caption }}</p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% if summaries.offered and not for_bulk %}
+    {% comment %}
+      Summaries tonight (Phase 9 chapter 5): each recording's summary written
+      in the overnight window; only for a batch going into a case, which
+      every batch from the Upload page is since v1.174.0.
+    {% endcomment %}
+    <div id="summaries-tick" data-needs-case="yes">
+      <label class="row">
+        <input type="checkbox" id="summaries-tonight"{% if summaries.ticked %} checked{% endif %}>
+        <b>Write each recording's summary tonight</b>
+      </label>
+      <p class="muted small">{{ summaries.caption }}</p>
+    </div>
+  {% endif %}
+
+  {% if batch_mail.offered %}
+    <label class="row">
+      <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>
+      <b>Email me when this batch finishes</b>
+    </label>
+    <p class="muted small">
+      {% if batch_mail.address %}
+        One message with the counts and any failures; never a word of a transcript.
+      {% else %}
+        No email address on your account; ask IT.
+      {% endif %}
+    </p>
+  {% endif %}
+
+  <label class="row">
+    <input type="checkbox" id="diarize"> <b>Tell the speakers apart</b>
+  </label>
+  <p class="muted small">
+    Labels each line with who is speaking. Off unless you turn it on.
+  </p>
+  <p class="notice warn" id="diarize-warning" hidden>
+    Speaker separation is not always right. It can run two people
+    together or split one person in two, and the labels are guesses
+    until somebody checks them against the audio. Use it when you
+    need who said what, and read the result with that in mind.
+  </p>
+
+  <div id="hint-wrap" style="margin-left: 24px"{% if diarizer == "nemotron" %} title="The diarizer counts the speakers itself"{% endif %}>
+    <div class="field">
+      <label for="hint">Speakers</label>
+      {% if diarizer == "nemotron" %}
+        {% comment %}Phase 5 chapter 4: the hint is pyannote's; greyed with the reason, never hidden.{% endcomment %}
+        <span class="muted small">The diarizer counts the speakers itself; the hint is not used.</span>
+      {% endif %}
+      <span class="row">
+        <select id="hint"{% if diarizer == "nemotron" %} disabled{% endif %}>
+          <option value="">Let the app decide</option>
+          <option value="exactly">Exactly</option>
+          <option value="between">Between</option>
+        </select>
+        <input type="number" id="hint-a" min="1" max="20" value="2" hidden>
+        <input type="number" id="hint-b" min="1" max="20" value="4" hidden>
+      </span>
+    </div>
+  </div>
+
+  <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
+    <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
+  </label>
+  {% if recogniser == "qwen3-asr" and not translation_offered %}
+    {% comment %}ADR 0026: under the Qwen3-ASR recogniser the English is the chat engine's; with no engine configured it cannot be written. Greyed with the reason, never hidden.{% endcomment %}
+    <p class="muted small">
+      Not offered: under the Qwen3-ASR recogniser the English is
+      written by the chat engine from the words as spoken, and no
+      engine is configured. A recording is transcribed in the
+      language spoken.
+    </p>
+  {% elif recogniser == "qwen3-asr" %}
+    {% comment %}ADR 0026: the transcript lands in the language spoken and the English follows, written by the chat engine from the words as spoken, which are kept.{% endcomment %}
+    <p class="muted small">
+      The transcript lands in the language spoken and reads at once;
+      the English follows, written by the chat engine line by line
+      from the words as spoken, which are kept and can be shown. A
+      recording in more than one language is translated whether or
+      not this is ticked.
+    </p>
+  {% else %}
+    <p class="muted small">
+      A recording in more than one language is translated whether or
+      not this is ticked. A translation has no word timing.
+    </p>
+  {% endif %}
+
+  {% comment %}The More options: a fold on the Upload page, plain fields on Bulk transcription, where the whole card is one fold already.{% endcomment %}
+  {% if for_bulk %}<div id="more" class="more-plain">{% else %}<details id="more" style="margin-top: 10px"><summary>More options</summary>{% endif %}
+
+    <div class="field" style="margin-top: 10px">
+      <label for="language">Spoken language</label>
+      <select id="language">
+        <option value="">Automatic</option>
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+      </select>
+    </div>
+    <p class="muted small">
+      Choosing a language switches detection off for that
+      recording.
+    </p>
+
+    <div class="field">
+      <label for="vocabulary">Vocabulary</label>
+      <textarea id="vocabulary" rows="4"
+                placeholder="One name or term per line"></textarea>
+    </div>
+    <p class="muted small">
+      Office names are added automatically. The engine's prompt is
+      short, so a long list is cut from the end.
+    </p>
+
+    <div class="field">
+      <label for="context">Context (one line)</label>
+      <input type="text" id="context" maxlength="500"
+             placeholder="Interview of a witness by an investigator about a robbery">
+    </div>
+    <p class="muted small">
+      Write it in the spoken language, or in English when
+      translating.
+    </p>
+
+    <div class="field">
+      <label>Audio clean-up</label>
+      <span class="muted small">Standard (set by IT)</span>
+    </div>
+  {% if for_bulk %}</div>{% else %}</details>{% endif %}
+</div>

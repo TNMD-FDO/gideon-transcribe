@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk transcription: the settings card</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; color-scheme: dark; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.big { font-size: 15px; padding: 8px 18px; min-height: 36px; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.on { background: var(--accent); color: var(--accent-ink); }
+  .shell { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; font-size: 13px; }
+  .shell h3 { margin: 0; font-size: 22px; }
+  .shell .lead { color: var(--muted); margin: 0; max-width: 64ch; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 18px; text-align: center; color: var(--muted); }
+  .files { display: flex; flex-direction: column; gap: 6px; }
+  .file { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; display: grid; grid-template-columns: minmax(140px, 1fr) auto auto auto; gap: 12px; align-items: center; }
+  @media (max-width: 560px) { .file { grid-template-columns: 1fr auto; } }
+  .file input { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--surface); color: var(--text); width: 100%; }
+  .file .q { color: var(--muted); font-size: 12px; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 14px; }
+  details summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  details summary b { font-size: 14px; }
+  details[open] summary { border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 10px; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 28px; }
+  .settings .f { display: flex; flex-direction: column; gap: 3px; }
+  .settings label.row { display: flex; gap: 6px; align-items: center; }
+  .settings .f .why { color: var(--muted); font-size: 12px; }
+  .settings select, .settings input[type=text], .settings textarea { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--surface); color: var(--text); }
+  .settings textarea { min-height: 54px; }
+  .settings .off { opacity: .55; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .new { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: var(--radius-lg); }
+  table.map { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.map th, table.map td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.map th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .pick { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .pick ol { margin: 6px 0 0; padding-left: 20px; } .pick li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 8 chapter 13, Bulk transcription amended · a drawing for the maintainer's word · 2026-10-29</span>
+    <h1>Bulk transcription: the Upload page's settings card, folded under the files</h1>
+    <p class="lede">The maintainer's ask after v1.173.0: the bulk page offers two options where the Upload page's "2. Settings (optional)" offers the lot. The drawing puts that same card on the bulk page, folded shut under the files with one line saying what is set, so the one-off errand stays one screen and nothing is asked that a plain transcript does not need; opened, it is the Upload page's card with the case-bound settings left out, since a bulk batch never goes into a case. Made-up files.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Folded: the files, one line of settings, Start</h2></div>
+    <div class="shell">
+      <div><h3>Bulk transcription</h3><p class="lead">Drop your recordings in, press Start, and come back for one download of every transcript. They are yours for this session and gone when you sign out; nothing goes into a case.</p></div>
+      <div class="drop">Drop recordings here, or <span style="color: var(--accent)">choose files</span></div>
+      <div class="files">
+        <div class="file"><input value="interview_0412"><span class="q">interview_0412.m4a · 38 MB</span><span class="pill">Same as batch</span><span class="btn ghost">Remove</span></div>
+        <div class="file"><input value="site_visit"><span class="q">site_visit.mp4 · 1.2 GB</span><span class="pill on">Own settings</span><span class="btn ghost">Remove</span></div>
+        <div class="file"><input value="voicemail_3"><span class="q">voicemail_3.wav · 2 MB</span><span class="pill">Same as batch</span><span class="btn ghost">Remove</span></div>
+      </div>
+      <details class="new">
+        <summary><b>Settings</b> <span class="muted">(optional)</span> <span class="muted">Speakers not told apart · not translated · language detected · one file with its own settings</span></summary>
+      </details>
+      <div class="row"><span class="btn primary big">Start: transcribe 3 files</span></div>
+    </div>
+    <div class="caption">
+      <p><b>The same page, one fold more.</b> The drop, the files and Start are as shipped. Between the files and Start sits the settings card, folded, with one line that says what is set for the batch and whether any file has its own; a person who wants a plain transcript never opens it.</p>
+      <p><b>Each file's title and chip.</b> As on the Upload page, a file's title is typed on its card, and its chip says Same as batch or Own settings; pressing the chip opens the card for that file alone (figure C). The one line under Settings counts the exceptions.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Opened: the Upload page's settings for the batch, less the case-bound ones</h2></div>
+    <div class="shell">
+      <details open class="new">
+        <summary><b>Settings</b> <span class="muted">(optional)</span> <span class="muted">for the batch</span></summary>
+        <p class="muted small" style="margin: 0 0 10px">Nothing here needs changing for a plain transcript. Set what you want for the batch, or press a file's chip to give it its own.</p>
+        <div class="settings">
+          <div class="f"><label class="row"><input type="checkbox"> <b>Enrich with vision</b></label><span class="why">For the videos of the batch, when the office offers it for this session; the same caption as the Upload page's.</span></div>
+          <div class="f"><label class="row"><input type="checkbox"> <b>Email me when this batch finishes</b></label><span class="why">One message with the counts and any failures; never a word of a transcript.</span></div>
+          <div class="f"><label class="row"><input type="checkbox"> <b>Tell the speakers apart</b></label><span class="why">Labels each line with who is speaking. Off unless you turn it on.</span><label class="row" style="margin-left: 22px">Speakers <select><option>Let the app decide</option><option>Exactly</option><option>Between</option></select></label></div>
+          <div class="f"><label class="row"><input type="checkbox"> <b>Translate to English</b></label><span class="why">A recording in more than one language is translated whether or not this is ticked.</span></div>
+          <div class="f"><label>Spoken language</label><select><option>Automatic</option><option>English</option><option>Spanish</option></select><span class="why">Choosing a language switches detection off for that recording.</span></div>
+          <div class="f"><label>Vocabulary</label><textarea placeholder="One name or term per line"></textarea><span class="why">Office names are added automatically.</span></div>
+          <div class="f"><label>Context (one line)</label><input type="text" placeholder="Interview of a witness by an investigator about a robbery"><span class="why">In the spoken language, or in English when translating.</span></div>
+          <div class="f"><label>Audio clean-up</label><span class="muted">Standard (set by IT)</span></div>
+        </div>
+      </details>
+    </div>
+    <div class="caption">
+      <p><b>The same settings, the same words, the same order</b> as the Upload page's card, so a person who knows one knows the other: Enrich with vision (when the office offers it for this session), Email me, Tell the speakers apart with the Speakers hint (greyed with its reason under Nemotron, as there), Translate to English (greyed with its reason under Qwen3-ASR with no engine), and the More options as plain fields: Spoken language, Vocabulary, Context, Audio clean-up. The Upload page's "More options" fold is not nested inside this fold; one fold is enough.</p>
+      <p><b>Left out, and why.</b> Add to case and Recording type, since a bulk batch never goes into a case; Write each recording's summary tonight, which is for a batch going into a case. The page says nothing about them: a person who wants a case uses Upload files, as the line under the drop says today.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>One file's own settings: the same card, for that file</h2></div>
+    <div class="shell">
+      <div class="files">
+        <div class="file"><input value="interview_0412"><span class="q">interview_0412.m4a · 38 MB</span><span class="pill">Same as batch</span><span class="btn ghost">Remove</span></div>
+        <div class="file" style="outline: 2px solid var(--accent); outline-offset: -2px"><input value="site_visit"><span class="q">site_visit.mp4 · 1.2 GB</span><span class="pill on">Own settings</span><span class="btn ghost">Remove</span></div>
+      </div>
+      <details open>
+        <summary><b>Settings</b> <span class="muted">for site_visit</span> <span class="btn ghost" style="margin-left: auto">Back to batch settings</span></summary>
+        <label class="row" style="margin: 0 0 10px"><input type="checkbox"> Use the batch settings for this file</label>
+        <div class="settings">
+          <div class="f"><label class="row"><input type="checkbox" checked> <b>Tell the speakers apart</b></label><label class="row" style="margin-left: 22px">Speakers <select><option>Exactly</option></select> <input type="text" value="2" style="width: 3em"></label></div>
+          <div class="f"><label class="row"><input type="checkbox"> <b>Translate to English</b></label></div>
+          <div class="f"><label>Spoken language</label><select><option>English</option></select></div>
+          <div class="f"><label>Vocabulary</label><textarea>Harbour Street</textarea></div>
+          <div class="f"><label>Context (one line)</label><input type="text" value="A site visit with two investigators"></div>
+        </div>
+      </details>
+    </div>
+    <div class="caption">
+      <p><b>As the Upload page does it.</b> Pressing a file's chip opens the card for that file: untick "Use the batch settings for this file" and the fields edit on their own; Back to batch settings returns. Enrich with vision and Email me are the batch's alone, as there, so they do not appear for one file.</p>
+      <p><b>Nothing new to learn.</b> This is the Upload page's exceptions rail, drawn in the fold instead of beside a table. The exceptions table itself (File, Goes to, Speakers, To English, Language) is not drawn: the chips on the file cards say the same, and the batch's one line counts the exceptions.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Every setting of the Upload page's step 2, and where it is on the bulk page</h2></div>
+    <table class="map">
+      <tr><th>On Upload files, step 2</th><th>On Bulk transcription</th><th>Why</th></tr>
+      <tr><td>Title, per file</td><td>On each file's card, as there</td><td>A file's name is rarely its title</td></tr>
+      <tr><td>Add to case</td><td>Not offered</td><td>A bulk batch is this session's, never a case's</td></tr>
+      <tr><td>Recording type</td><td>Not offered</td><td>A type belongs to a recording in a case</td></tr>
+      <tr><td>Enrich with vision</td><td>In the fold, when the office offers it for this session</td><td>The Upload page hides it with This session only when it needs a case; the same rule</td></tr>
+      <tr><td>Write each recording's summary tonight</td><td>Not offered</td><td>Only for a batch going into a case</td></tr>
+      <tr><td>Email me when this batch finishes</td><td>In the fold</td><td>A person who drops ten files and leaves wants it</td></tr>
+      <tr><td>Tell the speakers apart, with the Speakers hint</td><td>In the fold</td><td>The one setting a one-off most often needs beyond the two shipped</td></tr>
+      <tr><td>Translate to English</td><td>In the fold (shipped already)</td><td></td></tr>
+      <tr><td>More options: Spoken language, Vocabulary, Context, Audio clean-up</td><td>In the fold, as plain fields</td><td>One fold, not a fold inside a fold</td></tr>
+      <tr><td>Exceptions for single files</td><td>The chip on each file's card opens the same card for that file</td><td>As there, without the table</td></tr>
+      <tr><td>3. Check and start</td><td>Not a step: Start says how many files, and the fold's line says what is set</td><td>The errand stays one screen</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="pick">
+      <span class="eyebrow">What the build does, and the one thing for your word</span>
+      <ol>
+        <li><b>One settings card in the app, not two.</b> The card is cut out of the Upload page into a piece both pages draw, and the script that reads and writes it is shared, so a setting added to one page later is on the other. The Upload page does not change for a person using it.</li>
+        <li><b>Per-file exceptions are drawn in (figure C).</b> Say if the bulk page should carry batch settings only, with each file's title and nothing else per file; the fold and the line would then be simpler, and a person who needs exceptions would use Upload files.</li>
+        <li>No model, no migration: the batch's settings reach the app through the same submit as the Upload page's.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -271,7 +271,7 @@ Home's first section, when a Batch of this session has finished with at least on
 _Avoid_: inbox, notifications, downloads page
 
 **Bulk transcription**:
-The Rail's place under Home, from v1.173.0 (Phase 8 chapter 13 as amended): one page for the errand of getting transcripts of a set of files and nothing else. Drop the files, two options (Translate to English, the spoken language), Start; the same page then lists each file and where it stands, offers the download of what is ready, and ends as the download with Done with these and Transcribe more. Under it a Batch like any other, this session only and never in a Case, so it is also under My recordings and on Home's Ready to download. Upload files stays the full page with its settings and its Cases.
+The Rail's place under Home, from v1.173.0 (Phase 8 chapter 13 as amended): one page for the errand of getting transcripts of a set of files and nothing else. Drop the files, the Upload page's settings card folded under them (from v1.174.0; before, two options), Start; the same page then lists each file and where it stands, offers the download of what is ready, and ends as the download with Done with these and Transcribe more. Under it a Batch like any other, this session only and never in a Case, so it is also under My recordings and on Home's Ready to download. Upload files is the page for a Batch into a Case, and from v1.174.0 every Batch from it goes into one.
 _Avoid_: quick transcribe, express, simple mode, bulk upload (it is the transcripts the person wants)
 
 **Start page**:

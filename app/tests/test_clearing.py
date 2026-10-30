@@ -222,7 +222,10 @@ def test_the_upload_page_asks_where_and_chooses_nothing_else(client, monkeypatch
     page = client.get(reverse("upload")).content.decode()
 
     assert "<h1>Upload files</h1>" in page
-    assert "Where do they go?" in page and "This session only" in page
+    # Every batch from this page goes into a case (v1.174.0): the one
+    # question is which, and "This session only" is Bulk transcription's.
+    assert "Into which case?" in page and 'id="which-case"' in page
+    assert "<b>This session only</b>" not in page and "Where do they go?" not in page
     # No mode cards: nothing is chosen for the person, speaker separation
     # least of all, and the warning waits under its box for when it is on.
     assert 'name="kind"' not in page and "What are these?" not in page
@@ -232,7 +235,7 @@ def test_the_upload_page_asks_where_and_chooses_nothing_else(client, monkeypatch
     # Without Cases there is nowhere else for them to go, so no question at all.
     settings_store.set_to("folder_management", False)
     page = client.get(reverse("upload")).content.decode()
-    assert "Where do they go?" not in page
+    assert "Into which case?" not in page and 'id="which-case"' not in page
     # The line that answers the question every new user of this app has.
     assert "Nothing leaves this building" in page
 

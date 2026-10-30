@@ -873,9 +873,15 @@ main.wide { max-width: none; }
   .drop.hero { padding: 24px 14px; }
   .steps > li > .dialog { position: sticky; bottom: 0; z-index: 2; background: var(--surface); padding: 10px 0; margin-bottom: -8px; }
 }
-/* Bulk transcription (v1.173.0): the two options in one row under the drop. */
-.bulk .bulk-options { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; margin: 12px 0 14px; }
-.bulk .bulk-options label.row { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+/* Bulk transcription (v1.173.0; the settings card folded under the files,
+   v1.174.0): the Upload page's card inside one fold, its More options as
+   plain fields. */
+.bulk .settings-fold { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 14px; margin: 12px 0 14px; }
+.bulk .settings-fold > summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.bulk .settings-fold[open] > summary { border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 10px; }
+.bulk .settings-fold #the-settings { max-width: 40rem; }
+.bulk .settings-fold .more-plain .field { margin-top: 10px; }
+.bulk .which-case, .upload .which-case { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .bulk #bulk-rows .pill.acc { background: var(--accent-soft); color: var(--accent); }
 .drop.hero .big { font-size: 1.25em; margin-bottom: 8px; }
 .drop.hero .or { margin-bottom: 14px; }

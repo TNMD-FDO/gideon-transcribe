@@ -137,17 +137,7 @@
     control.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function lightUp(group, value) {
-    Array.prototype.forEach.call(group.querySelectorAll(".style"), function (card) {
-      var radio = card.querySelector("input");
-      radio.checked = radio.value === value;
-      card.classList.toggle("on", radio.checked);
-    });
-  }
-
-  var wheres = document.getElementById("wheres");
   var whichCase = document.getElementById("which-case");
-  var hint = document.getElementById("hint");
   // The type beside the case (v1.89.0) and the one in the options are one
   // choice: either sets the other, and the batch reads the options' box.
   var batchType = document.getElementById("batch-type");
@@ -162,62 +152,40 @@
     });
   }
 
-  function applyWhere() {
+  // Which case (v1.174.0): every batch from this page goes into a case, so
+  // the one question at the top is which; its answer is the rail's own Add
+  // to case box, and the ticks that need a case always show.
+  function applyCase() {
     var intoCase = document.getElementById("add-to-case");
-    if (!wheres || !intoCase) { return; }
-    var chosenWhere = wheres.querySelector('input[name="where"]:checked');
-    lightUp(wheres, chosenWhere ? chosenWhere.value : "");
-    intoCase.value = chosenWhere && chosenWhere.value === "case" ? whichCase.value : "";
-    // Under a schedule vision needs a case: the tick shows only with Into a
-    // case chosen, and This session only gets the one line saying why.
+    if (!whichCase || !intoCase) { return; }
+    intoCase.value = whichCase.value;
     var tick = document.getElementById("vision-tick");
     var sessionLine = document.getElementById("vision-session-line");
-    var toCase = !!(chosenWhere && chosenWhere.value === "case");
-    if (tick && tick.dataset.needsCase === "yes") {
-      tick.hidden = !toCase;
-      if (sessionLine) { sessionLine.hidden = toCase; }
-    }
-    // Summaries tonight (Phase 9 chapter 5) always needs a case.
+    if (tick) { tick.hidden = false; }
+    if (sessionLine) { sessionLine.hidden = true; }
     var summariesTick = document.getElementById("summaries-tick");
-    if (summariesTick) { summariesTick.hidden = !toCase; }
+    if (summariesTick) { summariesTick.hidden = false; }
     fire(intoCase);
   }
 
-  if (wheres) {
-    wheres.addEventListener("change", function (event) {
-      if (event.target.name === "where") { applyWhere(); }
-    });
-    whichCase.addEventListener("change", function () {
-      lightUp(wheres, "case");
-      applyWhere();
-    });
+  if (whichCase) {
+    whichCase.addEventListener("change", applyCase);
     // The case's names go with the recordings (Phase 9 chapter 2): one line
     // under the select says how many.
     var namesLine = document.getElementById("case-names-line");
     function sayNames() {
       if (!namesLine) { return; }
-      var chosen = whichCase.options[whichCase.selectedIndex];
-      var count = chosen ? Number(chosen.dataset.names || 0) : 0;
+      var chosenCase = whichCase.options[whichCase.selectedIndex];
+      var count = chosenCase ? Number(chosenCase.dataset.names || 0) : 0;
       namesLine.hidden = !(count > 0);
       namesLine.textContent = "This case's " + count + " name" + (count === 1 ? "" : "s") + " and place" + (count === 1 ? "" : "s") + " go with these recordings, for recognition.";
     }
     whichCase.addEventListener("change", sayNames);
     sayNames();
-    // Clicking into the select chooses Into a case, since that is what it is for.
-    whichCase.addEventListener("focus", function () {
-      wheres.querySelector('input[value="case"]').checked = true;
-      applyWhere();
-    });
   }
 
-  // Speaker separation is off until the person turns it on, and the warning
-  // under the box is shown while it is on, for the batch or for one file.
-  var diarizeBox = document.getElementById("diarize");
-  var diarizeWarning = document.getElementById("diarize-warning");
-  function showDiarizeWarning() {
-    if (diarizeWarning) { diarizeWarning.hidden = !diarizeBox.checked; }
-  }
-  diarizeBox.addEventListener("change", showDiarizeWarning);
+  // The card's own behaviour (the hint boxes, the warning under Tell the
+  // speakers apart) lives in upload-settings.js (v1.174.0).
 
   // The three steps -----------------------------------------------------------
 
@@ -253,93 +221,11 @@
   var useBatch = document.getElementById("use-batch");
   var fileTitle = document.getElementById("file-title");
 
-  function readRail() {
-    var speakers = null;
-    if (hint.value === "exactly") {
-      speakers = { exactly: parseInt(document.getElementById("hint-a").value, 10) };
-    } else if (hint.value === "between") {
-      speakers = {
-        between: [
-          parseInt(document.getElementById("hint-a").value, 10),
-          parseInt(document.getElementById("hint-b").value, 10)
-        ]
-      };
-    }
-    var intoCase = document.getElementById("add-to-case");
-    var whatKind = document.getElementById("recording-type");
-    var mailMe = document.getElementById("email-when-done");
-    var enrich = document.getElementById("enrich-with-vision");
-    var tick = document.getElementById("vision-tick");
-    var summaries = document.getElementById("summaries-tonight");
-    var summariesTick = document.getElementById("summaries-tick");
-    return {
-      // Write each recording's summary tonight (Phase 9 chapter 5): only
-      // while its tick is shown, which is only for a batch into a case.
-      summaries: !!(summaries && summariesTick && !summariesTick.hidden && summaries.checked),
-      // Absent while the Admin's switch is off or mail is not configured.
-      email_when_done: !!(mailMe && !mailMe.disabled && mailMe.checked),
-      // Enrich with vision (Phase 4 chapter 5): only while its tick is shown.
-      enrich: !!(enrich && tick && !tick.hidden && enrich.checked),
-      diarize: document.getElementById("diarize").checked,
-      speakers: speakers,
-      translate: document.getElementById("translate").checked,
-      language: document.getElementById("language").value,
-      vocabulary: document.getElementById("vocabulary").value.split("\n"),
-      context: document.getElementById("context").value,
-      // Absent from the page altogether while Folder management is off.
-      case: intoCase ? intoCase.value : "",
-      case_name: intoCase && intoCase.value
-        ? intoCase.options[intoCase.selectedIndex].textContent
-        : "",
-      recording_type: whatKind ? whatKind.value : ""
-    };
-  }
-
-  function writeRail(values) {
-    var mailMe = document.getElementById("email-when-done");
-    if (mailMe && !mailMe.disabled) { mailMe.checked = !!values.email_when_done; }
-    document.getElementById("diarize").checked = !!values.diarize;
-    showDiarizeWarning();
-    var translate = document.getElementById("translate");
-    // Greyed under the Qwen3-ASR recogniser (ADR 0025): never ticked then.
-    translate.checked = !translate.disabled && !!values.translate;
-    document.getElementById("language").value = values.language || "";
-    document.getElementById("vocabulary").value =
-      (values.vocabulary || []).join("\n");
-    document.getElementById("context").value = values.context || "";
-
-    var intoCase = document.getElementById("add-to-case");
-    if (intoCase) {
-      intoCase.value = values.case || "";
-      document.getElementById("recording-type").value =
-        values.recording_type || "";
-      // A recording type belongs to a case, so it is offered only once
-      // one is chosen.
-      document.getElementById("type-field").hidden = !intoCase.value;
-    }
-
-    var speakers = values.speakers;
-    if (speakers && speakers.exactly) {
-      hint.value = "exactly";
-      document.getElementById("hint-a").value = speakers.exactly;
-    } else if (speakers && speakers.between) {
-      hint.value = "between";
-      document.getElementById("hint-a").value = speakers.between[0];
-      document.getElementById("hint-b").value = speakers.between[1];
-    } else {
-      hint.value = "";
-    }
-    showHintBoxes();
-  }
-
-  function showHintBoxes() {
-    document.getElementById("hint-a").hidden = hint.value === "";
-    document.getElementById("hint-b").hidden = hint.value !== "between";
-  }
-
-  function copyOf(values) {
-    return JSON.parse(JSON.stringify(values));
-  }
+  // The card itself is read and written by upload-settings.js (v1.174.0),
+  // shared with Bulk transcription.
+  var readRail = window.UploadSettings.read;
+  var writeRail = window.UploadSettings.write;
+  var copyOf = window.UploadSettings.copyOf;
 
   // Whatever the rail is showing, keep it in the right place.
   function remember() {
@@ -351,15 +237,7 @@
     drawExceptions();
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#the-settings input, #the-settings select, " +
-      "#the-settings textarea"),
-    function (control) {
-      control.addEventListener("change", remember);
-      control.addEventListener("input", remember);
-    }
-  );
-  hint.addEventListener("change", showHintBoxes);
+  window.UploadSettings.onChange(remember);
 
   // A recording type belongs to a case, so the box appears only once one is
   // chosen. writeRail() does this when the rail is switched; this does it
@@ -368,16 +246,13 @@
   if (chooseCase) {
     chooseCase.addEventListener("change", function () {
       document.getElementById("type-field").hidden = !this.value;
-      // The where cards follow the batch's box, so the two never disagree.
-      if (railFor === null && wheres) {
-        lightUp(wheres, this.value ? "case" : "");
-        if (this.value) { whichCase.value = this.value; }
-      }
+      // The question at the top follows the batch's box, so the two never disagree.
+      if (railFor === null && whichCase && this.value) { whichCase.value = this.value; }
     });
   }
 
-  // The page opens with the cards' answer already in the rail.
-  if (wheres) { applyWhere(); }
+  // The page opens with the case chosen at the top already in the rail.
+  if (whichCase) { applyCase(); }
 
   function settings() {
     // The batch's own, read from the rail when the rail is showing them.
@@ -422,13 +297,7 @@
     drawExceptions();
   }
 
-  function enableSettings(on) {
-    Array.prototype.forEach.call(
-      document.querySelectorAll("#the-settings input, #the-settings select, " +
-        "#the-settings textarea"),
-      function (control) { control.disabled = !on; }
-    );
-  }
+  var enableSettings = window.UploadSettings.enable;
 
   document.getElementById("back-to-batch").addEventListener("click", showBatch);
 

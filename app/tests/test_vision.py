@@ -477,7 +477,12 @@ def test_the_upload_page_offers_the_tick_and_the_batch_carries_it(
         and "checked" not in page.split('id="enrich-with-vision"')[1].split(">")[0]
     )
     assert "between 20:00 and 06:00" in page and 'data-needs-case="yes"' in page
-    assert "needs a case" in page
+    # Every batch from the Upload page goes into a case (v1.174.0), so the
+    # "needs a case" line is Bulk transcription's, whose batch is this
+    # session's: there the line shows and the tick does not.
+    assert "needs a case" not in page
+    bulk = client.get("/bulk").content.decode()
+    assert "needs a case" in bulk and 'id="enrich-with-vision"' not in bulk
     settings_store.set_to("vision_runs", "asked")
     page = client.get("/upload").content.decode()
     assert 'id="enrich-with-vision"' not in page

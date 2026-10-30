@@ -1,9 +1,12 @@
-// Bulk transcription (v1.173.0): the drop, Start, the batch where it stands,
-// the download. The same endpoints as the Upload page and the batch page
-// (/upload/submit, the sidecar, /batch/<id>/state, /batch/<id>/cancel and the
-// batch's download), on one page that never leaves. The upload part follows
-// upload.js, three files at a time; the batch part draws the batch page's
-// state feed in one list rather than two panes.
+// Bulk transcription (v1.173.0, the settings card v1.174.0): the drop, the
+// files with their titles and chips, the settings card folded under them,
+// Start, the batch where it stands, the download. The same endpoints as the
+// Upload page and the batch page (/upload/submit, the sidecar,
+// /batch/<id>/state, /batch/<id>/cancel and the batch's download), on one
+// page that never leaves. The card is read and written by upload-settings.js,
+// shared with the Upload page; the upload part follows upload.js, three
+// files at a time; the batch part draws the batch page's state feed in one
+// list rather than two panes.
 
 (function () {
   "use strict";
@@ -14,7 +17,8 @@
   var section = document.getElementById("bulk-batch");
   var dropBox = document.getElementById("bulk-drop");
   var picker = document.getElementById("picker");
-  if (!section || !picker) { return; }
+  if (!section || !picker || !window.UploadSettings) { return; }
+  var Card = window.UploadSettings;
 
   var chosen = [];
   var list = document.getElementById("chosen");
@@ -23,7 +27,10 @@
   var problem = document.getElementById("submit-problem");
   var progress = document.getElementById("progress");
   var drop = document.getElementById("drop");
+  var fold = document.getElementById("bulk-settings");
+  var line = document.getElementById("bulk-settings-line");
 
+  function by(id) { return document.getElementById(id); }
   function escape(text) {
     return String(text === undefined || text === null ? "" : text)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -43,6 +50,98 @@
   }
   function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
+  // The settings: the batch's, or one file's own ---------------------------------
+  //
+  // As on the Upload page: a file's own start as null, meaning "same as the
+  // batch", and a copy is taken only when somebody unticks the box, so a
+  // file that follows the batch keeps following it when the batch changes.
+  var batchSettings = null;
+  var railFor = null;
+
+  function settings() {
+    if (railFor === null) { batchSettings = Card.read(); }
+    return batchSettings || Card.read();
+  }
+  function settingsFor(one) { return one.own || settings(); }
+
+  function showBatch() {
+    railFor = null;
+    by("rail-heading").textContent = "Batch settings";
+    by("back-to-batch").hidden = true;
+    by("use-batch-line").hidden = true;
+    by("file-title-line").hidden = true;
+    Card.enable(true);
+    Card.write(batchSettings || Card.read());
+    draw();
+  }
+
+  function showFile(index) {
+    railFor = index;
+    var one = chosen[index];
+    by("rail-heading").textContent = one.title;
+    by("back-to-batch").hidden = false;
+    by("use-batch-line").hidden = false;
+    by("file-title-line").hidden = false;
+    by("file-title").value = one.title;
+    by("use-batch").checked = !one.own;
+    Card.enable(!!one.own);
+    Card.write(one.own || settings());
+    fold.open = true;
+    draw();
+    fold.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // Whatever the card is showing, keep it in the right place.
+  function remember() {
+    if (railFor === null) { batchSettings = Card.read(); }
+    else if (chosen[railFor] && chosen[railFor].own) { chosen[railFor].own = Card.read(); }
+    sayLine();
+  }
+  Card.onChange(remember);
+
+  by("back-to-batch").addEventListener("click", showBatch);
+  by("use-batch").addEventListener("change", function () {
+    var one = chosen[railFor];
+    if (!one) { return; }
+    one.own = this.checked ? null : Card.copyOf(settings());
+    Card.enable(!this.checked);
+    Card.write(one.own || settings());
+    draw();
+  });
+  by("file-title").addEventListener("input", function () {
+    var one = chosen[railFor];
+    if (!one) { return; }
+    one.title = this.value;
+    by("rail-heading").textContent = this.value;
+    var card = list.querySelector("li[data-index='" + railFor + "'] input");
+    if (card && card.value !== this.value) { card.value = this.value; }
+  });
+
+  // The one line under Settings: what is set for the batch, and how many
+  // files have their own.
+  function speakersInWords(values) {
+    var speakers = values.speakers;
+    if (!values.diarize) { return "speakers not told apart"; }
+    if (speakers && speakers.exactly) { return "exactly " + speakers.exactly + " speakers"; }
+    if (speakers && speakers.between) { return "between " + speakers.between[0] + " and " + speakers.between[1] + " speakers"; }
+    return "speakers told apart";
+  }
+  function sayLine() {
+    var values = settings();
+    var parts = [
+      speakersInWords(values),
+      values.translate ? "to English" : "not translated",
+      values.language ? "language " + values.language : "language detected"
+    ];
+    if (values.vocabulary && values.vocabulary.join("").trim()) { parts.push("vocabulary"); }
+    if (values.context && values.context.trim()) { parts.push("context"); }
+    if (values.enrich) { parts.push("vision"); }
+    if (values.email_when_done) { parts.push("email when done"); }
+    var own = chosen.filter(function (one) { return one.own && !one.refused; }).length;
+    if (own) { parts.push(plural(own, "file") + " with " + (own === 1 ? "its" : "their") + " own"); }
+    line.textContent = parts.join(" · ");
+  }
+
   // The files -------------------------------------------------------------------------
 
   function add(files) {
@@ -53,7 +152,7 @@
       } else if (file.size === 0) {
         refused = "The file is empty";
       }
-      chosen.push({ file: file, title: withoutExtension(file.name), refused: refused });
+      chosen.push({ own: null, file: file, title: withoutExtension(file.name), refused: refused });
     });
     draw();
   }
@@ -65,15 +164,50 @@
     chosen.forEach(function (one, index) {
       var card = document.createElement("li");
       card.className = one.refused ? "card refused" : "card";
-      card.innerHTML =
-        "<strong>" + escape(one.title) + "</strong>" +
-        "<p class='quiet'>" + escape(one.file.name) + " · " + bytes(one.file.size) + "</p>" +
-        (one.refused ? "<p class='problem'>" + escape(one.refused) + "</p>" : "");
+      card.dataset.index = String(index);
+
+      var title = document.createElement("input");
+      title.type = "text";
+      title.value = one.title;
+      title.setAttribute("aria-label", "Title");
+      title.addEventListener("input", function () {
+        one.title = title.value;
+        if (railFor === index) { by("rail-heading").textContent = title.value; by("file-title").value = title.value; }
+      });
+      card.appendChild(title);
+
+      var about = document.createElement("p");
+      about.className = "quiet";
+      about.textContent = one.file.name + " · " + bytes(one.file.size);
+      card.appendChild(about);
+
+      if (one.refused) {
+        var why = document.createElement("p");
+        why.className = "problem";
+        why.textContent = one.refused;
+        card.appendChild(why);
+      } else {
+        // The chip says whether the file follows the batch, and opens the
+        // settings card for that file.
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "pill chip-for" + (railFor === index ? " on" : "");
+        chip.textContent = one.own ? "Own settings" : "Same as batch";
+        chip.title = "Give this file its own settings";
+        chip.addEventListener("click", function () { showFile(index); });
+        card.appendChild(chip);
+      }
+
       var remove = document.createElement("button");
       remove.type = "button";
       remove.className = "plain";
       remove.textContent = "Remove";
-      remove.addEventListener("click", function () { chosen.splice(index, 1); draw(); });
+      remove.addEventListener("click", function () {
+        chosen.splice(index, 1);
+        if (railFor === index) { showBatch(); return; }
+        if (railFor !== null && railFor > index) { railFor -= 1; }
+        draw();
+      });
       card.appendChild(remove);
       list.appendChild(card);
     });
@@ -81,6 +215,7 @@
     start.disabled = !count;
     start.textContent = count ? "Start: transcribe " + plural(count, "file") : "Start";
     hint.hidden = !!count;
+    sayLine();
   }
 
   picker.addEventListener("change", function () { add(picker.files); picker.value = ""; });
@@ -92,25 +227,31 @@
     add(event.dataTransfer.files);
   });
 
-  // Start: the batch is made with the two options and nothing else chosen;
-  // speakers off, no vocabulary, no context, no case, as the page says.
+  // Start: the batch is made with the card's settings; a file with its own
+  // sends them, as on the Upload page. Never a case: the card has no box
+  // for one here.
   start.addEventListener("click", function () {
     var files = usable();
     start.disabled = true;
     problem.hidden = true;
-    var translate = document.getElementById("translate");
+    var batch = Card.copyOf(settings());
+    batch.case = "";
+    batch.recording_type = "";
+    batch.summaries = false;
     fetch("/upload/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") },
       body: JSON.stringify({
-        batch: {
-          diarize: false,
-          translate: !!(translate && translate.checked && !translate.disabled),
-          language: document.getElementById("language").value,
-          vocabulary: [],
-          context: ""
-        },
-        files: files.map(function (one) { return { name: one.file.name, title: one.title, size: one.file.size }; })
+        batch: batch,
+        files: files.map(function (one) {
+          var sent = { name: one.file.name, title: one.title, size: one.file.size };
+          if (one.own) {
+            sent.settings = Card.copyOf(one.own);
+            sent.settings.case = "";
+            sent.settings.recording_type = "";
+          }
+          return sent;
+        })
       })
     }).then(function (answer) {
       return answer.json().then(function (body) {
@@ -136,15 +277,16 @@
     start.hidden = true;
     hint.hidden = true;
     list.hidden = true;
+    fold.hidden = true;
     progress.hidden = false;
     progress.innerHTML = "";
     var lines = {};
     files.forEach(function (one) {
-      var line = document.createElement("li");
-      line.className = "card";
-      line.innerHTML = "<strong>" + escape(one.title) + "</strong><p class='state quiet'>Waiting</p>";
-      progress.appendChild(line);
-      lines[one.key] = line;
+      var row = document.createElement("li");
+      row.className = "card";
+      row.innerHTML = "<strong>" + escape(one.title) + "</strong><p class='state quiet'>Waiting</p>";
+      progress.appendChild(row);
+      lines[one.key] = row;
     });
     function say(one, words, isProblem) {
       var state = lines[one.key].querySelector(".state");
@@ -162,14 +304,14 @@
       return "The upload did not finish. Check the connection and try again.";
     }
     function offerRetry(one) {
-      var line = lines[one.key];
-      if (line.querySelector("button")) { return; }
+      var row = lines[one.key];
+      if (row.querySelector("button")) { return; }
       var again = document.createElement("button");
       again.type = "button";
       again.className = "plain";
       again.textContent = "Try again";
       again.addEventListener("click", function () { again.remove(); waiting.push(one); next(); });
-      line.appendChild(again);
+      row.appendChild(again);
     }
     var waiting = files.slice();
     var running = 0;
@@ -178,7 +320,7 @@
       if (waiting.length || running || done !== files.length) { return; }
       // Every file is up: the drop goes and the batch takes the page.
       dropBox.hidden = true;
-      showBatch(batch);
+      showBatch_(batch);
     }
     function next() {
       if (!waiting.length || running >= AT_ONCE) { finishedIfDone(); return; }
@@ -241,7 +383,7 @@
     return (h ? h + " h " : "") + (whole % 60) + " min";
   }
 
-  function draw(state) {
+  function drawBatch(state) {
     var tally = { done: 0, failed: 0, waiting: 0 };
     rows.innerHTML = "";
     state.recordings.forEach(function (row) {
@@ -264,16 +406,16 @@
     if (state.finished) {
       runningBox.hidden = true;
       doneBox.hidden = false;
-      document.getElementById("bulk-done-heading").textContent = tally.done
+      by("bulk-done-heading").textContent = tally.done
         ? (tally.done === 1 ? "The transcript is ready" : "The " + tally.done + " transcripts are ready")
         : "This batch produced no transcripts";
-      document.getElementById("bulk-done-when").textContent =
+      by("bulk-done-when").textContent =
         (tally.failed ? plural(tally.failed, "file") + " could not be transcribed; each row says why. " : "") +
         "Yours until you sign out or press Done with these.";
-      var doneLink = document.getElementById("bulk-download-done");
+      var doneLink = by("bulk-download-done");
       doneLink.hidden = tally.done === 0;
       doneLink.href = download;
-      document.getElementById("bulk-clear").dataset.batch = batchId;
+      by("bulk-clear").dataset.batch = batchId;
       return;
     }
     doneBox.hidden = true;
@@ -292,13 +434,13 @@
     window.UI.whenVisible().then(function () { return fetch("/batch/" + batchId + "/state", { credentials: "same-origin" }); })
       .then(function (answer) { return answer.json(); })
       .then(function (state) {
-        draw(state);
+        drawBatch(state);
         if (!state.finished) { window.setTimeout(ask, EVERY); } else { asking = false; }
       })
       .catch(function () { window.setTimeout(ask, EVERY); });
   }
 
-  function showBatch(id) {
+  function showBatch_(id) {
     batchId = id;
     section.dataset.batch = id;
     section.hidden = false;
@@ -324,15 +466,19 @@
   });
 
   // Transcribe more: the drop again, the finished batch kept under it.
-  document.getElementById("bulk-more").addEventListener("click", function () {
+  by("bulk-more").addEventListener("click", function () {
     dropBox.hidden = false;
     start.hidden = false;
     list.hidden = false;
+    fold.hidden = false;
     progress.hidden = true;
     chosen = [];
-    draw();
+    showBatch();
     dropBox.scrollIntoView({ block: "start", behavior: "smooth" });
   });
 
-  if (batchId) { showBatch(batchId); }
+  // The card starts on the batch's settings.
+  batchSettings = Card.read();
+  showBatch();
+  if (batchId) { showBatch_(batchId); }
 })();

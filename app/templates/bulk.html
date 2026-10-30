@@ -5,11 +5,13 @@
 
 {% block content %}
   {% comment %}
-    Bulk transcription (Phase 8 chapter 13, amended v1.173.0; the drawing
-    docs/spec/mockups/phase-8-bulk-transcription.html): the drop and two
-    options when nothing runs; the batch where it stands while one does; the
-    download when every file has ended. One page, one script (bulk.js), the
-    batch page's own state feed underneath.
+    Bulk transcription (Phase 8 chapter 13, amended v1.173.0 and v1.174.0;
+    the drawings docs/spec/mockups/phase-8-bulk-transcription.html and
+    phase-8-bulk-transcription-settings.html): the drop, the files with
+    their titles and chips, the settings card folded under them, Start;
+    the batch where it stands while one runs; the download when every file
+    has ended. One page, one script (bulk.js), the settings card shared
+    with the Upload page, the batch page's own state feed underneath.
   {% endcomment %}
   <div class="page workbench upload bulk">
     <header class="page-head">
@@ -52,19 +54,16 @@
           </p>
         </div>
         <ul id="chosen" class="cards"></ul>
-        <div class="bulk-options">
-          <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
-            <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
-          </label>
-          <label class="row" for="language">Spoken language
-            <select id="language">
-              <option value="">Detect it</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-            </select>
-          </label>
-          <span class="muted small">Speakers, vocabulary, a case or a recording type: use <a href="{% url 'upload' %}">Upload files</a> instead.</span>
-        </div>
+        {% comment %}The settings card (v1.174.0), the Upload page's own, folded under the files with one line saying what is set; a file's chip opens it for that file.{% endcomment %}
+        <details id="bulk-settings" class="settings-fold">
+          <summary><b>Settings</b> <span class="muted">(optional)</span> <span class="muted small" id="bulk-settings-line"></span></summary>
+          <p class="muted small" id="bulk-settings-help">
+            Nothing here needs changing for a plain transcript. Set what you
+            want for the batch, or press a file's chip to give that file its
+            own. A case or a recording type: use <a href="{% url 'upload' %}">Upload files</a>.
+          </p>
+          {% include "upload-settings.html" %}
+        </details>
         <div class="dialog">
           <button type="button" id="start" class="primary big" disabled>Start</button>
           <span class="muted small" id="start-hint">Lights when a file is in.</span>
@@ -116,5 +115,6 @@
 
   <script src="{% static 'vendor/tus.min.js' %}"></script>
   <script src="{% static 'clearing.js' %}"></script>
+  <script src="{% static 'upload-settings.js' %}"></script>
   <script src="{% static 'bulk.js' %}"></script>
 {% endblock %}
