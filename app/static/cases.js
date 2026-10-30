@@ -830,8 +830,11 @@
   }
   var open = document.getElementById("new-incident");
   if (open) { open.addEventListener("click", function () { openWith([]); }); }
-  document.querySelectorAll(".choose-myself").forEach(function (button) {
-    button.addEventListener("click", function () { openWith(button.dataset.recordings.trim().split(/\s+/)); });
+  // Delegated (v1.180.0): the strip's forming cards add their own Choose
+  // myself after the page is drawn.
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".choose-myself");
+    if (button && button.dataset.recordings) { openWith(button.dataset.recordings.trim().split(/\s+/)); }
   });
   // The recording page loads this script too and has no incident box (v1.75.1).
   var cancel = document.getElementById("incident-cancel");

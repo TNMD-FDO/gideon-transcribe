@@ -14,6 +14,10 @@
   function mount(host) {
   var caseId = host.dataset.case;
   var proposed = host.dataset.mode === "proposed";
+  // The Incidents tab's strip (Phase 10 chapter 5, v1.180.0): the band
+  // without the spells, a forming lane, cards under it; polled by the minute.
+  var stripMode = host.dataset.mode === "strip";
+  var stripTimer = null;
   var onNotesPage = host.dataset.player === "notes-page";
   var state = { days: [], day: null, span: null, showAll: false, lit: null, open: {}, loaded: false, me: null, unplaced: [], run: null, railOnly: { rail: [], rail_more: 0, rail_all: [] } };
   var pollTimer = null;
@@ -46,7 +50,8 @@
     return { day: p.get("day") || "", from: p.get("from") || "", to: p.get("to") || "" };
   }
   function setAddress(day, span) {
-    if (onNotesPage) { return; }
+    // The Notes page and the Incidents tab's strip keep their own address.
+    if (onNotesPage || stripMode) { return; }
     var p = new URLSearchParams(location.search);
     p.set("tab", proposed ? "proposed" : "notes"); if (!proposed) { p.set("shape", "chronology"); }
     if (day) { p.set("day", day); } else { p.delete("day"); }
@@ -59,10 +64,11 @@
     if (span) { url += "&from=" + encodeURIComponent(hm(span[0])) + "&to=" + encodeURIComponent(hm(span[1])); }
     // While it reads (v1.176.0): the box keeps a height and shows three grey
     // rows, so the page does not jump when the chronology lands.
-    if (!quiet) { host.classList.add("loading"); host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : "Reading the notes...") + "</p><div class='skeleton' aria-hidden='true'><i></i><i></i><i></i></div>"; }
+    if (!quiet) { host.classList.add("loading"); host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : stripMode ? "Reading the clocks..." : "Reading the notes...") + "</p><div class='skeleton' aria-hidden='true'><i></i><i></i><i></i></div>"; }
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
       state.unplaced = told.unplaced || []; state.run = told.run || null;
+      state.most = told.most || 20; state.mayMake = told.may_make !== false;
       // The rail on its own (v1.170.1): the recordings to place, day or no day.
       state.railOnly = { rail: told.rail || [], rail_more: told.rail_more || 0, rail_all: told.rail_all || [] };
       state.lit = null; if (!quiet) { state.open = {}; }
@@ -76,6 +82,7 @@
     var d = state.day;
     host.classList.remove("loading");
     if (proposed) { drawProposed(d); return; }
+    if (stripMode) { drawStrip(d); return; }
     if (!d) {
       // No day yet (v1.170.1): the message, and the rail under it so the
       // first placing can happen from here.
@@ -95,6 +102,95 @@
     html += spellsHtml(d);
     host.innerHTML = html;
     wire();
+  }
+
+  // The Incidents tab's strip (Phase 10 chapter 5, v1.180.0): the day chips,
+  // the rail, the ruler without its drag track, the band, the notes lane,
+  // the incidents lane and the forming lane; the cards under the strip; a
+  // read by the minute while the tab is open, so a note written elsewhere
+  // shows here.
+  function drawStrip(d) {
+    if (stripTimer) { window.clearTimeout(stripTimer); stripTimer = null; }
+    if (!d) {
+      host.innerHTML = "<p class='muted small'>No video of this case is on the clock yet. A video whose clock was read places itself; the rest are placed on the Notes tab's chronology, by a drag or a typed time.</p>";
+      return;
+    }
+    host.innerHTML = dayChips() + ruler(d) + band(d) + notesLane(d) + incidentsLane(d) + formingLane(d) + rail(d);
+    wire();
+    cards(d);
+    stripTimer = window.setTimeout(function () { if (document.body.contains(host) && state.day) { load(state.day.date, null, true); } }, 60000);
+  }
+  function dayChips() {
+    if (!state.days.length) { return ""; }
+    var html = "<div class='days'><span class='lbl'>Days</span>";
+    state.days.forEach(function (one) {
+      var words = esc(one.words) + " · " + plural(one.videos, "video") + (one.notes ? " · " + plural(one.notes, "note") : "") + (one.forming ? " · " + one.forming + " forming" : "");
+      html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + "'>" + words + "</button>";
+    });
+    return html + "</div>";
+  }
+  function formingLane(d) {
+    var runs = d.hints || [];
+    if (!runs.length || !d.incidents_on) { return ""; }
+    var html = "<div class='form-lane' id='chron-forming'>";
+    runs.forEach(function (h) {
+      var left = x(h.from, d), width = Math.max(1, x(h.to, d) - left);
+      var faint = h.faint || h.declined;
+      var words = faint ? plural(h.cameras, "camera") + (h.declined ? ", not these" : "") : "Forming · " + esc(h.words);
+      var title = esc(h.words + (h.declined ? " · put away with Not these" : ""));
+      // The bracket, then its words centred on it and kept inside the strip,
+      // as the chronology's own brackets are.
+      html += "<span class='br" + (faint ? " faint" : "") + "' style='left: " + left + "%; width: " + width + "%' title='" + title + "'></span>" +
+        "<span class='hl" + (faint ? " faint" : "") + "' style='left: " + inside(left + width / 2) + "%' title='" + title + "'><b>" + words + "</b>" +
+        (!faint && state.mayMake ? "<button type='button' class='mk' data-make='" + h.from + "," + h.to + "' title='Make an incident from this span: the picker opens with these videos ticked'>Make it</button>" : "") + "</span>";
+    });
+    return html + "<span class='lbl'>forming</span></div>";
+  }
+  // The cards under the strip: the day's forming brackets with notes, not
+  // declined and not already an offer's card, three cards at most with the
+  // offers counted, the most noted first.
+  function cards(d) {
+    var box = document.querySelector(host.dataset.cards || "#forming-cards");
+    if (!box) { return; }
+    box.querySelectorAll("[data-forming]").forEach(function (one) { one.remove(); });
+    var have = {}; box.querySelectorAll("[data-key]").forEach(function (one) { have[one.dataset.key] = true; });
+    var worth = (d.hints || []).filter(function (h) { return h.notes && !h.declined && !have[h.key]; });
+    worth.sort(function (a, b) { return b.notes - a.notes; });
+    var room = Math.max(0, 3 - Object.keys(have).length);
+    var shown = worth.slice(0, room), more = worth.length - shown.length;
+    shown.forEach(function (h) { box.insertAdjacentHTML("beforeend", cardHtml(h, d)); });
+    if (more > 0) { box.insertAdjacentHTML("beforeend", "<p class='muted small forming-more m0' data-forming='more'>and " + more + " more forming on the strip.</p>"); }
+    box.querySelectorAll("[data-forming] [data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1])); }); });
+    box.querySelectorAll("[data-forming] [data-decline]").forEach(function (b) { b.addEventListener("click", function () { decline(b.dataset.decline); }); });
+    shown.forEach(function (h) { var card = box.querySelector("[data-forming='" + h.key + "']"); if (card) { sittingBar(card, h.ids); } });
+    // The box keeps its margin only while it holds a card.
+    box.hidden = !box.children.length;
+  }
+  function cardHtml(h, d) {
+    var bars = d.bars.filter(function (b) { return h.ids.indexOf(b.id) >= 0; });
+    var names = bars.map(function (b) { return esc(shortName(b)); });
+    var span = (h.to - h.from) || 1;
+    var mini = "<div class='mini' aria-hidden='true'>";
+    bars.slice(0, 3).forEach(function (b, i) {
+      var l = Math.max(0, (b.from - h.from) * 100 / span), w = Math.max(2, (Math.min(b.to, h.to) - Math.max(b.from, h.from)) * 100 / span);
+      mini += "<i style='left: " + l + "%; width: " + w + "%; top: " + (4 + i * 6) + "px; background: " + paint(b.colour) + "'></i>";
+    });
+    (d.marks || []).forEach(function (m) { if (m.seconds >= h.from && m.seconds <= h.to) { mini += "<em style='left: " + ((m.seconds - h.from) * 100 / span) + "%; background: " + paint(m.colour) + "'></em>"; } });
+    mini += "</div>";
+    var list = names.length > 3 ? names.slice(0, 3).join(", ") + " and " + (names.length - 3) + " more" : names.join(", ");
+    return "<div class='card forming-card' data-forming='" + esc(h.key) + "' data-most='" + state.most + "'>" +
+      "<div class='h'><b>Forming · " + hm(h.from) + " to " + hm(h.to) + " on " + esc(d.words) + "</b><span class='pill small'>" + plural(h.notes, "note") + "</span></div>" + mini +
+      "<div class='small muted'>" + list + " ran together, and the notes gather here. <span data-sitting></span></div>" +
+      "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "'>Make it</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
+      "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; the bracket stays faint on the strip'>Not these</button></div></div>";
+  }
+  function decline(key) {
+    var body = new FormData();
+    body.append("key", key);
+    body.append("csrfmiddlewaretoken", cookie("csrftoken"));
+    fetch(host.dataset.decline, { method: "POST", credentials: "same-origin", headers: { "Accept": "application/json", "X-CSRFToken": cookie("csrftoken") }, body: body })
+      .then(function () { load(state.day ? state.day.date : "", null, true); })
+      .catch(function () { window.UI.toast("That did not work. Try again.", { problem: true, icon: "warning" }); });
   }
 
   // The Proposed events tab (v1.169.0): the run's button and words, then
@@ -216,12 +312,16 @@
   }
 
   function rail(d) {
-    if (!d.rail.length && !d.rail_more) { return ""; }
+    // The strip's rail (chapter 5) holds the videos with no clock; the
+    // chronology's rail every noted recording.
+    var rows = d.rail, more = d.rail_more;
+    if (stripMode) { rows = (d.rail_all || d.rail).filter(function (one) { return one.video; }); more = 0; }
+    if (!rows.length && !more) { return ""; }
     var html = "<div class='rail' id='chron-rail'><span>Not on the clock yet:</span>";
-    d.rail.forEach(function (one) {
+    rows.forEach(function (one) {
       html += "<button type='button' class='chip' draggable='true' data-rail='" + one.id + "' title='Drag onto the ruler, or press to type its time'><i></i>" + esc(one.title) + " · " + plural(one.notes, "note") + "</button>";
     });
-    if (d.rail_more) { html += "<span class='tiny'>and " + d.rail_more + " more with notes</span>"; }
+    if (more) { html += "<span class='tiny'>and " + more + " more with notes</span>"; }
     html += "<button type='button' class='small' data-act='sheet' style='margin-left: auto'>Place recordings</button></div>";
     return html;
   }
@@ -235,6 +335,8 @@
     var span = d.ruler.to - d.ruler.from, ticks = 6;
     for (var i = 0; i <= ticks; i++) { var at = d.ruler.from + span * i / ticks; html += "<span class='tick' style='left: " + (100 * i / ticks) + "%'>" + hm(at) + "</span>"; }
     html += "</div>";
+    // The strip has no drag: it reads, the Notes tab looks closer.
+    if (stripMode) { return html; }
     // The drag track (v1.164.1): a drag across it looks closer at the span;
     // a chip from the rail dropped on it places the recording there.
     html += "<div class='track' id='chron-track' title='Drag across a span to look closer; drop a recording from the rail here to place it'><span class='words'>" +
@@ -683,6 +785,13 @@
     show();
     return;
   }
+  // The Incidents tab's strip reads at once and keeps its own global, so
+  // the Notes tab's host, mounted first, keeps CaseChronology.
+  if (stripMode) {
+    window.IncidentStrip = { reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", null, true); } } };
+    load("", null);
+    return;
+  }
   window.CaseChronology = { show: show, reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", state.span); } } };
 
   var toggle = document.getElementById("notes-shape");
@@ -719,4 +828,6 @@
   if (notesHost) { mount(notesHost); }
   var proposedHost = document.getElementById("case-proposed");
   if (proposedHost) { mount(proposedHost); }
+  var stripHost = document.getElementById("incident-strip");
+  if (stripHost) { mount(stripHost); }
 })();

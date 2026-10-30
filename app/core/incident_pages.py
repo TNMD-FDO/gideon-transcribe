@@ -887,7 +887,11 @@ def decline_offer(request: HttpRequest, case_id) -> HttpResponse:
     key = request.POST.get("key", "")[:2000]
     if key:
         incidents.decline(case, key)
-    return redirect("case", case.pk)
+    # The strip's Not these (v1.180.0) asks for JSON and redraws in place;
+    # the offer's form lands back on the Incidents tab.
+    if "application/json" in request.headers.get("Accept", ""):
+        return JsonResponse({"ok": True})
+    return redirect(f"{reverse('case', args=[case.pk])}?tab=incidents")
 
 
 @login_required

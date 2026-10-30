@@ -331,7 +331,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
         else 0
     )
     documents_count = documents.count(case) if documents.on() else 0
-    incidents_context = _incidents_context(case)
+    incidents_context = _incidents_context(case, strip=tab == "incidents")
     case_tabs = case_bar.bar(
         case,
         on=tab,
@@ -469,7 +469,10 @@ def notes_export(request: HttpRequest, case_id) -> HttpResponse:
     return exports.hand_over(body, notes.export_name(case), exports.WORD_TYPE)
 
 
-def _incidents_context(case: Case) -> dict:
+def _incidents_context(case: Case, *, strip: bool = False) -> dict:
+    """The Incidents tab's rows and offers; the strip's forming count only
+    when the tab in hand is Incidents, since the context is built for every
+    tab and the count reads the case's notes."""
     from core import incidents
 
     if not incidents.on():
@@ -496,11 +499,26 @@ def _incidents_context(case: Case) -> dict:
                 "elsewhere": elsewhere.incident.name if elsewhere else "",
             }
         )
+    from core import case_chronology, incident_strip
+
     return {
         "incidents_on": True,
         "incident_rows": incidents.strip_rows(case),
         "incident_offers": incidents.offers(case),
         "incident_videos": videos,
+        # The strip (Phase 10 chapter 5, v1.180.0): the lead's forming
+        # count, and the videos table open only while a video is neither
+        # on the clock nor in an incident.
+        "incident_forming": (
+            incident_strip.forming_count(case)
+            if strip and incidents.proposed_on()
+            else 0
+        ),
+        "incident_videos_open": any(
+            case_chronology.clock_of(one["recording"])[0] is None
+            and not one["elsewhere"]
+            for one in videos
+        ),
         # The sitting's column and the offer's bar (Phase 8 chapter 10).
         "sitting_on": sitting.available(),
         "incident_most": incidents.most_cameras(),

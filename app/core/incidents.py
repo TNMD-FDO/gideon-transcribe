@@ -440,8 +440,26 @@ def _chained(spans: list) -> list[list]:
     return groups
 
 
+def offer_key(ids) -> str:
+    """The key Not these keeps for a set of videos, whether the set came
+    from the clocks' overlap (the offer) or from the strip's forming
+    bracket (Phase 10 chapter 5): one key, so declining either declines both."""
+    return "new:" + ",".join(sorted(str(one) for one in ids))
+
+
 def _new_key(recordings) -> str:
-    return "new:" + ",".join(sorted(str(one.pk) for one in recordings))
+    return offer_key(one.pk for one in recordings)
+
+
+def taken_ids(case) -> set:
+    """The recordings already a camera of one of the case's incidents, as
+    strings: the offer and the strip's forming runs leave them out."""
+    return {
+        str(one)
+        for one in IncidentCamera.objects.filter(incident__case=case).values_list(
+            "recording_id", flat=True
+        )
+    }
 
 
 def _add_key(incident: Incident, recording) -> str:

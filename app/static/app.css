@@ -3799,3 +3799,35 @@ nav.rail { view-transition-name: rail; }
 .regular { font-weight: 400 !important; }
 .pad20 { padding: 20px !important; }
 
+
+/* The Incidents tab as a strip (Phase 10 chapter 5, v1.180.0): the chronology
+   without the spells, a forming lane under the incidents lane, day chips in
+   place of the Date strip bars, and the forming cards under the strip. */
+.chron.strip-host { gap: 6px; }
+.chron .days { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: var(--t-small); }
+.chron .days .lbl { color: var(--muted); margin-right: 2px; }
+.chron .days button { font: inherit; font-size: var(--t-small); padding: 1px 10px; border-radius: 999px; border: 1px solid transparent; background: var(--surface-2); color: var(--muted); cursor: pointer; }
+.chron .days button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.chron .days button:hover { border-color: var(--accent); }
+.chron .form-lane { position: relative; height: 20px; margin-top: 2px; }
+.chron .form-lane .br { position: absolute; top: 2px; height: 12px; border: 2px dashed var(--accent); border-top: 0; border-radius: 0 0 4px 4px; }
+.chron .form-lane .br.faint { border-color: var(--line); }
+.chron .form-lane .hl { position: absolute; top: 5px; transform: translateX(-50%); display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; background: var(--surface); padding: 0 4px; }
+.chron .form-lane .hl b { font-size: var(--t-label); color: var(--accent); font-weight: 600; }
+.chron .form-lane .hl.faint b { color: var(--muted); font-weight: 500; }
+.chron .form-lane .mk { font-size: var(--t-label); line-height: 14px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); cursor: pointer; font-family: inherit; }
+.chron .form-lane .mk:hover { background: var(--accent-soft); }
+.chron .form-lane .lbl { position: absolute; right: 0; top: 1px; font-size: var(--t-label); color: var(--muted); }
+.forming-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+.forming-cards:empty { display: none; }
+.forming-card { border: 1px dashed var(--accent); display: flex; flex-direction: column; gap: 6px; }
+.forming-card .h { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.forming-card .h b { font-size: var(--t-body); }
+.forming-card .mini { position: relative; height: 24px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.forming-card .mini i { position: absolute; height: 5px; border-radius: 3px; }
+.forming-card .mini em { position: absolute; width: 5px; height: 5px; border-radius: 50%; top: 17px; }
+.forming-card .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.forming-card .sit { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+.forming-card .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
+.forming-card .sit.over i { background: var(--danger); } .forming-card .sit.near i { background: var(--warn); }
+.forming-more { grid-column: 1 / -1; }

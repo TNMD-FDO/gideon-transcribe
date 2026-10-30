@@ -17,6 +17,22 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.180.0, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Incidents tab as a strip (Phase 10 chapter 5, the first of two releases; the drawing `docs/spec/mockups/phase-10-incidents-tab.html` stands).
+
+- **The strip.** At the top of a case's Incidents tab, the day's videos on their clocks as the Notes tab's chronology draws them, the notes lane, the incidents lane, and a new **forming lane**: a dashed bracket wherever two or more videos overlap on the clock with notes gathering under them, with **Make it**, which opens the picker with those videos ticked. A run with no notes is drawn faint and makes nothing. The days are chips with their counts; the tab opens on the day with the most forming. The strip reads again each minute while the tab is open, so a note written elsewhere shows here.
+- **The forming cards.** Under the strip, beside the clocks' offers: the day's forming brackets with notes, three cards in all, the most noted first, each with its span, its videos, the note marks, the sitting bar, Make it, Choose myself and Not these. Not these on a forming one keeps the same key as the clocks' offer for those videos, so either puts both away.
+- **The lead** counts incidents and forming ones; the videos table folds under "Videos in this case" and opens by itself only while a video is neither on the clock nor in an incident.
+- **Not these** from the offer's form lands back on the Incidents tab.
+
+The glossary gains **Forming**. No new setting: Incidents proposed governs the lane's buttons and the cards. Placing a clockless video by its sound is the second release.
+
 ## v1.179.1, 2026-10-30
 
 ```

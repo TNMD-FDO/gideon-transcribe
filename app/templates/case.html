@@ -369,13 +369,23 @@
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px">
             <p class="lead grow m0">
-              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}.{% else %}No incident yet.{% endif %}
-              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.
+              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}{% if incident_forming %}, {{ incident_forming }} forming{% endif %}.
+              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.{% if incident_forming %} A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press.{% endif %}
             </p>
             <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
           </div>
+          {% comment %}
+            The strip (Phase 10 chapter 5, v1.180.0; the drawing
+            docs/spec/mockups/phase-10-incidents-tab.html): the chronology's
+            band without the spells, drawn by chronology.js in its strip
+            mode from strip.json, with the forming lane and, under it, the
+            forming cards beside the clocks' offers. Not these on either
+            keeps the same key.
+          {% endcomment %}
+          <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-cards="#forming-cards" data-export=""></div>
+          <div class="forming-cards" id="forming-cards">
           {% for offer in incident_offers %}
-            <div class="card inc-offer mb10">
+            <div class="card inc-offer" data-key="{{ offer.key }}">
               <span class="pill small offer">Offer</span>
               <span class="small"><b>{{ offer.line }}</b>
                 {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
@@ -413,6 +423,7 @@
               </span>
             </div>
           {% endfor %}
+          </div>
           {% if incident_rows %}
             <div class="tbl-wrap">
               <table class="tbl as-cards" id="incidents">
@@ -444,8 +455,10 @@
             </div>
           {% endif %}
           {% with loose=incident_videos %}
-            <h2 style="margin-top: 26px; font-size: var(--t-heading)">Videos in this case</h2>
-            <p class="muted small m0 mb8">Each video, the clock read from its picture where it carries one, and the incident it is in. A video with no clock is synced on the incident page, by sound or by hand.</p>
+            {% comment %}Folded (v1.180.0) while every video is on the clock or in an incident; open when one is neither.{% endcomment %}
+            <details class="mt18" id="case-videos"{% if incident_videos_open %} open{% endif %}>
+            <summary class="btn small">Videos in this case · {{ loose|length }}</summary>
+            <p class="muted small m0 mb8 mt8">Each video, the clock read from its picture where it carries one, and the incident it is in. A video with no clock is synced on the incident page, by sound or by hand.</p>
             {% if loose %}
               <table class="tbl">
                 <thead><tr><th>Recording</th><th>Clock</th><th>Incident</th></tr></thead>
@@ -462,6 +475,7 @@
             {% else %}
               <p class="muted">This case has no videos yet.</p>
             {% endif %}
+            </details>
           {% endwith %}
         {% elif tab == "speakers" %}
           {% comment %}

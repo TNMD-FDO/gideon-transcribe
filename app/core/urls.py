@@ -371,6 +371,12 @@ urlpatterns = [
         case_chronology_pages.day,
         name="case-chronology",
     ),
+    # The Incidents tab's strip (Phase 10 chapter 5, v1.180.0).
+    path(
+        "case/<uuid:case_id>/incidents/strip.json",
+        case_chronology_pages.strip,
+        name="case-incident-strip",
+    ),
     path(
         "case/<uuid:case_id>/chronology/running",
         case_chronology_pages.running,

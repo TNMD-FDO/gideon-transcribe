@@ -24,6 +24,7 @@ Nothing in this document is office-specific. No new environment key, no new serv
 2. An incident from a span (the second release)
 3. Deferred and ruled out
 4. Proposed events and the comparison over the whole case
+5. The Incidents tab as a strip
 
 Appendix A. Audit rows added in Phase 10
 Appendix B. Settings added or changed in Phase 10
@@ -178,6 +179,38 @@ Written 2026-10-29 from the maintainer's ask of the same day, after v1.167.0: th
 
 - The second and third releases' addresses, the lane's drawing and the layer's filters, within the drawing.
 - Whether the case's chronology entry and the Notes page show the origin's words (a later release).
+
+## 5. The Incidents tab as a strip
+
+Asked 2026-10-30 ("show proposed incidents as they build from the notes, a timeline view that updates with notes, suggest incidents from videos with seen clocks and matching sound profiles, not congested, intuitive and useful"), drawn in `docs/spec/mockups/phase-10-incidents-tab.html` and agreed the same day. Two releases: the strip with the forming lane and cards (v1.180.0), then placing by sound.
+
+### Principles
+
+1. **Three things the app has are joined, nothing new is invented.** The band of chapter 1 (the videos on their clocks), the brackets of chapter 1 (two or more videos overlapping under notes, with Make an incident) and the clocks' offer of Phase 6 chapter 1 are drawn on one strip at the top of the Incidents tab. The strip reads the day as the Notes tab's Chronology shape reads it, less the spells, so it changes as notes are written and as videos are placed.
+2. **Nothing is made without a press.** A forming bracket and its card say what overlaps and where the notes gather; Make it opens chapter 2's picker with those videos ticked; Choose myself opens New incident's dialog with them ticked; Not these puts the one away.
+3. **Congestion is answered by the lanes' rules.** The band keeps one height by its three shapes; a bracket needs notes to earn a card; a declined bracket goes faint; cards stop at three.
+
+### Words
+
+**Forming** (new, `CONTEXT.md`). The lanes are "the notes lane", "the incidents lane" and "the forming lane". The strip's chips are "the days".
+
+### The strip (v1.180.0)
+
+- **Where.** Under the tab's lead and New incident, above the forming cards and the incidents table. The videos table folds under "Videos in this case · N" and opens by itself only while a video is neither on the clock nor in an incident.
+- **The days.** One chip per day with a video on the clock (by its clock, by hand or from its file; a recording placed by its day alone has no hour and no bar), each with its videos, notes and forming counts; the tab opens on the day with the most forming, then the most notes, then the latest. A press changes the day; the address is not written.
+- **The day.** The rail of chapter 1 (recordings with notes and no clock, with Place recordings); the ruler fitted to the day's videos, not its notes, with no drag track; the band in its three shapes; the notes lane; the incidents lane of chapter 2; and the **forming lane**: one dashed bracket per run of two or more overlapping videos, with its words ("3 cameras, 7 notes, 20:24 to 20:53") and **Make it** when notes gather under it; a run with no notes is drawn faint with its camera count and no button; a declined run is drawn faint and says so on hover.
+- **The cards.** Under the strip, in one row of cards with the clocks' offers (which keep their card and their key): each forming bracket of the day in view with notes, not declined and not already an offer, the most noted first, three cards in all with the offers counted; more than that, one line "and N more forming on the strip". A card: "Forming · 20:24 to 20:53 on 6 Nov 2025", the note count, a small bar of the videos in the span with the note marks, their short names, the sitting bar of Phase 8 chapter 10 for those videos, Make it, Choose myself, Not these.
+- **One key.** A forming run's key is the clocks' offer's key for the same videos (`new:` and the ids), so Not these on either puts both away, kept on the case as the offers are. The lead's count ("1 incident, 2 forming") is over every day.
+- **Reading by the minute.** While the tab is open the strip reads again each minute, quietly, so a note written on the Notes tab or a video landing shows without a reload.
+- **Settings.** None added. Incidents proposed governs the forming lane's buttons and the cards; Most cameras in an incident the picker; Match by sound the sound line of the second release.
+
+### Placing by sound (the second release)
+
+A video with no clock in its picture sits on the rail. Match by sound, which serves the incident page, runs for it on the media worker against the placed videos of its day (its file time first, then the day): a clear match (the matcher's spike, not a plateau) is one line on the rail, "<video> has no clock in its picture. Its sound matches <video> from hh:mm:ss", with **Place it there** and **Not this**. Placing it writes the recording's clock as *by sound* (ADR 0027 widened: the match's strength and the video it followed kept), and the bars and brackets redraw. Sound places a video; the notes form the incident. Held for its own release with its migration.
+
+### Left to the build
+
+The minute's read while the tab is hidden (the browser throttles it, which is fine); the strip on a case with hundreds of days (the chips wrap; a scroll if it ever matters).
 
 ## Appendix A. Audit rows added in Phase 10
 

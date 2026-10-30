@@ -279,10 +279,16 @@ def day_of(
     date: dt.date,
     span: tuple[float, float] | None = None,
     rows: list[dict] | None = None,
+    strip: bool = False,
 ) -> dict:
     """Everything the page draws for one day (and a span of it): the rail,
     the ruler, the band in its shape, the marks, the hints and the spells.
-    Given rows in the notes' shape, it lays those out instead (chapter 4)."""
+    Given rows in the notes' shape, it lays those out instead (chapter 4).
+
+    For the Incidents tab's strip (chapter 5, v1.180.0) the ruler fits the
+    day's videos rather than its notes, and the hints keep every run of
+    overlapping videos with its key, so the strip can draw the faint ones.
+    """
     recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
     colours: dict = {}
@@ -354,6 +360,8 @@ def day_of(
     last = max((row["seconds"] for row in entries), default=None)
     if span is not None:
         ruler = {"from": span[0], "to": span[1]}
+    elif strip and bars:
+        ruler = {"from": min(b["from"] for b in bars), "to": max(b["to"] for b in bars)}
     elif first is not None:
         pad = max(300.0, (last - first) * 0.05)
         ruler = {"from": max(0.0, first - pad), "to": min(DAY_SECONDS, last + pad)}
@@ -364,7 +372,19 @@ def day_of(
     if ruler["to"] - ruler["from"] < 600:
         ruler["to"] = min(DAY_SECONDS, ruler["from"] + 600)
     shape, lanes, folded, coverage = _band(bars, ruler)
-    hints = _hints(bars, entries)
+    if strip:
+        # The strip's runs are over the loose videos only (chapter 5): a video
+        # already a camera of an incident is drawn in the incidents lane and
+        # forms nothing, as the clocks' offer has it.
+        taken = incidents.taken_ids(case)
+        hints = _hints(
+            [b for b in bars if b["id"] not in taken],
+            entries,
+            every=True,
+            declined=frozenset(case.declined_offers or []),
+        )
+    else:
+        hints = _hints(bars, entries)
     # The case's incidents on the day (chapter 2), and each entry's place
     # against them: an event of one, or inside one on a camera not in it.
     on_day = _incidents_on_day(case, date, span, placements)
@@ -543,9 +563,8 @@ def _most_overlapping(bars: list[dict]) -> int:
     return most
 
 
-def _hints(bars: list[dict], entries: list[dict]) -> list[dict]:
-    """Wherever two or more videos overlap with marks under them: the
-    bracket's span and counts. Overlapping videos are merged into runs."""
+def _runs(bars: list[dict]) -> list[dict]:
+    """Overlapping videos merged into runs: each a span and the ids in it."""
     videos = sorted((b for b in bars if b["video"]), key=lambda b: b["from"])
     runs: list[dict] = []
     for bar in videos:
@@ -554,21 +573,42 @@ def _hints(bars: list[dict], entries: list[dict]) -> list[dict]:
             runs[-1]["ids"].add(bar["id"])
         else:
             runs.append({"from": bar["from"], "to": bar["to"], "ids": {bar["id"]}})
+    return [run for run in runs if len(run["ids"]) > 1]
+
+
+def _hints(
+    bars: list[dict],
+    entries: list[dict],
+    *,
+    every: bool = False,
+    declined: frozenset = frozenset(),
+) -> list[dict]:
+    """Wherever two or more videos overlap with marks under them: the
+    bracket's span and counts. Overlapping videos are merged into runs.
+
+    On the Incidents tab's strip (Phase 10 chapter 5, v1.180.0) `every`
+    keeps the runs with no notes too, drawn faint, and each run carries the
+    offer's key (the same key Not these keeps) and whether it was declined.
+    """
     out = []
-    for run in runs:
-        if len(run["ids"]) < 2:
-            continue
+    for run in _runs(bars):
         count = sum(1 for row in entries if run["from"] <= row["seconds"] <= run["to"])
-        if not count:
+        if not count and not every:
             continue
+        ids = sorted(run["ids"])
+        key = incidents.offer_key(ids)
         out.append(
             {
                 "from": run["from"],
                 "to": run["to"],
-                "cameras": len(run["ids"]),
+                "cameras": len(ids),
+                "ids": ids,
                 "notes": count,
+                "key": key,
+                "declined": key in declined,
+                "faint": not count,
                 "words": (
-                    f"{len(run['ids'])} cameras, {count} "
+                    f"{len(ids)} cameras, {count} "
                     f"note{'' if count == 1 else 's'}, "
                     f"{hm(run['from'])} to {hm(run['to'])}"
                 ),

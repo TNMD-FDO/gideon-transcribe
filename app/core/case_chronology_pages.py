@@ -71,6 +71,36 @@ def day(request: HttpRequest, case_id) -> JsonResponse:
 
 
 @login_required
+def strip(request: HttpRequest, case_id) -> JsonResponse:
+    """The Incidents tab's strip (Phase 10 chapter 5, v1.180.0): the days
+    with a video on the clock, and one day read for the strip (the day asked
+    for, else the one with the most forming), with the forming brackets
+    keyed and the faint runs kept."""
+    from core import incident_strip
+
+    _on_or_404()
+    case = _their_case(request, case_id)
+    days = incident_strip.days(case)
+    asked = _date(request.GET.get("day", ""))
+    if asked is None:
+        asked = incident_strip.pick_day(days)
+    reading = case_chronology.day_of(case, asked, strip=True) if asked else None
+    return JsonResponse(
+        {
+            "days": days,
+            "day": reading,
+            "me": request.user.pk,
+            "may_place": True,
+            "may_make": incidents.proposed_on(),
+            "most": incidents.most_cameras(),
+            "fold_notes": case_chronology.FOLD_NOTES,
+            "bars_most": case_chronology.BARS_MOST,
+            **case_chronology.rail_of(case),
+        }
+    )
+
+
+@login_required
 def running(request: HttpRequest, case_id) -> JsonResponse:
     """The recordings running at a moment of a day: the Coverage lane's press."""
     _on_or_404()

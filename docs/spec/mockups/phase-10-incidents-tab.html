@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab as a strip</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --sys: #6b7480; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .tabs span { padding: 6px 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs span.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .lead { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .lead p { margin: 0; }
+
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px 8px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+  .days { display: flex; gap: 6px; font-size: 12px; flex-wrap: wrap; align-items: center; }
+  .days span { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .days span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .days .lbl { background: none; padding: 0; margin-right: 4px; }
+  .ruler { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: 10px; color: var(--muted); }
+  .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .band { position: relative; display: grid; gap: 4px; padding: 6px 0 2px; }
+  .band .bar { position: relative; height: 11px; }
+  .band .bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; display: block; }
+  .band .bar i.dashed { border: 1px dashed var(--sys); background: transparent; top: -1px; bottom: -1px; }
+  .band .bar b { position: absolute; top: -1px; font-size: 10px; font-weight: 600; color: var(--surface); padding-left: 6px; line-height: 12px; white-space: nowrap; }
+  .band .bar b.out { color: var(--muted); }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); }
+  .lane { position: relative; height: 12px; }
+  .lane i { position: absolute; top: 2px; width: 7px; height: 7px; border-radius: 50%; }
+  .lane .lbl, .inc-lane .lbl, .forming .lbl { position: absolute; right: 0; top: 0; font-size: 10px; color: var(--muted); }
+  .inc-lane { position: relative; height: 18px; }
+  .inc-lane .br { position: absolute; top: 2px; height: 12px; border: 2px solid var(--inc); border-top: 0; border-radius: 0 0 4px 4px; background: var(--inc-soft); }
+  .inc-lane .br b { position: absolute; left: 6px; top: -2px; font-size: 10px; color: var(--inc); white-space: nowrap; font-weight: 600; }
+  .forming { position: relative; height: 20px; }
+  .forming .br { position: absolute; top: 2px; height: 12px; border: 2px dashed var(--accent); border-top: 0; border-radius: 0 0 4px 4px; }
+  .forming .br.faint { border-color: var(--line); }
+  .forming .br b { position: absolute; left: 6px; top: -2px; font-size: 10px; color: var(--accent); white-space: nowrap; font-weight: 600; }
+  .forming .br.faint b { color: var(--muted); font-weight: 500; }
+  .rail { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
+  .rail .pill { font-size: 10px; }
+
+  /* the forming cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+  .card.forming-card { border-style: dashed; border-color: var(--accent); }
+  .card .h { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+  .card .mini { position: relative; height: 24px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .card .mini i { position: absolute; height: 5px; border-radius: 3px; }
+  .card .mini em { position: absolute; width: 5px; height: 5px; border-radius: 50%; top: 17px; }
+  .card .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .sit { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+  .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
+
+  table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .tbl th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .tbl td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  details { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 6px 12px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .quiet { color: var(--muted); font-size: 13px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 10, a chapter for the Incidents tab · a drawing for the maintainer's word · 2026-10-30</span>
+    <h1>The Incidents tab as a strip: incidents forming from the notes, and videos placed by sound</h1>
+    <p class="lede">Three things the app already has are brought onto one strip at the top of the tab: the case's videos on their clocks (the chronology's band), the brackets that appear wherever videos overlap under notes (the chronology's rule, drawn dashed here because nothing is made yet), and the sound matcher that finds how far one recording's sound runs after another's (Match by sound, which today only serves the incident page). The strip is read from the same data the Notes tab's Chronology shape reads, so it changes as notes are written and as videos are placed. Below it, at most three cards, then the incidents as they are now. The fictional office of the local demo throughout.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The tab with the strip: one incident made, one forming, one video not on the clock</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings</span><span>Search</span><span>Proposed events</span><span>Notes</span><span>Documents</span><span class="on">Incidents</span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+      <div class="lead">
+        <p><b>1 incident, 1 forming.</b> <span class="muted">An incident is the cameras that ran at the same time, laid on one clock so they play in step. A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press.</span></p>
+        <span class="btn">New incident</span>
+      </div>
+
+      <div class="strip">
+        <div class="days"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 5 videos · 14 notes</span><span>7 Nov · 2 videos · 3 notes</span><span>12 Nov · 1 video</span></div>
+        <div class="ruler"><span style="left: 0%">20:00</span><span style="left: 25%">20:30</span><span style="left: 50%">21:00</span><span style="left: 75%">21:30</span><span style="left: 100%">22:00</span></div>
+        <div class="band">
+          <div class="bar"><i class="c1" style="left: 20.5%; width: 55%"></i><b style="left: 20.5%">BWC1-1 · clock</b></div>
+          <div class="bar"><i class="c2" style="left: 21%; width: 56%"></i><b style="left: 21%">BWC2-1 · clock</b></div>
+          <div class="bar"><i class="c3" style="left: 34%; width: 30%"></i><b style="left: 34%">BWC3-1 · by hand</b></div>
+          <div class="bar"><i class="c4" style="left: 62%; width: 30%"></i><b style="left: 62%">Dash-4 · clock</b></div>
+          <div class="bar"><i class="dashed" style="left: 3%; width: 18%"></i><b class="out" style="left: 3%">Interview room · no clock, by its day</b></div>
+        </div>
+        <div class="lane"><i class="c1" style="left: 20.5%"></i><i class="c2" style="left: 21.8%"></i><i class="c1" style="left: 24%"></i><i class="c2" style="left: 25.9%"></i><i class="c3" style="left: 35%"></i><i class="c1" style="left: 37%"></i><i class="c3" style="left: 40%"></i><i class="c4" style="left: 64%"></i><i class="c2" style="left: 66%"></i><i class="c4" style="left: 70%"></i><i class="c1" style="left: 72%"></i><span class="lbl">notes</span></div>
+        <div class="inc-lane"><div class="br" style="left: 60%; width: 20%"><b>Traffic stop, 6 Nov · 3 cameras · 5 events</b></div><span class="lbl">incidents</span></div>
+        <div class="forming"><div class="br" style="left: 20.5%; width: 24%"><b>Forming · 3 cameras, 7 notes, 20:24 to 20:53</b></div><span class="lbl">forming</span></div>
+        <div class="rail"><span class="pill">1 not on the clock</span><span>Interview room has no clock in its picture. Its sound matches <b>BWC2-1</b> from 20:26:04 (a clear match). <span class="btn tiny primary">Place it there</span> <span class="btn tiny ghost">Not this</span></span></div>
+      </div>
+
+      <div class="cards">
+        <div class="card forming-card">
+          <div class="h"><h3>Forming · 20:24 to 20:53 on 6 Nov</h3><span class="pill acc">7 notes</span></div>
+          <div class="mini"><i class="c1" style="left: 4%; width: 86%; top: 4px"></i><i class="c2" style="left: 6%; width: 88%; top: 10px"></i><i class="c3" style="left: 48%; width: 46%; top: 16px"></i><em class="c1" style="left: 5%"></em><em class="c2" style="left: 9%"></em><em class="c1" style="left: 16%"></em><em class="c2" style="left: 22%"></em><em class="c3" style="left: 52%"></em><em class="c1" style="left: 58%"></em><em class="c3" style="left: 68%"></em></div>
+          <div class="small muted">BWC1-1, BWC2-1 and BWC3-1 ran together and the notes gather here: 3 on first contact, 4 on the search. One sitting <span class="sit"><i style="width: 31%"></i></span> <span class="tiny">31% used</span></div>
+          <div class="acts"><span class="btn tiny primary">Make it</span><span class="btn tiny">Choose myself</span><span class="btn tiny ghost">Not these</span><span class="tiny muted">The picker opens with these three ticked, as it does from the chronology.</span></div>
+        </div>
+      </div>
+
+      <table class="tbl">
+        <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th><th>Events</th><th></th></tr></thead>
+        <tbody><tr><td><b>Traffic stop, 6 Nov</b></td><td>3</td><td class="mono">21:12 to 21:36</td><td><span class="pill ok">3 of 3</span></td><td>5 events, memo written</td><td><span class="btn tiny">Open the incident</span></td></tr></tbody>
+      </table>
+      <details><summary>Videos in this case · 8, all on the clock but one</summary><p class="quiet" style="margin: 8px 0 4px">The table as it is today: each video, the clock read from its picture, how it was placed, and the incident it is in. Folded while every video is placed or offered; open when one is neither.</p></details>
+    </div>
+    <div class="caption">
+      <p><b>The strip is the chronology's band without the spells.</b> The same days, ruler, bars and note marks the Notes tab's Chronology shape draws, read from the same code (one day in view, the busiest day first, the others a press away). The notes lane keeps its marks alone; the words stay on the Notes tab. The strip takes one height whatever the day holds, by the band's own three shapes (stacked, packed lanes, the Coverage lane over six).</p>
+      <p><b>Two lanes under the marks.</b> The incidents lane as chapter 2 drew it, one solid bracket per incident. A <b>forming</b> lane under it: a dashed bracket wherever two or more videos overlap on the clock with notes under them (the chronology's own rule, today's brackets with Make an incident). A bracket with no notes under it is drawn faint and makes no card, unless every video in it carries a seen clock, which is today's offer and stays one.</p>
+      <p><b>At most three cards.</b> Each forming bracket with a card is one card under the strip: its span, its cameras, where the notes gather, the sitting bar, and <b>Make it</b> (the chapter 2 picker with those ticked), Choose myself, Not these. Not these folds the bracket to faint for good, as declining an offer does today. More than three: the three with the most notes, and "and 2 more on the strip".</p>
+      <p><b>Sound places a video, it does not make an incident.</b> A video with no clock in its picture sits on the rail, as on the chronology. Match by sound, which today serves the incident page, runs for it on the media worker against the placed videos of its day (its file time first, then the day): a clear match (a spike, not a plateau) is one line on the rail with <b>Place it there</b>. Placing it writes the recording's clock as <i>by sound</i>, with the match's strength and the video it followed, and the bars and brackets redraw: the video now overlaps, and may join a forming one or an incident's offer. One mechanism for all of it.</p>
+      <p><b>It moves as the case moves.</b> A note written on the Notes tab, a video landing, a clock read: each redraws the strip on the next draw, and the tab polls by the minute while open as the chronology does. The card count in the lead ("1 forming") is the only number that changes above the strip.</p>
+      <p><b>What stays.</b> New incident, the incidents table, the videos table (folded), the Panel's settings: Incidents proposed governs the cards and the brackets, Match by sound the rail's line, Most cameras the picker. The incident page, the chronology's own brackets and the picker are unchanged; this tab reads them.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The quiet state, and the busy state, so the strip never crowds</h2></div>
+    <div class="two">
+      <div class="frame">
+        <p class="small"><b>Quiet.</b> Every video is in an incident or stands alone; no note gathers under an overlap.</p>
+        <div class="strip">
+          <div class="days"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 3 videos · 9 notes</span></div>
+          <div class="ruler"><span style="left: 0%">21:00</span><span style="left: 50%">21:30</span><span style="left: 100%">22:00</span></div>
+          <div class="band">
+            <div class="bar"><i class="c1" style="left: 22%; width: 48%"></i><b style="left: 22%">BWC1-1 · clock</b></div>
+            <div class="bar"><i class="c2" style="left: 24%; width: 50%"></i><b style="left: 24%">BWC2-1 · clock</b></div>
+            <div class="bar"><i class="c3" style="left: 30%; width: 36%"></i><b style="left: 30%">Dash-4 · clock</b></div>
+          </div>
+          <div class="lane"><i class="c1" style="left: 25%"></i><i class="c2" style="left: 31%"></i><i class="c3" style="left: 40%"></i><i class="c1" style="left: 52%"></i><span class="lbl">notes</span></div>
+          <div class="inc-lane"><div class="br" style="left: 22%; width: 52%"><b>Traffic stop, 6 Nov · 3 cameras · 9 events</b></div><span class="lbl">incidents</span></div>
+        </div>
+        <p class="quiet">Nothing forming. <span class="muted">The forming lane is not drawn when it has nothing, no card is drawn, and the lead reads "1 incident."</span></p>
+      </div>
+      <div class="frame">
+        <p class="small"><b>Busy.</b> Twelve videos on the day, four overlaps with notes, two incidents already.</p>
+        <div class="strip">
+          <div class="days"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 12 videos · 41 notes</span><span>7 Nov · 4 · 6</span></div>
+          <div class="ruler"><span style="left: 0%">18:00</span><span style="left: 50%">21:00</span><span style="left: 100%">00:00</span></div>
+          <div class="band">
+            <div class="bar"><i class="c1" style="left: 5%; width: 20%"></i><i class="c3" style="left: 40%; width: 22%"></i><i class="c5" style="left: 70%; width: 18%"></i><b style="left: 5%">lane 1 · 3 videos</b></div>
+            <div class="bar"><i class="c2" style="left: 7%; width: 20%"></i><i class="c4" style="left: 42%; width: 20%"></i><i class="c1" style="left: 72%; width: 20%"></i><b style="left: 7%">lane 2 · 3 videos</b></div>
+            <div class="bar"><i class="c3" style="left: 9%; width: 12%"></i><i class="c2" style="left: 44%; width: 24%"></i><b style="left: 9%">lane 3 · 2 videos</b></div>
+            <div class="bar"><i class="c5" style="left: 46%; width: 14%"></i><i class="c4" style="left: 74%; width: 10%"></i><b style="left: 46%">lane 4 · 2 videos</b></div>
+          </div>
+          <div class="lane"><i class="c1" style="left: 8%"></i><i class="c2" style="left: 11%"></i><i class="c3" style="left: 14%"></i><i class="c1" style="left: 20%"></i><i class="c3" style="left: 43%"></i><i class="c4" style="left: 47%"></i><i class="c2" style="left: 50%"></i><i class="c5" style="left: 53%"></i><i class="c2" style="left: 58%"></i><i class="c5" style="left: 73%"></i><i class="c1" style="left: 76%"></i><i class="c4" style="left: 80%"></i><span class="lbl">notes</span></div>
+          <div class="inc-lane"><div class="br" style="left: 5%; width: 22%"><b>Stop, 18:18 · 3 · 6</b></div><div class="br" style="left: 70%; width: 24%"><b>Custody · 3 · 4</b></div><span class="lbl">incidents</span></div>
+          <div class="forming"><div class="br" style="left: 40%; width: 28%"><b>Forming · 5 cameras, 11 notes</b></div><div class="br faint" style="left: 86%; width: 8%"><b>2 cameras</b></div><span class="lbl">forming</span></div>
+        </div>
+        <p class="quiet">One card below (the overlap with eleven notes); the faint bracket at the right has no notes and makes none. <span class="muted">Packed lanes, as the chronology does from seven videos; the Coverage lane over six overlapping at once.</span></p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Congestion is answered by the lanes' rules, not by a new layout.</b> The band's three shapes already keep one height; a forming bracket needs notes to earn a card; declined brackets go faint; cards stop at three. The busiest the tab gets is the busiest the chronology already gets, less the spells.</p>
+      <p><b>What a bracket says on hover</b>, in both lanes: the cameras by name, the span, the note count, and for a forming one how each video was placed (clock, by hand, from its file, by sound). A press on a forming bracket is Make it.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The alternative weighed: cards without a strip</h2></div>
+    <div class="frame">
+      <div class="lead"><p><b>1 incident, 1 forming.</b></p><span class="btn">New incident</span></div>
+      <div class="cards">
+        <div class="card forming-card">
+          <div class="h"><h3>Forming · 20:24 to 20:53 on 6 Nov</h3><span class="pill acc">7 notes</span></div>
+          <div class="mini"><i class="c1" style="left: 4%; width: 86%; top: 4px"></i><i class="c2" style="left: 6%; width: 88%; top: 10px"></i><i class="c3" style="left: 48%; width: 46%; top: 16px"></i><em class="c1" style="left: 5%"></em><em class="c2" style="left: 9%"></em><em class="c3" style="left: 52%"></em></div>
+          <div class="acts"><span class="btn tiny primary">Make it</span><span class="btn tiny ghost">Not these</span></div>
+        </div>
+        <div class="card">
+          <div class="h"><h3>Interview room · no clock</h3><span class="pill warn">by its day</span></div>
+          <div class="small muted">Its sound matches BWC2-1 from 20:26:04.</div>
+          <div class="acts"><span class="btn tiny primary">Place it there</span><span class="btn tiny ghost">Not this</span></div>
+        </div>
+      </div>
+      <table class="tbl"><thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th></th></tr></thead><tbody><tr><td><b>Traffic stop, 6 Nov</b></td><td>3</td><td class="mono">21:12 to 21:36</td><td><span class="btn tiny">Open the incident</span></td></tr></tbody></table>
+    </div>
+    <div class="caption">
+      <p><b>Smaller, and it says less.</b> The cards alone are today's offers with a mini bar. They do not show where the day's videos sit against each other, which is the question the tab is for, and a person cannot see why one overlap is forming and another is not. It is the fallback if the strip reads as too much.</p>
+      <p><b>Not drawn: the whole chronology on this tab.</b> Band, lane, brackets and the spells with the notes' words, moved in from the Notes tab. One thing in two places, and the spells are where the congestion lives.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>What it would take, and what to decide</h2></div>
+    <div class="verdict">
+      <p style="margin: 0"><b>Recommended: Figure A</b>, as two releases. First the strip with the forming lane and the cards, read from the chronology's day shape and the chapter 2 picker, no new store beyond the declined keys the offers already keep. Then placing by sound: the media worker's match of a clockless video against its day's placed videos, a new way of placing in the recording's clock (<i>by sound</i>, with the match's strength and the anchor), one migration, the Panel's Match by sound widened to cover it.</p>
+    </div>
+    <ul class="small">
+      <li><b>Words.</b> "Forming" for a dashed bracket and its card (the glossary gains it; a forming one is never called an incident, a proposal or a suggestion). "Placed by sound" joins clock, by hand, from its file and by its day in the Recording's clock entry.</li>
+      <li><b>Rules to confirm.</b> A forming bracket needs two or more videos overlapping and at least one note under the overlap; without notes it is faint and silent, except today's seen-clock offer, which keeps its card. Three cards at most, the most noted first. Not these folds a bracket to faint for good. The sound line appears only for a clear match (the spike rule the matcher already has), and never places a video by itself.</li>
+      <li><b>Cost.</b> The strip is one more read of the day shape the Notes tab already builds, cached per draw. A sound match is a few seconds on the media worker per pair and runs when a clockless video lands or a video is placed, against the placed videos of its day only; no engine call, nothing leaves the building.</li>
+      <li><b>Settings.</b> No new setting: Incidents proposed governs the brackets and cards, Match by sound the rail's line, Most cameras the picker.</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>
