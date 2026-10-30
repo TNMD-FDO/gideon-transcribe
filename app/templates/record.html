@@ -25,8 +25,8 @@
       <div class="line"><h1>New recording</h1></div>
     </header>
 
-    <section id="before" class="stack" style="max-width: 44rem">
-      <p class="muted" style="margin: 0">What are you recording?</p>
+    <section id="before" class="stack max44">
+      <p class="muted m0">What are you recording?</p>
       <div class="styles" role="radiogroup" aria-label="What are you recording">
         {% for key, style in styles %}
           <label class="style card{% if forloop.first %} on{% endif %}">
@@ -51,11 +51,11 @@
 
         <div class="field" id="people-field" hidden>
           <label for="record-person">People expected</label>
-          <p class="muted small" style="margin: 0 0 6px">
+          <p class="muted small m0 mb6">
             {% if chosen_case %}The case's people, and anyone else who will speak.{% else %}Anyone who will speak.{% endif %} While recording, tap a person as they start talking and the transcript names its speakers from that.
           </p>
           <div class="people-buttons" id="people-expected"></div>
-          <div class="row" style="gap: 6px; margin-top: 6px">
+          <div class="row gap6 mt6">
             <input type="text" id="record-person" maxlength="60" class="grow" placeholder="Add a person">
             <button type="button" class="btn small" id="add-person">Add</button>
           </div>
@@ -67,7 +67,7 @@
 
         <details id="more-options">
           <summary>More options</summary>
-          <div class="stack" style="margin-top: 10px">
+          <div class="stack mt10">
             <div class="row" style="gap: 18px; flex-wrap: wrap">
               <div class="field">
                 <label for="record-language">Spoken language</label>
@@ -85,7 +85,7 @@
                 <option value="">The style's own</option>
                 {% for one in types %}<option value="{{ one }}">{{ one }}</option>{% endfor %}
               </select>
-              <p class="muted small" style="margin: 4px 0 0">Choose one to get its summary instead: a jail call played on this computer, for instance.</p>
+              <p class="muted small m0 mt4">Choose one to get its summary instead: a jail call played on this computer, for instance.</p>
             </div>
             <label class="row">
               <input type="checkbox" id="record-computer"> <b>Also record what this computer plays</b>
@@ -108,17 +108,17 @@
         {% endcomment %}
         <div class="field mic-check" id="mic-field">
           <label for="mic-choice">Microphone</label>
-          <div class="row" style="gap: 8px">
+          <div class="row gap8">
             <select id="mic-choice" class="grow" aria-label="Which microphone">
               <option value="">The computer's default microphone</option>
             </select>
             <button type="button" class="btn small" id="mic-check">Check</button>
           </div>
           <div class="row small muted" style="gap: 8px; margin-top: 6px">
-            <span style="width: 7rem">Level</span>
+            <span class="w7">Level</span>
             <div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-before"></div></div>
           </div>
-          <p class="muted small" id="mic-line" style="margin: 4px 0 0">
+          <p class="muted small m0 mt4" id="mic-line">
             Say a few words: the bar should move. If it does not, choose another microphone here, or in Windows Sound settings. After a Remote Desktop session Windows can be left on "Remote Audio", which carries no sound at the machine itself.
           </p>
           <p class="notice warn" id="mic-silent" hidden>No sound is reaching the app from this microphone. Choose another, or check it in Windows Sound settings.</p>
@@ -134,20 +134,20 @@
       </div>
     </section>
 
-    <section id="during" class="card stack" hidden style="max-width: 44rem">
+    <section id="during" class="card stack max44" hidden>
       <div class="row">
         <span class="pill danger" id="rec-pill">Recording</span>
         <b class="grow" id="during-title"></b>
         <span class="time big" id="clock">0:00</span>
       </div>
-      <div class="row small muted" style="gap: 8px"><span style="width: 7rem">Microphone</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter"></div></div></div>
-      <div class="row small muted" id="computer-row" hidden style="gap: 8px"><span style="width: 7rem">This computer</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-computer"></div></div></div>
+      <div class="row small muted gap8"><span class="w7">Microphone</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter"></div></div></div>
+      <div class="row small muted gap8" id="computer-row" hidden><span class="w7">This computer</span><div class="meter grow" aria-hidden="true"><div class="meter-bar" id="meter-computer"></div></div></div>
       <div class="people-buttons" id="people-during"></div>
-      <div class="row" style="gap: 6px">
+      <div class="row gap6">
         <button type="button" class="btn small" id="mark" title="M">Mark this moment</button>
         <span class="muted small" id="marks-count"></span>
       </div>
-      <div class="row mark-box" id="mark-box" hidden style="gap: 6px">
+      <div class="row mark-box gap6" id="mark-box" hidden>
         <input type="text" id="mark-word" maxlength="80" class="grow" placeholder="A word for the mark (optional), then Enter">
         <button type="button" class="btn small ghost" id="mark-done">Done</button>
       </div>
@@ -160,7 +160,7 @@
       </div>
     </section>
 
-    <section id="after" class="card stack" hidden style="max-width: 44rem">
+    <section id="after" class="card stack max44" hidden>
       <div class="row">
         <b class="grow" id="after-title"></b>
         <span class="pill warn" id="after-pill">Transcribing</span>

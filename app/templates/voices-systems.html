@@ -14,12 +14,12 @@
   {% endcomment %}
   <div class="page roomy">
     <header class="page-head">
-      <div class="line"><h1>Voices <span class="muted" style="font-weight: 400">&middot; phone systems</span></h1></div>
+      <div class="line"><h1>Voices <span class="muted regular">&middot; phone systems</span></h1></div>
     </header>
 
-    {% if said %}<p class="notice ok" style="margin-bottom: 12px">{{ said }}</p>{% endif %}
+    {% if said %}<p class="notice ok mb12">{{ said }}</p>{% endif %}
 
-    <div class="chips" style="margin-bottom: 12px">
+    <div class="chips mb12">
       {% for one in units %}
         <a class="chip" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
       {% endfor %}
@@ -33,7 +33,7 @@
       <div class="m"><div class="n">{{ month.given }}</div><div class="w">line{{ month.given|pluralize }} given by voice this month</div></div>
       <div class="m"><div class="n">{{ month.would }}</div><div class="w">line{{ month.would|pluralize }} the voice would have given</div></div>
     </div>
-    <p class="muted small" style="margin: 8px 0 14px">
+    <p class="muted small m0 mt8 mb14">
       A jail call's announcements are the Call system's by their words (the phrase list on the Panel). Those lines teach the app the phone system's voice as each call lands; nobody keeps it from a card and it is never a person.
       A new phone system starts <b>listening, not moving</b>: the voice step counts the lines it would have given, and nothing on a transcript changes until an Admin starts the giving, having judged the numbers on the office's own calls.
       Given lines carry a pill and <b>Not the system</b> on the Speakers page; {{ back_to_stop }} lines given back in a month stop the giving by themselves.
@@ -56,7 +56,7 @@
                     <details class="menu">
                       <summary class="btn quiet" aria-label="Rename, hear it, start or stop, forget" title="Rename, hear it, start or stop, forget">···</summary>
                       <div class="menu-body">
-                        <form method="post" action="{% url 'voices-system-act' v.pk 'rename' %}" class="row small" style="gap: 6px">
+                        <form method="post" action="{% url 'voices-system-act' v.pk 'rename' %}" class="row small gap6">
                           {% csrf_token %}
                           <input type="text" name="name" value="{{ v.name }}" maxlength="60" aria-label="New name">
                           <button type="submit" class="small">Rename</button>

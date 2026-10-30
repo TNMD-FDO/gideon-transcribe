@@ -3,6 +3,7 @@ transcription, and every batch from the Upload page going into a case."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -77,8 +78,9 @@ def test_the_upload_page_asks_which_case_and_never_this_session(person, client):
     assert 'id="add-to-case"' in page
     box = page.split('id="add-to-case"')[1].split("</select>")[0]
     assert 'option value=""' not in box
-    # The fold stays a fold on this page, and the card is the shared one.
-    assert '<details id="more"' in page
+    # The fold stays a fold on this page, and the card is the shared one; its
+    # attributes may come in any order since a spacing class joined them.
+    assert re.search(r'<details[^>]*id="more"', page)
     for control in CARD:
         assert control in page, control
 

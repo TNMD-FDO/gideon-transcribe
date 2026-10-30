@@ -37,8 +37,8 @@
       {% comment %}New incident: the case's videos, ticked; the same dialog the offer's Choose myself opens with its videos ticked.{% endcomment %}
       <div class="modal-bg" id="incident-box" hidden>
         <div class="modal">
-          <h2 style="margin: 0 0 4px">New incident</h2>
-          <p class="muted small" style="margin: 0 0 12px">Tick the cameras that ran at the same time. Up to {{ incident_most }} in an incident; {{ incident_wall }} play at once. A video without a clock in its picture is synced on the incident page, by sound or by hand.</p>
+          <h2 class="m0 mb4">New incident</h2>
+          <p class="muted small m0 mb12">Tick the cameras that ran at the same time. Up to {{ incident_most }} in an incident; {{ incident_wall }} play at once. A video without a clock in its picture is synced on the incident page, by sound or by hand.</p>
           <form method="post" action="{% url 'new-incident' case.pk %}" id="incident-form">
             {% csrf_token %}
             <label class="field">Name<input type="text" name="name" maxlength="200" placeholder="The date of the first clock, unless you type one"></label>
@@ -55,7 +55,7 @@
             {% else %}
               <p class="muted">This case has no videos yet.</p>
             {% endif %}
-            <div class="dialog" style="justify-content: flex-end">
+            <div class="dialog end">
               <button type="button" class="ghost" id="incident-cancel">Cancel</button>
               <button type="submit" class="primary"{% if not incident_videos %} disabled{% endif %}>Make the incident</button>
             </div>
@@ -149,14 +149,14 @@
             document is added from the incident or the recording it is about.
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
-            <p class="lead grow" style="margin: 0">
+            <p class="lead grow m0">
               {% if documents %}{{ documents|length }} document{{ documents|length|pluralize }} in this case, each the report for an incident or a camera.{% else %}None yet.{% endif %}
               A report is added here or from the incident's or the recording's <b>Details</b> tab, and is read beside the cameras it is about.
             </p>
             <a class="btn small" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
           </div>
           {% if documents %}
-            <div class="card" style="overflow-x: auto">
+            <div class="card scroll-x">
               <table class="tbl as-cards" id="documents">
                 <thead><tr><th>Document</th><th>Pages</th><th>The report for</th><th>Against the case</th><th>Added</th><th></th></tr></thead>
                 <tbody>
@@ -169,14 +169,14 @@
                       <td class="small">
                         {% if one.case_state == "done" %}<span class="pill small ok">{{ one.case_findings }} finding{{ one.case_findings|pluralize }}</span>{% elif one.case_busy %}<span class="pill small warn">running</span>{% elif one.case_state == "failed" %}<span class="pill small warn">did not finish</span>{% else %}<span class="muted">not compared yet</span>{% endif %}
                         {% if one.case_words %}<div class="muted tiny">{{ one.case_words|truncatechars:120 }}</div>{% endif %}
-                        <div style="margin-top: 4px"><button type="button" class="btn small{% if one.case_state == 'done' %} primary{% endif %}" data-case-compare data-comparison="{% url 'document-comparison' case.pk one.pk %}" data-compare="{% url 'document-compare' case.pk one.pk %}" data-title="{{ one.title }}" title="The report read against every recording of the case that has a transcript, one at a time; every finding cites the paragraph and the moment">{% if one.case_state == "done" %}Comparison{% elif one.case_busy %}Comparison, running{% else %}Compare with the case{% endif %}</button>
+                        <div class="mt4"><button type="button" class="btn small{% if one.case_state == 'done' %} primary{% endif %}" data-case-compare data-comparison="{% url 'document-comparison' case.pk one.pk %}" data-compare="{% url 'document-compare' case.pk one.pk %}" data-title="{{ one.title }}" title="The report read against every recording of the case that has a transcript, one at a time; every finding cites the paragraph and the moment">{% if one.case_state == "done" %}Comparison{% elif one.case_busy %}Comparison, running{% else %}Compare with the case{% endif %}</button>
                         {% if one.case_comparison_export %}<a class="btn small ghost" href="{{ one.case_comparison_export }}">{% icon "word" %} To Word</a>{% endif %}</div>
                       </td>
                       <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
                       <td class="nowrap">
                         <a class="btn small" href="{{ one.url }}">Open</a>
                         {% if one.comparison_export %}<a class="btn small ghost" href="{{ one.comparison_export }}">{% icon "word" %} Comparison to Word</a>{% endif %}
-                        <form method="post" action="{% url 'document-act' case.pk one.pk %}" style="display: inline" data-confirm="Remove {{ one.title }} and its pages from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
+                        <form class="inline-form" method="post" action="{% url 'document-act' case.pk one.pk %}" data-confirm="Remove {{ one.title }} and its pages from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
                         {% comment %}Re-link (part 2): a plain choice on the row, no pop-up.{% endcomment %}
                         <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="row relink" style="gap: 4px; margin-top: 6px; flex-wrap: wrap">{% csrf_token %}<input type="hidden" name="action" value="relink">
                           <select name="incident" class="small" aria-label="The incident this is the report for"><option value="">no incident</option>{% for home in document_homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if one.incident_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}</select>
@@ -202,7 +202,7 @@
             was written. Nothing is edited here.
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
-            <p class="lead grow" style="margin: 0">
+            <p class="lead grow m0">
               {% if notes.total %}{{ notes.total }} note{{ notes.total|pluralize }} in this case, the office's own words: {{ notes.lines }} on line{{ notes.lines|pluralize }} of transcripts, {{ notes.events }} on event{{ notes.events|pluralize }}.{% else %}None yet. A note is written under a line of a transcript (<b>note</b> on the line, or N) or on an event of a chronology; every note in the case is listed here, and <a href="{% url 'case' case.pk %}?tab=notes&shape=page">the Page shape</a> plays them one by one.{% endif %}
             </p>
             {% if notes.total or recordings %}
@@ -302,7 +302,7 @@
             <ul class="plain team-list" id="team">
               {% for row in team %}
                 <li{% if row.share %} data-share="{{ row.share.pk }}"{% endif %}{% if row.status %} class="muted"{% endif %}>
-                  <div class="row" style="gap: 6px; flex-wrap: wrap">
+                  <div class="row gap6 wrap">
                     <span><b>{{ row.name }}</b>{% if row.is_you %} <span class="muted small">(you)</span>{% endif %}</span>
                     {% if row.role == "owner" %}<span class="pill small on">Owner</span>{% elif row.role == "also-owner" and not may_direct %}<span class="pill small">Also an owner</span>{% endif %}
                     {% if row.status %}<span class="pill small warn">{{ row.status }}</span>{% endif %}
@@ -328,7 +328,7 @@
               <p class="muted small" id="nobody-yet">Nobody else yet. Whoever you add with Share can work in this case as you do.</p>
             {% endif %}
             {% if may_transfer %}
-              <div class="row actions" style="margin-top: 8px">
+              <div class="row actions mt8">
                 <button type="button" class="btn ghost small" id="transfer">Transfer</button>
               </div>
             {% endif %}
@@ -348,7 +348,7 @@
 
         <div id="rename-box" class="card" hidden style="margin-top: 12px">
           <label for="new-name">Name</label>
-          <div class="row" style="gap: 6px">
+          <div class="row gap6">
             <input id="new-name" type="text" maxlength="200" class="grow" value="{{ case.name }}">
             <button type="button" class="btn primary" id="save-name">Save</button>
             <button type="button" class="btn ghost" id="never-mind">Cancel</button>
@@ -365,14 +365,14 @@
             after the strip under the case name had floated over the page.
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px">
-            <p class="lead grow" style="margin: 0">
+            <p class="lead grow m0">
               {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}.{% else %}No incident yet.{% endif %}
               An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.
             </p>
             <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
           </div>
           {% for offer in incident_offers %}
-            <div class="card inc-offer" style="margin-bottom: 10px">
+            <div class="card inc-offer mb10">
               <span class="pill small offer">Offer</span>
               <span class="small"><b>{{ offer.line }}</b>
                 {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
@@ -387,7 +387,7 @@
               </span>
               <span class="nowrap">
                 {% if offer.kind == "new" %}
-                  <form method="post" action="{% url 'new-incident' case.pk %}" style="display: inline">
+                  <form class="inline-form" method="post" action="{% url 'new-incident' case.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="how" value="offer">
                     {% for one in offer.recordings %}<input type="hidden" name="recordings" value="{{ one.pk }}">{% endfor %}
@@ -395,14 +395,14 @@
                   </form>
                   <button type="button" class="small ghost choose-myself" data-recordings="{% for one in offer.recordings %}{{ one.pk }} {% endfor %}">Choose myself</button>
                 {% else %}
-                  <form method="post" action="{% url 'add-to-incident' case.pk %}" style="display: inline">
+                  <form class="inline-form" method="post" action="{% url 'add-to-incident' case.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="incident" value="{{ offer.incident.pk }}">
                     <input type="hidden" name="recording" value="{{ offer.recording.pk }}">
                     <button type="submit" class="small primary">Add it</button>
                   </form>
                 {% endif %}
-                <form method="post" action="{% url 'decline-incident-offer' case.pk %}" style="display: inline">
+                <form class="inline-form" method="post" action="{% url 'decline-incident-offer' case.pk %}">
                   {% csrf_token %}
                   <input type="hidden" name="key" value="{{ offer.key }}">
                   <button type="submit" class="tiny ghost">Not these</button>
@@ -442,7 +442,7 @@
           {% endif %}
           {% with loose=incident_videos %}
             <h2 style="margin-top: 26px; font-size: var(--t-heading)">Videos in this case</h2>
-            <p class="muted small" style="margin: 0 0 8px">Each video, the clock read from its picture where it carries one, and the incident it is in. A video with no clock is synced on the incident page, by sound or by hand.</p>
+            <p class="muted small m0 mb8">Each video, the clock read from its picture where it carries one, and the incident it is in. A video with no clock is synced on the incident page, by sound or by hand.</p>
             {% if loose %}
               <table class="tbl">
                 <thead><tr><th>Recording</th><th>Clock</th><th>Incident</th></tr></thead>
@@ -527,7 +527,7 @@
                         <option value="">a new name:</option>
                         {% for row in people %}<option value="{{ row.person.pk }}">{{ row.person.name }}</option>{% endfor %}
                       </select>
-                      <input type="text" name="name" maxlength="60" placeholder="Name" aria-label="Name" style="max-width: 14rem">
+                      <input class="max14" type="text" name="name" maxlength="60" placeholder="Name" aria-label="Name">
                       <button type="submit" class="small">Name that side everywhere</button>
                     </form>
                     <span class="muted tiny" style="display: block; margin-top: 4px">{{ two_channel_count }} two-channel call{{ two_channel_count|pluralize }} in this case. The other side stays Caller until somebody names it on the call.{% if single_channel_calls %} {{ single_channel_calls }} call{{ single_channel_calls|pluralize }} with both voices in one track {{ single_channel_calls|pluralize:"is,are" }} not covered: name those with Suggest names or by hand.{% endif %}</span>
@@ -540,7 +540,7 @@
             {% endif %}
           </div>
           {% if voice.forgotten_at %}
-            <p class="notice warn" style="margin-top: 10px">Voices were forgotten on {{ voice.forgotten_at|date:"j M Y" }}, when the Admin turned Remember voices off. The names stayed; a print is learnt again the next time a speaker is named with the voice on.</p>
+            <p class="notice warn mt10">Voices were forgotten on {{ voice.forgotten_at|date:"j M Y" }}, when the Admin turned Remember voices off. The names stayed; a print is learnt again the next time a speaker is named with the voice on.</p>
           {% endif %}
 
           <div class="people-toolbar">
@@ -578,13 +578,13 @@
                     <details class="menu">
                       <summary class="btn quiet" aria-label="Rename, edit, merge, delete{% if v.has_print %}, unlearn{% endif %}" title="Rename, edit, merge, delete{% if v.has_print %}, unlearn{% endif %}">···</summary>
                       <div class="menu-body">
-                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px">
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small gap6">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="rename">
                           <input type="text" name="name" value="{{ row.person.name }}" maxlength="60" aria-label="New name">
                           <button type="submit" class="small">Rename everywhere</button>
                         </form>
-                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px">
+                        <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small gap6">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="edit">
                           <select name="role" aria-label="Role">
@@ -600,7 +600,7 @@
                           <button type="submit" class="small">Save role, notes and names</button>
                         </form>
                         {% if row.others %}
-                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small" style="gap: 6px"
+                          <form method="post" action="{% url 'person-action' row.person.pk %}" class="row small gap6"
                                 data-confirm-title="Merge {{ row.person.name }} into the chosen person?" data-confirm="Their speakers in {{ row.recordings|length }} recording{{ row.recordings|length|pluralize }} take that person's name. Their notes are kept under the old name." data-confirm-ok="Merge">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="merge">
@@ -758,7 +758,7 @@
           </div>
 
           {% if clips_here %}
-            <div style="overflow-x: auto">
+            <div class="scroll-x">
               <table class="tbl">
                 <thead>
                   <tr>
@@ -836,7 +836,7 @@
               never only in a row's fold. cases.js refreshes this line while
               a video is being enriched.
             {% endcomment %}
-            <form method="post" action="{% url 'vision-case' case.pk %}" class="row vision-line" id="prepare-line" style="margin: 0 0 8px; flex-wrap: wrap">
+            <form method="post" action="{% url 'vision-case' case.pk %}" class="row vision-line m0 mb8 wrap" id="prepare-line">
               {% csrf_token %}
               <span class="muted small">{{ vision_line }}.</span>
               {% if vision_offers.tonight and vision_pending %}
@@ -859,7 +859,7 @@
               summary, and the offer to write them in the overnight window,
               for anyone with the case.
             {% endcomment %}
-            <form method="post" action="{% url 'summaries-tonight-case' case.pk %}" class="row vision-line" id="summaries-line" style="margin: 0 0 8px; flex-wrap: wrap">
+            <form method="post" action="{% url 'summaries-tonight-case' case.pk %}" class="row vision-line m0 mb8 wrap" id="summaries-line">
               {% csrf_token %}
               <span class="muted small">{{ summaries_line }}.</span>
               {% if summaries_missing %}
@@ -881,8 +881,8 @@
           {% endcomment %}
           {% if recordings or who or state %}
             <div class="row" style="gap: 8px; margin: 10px 0 8px; flex-wrap: wrap">
-              <input type="search" id="recording-filter" placeholder="Filter these recordings"
-                     aria-label="Filter these recordings" style="max-width: 18rem">
+              <input class="max18" type="search" id="recording-filter" placeholder="Filter these recordings"
+                     aria-label="Filter these recordings">
               <span class="muted small" id="recording-filter-count" hidden></span>
               <span class="row" style="gap: 6px" id="assignment-pills"{% if may_direct and not tools_open %} hidden{% endif %}>
                 {% for pill in assignment_pills %}
@@ -960,13 +960,13 @@
                   <td colspan="{% if incidents_on %}11{% else %}10{% endif %}">
                     <div class="detail" id="detail-{{ recording.pk }}" data-recording="{{ recording.pk }}">
                       {% if recording.description %}
-                        <p class="small" style="margin: 0 0 8px">{{ recording.description }}</p>
+                        <p class="small m0 mb8">{{ recording.description }}</p>
                       {% endif %}
                       {% if recording.failure_message %}
-                        <p class="small" style="margin: 0 0 8px">{{ recording.state_word }}: {{ recording.failure_message }}</p>
+                        <p class="small m0 mb8">{{ recording.state_word }}: {{ recording.failure_message }}</p>
                       {% endif %}
                       {% comment %}v1.126.1: the type saves as it changes and the description when it is left or Enter is pressed, as Assigned to below saves; no Save button to miss.{% endcomment %}
-                      <div class="row" style="gap: 6px">
+                      <div class="row gap6">
                         <select class="a-type" style="max-width: 12rem" aria-label="Recording type">
                           <option value="">No type</option>
                           {% for one in types %}
@@ -977,9 +977,9 @@
                                value="{{ recording.description }}" placeholder="Notes about this recording; Enter or leaving the box saves">
                       </div>
                       {% if may_direct %}
-                        <div class="row assign-tools" style="gap: 6px; margin-top: 6px">
+                        <div class="row assign-tools gap6 mt6">
                           <label class="muted small" for="assigned-{{ recording.pk }}">Assigned to</label>
-                          <select class="a-assigned" id="assigned-{{ recording.pk }}" data-recording="{{ recording.pk }}" style="max-width: 14rem">
+                          <select class="a-assigned max14" id="assigned-{{ recording.pk }}" data-recording="{{ recording.pk }}">
                             <option value="">nobody</option>
                             {% for one in team_members %}
                               <option value="{{ one.username }}"{% if recording.assigned_to and recording.assigned_to.username == one.username %} selected{% endif %}>{{ one.name }}</option>

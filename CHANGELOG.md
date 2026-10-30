@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.177.0, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The polish run's third release, the stylesheet's own tidy-up. Nothing a person sees changes; the same look now lives in one place.
+
+- **Type sizes on the look's scale are their tokens.** Forty-nine sizes written as pixels (11, 13, 15 and 22) now name the scale's token; a size changed once changes everywhere. The sizes off the scale (12 and 14 pixels in the tables, the rail's names and the dense panels; 16, 18 and 20 in a few figures) are listed in the findings for a decision, since moving them changes the look.
+- **Inline styles into classes.** 145 of the templates' 241 inline styles, the common margins, gaps and widths, are a small set of spacing classes named once in the stylesheet, marked to win as an inline style did; measured on every page, each class computes to the value it replaced. The 96 left are values computed per element (a bar's width, a speaker's colour) and one-offs.
+- **No browser pop-ups.** The chronology's five bare alerts are the app's own toasts.
+
 ## v1.176.0, 2026-10-29
 
 ```

@@ -19,14 +19,14 @@
       long the work would take, the line of why, and Allow or Decline with an
       optional line back. Outside the tray: a decision acts at once.
     {% endcomment %}
-    <h2 style="margin-top: 0">Requests</h2>
+    <h2 class="mt0">Requests</h2>
     {% if vision_requests %}
       <div class="vision-requests">
         {% for one in vision_requests %}
-          <form method="post" action="{% url 'panel-vision-request' one.id %}" class="card" style="margin-bottom: 10px">
+          <form method="post" action="{% url 'panel-vision-request' one.id %}" class="card mb10">
             {% csrf_token %}
             <div class="row"><b class="grow">{{ one.who }} asks for vision now on <a href="{% url 'case' one.case_id %}">{{ one.what }}</a></b><span class="muted small">{{ one.when }} · {{ one.about }} of engine time</span></div>
-            {% if one.why %}<p class="small" style="margin: 6px 0 0">"{{ one.why }}"</p>{% endif %}
+            {% if one.why %}<p class="small m0 mt6">"{{ one.why }}"</p>{% endif %}
             <div class="row" style="margin-top: 8px; gap: 8px; flex-wrap: wrap">
               <input type="text" name="line" maxlength="200" placeholder="A line back, if you like" class="grow" style="min-width: 12rem">
               <button type="submit" name="action" value="allow" class="primary small">Allow</button>
@@ -183,7 +183,7 @@
   </script>
 
   {% if directory %}
-    <h2 style="margin-top: 28px">Directory connection</h2>
+    <h2 class="mt28">Directory connection</h2>
     <p class="muted small">
       Read-only, from the server's environment file. To change any of it,
       change the file on the server and restart. No password is ever shown
@@ -205,7 +205,7 @@
   {% endif %}
 
   {% if email %}
-    <h2 style="margin-top: 28px">Test message</h2>
+    <h2 class="mt28">Test message</h2>
     <p class="muted small">
       Sends one message through the relay now, to you
       ({{ email.to|default:"nobody: you have no email address and there is no Operator address" }}),
@@ -226,7 +226,7 @@
   {% endif %}
 
   {% if appearance %}
-    <h2 style="margin-top: 28px">Office logo</h2>
+    <h2 class="mt28">Office logo</h2>
     <p class="muted small">
       Shown large on the sign-in page, and at the head of every Word export
       when the toggle above is on. A PNG or JPEG up to 2 MB; a wide mark reads
@@ -250,7 +250,7 @@
         <button type="submit" class="small">{% if appearance.logo %}Replace logo{% else %}Upload logo{% endif %}</button>
       </form>
       {% if appearance.logo %}
-        <form method="post" action="{% url 'panel-logo' %}" style="margin-top: 8px"
+        <form class="mt8" method="post" action="{% url 'panel-logo' %}"
               data-confirm-title="Remove the office logo?" data-confirm="The sign-in page goes back to the app's own mark, and exports lose the logo at once." data-confirm-ok="Remove logo" data-danger>
           {% csrf_token %}
           <input type="hidden" name="action" value="remove">
@@ -260,7 +260,7 @@
     </div>
   {% endif %}
 
-  <h2 style="margin-top: 28px">Fixed rules, not settings</h2>
+  <h2 class="mt28">Fixed rules, not settings</h2>
   <p class="muted small">
     These are fixed in the app, so that nobody looks for them here.
   </p>

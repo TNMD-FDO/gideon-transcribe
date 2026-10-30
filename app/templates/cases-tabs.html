@@ -3,7 +3,7 @@
   eyes, three views. Everyone's is an Admin's alone. `who` is mine, everyone,
   or bin.
 {% endcomment %}
-<div class="tabs" style="margin: 0 0 12px">
+<div class="tabs m0 mb12">
   <a href="{% url 'cases' %}" class="tab{% if who == 'mine' %} on{% endif %}">Mine</a>
   {% if user.is_admin %}
     <a href="{% url 'cases' %}?who=everyone" class="tab{% if who == 'everyone' %} on{% endif %}">Everyone's</a>

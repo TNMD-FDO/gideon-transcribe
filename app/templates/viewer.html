@@ -228,7 +228,7 @@
               {% comment %}v1.106.0: the list folds to this strip, so the transcript keeps the height; folded by itself on a short or narrow window.{% endcomment %}
               <button type="button" class="ghost small case-fold" id="case-fold" aria-expanded="true" aria-controls="caserail" title="Fold the list to one line">Fold</button>
             </div>
-            <p class="muted small" style="margin: 2px 0 0">
+            <p class="muted small m0 mt2">
               {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
             </p>
             <a href="{% url 'case-download' recording.case_id %}"
@@ -388,7 +388,7 @@
                 {% endcomment %}
                 <div id="rename-box" class="card" hidden style="margin: 6px 0">
                   <label for="rename-input" class="small" id="rename-label">Rename</label>
-                  <div class="row" style="gap: 6px">
+                  <div class="row gap6">
                     <input type="text" id="rename-input" maxlength="60" class="grow" autocomplete="off" placeholder="Type a name, or pick one below">
                     <button type="button" class="primary small" id="rename-save">Save</button>
                     <button type="button" class="ghost small" id="rename-cancel">Cancel</button>
@@ -400,11 +400,11 @@
                         <li><button type="button" class="pick" data-name="{{ one.name }}">{{ one.name }}{% if one.role %} <span class="pill role">{{ one.role }}</span>{% endif %} <span class="muted">in {{ one.count }} recording{{ one.count|pluralize }}</span></button></li>
                       {% endfor %}
                     </ul>
-                    <p class="small muted" id="people-none" hidden style="margin: 4px 0 0">Nobody in this case matches; Save makes a new person.</p>
+                    <p class="small muted m0 mt4" id="people-none" hidden>Nobody in this case matches; Save makes a new person.</p>
                   {% else %}
-                    <p class="small muted" style="margin: 8px 0 0">This case has no people yet; Save makes the first.</p>
+                    <p class="small muted m0 mt8">This case has no people yet; Save makes the first.</p>
                   {% endif %}
-                  <p class="muted small" style="margin: 6px 0 0">Changes this recording only. To rename in every recording, use the <a href="{% url 'case' recording.case_id %}?tab=speakers">case's Speakers tab</a>.</p>
+                  <p class="muted small m0 mt6">Changes this recording only. To rename in every recording, use the <a href="{% url 'case' recording.case_id %}?tab=speakers">case's Speakers tab</a>.</p>
                 </div>
               {% endif %}
               <p class="small muted" id="speakers-undo-line"{% if not last_change %} hidden{% endif %}>
@@ -431,7 +431,7 @@
                   <span class="small muted" id="suggest-count-words" hidden>from what people say. Nothing changes until you accept one.</span>
                   <button type="button" class="small" id="suggest-names">Suggest names</button>
                 </div>
-                <p id="suggest-said" class="small muted" style="margin: 4px 0 0"></p>
+                <p id="suggest-said" class="small muted m0 mt4"></p>
                 <ul id="suggestions" class="suggestion-cards"></ul>
               </div>
             {% endif %}

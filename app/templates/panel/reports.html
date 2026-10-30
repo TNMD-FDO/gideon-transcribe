@@ -10,7 +10,7 @@
     {% if not reports_on %}<b>Reports are off</b> on the Features page; the link is hidden and nothing new arrives.{% endif %}
   </p>
 
-  <div class="row" style="margin: 0 0 8px; gap: 8px">
+  <div class="row m0 mb8 gap8">
     <a href="{% url 'panel-reports' %}" class="btn small{% if not state %} on{% endif %}">All ({{ total }})</a>
     <a href="{% url 'panel-reports' %}?state=new" class="btn small{% if state == 'new' %} on{% endif %}">New ({{ counts.new }})</a>
     <a href="{% url 'panel-reports' %}?state=seen" class="btn small{% if state == 'seen' %} on{% endif %}">Seen ({{ counts.seen }})</a>
@@ -18,7 +18,7 @@
   </div>
 
   {% if rows %}
-    <div class="card" style="overflow-x: auto">
+    <div class="card scroll-x">
       <table class="tbl" id="reports">
         <thead>
           <tr><th>Mark</th><th>Kind</th><th>Report</th><th>From</th><th>Where</th><th></th></tr>
@@ -39,10 +39,10 @@
               <td class="small muted">{{ one.where_line }}{% if one.state != 'new' and one.marked_by %}<div>{{ one.state|capfirst }} by {{ one.marked_by.shown_name }}, {{ one.marked_at|date:"j M Y H:i" }}</div>{% endif %}</td>
               <td class="nowrap">
                 {% if one.state == 'new' %}
-                  <form method="post" action="{% url 'panel-report-mark' one.pk 'seen' %}" style="display: inline">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Seen</button></form>
+                  <form class="inline-form" method="post" action="{% url 'panel-report-mark' one.pk 'seen' %}">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Seen</button></form>
                 {% endif %}
                 {% if one.state != 'done' %}
-                  <form method="post" action="{% url 'panel-report-mark' one.pk 'done' %}" style="display: inline">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Done</button></form>
+                  <form class="inline-form" method="post" action="{% url 'panel-report-mark' one.pk 'done' %}">{% csrf_token %}<input type="hidden" name="back" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Done</button></form>
                 {% endif %}
               </td>
             </tr>

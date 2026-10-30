@@ -88,3 +88,24 @@ def test_what_arrives_after_the_paint_keeps_its_place():
     assert "if (was !== lit)" in preview
     notes = (APP / "static" / "notes-page.js").read_text(encoding="utf-8")
     assert "play.dataset.state !== state" in notes
+
+
+def test_the_stylesheet_keeps_its_own_scale_and_the_templates_keep_no_spacing():
+    # The stylesheet's tidy-up (v1.177.0): every size on the look's scale is
+    # its token; the common margins, gaps and widths are classes, not inline
+    # styles; nothing opens a browser pop-up.
+    for literal in ("11px", "13px", "15px", "22px"):
+        assert not re.search(r"font-size:\s*" + literal + r"(?![\d.])", CSS), literal
+    classes = (".m0 {", ".mt6 {", ".mb8 {", ".gap6 {", ".wrap {", ".scroll-x {")
+    for cls in classes + (".inline-form {",):
+        assert cls in CSS, cls
+    inline = 0
+    pages = list(TEMPLATES.glob("*.html")) + list((TEMPLATES / "panel").glob("*.html"))
+    for path in pages:
+        inline += path.read_text(encoding="utf-8").count('style="')
+    # A ratchet: 96 after the conversion, down from 241; the rest are values
+    # computed per element (a bar's width, a colour) and one-offs.
+    assert inline <= 96, inline
+    for script in (APP / "static").glob("*.js"):
+        text = script.read_text(encoding="utf-8")
+        assert not re.search(r"(?<![\w.])(?<!function )alert\(", text), script.name

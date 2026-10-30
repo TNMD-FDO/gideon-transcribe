@@ -11,13 +11,13 @@
   it when the shape is opened.
 {% endcomment %}
 <div id="case-notes-desk" hidden>
-  <p class="lead small muted" id="np-lead" style="margin: 0 0 8px">Reading the notes...</p>
+  <p class="lead small muted m0 mb8" id="np-lead">Reading the notes...</p>
   <div class="inc-desk notes-desk" id="notes-desk"
        data-list="{{ desk_list_url }}" data-find="{{ desk_find_url }}" data-opening="{{ desk_opening }}" data-case="{{ case.pk }}">
     <div class="np-notes inc-work" id="np-work" data-showing="notes">
       <div class="np-bar np-notes-bar">
-        <div class="row np-pills" id="np-pills" style="gap: 6px; flex-wrap: wrap"></div>
-        <div class="row np-pills" id="np-type-pills" style="gap: 6px; flex-wrap: wrap"></div>
+        <div class="row np-pills gap6 wrap" id="np-pills"></div>
+        <div class="row np-pills gap6 wrap" id="np-type-pills"></div>
         <span class="grow"></span>
         {% comment %}The Recordings list (v1.172.0): the page's own Listen through flow, once a button in the page's head.{% endcomment %}
         <button type="button" class="small np-panel-button" data-panel="recordings" title="The case's recordings as cards with Listen; Listen through them one after another and mark them reviewed">{% icon "recordings" %} Recordings <span class="count" id="np-count-recordings"></span></button>
@@ -38,7 +38,7 @@
             <div class="row np-pills" id="np-rec-pills" style="gap: 6px; flex-wrap: wrap; margin-bottom: 6px"></div>
             {# Cards, not a table (v1.121.1): Listen is the point. #}
             <div class="np-recs" id="np-recordings"></div>
-            <div class="row small muted" id="np-rec-foot" style="margin-top: 6px"></div>
+            <div class="row small muted mt6" id="np-rec-foot"></div>
           </div>
         </div>
       </div>
@@ -55,9 +55,9 @@
 
     <div class="np-left np-player" id="np-left">
       <div class="np-call-head" id="np-call-head">
-        <div class="row" style="gap: 8px; flex-wrap: wrap">
+        <div class="row gap8 wrap">
           <b id="np-call-title" style="font-size: var(--t-heading)">No recording yet</b>
-          <span id="np-call-pills" class="row" style="gap: 6px"></span>
+          <span id="np-call-pills" class="row gap6"></span>
           <span class="grow"></span>
           <button type="button" class="btn small" id="np-open-call" hidden title="The whole recording, over this page">Open the call</button>
         </div>

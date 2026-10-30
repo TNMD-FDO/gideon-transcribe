@@ -9,7 +9,7 @@
       <div class="line"><h1>Clips</h1></div>
       <div class="acts">
         {% if groups|length > 1 %}
-          <label class="row small" style="gap: 6px">
+          <label class="row small gap6">
             Where
             <select id="clip-filter">
               <option value="">Everywhere</option>
@@ -109,8 +109,8 @@
                         {% endif %}
                       {% endif %}
                       <h2>{{ clip.title }}</h2>
-                      {% if clip.from_event %}<p class="small muted" style="margin: 0 0 8px">{{ clip.from_event }}</p>{% endif %}
-                      {% if clip.note %}<p class="small" style="margin: 0 0 8px">{{ clip.note }}</p>{% endif %}
+                      {% if clip.from_event %}<p class="small muted m0 mb8">{{ clip.from_event }}</p>{% endif %}
+                      {% if clip.note %}<p class="small m0 mb8">{{ clip.note }}</p>{% endif %}
                       <dl class="kv">
                         <dt>Recording</dt><dd>{{ clip.recording.title }}</dd>
                         {% if clip.recording.case_id %}<dt>Case</dt><dd><a href="{% url 'case' clip.recording.case_id %}">{{ clip.recording.case.name }}</a></dd>{% endif %}

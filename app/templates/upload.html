@@ -50,7 +50,7 @@
     <section class="asks">
       {% if to_a_case %}
         <div class="ask">
-          <p class="muted" style="margin: 0 0 6px">Into which case?</p>
+          <p class="muted m0 mb6">Into which case?</p>
           <div class="row which-case">
             <select id="which-case" aria-label="Which case">
               {% for one in to_a_case %}
@@ -64,16 +64,16 @@
               {% endfor %}
             </select>
           </div>
-          <p class="muted small" style="margin: 4px 0 0">Kept with the case, shared with its people. For transcripts you only need this session, use <a href="{% url 'bulk' %}">Bulk transcription</a>.</p>
+          <p class="muted small m0 mt4">Kept with the case, shared with its people. For transcripts you only need this session, use <a href="{% url 'bulk' %}">Bulk transcription</a>.</p>
           {% comment %}The case's names go with the recordings (Phase 9 chapter 2).{% endcomment %}
-          <span class="muted small" id="case-names-line" style="margin-top: 4px" hidden></span>
+          <span class="muted small mt4" id="case-names-line" hidden></span>
         </div>
       {% elif no_case %}
         {% url 'cases' as cases_url %}
         {% include "empty.html" with icon="case" title="No case to upload into yet" line="A batch from this page goes into a case, which keeps it after you sign out. Make one on the Cases page, or use Bulk transcription for transcripts you only need this session." action="New case" action_url=cases_url %}
         <p class="muted small centre"><a href="{% url 'bulk' %}">Bulk transcription</a></p>
       {% else %}
-        <p class="notice" style="margin: 0">{{ standing_line }}</p>
+        <p class="notice m0">{{ standing_line }}</p>
       {% endif %}
     </section>
 
@@ -170,7 +170,7 @@
       somebody who has just been told the service is down is exactly the
       person wondering where their recordings went.
     {% endcomment %}
-    <p class="muted small centre" style="margin-top: 18px">
+    <p class="muted small centre mt18">
       Nothing leaves this building.
     </p>
   </div>

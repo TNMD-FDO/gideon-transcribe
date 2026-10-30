@@ -41,7 +41,7 @@
           <option data-names="{{ one.names }}" value="{{ one.id }}"{% if one.id == chosen_case %} selected{% endif %}>{{ one.name }}{% if one.shared_by %} (shared by {{ one.shared_by }}, {{ one.room }} left){% endif %}</option>
         {% endfor %}
       </select>
-      <p class="muted small" style="margin: 4px 0 0">
+      <p class="muted small m0 mt4">
         A recording added to a case stays after you sign out.
       </p>
     </div>
@@ -166,9 +166,9 @@
   {% endif %}
 
   {% comment %}The More options: a fold on the Upload page, plain fields on Bulk transcription, where the whole card is one fold already.{% endcomment %}
-  {% if for_bulk %}<div id="more" class="more-plain">{% else %}<details id="more" style="margin-top: 10px"><summary>More options</summary>{% endif %}
+  {% if for_bulk %}<div id="more" class="more-plain">{% else %}<details class="mt10" id="more"><summary>More options</summary>{% endif %}
 
-    <div class="field" style="margin-top: 10px">
+    <div class="field mt10">
       <label for="language">Spoken language</label>
       <select id="language">
         <option value="">Automatic</option>

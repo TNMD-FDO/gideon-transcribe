@@ -46,7 +46,7 @@
                   {% if not transcript %}<span class="muted">available once the transcript is ready</span>{% endif %}
                 </label>
               {% endif %}
-              <div class="row" style="margin-top: 8px">
+              <div class="row mt8">
                 <button type="submit" class="primary">Save clip</button>
                 <span class="muted small">
                   Saved as {% if is_video %}mp4{% else %}mp3{% endif %}, cut from the playback copy
@@ -72,11 +72,11 @@
               <h2 class="grow">Summaries</h2>
               <button type="button" class="small primary" id="new-summary">{% if assistant.moments and is_video %}Summarise this video{% else %}New summary{% endif %}</button>
             </div>
-            <div id="summary-dialog" class="card" hidden style="margin: 8px 0">
+            <div id="summary-dialog" class="card m0 mt8 mb8" hidden>
               <div class="field" id="summary-template-line" hidden>
                 <label for="summary-template">Template</label>
                 <select id="summary-template"></select>
-                <p class="muted small" id="summary-type-line" hidden style="margin: 4px 0 0"></p>
+                <p class="muted small m0 mt4" id="summary-type-line" hidden></p>
               </div>
               <div class="field">
                 <label for="summary-focus">What should the summary concentrate on? (optional)</label>
@@ -96,7 +96,7 @@
                   does first when the video is not yet prepared, in numbers,
                   from the state; nothing to tick.
                 {% endcomment %}
-                <p class="muted small" id="summary-prepare-note" hidden style="margin: 2px 0 0"></p>
+                <p class="muted small m0 mt2" id="summary-prepare-note" hidden></p>
               {% endif %}
               <div class="row">
                 <button type="button" class="primary small" id="summary-write">Write summary</button>
@@ -145,7 +145,7 @@
           {% if documents_on %}
             {% comment %}The report for this recording (Phase 8 chapter 4, part 1).{% endcomment %}
             <div id="recording-documents" class="documents-here">
-              <h3 class="small" style="margin: 12px 0 4px">The report</h3>
+              <h3 class="small m0 mt12 mb4">The report</h3>
               {% if documents %}
                 <ul class="plain">
                   {% for one in documents %}
@@ -153,13 +153,13 @@
                   {% endfor %}
                 </ul>
               {% else %}
-                <p class="muted small" style="margin: 0 0 6px">No report yet for this recording. Add the police report as a PDF and it is read beside the transcript.</p>
+                <p class="muted small m0 mb6">No report yet for this recording. Add the police report as a PDF and it is read beside the transcript.</p>
               {% endif %}
               <a class="btn small" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
             </div>
           {% endif %}
           <div id="marks" hidden>
-            <h3 class="small" style="margin: 12px 0 4px">Marks</h3>
+            <h3 class="small m0 mt12 mb4">Marks</h3>
             <ul class="plain marks"></ul>
           </div>
         </div>

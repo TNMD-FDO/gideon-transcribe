@@ -5,7 +5,7 @@
   core.case_bar.bar. The tab the page lives under is lit; away from the case
   page the page's own name follows the tabs.
 {% endcomment %}
-<div class="tabs case-tabs" id="case-tabs" style="margin-top: 6px">
+<div class="tabs case-tabs mt6" id="case-tabs">
   {% for t in bar.tabs %}
     <a href="{{ t.url }}" class="tab{% if t.on %} on{% endif %}">{% icon t.icon %} {{ t.name }}{% if t.count_shown %} <span class="count">{{ t.count }}</span>{% endif %}</a>
   {% endfor %}

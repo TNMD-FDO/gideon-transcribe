@@ -21,7 +21,7 @@
     {% else %}
       <div class="muted tiny">Nobody named yet. A speaker named on a recording becomes a person here.</div>
     {% endif %}
-    <div class="muted tiny" style="margin-top: 6px">Their names and nicknames go to recognition. A spelling the recogniser got wrong is kept against the person as "also heard as", for Search; it is never sent to recognition.</div>
+    <div class="muted tiny mt6">Their names and nicknames go to recognition. A spelling the recogniser got wrong is kept against the person as "also heard as", for Search; it is never sent to recognition.</div>
   </div>
   {% if names_block.terms %}
     <ul class="plain vocabulary-list">
@@ -32,7 +32,7 @@
               <b>{{ one.name }}</b>
               <div class="muted small">{% if one.spellings %}also heard as {{ one.spellings|join:", " }}{% else %}no other spelling yet{% endif %}</div>
             </summary>
-            <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="gap: 6px; margin-top: 6px">
+            <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small gap6 mt6">
               {% csrf_token %}
               <input type="hidden" name="action" value="spellings">
               <input type="hidden" name="kind" value="term">
@@ -41,7 +41,7 @@
               <button type="submit" class="small">Save</button>
             </form>
             {% if may_remove_terms %}
-              <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small" style="margin-top: 4px"
+              <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="row small mt4"
                     data-confirm-title="Remove {{ one.name }} from the case's names and places?" data-confirm="Nothing in the recordings changes; the name stops going with new uploads and its spellings stop standing for it in Search." data-confirm-ok="Remove" data-danger>
                 {% csrf_token %}
                 <input type="hidden" name="action" value="remove">
@@ -54,7 +54,7 @@
       {% endfor %}
     </ul>
   {% endif %}
-  <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="vocabulary-add" style="margin-top: 8px">
+  <form method="post" action="{% url 'case-vocabulary' case.pk %}" class="vocabulary-add mt8">
     {% csrf_token %}
     <input type="hidden" name="action" value="add">
     <input type="text" name="term" maxlength="120" placeholder="A place or a term" required aria-label="A place or a term">

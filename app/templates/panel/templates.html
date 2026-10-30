@@ -15,14 +15,14 @@
     <div class="pane-list">
       <h2>Prompt templates</h2>
       {% for row in prompt_templates %}
-        <form method="post" action="{% url 'panel-prompt-template' row.key %}" class="card" style="margin-bottom: 12px">
+        <form method="post" action="{% url 'panel-prompt-template' row.key %}" class="card mb12">
           {% csrf_token %}
           <div class="row">
             <b class="grow">{{ row.name }}</b>
             <span class="muted small">version {{ row.version }}</span>
             {% if row.behind %}<span class="pill warn small" title="This copy was edited, and a later release changed the shipped wording. Reset to default takes the new wording; your edits are lost.">shipped wording changed</span>{% endif %}
           </div>
-          <textarea name="text" rows="6" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
+          <textarea class="full m0 mt8 mb8" name="text" rows="6">{{ row.text }}</textarea>
           <div class="row">
             <button type="submit" name="action" value="save" class="primary small">Save</button>
             <button type="submit" name="action" value="reset" class="ghost small"
@@ -31,16 +31,16 @@
         </form>
       {% endfor %}
 
-      <h2 style="margin-top: 24px">Starter questions</h2>
+      <h2 class="mt24">Starter questions</h2>
       <p class="muted small">
         What an empty chat offers as one-click chips, one question per line.
         Leave a list empty and the chat offers nothing but its box.
       </p>
       {% for row in starters %}
-        <form method="post" action="{% url 'panel-starter-questions' row.key %}" class="card" style="margin-bottom: 12px">
+        <form method="post" action="{% url 'panel-starter-questions' row.key %}" class="card mb12">
           {% csrf_token %}
           <div class="row"><b class="grow">{{ row.name }}</b></div>
-          <textarea name="text" rows="{{ row.lines }}" style="width: 100%; margin: 8px 0"
+          <textarea class="full m0 mt8 mb8" name="text" rows="{{ row.lines }}"
                     placeholder="One question per line">{% for key, text in starter_text.items %}{% if key == row.key %}{{ text }}{% endif %}{% endfor %}</textarea>
           <div class="row">
             <button type="submit" class="primary small">Save</button>
@@ -48,7 +48,7 @@
         </form>
       {% endfor %}
 
-      <h2 style="margin-top: 24px">Summary templates</h2>
+      <h2 class="mt24">Summary templates</h2>
       <p class="muted small">
         Users choose a template only when two or more are Enabled. Exactly one
         is the Default among the Enabled; the shipped ones are built in and
@@ -58,7 +58,7 @@
         {% if not folder_management %}Recording types come with Cases, which are off; the ticks apply once Folder management is on.{% endif %}
       </p>
       {% for item in summary_templates %}{% with row=item.row %}
-        <form method="post" action="{% url 'panel-summary-template' row.pk %}" class="card" style="margin-bottom: 12px">
+        <form method="post" action="{% url 'panel-summary-template' row.pk %}" class="card mb12">
           {% csrf_token %}
           <div class="row">
             {% if row.built_in %}
@@ -84,7 +84,7 @@
               <span class="muted">none listed under Cases settings</span>
             {% endfor %}
           </div>
-          <textarea name="text" rows="8" style="width: 100%; margin: 8px 0">{{ row.text }}</textarea>
+          <textarea class="full m0 mt8 mb8" name="text" rows="8">{{ row.text }}</textarea>
           <div class="row">
             <button type="submit" name="action" value="save" class="primary small">Save</button>
             {% if not row.is_default %}
@@ -111,7 +111,7 @@
     </div>
 
     <aside class="pane-detail">
-      <h2 style="margin-top: 0">Add template</h2>
+      <h2 class="mt0">Add template</h2>
       <p class="muted small">
         A new shape for a summary: a name people will recognise, one line
         about when to use it, the recording types it is for, and the
@@ -127,7 +127,7 @@
         <div class="field"><span>For recording types (none means any)</span>
           <div class="row small" style="gap: 10px; flex-wrap: wrap; margin-top: 4px">
             {% for one in types_for_new %}
-              <label class="row" style="gap: 4px"><input type="checkbox" name="types" value="{{ one.name }}"> {{ one.name }}</label>
+              <label class="row gap4"><input type="checkbox" name="types" value="{{ one.name }}"> {{ one.name }}</label>
             {% empty %}<span class="muted">none listed</span>{% endfor %}
           </div>
         </div>

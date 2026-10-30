@@ -30,7 +30,7 @@
       </span>
       <div class="line"><h1>{{ document.title }}</h1></div>
       <div class="acts">
-        <label class="row small" style="gap: 4px">Page <input type="number" id="doc-page-box" class="small" min="1" max="{{ document.pages }}" value="{{ open_page }}" style="width: 4.5em"> of {{ document.pages }}</label>
+        <label class="row small gap4">Page <input type="number" id="doc-page-box" class="small" min="1" max="{{ document.pages }}" value="{{ open_page }}" style="width: 4.5em"> of {{ document.pages }}</label>
         <input type="search" id="doc-find" class="small" maxlength="200" placeholder="Find in this document" value="{{ asked }}" aria-label="Find in this document">
         <a class="btn small" href="{% url 'document-download' case.pk document.pk %}">{% icon "download" %} Download</a>
       </div>

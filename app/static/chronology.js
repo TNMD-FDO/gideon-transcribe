@@ -161,7 +161,7 @@
     var body = { action: action };
     if (e) { body.id = e.dataset.id; }
     if (text !== undefined) { body.text = text; }
-    return post(host.dataset.act, body).then(function (told) { say(told.said); load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { alert(err.message); });
+    return post(host.dataset.act, body).then(function (told) { say(told.said); load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
   }
   function acceptEdit(e) {
     var words = e.querySelector(".words"); if (words.querySelector("textarea")) { return; }
@@ -173,7 +173,7 @@
   }
   function propose() {
     var box = host.querySelector("#proposed-look-for");
-    post(host.dataset.act, { action: "propose", look_for: box ? box.value : "" }).then(function () { load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { alert(err.message); });
+    post(host.dataset.act, { action: "propose", look_for: box ? box.value : "" }).then(function () { load(state.day ? state.day.date : "", state.span, true); }).catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
   }
 
   function leadRow(d) {
@@ -548,7 +548,7 @@
   function makeSheet(from, to) {
     fetch(spanUrl("/chronology/span", hm(from), hm(to)), { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       if (told.incidents && told.incidents.length) { addFirstSheet(told); } else { pickerSheet(told); }
-    }).catch(function () { alert("The span could not be read. Try again."); });
+    }).catch(function () { window.UI.toast("The span could not be read. Try again.", { problem: true, icon: "warning" }); });
   }
   function rowHtml(r, ticked, inIt) {
     var tick = inIt ? "<input type='checkbox' checked disabled title='Already in it'>" : "<input type='checkbox' name='pick'" + (ticked ? " checked" : "") + " aria-label='" + esc(r.title) + "'>";
@@ -632,7 +632,7 @@
     var inc = JSON.parse(e.dataset.outside);
     post("/case/" + caseId + "/incident/" + inc.id + "/add-from-chronology", { day: state.day.date, from: inc.from, to: inc.to, recordings: [e.dataset.recording] })
       .then(function () { load(state.day.date, state.span); })
-      .catch(function (err) { alert(err.message); });
+      .catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
   }
   function check(e) {
     var key = e.dataset.entry.split(":"), wanted = !e.querySelector(".pill.warn");
@@ -653,7 +653,7 @@
       var line = key[0] === "line";
       var url = line ? "/recording/" + e.dataset.recording + "/segment/" + key[1] + "/note" : "/recording/" + e.dataset.recording + "/note-at";
       var body = line ? { note: text, was: was } : { id: key[1], note: text, at: parseFloat(e.dataset.at) };
-      post(url, body).then(function () { load(state.day.date, state.span); }).catch(function (err) { words.textContent = was; alert(err.message); });
+      post(url, body).then(function () { load(state.day.date, state.span); }).catch(function (err) { words.textContent = was; window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
     });
   }
 

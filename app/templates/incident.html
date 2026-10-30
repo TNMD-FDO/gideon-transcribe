@@ -22,7 +22,7 @@
     {% comment %}The page's h1 (v1.175.0, the polish walk), drawn as the bold line it was.{% endcomment %}
     <h1 class="grow" id="inc-title">{{ incident.name }}
       {% comment %}The case bar above says the case (v1.171.0); "in the case" and Back to the case went with it.{% endcomment %}
-      <span class="muted small" style="font-weight: 400"><span id="inc-facts"></span></span>
+      <span class="muted small regular"><span id="inc-facts"></span></span>
     </h1>
     {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
     <span class="inc-clock" id="inc-clock" title="The incident clock: the time of day the cameras' clocks give">00:00:00</span>
@@ -223,15 +223,15 @@
   {% comment %}Add cameras: the case's other videos, ticked into this incident.{% endcomment %}
   <div class="modal-bg" id="add-box" hidden>
     <div class="modal">
-      <h2 style="margin: 0 0 4px">Add cameras</h2>
+      <h2 class="m0 mb4">Add cameras</h2>
       <p class="muted small" style="margin: 0 0 10px">The case's other videos. Up to {{ state.incident.most }} cameras in an incident.</p>
       <form id="add-form">
         {% comment %}Drawn by incident.js from the state each time the box opens (v1.60.1).{% endcomment %}
         <div class="inc-checks" id="add-list"></div>
         <p class="muted" id="add-none" hidden>Every video in this case is already here.</p>
         {% comment %}One sitting (Phase 8 chapter 9): the bar as it will read with the ticked cameras in.{% endcomment %}
-        <div id="add-sitting" style="margin: 8px 0"></div>
-        <div class="dialog" style="justify-content: flex-end">
+        <div class="m0 mt8 mb8" id="add-sitting"></div>
+        <div class="dialog end">
           <button type="button" class="ghost" id="add-cancel">Cancel</button>
           <button type="submit" class="primary" id="add-go">Add</button>
         </div>

@@ -17,13 +17,13 @@
   {% endcomment %}
   <div class="page roomy">
     <header class="page-head">
-      <div class="line"><h1>Voices <span class="muted" style="font-weight: 400">&middot; {% if chooser %}every unit{% else %}the {{ unit }} unit{% endif %}</span></h1></div>
+      <div class="line"><h1>Voices <span class="muted regular">&middot; {% if chooser %}every unit{% else %}the {{ unit }} unit{% endif %}</span></h1></div>
     </header>
 
-    {% if said %}<p class="notice ok" style="margin-bottom: 12px">{{ said }}</p>{% endif %}
+    {% if said %}<p class="notice ok mb12">{{ said }}</p>{% endif %}
 
     {% if chooser or systems.shown %}
-      <div class="chips" style="margin-bottom: 12px">
+      <div class="chips mb12">
         {% for one in units %}
           <a class="chip{% if one.name == unit %} on{% endif %}" href="{% url 'voices' %}?unit={{ one.name|urlencode }}">{{ one.name }} &middot; {{ one.count }} voice{{ one.count|pluralize }}</a>
         {% endfor %}
@@ -40,7 +40,7 @@
       <div class="m"><div class="n">{{ this_month.dismissed }}</div><div class="w">not them</div></div>
       <div class="m"><div class="n">{{ this_month.none }}</div><div class="w">no match</div></div>
     </div>
-    <p class="muted small" style="margin: 8px 0 14px">
+    <p class="muted small m0 mt8 mb14">
       A voice is kept here only when someone on a case chooses to keep it, in whatever role they hold on that case; the role rides with the voice as a label.
       A card on any recording in this unit can be checked against these by hand; the answer is decided on that card, never here. No line of any recording, no time, no name of a case you may not open.
     </p>
@@ -110,15 +110,15 @@
           <p class="muted">No voice is kept for the {{ unit }} unit yet. On a case's Speakers tab, a person with a voice print in an allowed role offers <b>Keep for the {{ unit }}...</b> on their card; the voice then appears here for everyone in the unit.</p>
         {% endif %}
 
-        <details class="numbers-fold" style="margin-top: 18px">
+        <details class="numbers-fold mt18">
           <summary class="small muted">Numbers &middot; decided from the book, by month</summary>
           {% if decided %}
-            <table class="numbers" style="margin-top: 6px">
+            <table class="numbers mt6">
               <tr><th>Month</th><th>Checks</th><th>Accepted</th><th>Not them</th><th>No match</th></tr>
               {% for d in decided %}<tr><td>{{ d.month }}</td><td>{{ d.checks }}</td><td>{{ d.accepted }}</td><td>{{ d.dismissed }}</td><td>{{ d.none }}</td></tr>{% endfor %}
             </table>
           {% else %}
-            <p class="muted small" style="margin: 6px 0 0">No card has been checked against this book yet.</p>
+            <p class="muted small m0 mt6">No card has been checked against this book yet.</p>
           {% endif %}
         </details>
       </div>
