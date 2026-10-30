@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.180.1, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two fixes to the Incidents tab's strip, at the maintainer's word.
+
+- **Incidents proposed governs the cards.** While the Panel's Incidents proposed is Off, the strip and its lanes show but no forming card is drawn, as the setting's intent is this: v1.180.0 drew the cards with only Not these on them.
+- **No table of every video under the incidents.** The folded "Videos in this case" is gone from the tab; the recordings list carries each video's clock and incident, and New incident keeps its own tick list.
+
 ## v1.180.0, 2026-10-30
 
 ```

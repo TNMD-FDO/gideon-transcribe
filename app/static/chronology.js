@@ -153,6 +153,8 @@
     var box = document.querySelector(host.dataset.cards || "#forming-cards");
     if (!box) { return; }
     box.querySelectorAll("[data-forming]").forEach(function (one) { one.remove(); });
+    // Incidents proposed governs the cards (v1.180.1): Off, none is drawn.
+    if (!state.mayMake) { box.hidden = !box.children.length; return; }
     var have = {}; box.querySelectorAll("[data-key]").forEach(function (one) { have[one.dataset.key] = true; });
     var worth = (d.hints || []).filter(function (h) { return h.notes && !h.declined && !have[h.key]; });
     worth.sort(function (a, b) { return b.notes - a.notes; });

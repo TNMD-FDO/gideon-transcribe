@@ -166,22 +166,18 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     assert 'id="forming-cards"' in page
     key = incidents.offer_key([one.pk, two.pk, three.pk])
     assert f'data-key="{key}"' in page
-    assert '<details class="mt18" id="case-videos">' in page
-    assert "Videos in this case · 3" in page
-    # A video with no clock and no incident opens the fold.
-    Recording.objects.create(
-        batch=Batch.objects.create(user=owner),
-        user=owner,
-        case=a_case,
-        title="Interview room",
-        original_filename="Interview room.mp4",
-        media_state=MediaState.READY,
-        duration_seconds=600.0,
-        recording_type="Body camera",
-        probe={"streams": [{"codec_type": "video"}]},
-    )
+    # No table of every video under the incidents (v1.180.1): the recordings
+    # list carries the clock columns. New incident's own tick list stays.
+    assert "Videos in this case" not in page and 'id="case-videos"' not in page
+    assert 'name="recordings"' in page
+    # Incidents proposed Off: the strip's reading says so, the lead counts no
+    # forming, and the page keeps its strip.
+    settings_store.set_to("incidents_proposed", False)
+    told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    assert told["may_make"] is False
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert '<details class="mt18" id="case-videos" open>' in page
+    assert "No incident yet." in page and ", 1 forming" not in page
+    assert 'id="incident-strip"' in page
 
 
 def test_not_these_from_the_strip_answers_json(owner, a_case, three_cameras, client):
