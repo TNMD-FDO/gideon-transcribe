@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>The off-scale type sizes, beside the scale</title>
+<!-- This drawing wears the app's own stylesheet and components, so the sizes compare as they would on the pages. Open it from the repository; the stylesheet and the typeface are found beside it. -->
+<link rel="stylesheet" href="../../../app/static/app.css">
+<style>
+  body { padding: 32px 16px 64px; }
+  .draw { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  .draw h1 { font-size: var(--t-title); margin: 0 0 6px; }
+  .draw h2 { font-size: var(--t-heading); margin: 0 0 12px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: var(--t-label); color: var(--muted); font-weight: 600; }
+  .lede { max-width: 76ch; color: var(--muted); margin: 0; }
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; min-width: 0; }
+  .col > .eyebrow { display: block; margin-bottom: 8px; }
+  .col.pick { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .caption { color: var(--muted); font-size: var(--t-small); margin: 10px 0 0; }
+  /* The "after" columns: the same components at the scale's sizes. */
+  .tables15 table.tbl { font-size: var(--t-body); }
+  .tables13 table.tbl { font-size: var(--t-small); }
+  .rail15 .rail .item b, .rail15 .rail .do .btn, .rail15 .nav .who { font-size: var(--t-body); }
+  .dense13 .chip, .dense13 .tbl td .voice .chain, .dense13 .person-card .chain, .dense13 .chron .entry .line, .dense13 .chron .sheet table, .dense13 .sg-sample .sg-quote { font-size: var(--t-small); }
+  .figures .sg-q { font-size: var(--t-heading); } .figures .sg-q.small, .figures .person-card .h .nm, .figures .need .n.small { font-size: var(--t-body); } .figures .need .n { font-size: var(--t-title); }
+  /* Enough of the frame to stand a rail and a top bar inside a column. */
+  .col .nav { position: static; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; }
+  .col .rail { border: 1px solid var(--line); border-radius: var(--radius); width: 220px; }
+  .col .rail .item .ico { background: var(--surface-2); }
+  .decide { border: 1px dashed var(--accent); border-radius: var(--radius-lg); padding: 10px 14px; background: var(--accent-soft); }
+  .decide ol { margin: 6px 0 0; padding-left: 20px; } .decide li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="draw">
+
+  <header>
+    <span class="eyebrow">docs/the-look.md, Type · a drawing for the maintainer's decision · 2026-10-30</span>
+    <h1>The sizes off the scale, beside the scale</h1>
+    <p class="lede">The look allows five sizes, 22, 17, 15, 13 and 11, and a display size for a figure. The stylesheet still sets 12 pixels in 35 places and 14 in 14, with a few 16, 18 and 20. This drawing wears the app's own stylesheet, so each pair below is the component as it is today beside the same at the nearest size on the scale. Made-up office.</p>
+  </header>
+
+  <!-- 1. Tables -->
+  <section>
+    <h2>1. The tables: 14 pixels today, 15 (the body size) or 13 (the small size)</h2>
+    <div class="compare">
+      <div class="col"><span class="eyebrow">Today, 14 px</span>
+        <table class="tbl"><thead><tr><th>Case</th><th>Recordings</th><th>Last activity</th><th></th></tr></thead><tbody>
+          <tr><td><b>Harbour Street stop</b><div class="muted small">shared by R. Diaz</div></td><td>5</td><td class="muted">yesterday 16:12</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Marsh Lane interview</b></td><td>2</td><td class="muted">3 Oct 09:40</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Pike calls (fictional)</b><div class="muted small">12 calls, one phone system</div></td><td>12</td><td class="muted">28 Sep 11:03</td><td class="acts"><a class="btn small">Open</a></td></tr>
+        </tbody></table>
+      </div>
+      <div class="col tables15 pick"><span class="eyebrow">At 15 px, the body size</span>
+        <table class="tbl"><thead><tr><th>Case</th><th>Recordings</th><th>Last activity</th><th></th></tr></thead><tbody>
+          <tr><td><b>Harbour Street stop</b><div class="muted small">shared by R. Diaz</div></td><td>5</td><td class="muted">yesterday 16:12</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Marsh Lane interview</b></td><td>2</td><td class="muted">3 Oct 09:40</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Pike calls (fictional)</b><div class="muted small">12 calls, one phone system</div></td><td>12</td><td class="muted">28 Sep 11:03</td><td class="acts"><a class="btn small">Open</a></td></tr>
+        </tbody></table>
+      </div>
+      <div class="col tables13"><span class="eyebrow">At 13 px, the small size</span>
+        <table class="tbl"><thead><tr><th>Case</th><th>Recordings</th><th>Last activity</th><th></th></tr></thead><tbody>
+          <tr><td><b>Harbour Street stop</b><div class="muted small">shared by R. Diaz</div></td><td>5</td><td class="muted">yesterday 16:12</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Marsh Lane interview</b></td><td>2</td><td class="muted">3 Oct 09:40</td><td class="acts"><a class="btn small">Open</a></td></tr>
+          <tr><td><b>Pike calls (fictional)</b><div class="muted small">12 calls, one phone system</div></td><td>12</td><td class="muted">28 Sep 11:03</td><td class="acts"><a class="btn small">Open</a></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <p class="caption">Every list in the app (Cases, a case's Recordings, My recordings, Clips, the Panel's Users and Audit log) reads at this size. At 15 a table reads as the page's text and rows grow a little taller; at 13 it reads as a table of facts and the Audit log fits more. The recommendation is 15: a case list is the page, not a footnote.</p>
+  </section>
+
+  <!-- 2. The rail and the top bar -->
+  <section>
+    <h2>2. The rail's names and buttons, and the top bar's name: 14 today, 15</h2>
+    <div class="compare">
+      <div class="col"><span class="eyebrow">Today, 14 px</span>
+        <nav class="nav"><a class="brand"><span class="name">Gideon <span class="second">Transcribe</span></span></a><span class="who">A. Person · Admin · <a>Sign out</a></span></nav>
+        <nav class="rail"><div class="do"><a class="btn primary"><span>Upload files</span></a><a class="btn"><span>Record now</span></a></div><div class="grp">Places</div>
+          <a class="item on"><span class="ico"></span><span class="words"><b>Home</b><span class="line">What is running, and what needs you</span></span></a>
+          <a class="item"><span class="ico"></span><span class="words"><b>Bulk transcription</b><span class="line">Files in, transcripts out, nothing kept</span></span></a>
+          <a class="item"><span class="ico"></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></a>
+        </nav>
+      </div>
+      <div class="col rail15 pick"><span class="eyebrow">At 15 px, the body size</span>
+        <nav class="nav"><a class="brand"><span class="name">Gideon <span class="second">Transcribe</span></span></a><span class="who">A. Person · Admin · <a>Sign out</a></span></nav>
+        <nav class="rail"><div class="do"><a class="btn primary"><span>Upload files</span></a><a class="btn"><span>Record now</span></a></div><div class="grp">Places</div>
+          <a class="item on"><span class="ico"></span><span class="words"><b>Home</b><span class="line">What is running, and what needs you</span></span></a>
+          <a class="item"><span class="ico"></span><span class="words"><b>Bulk transcription</b><span class="line">Files in, transcripts out, nothing kept</span></span></a>
+          <a class="item"><span class="ico"></span><span class="words"><b>Cases</b><span class="line">Kept for a matter, after sign-out</span></span></a>
+        </nav>
+      </div>
+    </div>
+    <p class="caption">The place names and the two action buttons at the body size, which is what the page beside them is set in; the one-line captions stay at the label size. The change is one pixel and reads as the rail belonging to the page rather than sitting beside it.</p>
+  </section>
+
+  <!-- 3. The dense parts -->
+  <section>
+    <h2>3. The dense parts: 12 today, 13 (the small size)</h2>
+    <div class="compare">
+      <div class="col"><span class="eyebrow">Today, 12 px</span>
+        <div class="row gap6 wrap" style="margin-bottom: 10px"><button type="button" class="chip on">All 14</button><button type="button" class="chip">Voice known 6</button><button type="button" class="chip">Named 9</button><button type="button" class="chip">Waiting 3</button></div>
+        <table class="tbl"><tbody><tr><td><div class="voice"><b>Officer Rivera</b><div class="chain">kept for CHU · taught on 3 calls · told to recognition</div></div></td></tr></tbody></table>
+        <div class="person-card" style="margin-top: 10px"><div class="h"><span class="nm">Dana Pike</span></div><div class="chain">named by another · heard on 4 recordings</div></div>
+        <div class="chron" style="margin-top: 10px"><div class="entry"><div class="line">10:42:07 · BWC-1 · "stay where you are, hands where I can see them"</div></div><div class="sheet"><table><thead><tr><th>Time</th><th>Camera</th><th>Said</th></tr></thead><tbody><tr><td class="mono">10:42:07</td><td>BWC-1</td><td>stay where you are</td></tr></tbody></table></div></div>
+        <div class="sg-sample" style="margin-top: 10px; display: flex; gap: 8px; align-items: center"><span class="sg-quote">"I was at the harbour car park when the second unit arrived"</span></div>
+      </div>
+      <div class="col dense13 pick"><span class="eyebrow">At 13 px, the small size</span>
+        <div class="row gap6 wrap" style="margin-bottom: 10px"><button type="button" class="chip on">All 14</button><button type="button" class="chip">Voice known 6</button><button type="button" class="chip">Named 9</button><button type="button" class="chip">Waiting 3</button></div>
+        <table class="tbl"><tbody><tr><td><div class="voice"><b>Officer Rivera</b><div class="chain">kept for CHU · taught on 3 calls · told to recognition</div></div></td></tr></tbody></table>
+        <div class="person-card" style="margin-top: 10px"><div class="h"><span class="nm">Dana Pike</span></div><div class="chain">named by another · heard on 4 recordings</div></div>
+        <div class="chron" style="margin-top: 10px"><div class="entry"><div class="line">10:42:07 · BWC-1 · "stay where you are, hands where I can see them"</div></div><div class="sheet"><table><thead><tr><th>Time</th><th>Camera</th><th>Said</th></tr></thead><tbody><tr><td class="mono">10:42:07</td><td>BWC-1</td><td>stay where you are</td></tr></tbody></table></div></div>
+        <div class="sg-sample" style="margin-top: 10px; display: flex; gap: 8px; align-items: center"><span class="sg-quote">"I was at the harbour car park when the second unit arrived"</span></div>
+      </div>
+    </div>
+    <p class="caption">The chips that narrow a list, a voice's chain under its name, a person card's chain, a chronology entry's line and its sheet, and the guided Speakers page's quoted sample: thirty-five rules at 12 pixels, all secondary words beside something larger. At 13 they are the look's small size, the same as every caption and hint in the app; the dense parts take a little more room.</p>
+  </section>
+
+  <!-- 4. The figures -->
+  <section>
+    <h2>4. The figures and the odd ones: 16, 18 and 20, and a 14</h2>
+    <div class="compare">
+      <div class="col"><span class="eyebrow">Today</span>
+        <div class="sg-q"><span>Who is this?</span></div>
+        <div class="sg-q small"><span>Heard on three calls</span></div>
+        <div class="need" style="margin-top: 10px"><span class="n">4</span> <span class="n small">of 9 named</span></div>
+        <div class="person-card" style="margin-top: 10px"><div class="h"><span class="nm">Dana Pike</span></div></div>
+      </div>
+      <div class="col figures"><span class="eyebrow">On the scale: 17 (heading), 15 (body), 22 (title)</span>
+        <div class="sg-q"><span>Who is this?</span></div>
+        <div class="sg-q small"><span>Heard on three calls</span></div>
+        <div class="need" style="margin-top: 10px"><span class="n">4</span> <span class="n small">of 9 named</span></div>
+        <div class="person-card" style="margin-top: 10px"><div class="h"><span class="nm">Dana Pike</span></div></div>
+      </div>
+    </div>
+    <p class="caption">The guided Speakers page's question (16) to the heading size, its second line and a person card's name (14) to the body size, the "4 of 9" figure (20) to the title size. Six rules in all. The recommendation is to move the first three and leave the figure at 20, written into the look as the size for a count beside its words, since 22 is a page title and 28 a clock.</p>
+  </section>
+
+  <section>
+    <div class="decide">
+      <span class="eyebrow">For your decision</span>
+      <ol>
+        <li><b>The tables:</b> 15 (recommended), 13, or leave at 14.</li>
+        <li><b>The rail and the top bar's name:</b> 15 (recommended), or leave at 14.</li>
+        <li><b>The dense parts:</b> 13 (recommended), or leave at 12.</li>
+        <li><b>The figures:</b> as the fourth pair, with the count left at 20 and written into the look.</li>
+      </ol>
+      <p class="caption">Whatever the pick, it is one release, stylesheet only, with the look's Type section amended to say what it says and a test that no size off the scale remains.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

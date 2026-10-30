@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.178.0, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The polish run's fourth release: every type size on the look's scale, as decided from the drawing `docs/spec/mockups/phase-8-type-scale.html`.
+
+- **The tables, the rail's names and buttons, the top bar's name, the tabs, the banner and the toast** are the body size, 15 pixels; they were 14. A list reads as the page's text, and the rail as part of the page.
+- **The dense parts** are the small size, 13 pixels; they were 12: the chips that narrow a list, a voice's chain and its words, a person card's chain, a chronology entry's line and its sheet, the guided Speakers page's quoted samples, the picker's facts, the quota notice.
+- **The figures:** the guided Speakers page's question at the heading size, its second line and a person card's name at the body size; the count beside its words stays at 20 and the lines of a transcript being read stay at 16, both now named in the look (`--t-count`, `--t-reading`). The stylesheet writes no size in pixels any more, and a test keeps it so.
+
 ## v1.177.0, 2026-10-30
 
 ```

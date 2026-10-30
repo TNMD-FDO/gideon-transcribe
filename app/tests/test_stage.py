@@ -79,7 +79,9 @@ def test_the_stylesheet_has_both_shapes():
         in css
     )
     assert ".seg.cont .who .name { visibility: hidden; }" in css
-    assert "font-size: 16px;" in css[css.index(".read .transcript {") :][:300]
+    # The lines being read keep their size as the --t-reading token (v1.178.0).
+    read = css[css.index(".read .transcript {") :][:300]
+    assert "font-size: var(--t-reading);" in read
     # The cast is stuck under the tab bar.
     cast = css[css.index(".cast {") :][:200]
     assert "position: sticky;" in cast

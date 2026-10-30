@@ -21,6 +21,18 @@ The display size (28) is for a figure, such as the incident's clock, never a
 title. IBM Plex Sans for words, IBM Plex Mono for times and counts, with
 tabular digits wherever digits line up.
 
+Two more sizes, named since v1.178.0 and used nowhere else: `--t-count`
+(20) for a count beside its words, as in the needs box, and `--t-reading`
+(16) for the lines of a transcript being read on the recording page and the
+Speakers page. Amended v1.178.0 at the maintainer's decision from
+`docs/spec/mockups/phase-8-type-scale.html`: the tables, the rail's names
+and buttons, the top bar's name, the tabs, the banner and the toast are the
+body size (they were 14); the dense parts (the chips that narrow a list, a
+voice's chain, a person card's chain, a chronology entry's line and its
+sheet, the guided Speakers page's quoted samples) are the small size (they
+were 12). The stylesheet writes no size in pixels but these tokens, and a
+test keeps it so.
+
 ## Buttons
 
 Four kinds at two sizes. A plain button is the **secondary** (outlined,
