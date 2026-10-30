@@ -17,6 +17,15 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.175.1, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The Notes tab's Page shape opens silent, this time for real.** v1.173.0 stopped the script from pressing play as the shape opened, but the Preview's media element carried the browser's own autoplay attribute and started the recording regardless; the motion walk on the server caught it playing at open. The attribute is gone, and a recording starts only when the script's own play() is called for a press. The same held for every Preview opened quietly.
+
 ## v1.175.0, 2026-10-29
 
 ```

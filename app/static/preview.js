@@ -460,8 +460,12 @@
             stopAt = told.clock_verdict ? told.clock_verdict.play_to : ((line ? line.end : told.seconds) + 0.5);
           } else { stopAt = null; }
           holder.innerHTML = told.is_video
-            ? "<video controls autoplay playsinline preload='metadata'></video>"
-            : "<audio controls autoplay preload='metadata'></audio>";
+            // No autoplay attribute (v1.175.1): the browser had started the
+            // recording by itself whatever the quiet flag said, so the Notes
+            // tab's Page shape played at open after all. The script calls
+            // play() itself wherever a press asks for it.
+            ? "<video controls playsinline preload='metadata'></video>"
+            : "<audio controls preload='metadata'></audio>";
           var player = holder.firstChild;
           player.src = told.media + "#t=" + from;
           player.addEventListener("loadedmetadata", function () { try { player.currentTime = from; } catch (ignored) { /* the fragment then */ } }, { once: true });

@@ -56,3 +56,11 @@ def test_the_incident_page_has_a_heading():
     assert '<h1 class="grow" id="inc-title">' in page
     look = ".inc-head h1#inc-title { font: inherit; font-weight: 600; margin: 0; }"
     assert look in CSS
+
+
+def test_the_preview_never_autoplays():
+    # v1.175.1: the Preview's media had the autoplay attribute, so the Notes
+    # tab's Page shape played at open whatever the quiet flag said; the
+    # script's own play() is the only thing that starts a recording.
+    preview = (APP / "static" / "preview.js").read_text(encoding="utf-8")
+    assert "autoplay" not in preview.replace("No autoplay attribute", "")
