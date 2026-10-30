@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.179.0, 2026-10-30
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The polish run's fifth release, from the dark walk: thirty pages measured in dark, one fault found.
+
+- **The chronology's cameras in dark.** On the Notes tab's Chronology shape and the Proposed events tab, each camera's entry number, its bar in the band and its legend swatch were painted in the light palette's hex the server names (the colour the exports draw with), while their ink turned dark with the theme: 3.1 to 3.6 to 1 at the label size, under the line. The page now paints each camera in its own token (`--sp1` to `--sp8`), so dark gets the look's dark palette, 8 to 1 and above, and light is as it was. The exports are unchanged.
+- **The look's quiet borders, written down.** The borders of controls and the pills' fills sit under the accessibility boundary by the same margin in both themes, on purpose; `docs/the-look.md` says so and why.
+
 ## v1.178.0, 2026-10-30
 
 ```

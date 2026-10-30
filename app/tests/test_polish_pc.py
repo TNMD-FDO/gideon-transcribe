@@ -111,3 +111,17 @@ def test_the_stylesheet_keeps_its_own_scale_and_the_templates_keep_no_spacing():
     for script in (APP / "static").glob("*.js"):
         text = script.read_text(encoding="utf-8")
         assert not re.search(r"(?<![\w.])(?<!function )alert\(", text), script.name
+
+
+def test_the_chronology_paints_cameras_in_the_pages_tokens():
+    # The dark walk (v1.179.0): the server names a camera by the light
+    # palette hex the exports draw with; the page paints the same camera in
+    # its own --sp token, so dark gets the dark palette and the ink reads.
+    from core.chronology import FIGURE_COLOURS
+
+    script = (APP / "static" / "chronology.js").read_text(encoding="utf-8")
+    for index, hexcode in enumerate(FIGURE_COLOURS, start=1):
+        assert f'"{hexcode}": {index}' in script, hexcode
+    assert "paint(e.colour)" in script and "paint(b.colour)" in script
+    assert "e.colour ||" not in script and "+ b.colour +" not in script
+    assert '.colour + "' not in script

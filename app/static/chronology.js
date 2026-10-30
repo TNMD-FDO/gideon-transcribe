@@ -24,6 +24,12 @@
   function hms(seconds) { seconds = Math.max(0, Math.round(seconds)) % 86400; var h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60; return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s; }
   function hm(seconds) { return hms(seconds).slice(0, 5); }
   function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+  // A camera's colour (v1.179.0, the dark walk): the server names it by the
+  // light palette's hex, which the exports draw with on white; the page
+  // paints the same camera in its own token, so dark gets the look's dark
+  // palette and the ink on it reads. Anything else is the muted tone.
+  var PAINT = { "#1f6fb2": 1, "#c2410c": 2, "#2e7d32": 3, "#8e24aa": 4, "#00838f": 5, "#ad1457": 6, "#6d4c41": 7, "#546e7a": 8 };
+  function paint(hex) { var n = PAINT[String(hex || "").toLowerCase()]; return n ? "var(--sp" + n + ")" : "var(--muted)"; }
   function cookie(name) { var m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : ""; }
   function post(url, body) {
     return fetch(url, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": cookie("csrftoken") }, body: JSON.stringify(body || {}) })
@@ -139,12 +145,12 @@
       ? "<span class='pill small ok'>accepted · " + esc(e.became) + "</span>" + (e.note_url ? "<a class='small' href='" + esc(e.note_url) + "'>Open the note</a>" : "")
       : "<button type='button' class='small primary' data-act='accept' title='The sentence becomes a note on the recording at this moment, in your name'>Accept</button><button type='button' class='small' data-act='accept-edit' title='Write the note in your own words first'>Accept and edit</button><button type='button' class='small ghost' data-act='dismiss' title='Put away; a later run does not offer it again'>Dismiss</button>";
     return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-id='" + esc(e.id) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'>" +
-      "<span class='num' style='background: " + (e.colour || "var(--muted)") + "'>" + e.number + "</span>" +
+      "<span class='num' style='background: " + paint(e.colour) + "'>" + e.number + "</span>" +
       "<div><div class='top'><button type='button' class='t' data-act='play' title='Play the moment, with the lines'>" + (e.time || "the day") + "</button><button type='button' class='play' data-act='play' title='Play the moment'>▶</button>" + (e.how === "day" ? "<span class='pill small'>placed by the day</span>" : "") + "</div>" +
       "<div class='words'>" + esc(e.text) + "</div>" +
       (e.why ? "<div class='why small'>Why it matters: " + esc(e.why) + "</div>" : "") +
       "<div class='line'>" + (e.said ? "“" + esc(e.said) + "”" : "at a moment, nothing said") + " · " + esc(e.title) + "</div>" +
-      "<div class='meta'><span class='pill small " + (e.source === "watch" ? "inc" : "warn") + "'>" + esc(e.source_words) + "</span><span class='chip'><i style='background: " + (e.colour || "var(--muted)") + "'></i>" + esc(e.title) + "</span>" +
+      "<div class='meta'><span class='pill small " + (e.source === "watch" ? "inc" : "warn") + "'>" + esc(e.source_words) + "</span><span class='chip'><i style='background: " + paint(e.colour) + "'></i>" + esc(e.title) + "</span>" +
       (e.for_incident ? "<span class='pill small inc' title='Proposed by a run on this incident'>for " + esc(e.for_incident) + "</span>" : "") +
       (e.incident ? (e.incident.event ? "<span class='pill small inc' title='Its camera is on the incident&#39;s clock; accepted, the note is an event of it'>on a camera of " + esc(e.incident.name) + "</span>" : "<span class='pill small inc' title='Its camera is in the incident but not on its clock yet'>in " + esc(e.incident.name) + ", not synced yet</span>") : "") +
       acts + "</div></div></div>";
@@ -285,7 +291,7 @@
     // narrow for a name carries none, and the whole title is on hover.
     var pixels = width * (host.clientWidth || 900) / 100;
     var label = pixels < 56 ? "" : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + plural(b.notes, "note"));
-    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + b.colour + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
+    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + paint(b.colour) + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
   }
 
   function legend(d) {
@@ -293,7 +299,7 @@
     var placed = d.bars.length, byHand = d.bars.filter(function (b) { return b.how === "hand" || b.how === "file" || b.how === "day"; }).length;
     if (d.shape === "coverage") { parts.push("The " + Math.min(8, d.bars.length) + " with the most notes have a bar; press the shade at a moment for every recording running then."); }
     else if (d.shape === "packed") { parts.push(placed + " recordings on the clock, packed into lanes; " + (placed - byHand) + " by clock, " + byHand + " by hand."); }
-    else { d.bars.forEach(function (b) { parts.push("<i style='background: " + b.colour + "'></i>" + esc(b.title) + " · " + esc(b.placed)); }); }
+    else { d.bars.forEach(function (b) { parts.push("<i style='background: " + paint(b.colour) + "'></i>" + esc(b.title) + " · " + esc(b.placed)); }); }
     if (d.shape !== "lanes") { parts.push("Hover a bar for the recording; press it to light its notes."); }
     return "<div class='legend'>" + parts.map(function (p) { return "<span>" + p + "</span>"; }).join("") + "</div>";
   }
@@ -312,7 +318,7 @@
     });
     clusters.forEach(function (c) {
       var mid = (c.first + c.last) / 2;
-      if (c.items.length === 1) { html += "<i " + (live ? "data-mark='" + c.items[0].n + "' " : "") + "style='left: " + x(mid, d) + "%; background: " + (c.items[0].colour || "var(--muted)") + "' title='" + (label === "notes" ? "Note " : "Proposed event ") + c.items[0].n + " at " + hms(mid) + "'></i>"; }
+      if (c.items.length === 1) { html += "<i " + (live ? "data-mark='" + c.items[0].n + "' " : "") + "style='left: " + x(mid, d) + "%; background: " + paint(c.items[0].colour) + "' title='" + (label === "notes" ? "Note " : "Proposed event ") + c.items[0].n + " at " + hms(mid) + "'></i>"; }
       else { html += "<em " + (live ? "data-marks='" + c.items.map(function (m) { return m.n; }).join(",") + "' " : "") + "style='left: " + inside(x(mid, d)) + "%' title='" + c.items.length + " " + label + ", " + hm(c.first) + " to " + hm(c.last) + (live ? "; press to open them" : "") + "'>×" + c.items.length + "</em>"; }
     });
     html += "<span class='lbl'>" + label + "</span></div>";
@@ -355,12 +361,12 @@
     var cls = "entry" + (state.lit ? (e.recording === state.lit ? " lit" : " dim") : "");
     var under = e.said ? "“" + esc(e.said) + "”" : (e.kind === "event" ? "on the event" + (e.event_time ? " at " + esc(e.event_time) : "") : "at a moment, nothing said");
     return "<div class='" + cls + "' data-entry='" + esc(e.key) + "' data-recording='" + e.recording + "' data-at='" + e.at + "' data-n='" + e.number + "'" + (e.outside ? " data-outside='" + esc(JSON.stringify(e.outside)) + "'" : "") + ">" +
-      "<span class='num' style='background: " + (e.colour || "var(--muted)") + "'>" + e.number + "</span>" +
+      "<span class='num' style='background: " + paint(e.colour) + "'>" + e.number + "</span>" +
       "<div><div class='top'><button type='button' class='t' data-act='play' title='Play the moment'>" + (e.time || "the day") + "</button><button type='button' class='play' data-act='play' title='Play the moment'>▶</button>" +
       (e.how === "day" ? "<span class='pill small'>placed by the day</span>" : "") + (e.to_check ? "<span class='pill small warn'>To check</span>" : "") + "</div>" +
       "<div class='words' data-act='edit' title='" + (e.kind === "event" ? "A note on an incident&#39;s event: edit it there" : "Press to edit") + "'>" + esc(e.text).replace(/\n/g, "<br>") + "</div>" +
       "<div class='line'>" + under + " · " + esc(e.title) + "</div>" +
-      "<div class='meta'><span class='pill small'>" + esc(e.by) + (e.when ? ", " + esc(e.when) : "") + "</span><span class='chip'><i style='background: " + (e.colour || "var(--muted)") + "'></i>" + esc(e.title) + "</span>" +
+      "<div class='meta'><span class='pill small'>" + esc(e.by) + (e.when ? ", " + esc(e.when) : "") + "</span><span class='chip'><i style='background: " + paint(e.colour) + "'></i>" + esc(e.title) + "</span>" +
       (e.kind !== "event" ? "<button type='button' class='small ghost' data-act='check' title='A question for a colleague; pressed on or off by anyone on the case'>" + (e.to_check ? "Clear To check" : "To check") + "</button>" : "") +
       "<a class='small ghost' href='/recording/" + e.recording + "?t=" + e.at + "' title='The whole call, on its own page'>Open the call</a>" +
       (e.incident ? (e.incident.event ? "<span class='pill small inc' title='This note is an event of the incident'>an event of " + esc(e.incident.name) + "</span>" : "<span class='pill small inc' title='Its camera is in the incident but not on its clock yet; the note is an event once it is synced'>in " + esc(e.incident.name) + ", not synced yet</span>") : "") + "</div>" +

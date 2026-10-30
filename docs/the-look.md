@@ -103,6 +103,15 @@ four colours. Light and dark are two palettes for the same roles, not an
 inversion, and a colour written into a rule rather than a token is a
 mistake.
 
+The borders are quiet on purpose (v1.179.0, from the dark walk): `--line` on
+`--surface` sits near 1.4 to 1 in light and 1.5 in dark, and a pill's fill
+near 1.2 in both, under the 3 to 1 an accessibility boundary asks for. A
+control reads by its words, its fill against the page and its focus ring,
+and a pill says its state in the colour of its words, which meet 4.5 to 1
+on every page in both themes. Where the server names a colour by a hex for
+the exports (the chronology's cameras), the page paints the same thing in
+its own token, so dark gets the dark palette.
+
 ## The page change (v1.171.1)
 
 Every press loads a whole page. The browser crossfades from the old page to
