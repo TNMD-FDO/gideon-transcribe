@@ -51,7 +51,9 @@
   function load(day, span, quiet) {
     var url = host.dataset.json + "?day=" + encodeURIComponent(day || "");
     if (span) { url += "&from=" + encodeURIComponent(hm(span[0])) + "&to=" + encodeURIComponent(hm(span[1])); }
-    if (!quiet) { host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : "Reading the notes...") + "</p>"; }
+    // While it reads (v1.176.0): the box keeps a height and shows three grey
+    // rows, so the page does not jump when the chronology lands.
+    if (!quiet) { host.classList.add("loading"); host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : "Reading the notes...") + "</p><div class='skeleton' aria-hidden='true'><i></i><i></i><i></i></div>"; }
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
       state.unplaced = told.unplaced || []; state.run = told.run || null;
@@ -60,12 +62,13 @@
       state.lit = null; if (!quiet) { state.open = {}; }
       setAddress(state.day ? state.day.date : "", state.span);
       draw();
-    }).catch(function () { host.innerHTML = "<p class='muted small'>The chronology could not be read. Try again.</p>"; });
+    }).catch(function () { host.classList.remove("loading"); host.innerHTML = "<p class='muted small'>The chronology could not be read. Try again.</p>"; });
   }
 
   // Drawing ------------------------------------------------------------------
   function draw() {
     var d = state.day;
+    host.classList.remove("loading");
     if (proposed) { drawProposed(d); return; }
     if (!d) {
       // No day yet (v1.170.1): the message, and the rail under it so the

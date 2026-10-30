@@ -262,6 +262,17 @@
             {% endif %}
           </ul>
         </aside>
+        {% comment %}The rail's fold decided before the page paints (v1.176.0, the motion walk): the script had folded it after the paint on a window under 900 tall or 1280 wide, and the page jumped. The script keeps the button and the memory.{% endcomment %}
+        <script>
+          (function () {
+            var rail = document.getElementById("caserail");
+            if (!rail) { return; }
+            var remembered = null;
+            try { remembered = window.localStorage.getItem("caserail-fold"); } catch (ignored) { remembered = null; }
+            var folded = remembered ? remembered === "folded" : (window.innerHeight < 900 || window.innerWidth < 1280);
+            if (folded) { rail.classList.add("folded"); }
+          })();
+        </script>
       {% endif %}
       {% if is_video %}
         <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
@@ -446,7 +457,8 @@
           </div>
           {% comment %}Find's close matches and what the camera showed (v1.97.0).{% endcomment %}
           <div id="find-more" class="find-more small" hidden></div>
-          <ol id="transcript" class="transcript"></ol>
+          {% comment %}Twelve grey rows in the lines' own shape until the script draws the transcript (v1.176.0, the motion walk): the column is never blank, then full.{% endcomment %}
+          <ol id="transcript" class="transcript">{% if transcript %}{% for _ in "123456789012" %}<li class="seg skeleton" aria-hidden="true"><span class="bar t"></span><span class="bar w"></span></li>{% endfor %}{% endif %}</ol>
         {% else %}
           <div class="jobstate" id="waiting">
             <h2 id="waiting-what">Waiting in the queue</h2>

@@ -3750,3 +3750,26 @@ nav.rail { view-transition-name: rail; }
 @media (min-width: 1500px) {
   .panes.audit { grid-template-columns: 250px minmax(0, 1fr); }
 }
+
+/* The motion release (v1.176.0): what arrives after the paint keeps its place.
+   Grey rows in the lines' own shape until the recording page's script draws
+   the transcript; the chronology box keeps a height while it reads; the
+   incident strip's lanes are drawn grey by the page before the script draws
+   them. Each placeholder is replaced, never pushed. */
+.transcript li.skeleton { display: grid; grid-template-columns: 4.6rem 1fr; gap: 8px; align-items: center; height: 44px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+.transcript li.skeleton .bar { display: block; height: 12px; border-radius: 4px; background: var(--surface-2); }
+.transcript li.skeleton .bar.t { width: 3.2rem; }
+.transcript li.skeleton .bar.w { width: 72%; }
+.transcript li.skeleton:nth-child(3n) .bar.w { width: 48%; }
+.transcript li.skeleton:nth-child(3n+1) .bar.w { width: 86%; }
+.chron.loading { min-height: 50vh; }
+.chron .skeleton i { display: block; height: 14px; margin: 12px 0; border-radius: 4px; background: var(--surface-2); width: 62%; }
+.chron .skeleton i:nth-child(2) { width: 84%; }
+.chron .skeleton i:nth-child(3) { width: 40%; }
+#lanes .lane.placeholder .head .name { display: inline-block; width: 70px; height: 12px; border-radius: 4px; background: var(--surface-2); }
+#lanes .lane.placeholder .track { background: var(--surface-2); opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .transcript li.skeleton .bar, .chron .skeleton i, #lanes .lane.placeholder .track { animation: breathe 1.4s ease-in-out infinite; }
+}
+@keyframes breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+

@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.176.0, 2026-10-29
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The polish run's motion release: what the walk of twenty-seven pages measured as a jump, fixed so that what arrives after the paint keeps its place.
+
+- **The recording page.** Twelve grey rows in the lines' own shape stand in the transcript column until the script draws the lines, so the column is never blank then full; and the case rail's fold is decided before the page paints (the script had folded it after the paint on a window under 900 tall or 1280 wide, and the page jumped).
+- **The incident page.** One grey lane per camera is drawn by the page itself, so the strip has its height from the first paint and the work area never jumps when the script draws the lanes.
+- **The Notes tab's Chronology shape and the Proposed events tab.** The box keeps a height and shows three grey rows while it reads, so the page does not jump when the chronology lands.
+- **Playback on the Notes tab's Page shape** touches the lit line and the play button only when they change; it had cleared and set the lit line's class on every line dozens of times a second and rebuilt the button on every tick.
+- The grey placeholders breathe gently, and keep still for a person who has asked for reduced motion.
+
 ## v1.175.1, 2026-10-29
 
 ```

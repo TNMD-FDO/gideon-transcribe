@@ -91,11 +91,19 @@
     // The length from the file, else from the record (a stand-in file has none).
     var told = left.told();
     var length = isFinite(player.duration) && player.duration > 0 ? clock(player.duration) : (told && told.length ? told.length.replace(/^00:/, "") : "0:00");
-    document.getElementById("np-time").textContent = clock(player.currentTime) + " / " + length;
+    var time = document.getElementById("np-time");
+    var said = clock(player.currentTime) + " / " + length;
+    if (time.textContent !== said) { time.textContent = said; }
+    // The button is rebuilt only when play turns to pause or back (v1.176.0):
+    // it had been rebuilt on every tick of the clock.
     var play = document.getElementById("np-play");
-    play.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-" + (player.paused ? "play" : "pause") + "'></use></svg>";
-    play.setAttribute("aria-label", player.paused ? "Play" : "Pause");
-    play.title = player.paused ? "Play (Space)" : "Pause (Space)";
+    var state = player.paused ? "play" : "pause";
+    if (play.dataset.state !== state) {
+      play.dataset.state = state;
+      play.innerHTML = "<svg class='i' aria-hidden='true'><use href='#i-" + state + "'></use></svg>";
+      play.setAttribute("aria-label", player.paused ? "Play" : "Pause");
+      play.title = player.paused ? "Play (Space)" : "Pause (Space)";
+    }
   }
   function wirePlayer(player) {
     if (!player || player === wired) { return; }

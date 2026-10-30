@@ -488,14 +488,20 @@
     function follow(now, jump) {
       if (!card || !told) { return; }
       var lit = null;
-      Array.prototype.forEach.call(card.querySelectorAll(".preview-line"), function (row) {
+      var rows = card.querySelectorAll(".preview-line");
+      Array.prototype.forEach.call(rows, function (row) {
         var at = parseFloat(row.dataset.at);
-        row.classList.remove("now");
         // A note kept at a moment is the office's, not the recording's: never lit.
         if (at <= now + 0.05 && !row.classList.contains("kept")) { lit = row; }
       });
+      // The lit line is touched only when it changes (v1.176.0): every tick
+      // had cleared and set the class on every line, dozens of times a second.
+      var was = card.querySelector(".preview-line.now");
+      if (was !== lit) {
+        if (was) { was.classList.remove("now"); }
+        if (lit) { lit.classList.add("now"); }
+      }
       if (lit) {
-        lit.classList.add("now");
         var box = card.querySelector(".preview-lines");
         var top = lit.offsetTop - box.offsetTop;
         if (jump || top < box.scrollTop || top + lit.offsetHeight > box.scrollTop + box.clientHeight) {

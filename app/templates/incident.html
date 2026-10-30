@@ -204,7 +204,8 @@
       </div>
     </div>
     <span class="guide" id="strip-guide" hidden></span>
-    <div id="lanes"></div>
+    {% comment %}One grey lane per camera until the script draws the strip (v1.176.0, the motion walk): the strip keeps its height from the first paint, so the work area never jumps.{% endcomment %}
+    <div id="lanes">{% for camera in state.cameras %}<div class="lane placeholder" aria-hidden="true"><span class="head"><span class="name"></span></span><div class="track"></div></div>{% endfor %}</div>
     <div class="foot small muted">
       <button type="button" class="tiny ghost" id="strip-help" title="How the strip works" aria-label="How the strip works">?</button>
       <span id="strip-help-words" hidden>Click a lane to play every camera from there. Drag a camera's bar to sync it by hand; a thin bar is a camera not on the wall, with Swap in. A mark on the Events lane is an event: hover it for its line, press it for its card and to play from there. Drag across the clip track to make a clip of that span; a clip already made is on the Clips lane. Zoomed in, the wheel over the lanes moves along the strip.</span>

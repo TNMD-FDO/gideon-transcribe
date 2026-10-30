@@ -64,3 +64,27 @@ def test_the_preview_never_autoplays():
     # script's own play() is the only thing that starts a recording.
     preview = (APP / "static" / "preview.js").read_text(encoding="utf-8")
     assert "autoplay" not in preview.replace("No autoplay attribute", "")
+
+
+def test_what_arrives_after_the_paint_keeps_its_place():
+    # The motion release (v1.176.0): placeholders in each thing's own shape,
+    # replaced by the script, never pushed; the rail folded before the paint.
+    viewer = (TEMPLATES / "viewer.html").read_text(encoding="utf-8")
+    assert viewer.count('<li class="seg skeleton"') == 1 and "123456789012" in viewer
+    assert 'localStorage.getItem("caserail-fold")' in viewer
+    incident = (TEMPLATES / "incident.html").read_text(encoding="utf-8")
+    assert '<div class="lane placeholder"' in incident and "state.cameras" in incident
+    chron = (APP / "static" / "chronology.js").read_text(encoding="utf-8")
+    assert 'host.classList.add("loading")' in chron
+    assert chron.count('host.classList.remove("loading")') == 2
+    for rule in (
+        ".transcript li.skeleton {",
+        ".chron.loading { min-height: 50vh; }",
+        "#lanes .lane.placeholder .track {",
+    ):
+        assert rule in CSS, rule
+    # Playback touches the lit line and the play button only when they change.
+    preview = (APP / "static" / "preview.js").read_text(encoding="utf-8")
+    assert "if (was !== lit)" in preview
+    notes = (APP / "static" / "notes-page.js").read_text(encoding="utf-8")
+    assert "play.dataset.state !== state" in notes
