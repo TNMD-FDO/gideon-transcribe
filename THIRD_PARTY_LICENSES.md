@@ -57,6 +57,13 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | Caddy | Apache-2.0 | upstream image |
 | PostgreSQL | the PostgreSQL Licence | upstream image |
 | tusd | MIT | upstream image |
+| tus-js-client | MIT | vendored in the app image's static files (`app/static/vendor/README.md`) |
+| MapLibre GL JS | BSD-3-Clause | the Map tab's drawing library (Phase 12), vendored at 5.24.0 in the app image's static files; `app/static/vendor/README.md` has the hashes |
+| pmtiles (JavaScript) | BSD-3-Clause | reads the basemap file by byte ranges, vendored at 4.5.0 beside it |
+| Protomaps basemaps (the style) | BSD-3-Clause | the two style files under `app/static/maps/` generated once from `@protomaps/basemaps` 5.7.2; the package itself is not shipped |
+| Noto Sans glyphs (`basemaps-assets`) | SIL Open Font License 1.1 | three stacks, eight ranges each, under `app/static/maps/fonts/` |
+| Protomaps sprites (`basemaps-assets`, from tangrams/icons) | MIT | under `app/static/maps/sprites/` |
+| OpenStreetMap data (in the office's own basemap file) | ODbL 1.0 | never shipped: each office cuts its own region file and places it with `./transcribe basemap`; the Map tab shows "© OpenStreetMap contributors · Protomaps" |
 | vLLM | Apache-2.0 | the Local engine's upstream image, behind the `llm` Compose profile, off by default; pulled by digest only when an office turns the profile on |
 | Qwen3.5-4B weights (`Qwen/Qwen3.5-4B`) | Apache-2.0 | the Local engine's default model, not gated; downloaded by the Local engine itself on its first start, never shipped in an image; an office that names another model in `LLM_LOCAL_MODEL` takes on that model's licence |
 | restic | BSD-2-Clause | the Backup chapter's upstream image; not yet shipped |

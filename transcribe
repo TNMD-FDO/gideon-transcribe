@@ -26,6 +26,8 @@
 #                             start or stop the fast lane, a second copy of the transcription
 #                             service for what must not wait behind a long job
 #   ./transcribe folders      make the app data folders, owned by the app account
+#   ./transcribe basemap FILE put the street map (a .pmtiles file cut on a workstation)
+#                             in place for the Map tab; 'basemap remove' takes it out
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe backup       the nightly job: dump, manifest, Snapshot to the store
 #   ./transcribe snapshots    the Snapshots in the repository, with their ids
@@ -1601,7 +1603,8 @@ make_the_data_folders() {
   # The models and state folders too (v1.82.1): the service and the Local
   # engine run as the app's account and write into them.
   local made=""
-  for folder in scratch cases uploads models models/whisperx whisperx models/vllm; do
+  # And maps (Phase 12): Caddy mounts it read-only for the street map.
+  for folder in scratch cases uploads models models/whisperx whisperx models/vllm maps; do
     if [ ! -d "$data/$folder" ]; then
       sudo mkdir -p "$data/$folder" || return 0
       made="$made $folder"
@@ -2186,7 +2189,7 @@ cmd_folders() {
 
   local data
   data="$(env_value APP_DATA_DIR)"
-  for folder in scratch cases uploads; do
+  for folder in scratch cases uploads maps; do
     # Plain sudo here, not the report's `sudo -n`: this subcommand has already
     # asked for a password, so it may ask again if the timestamp has gone.
     if sudo test -d "$data/$folder"; then
@@ -2197,6 +2200,50 @@ cmd_folders() {
   done
 
   [ "$FAILURES" -eq 0 ] || exit 1
+}
+
+cmd_basemap() {
+  # The street map behind a case's Map tab (Phase 12 chapter 1): one
+  # .pmtiles file the Admin cut on a workstation with the internet, copied
+  # into the maps folder under the app's account, where Caddy serves it
+  # read-only to signed-in browsers. The app never fetches it: nothing
+  # reaches outside the office at run time. The admin guide (Maps) says how
+  # the file is cut.
+  need_env
+  local data
+  data="$(env_value APP_DATA_DIR)"
+  local target="$data/maps/basemap.pmtiles"
+  case "${1:-}" in
+    remove)
+      if sudo test -f "$target"; then
+        sudo rm -f "$target"
+        green "The street map was removed. The Map tab draws its paths on plain ground now."
+      else
+        amber "There is no street map in place ($target)."
+      fi
+      ;;
+    "" | -h | --help)
+      red "basemap takes the file to place, or 'remove': ./transcribe basemap /path/to/region.pmtiles"
+      exit 1
+      ;;
+    *)
+      local file="$1"
+      if [ ! -f "$file" ]; then
+        red "There is no file at $file."
+        exit 1
+      fi
+      # The first seven bytes of a PMTiles file spell its name; anything
+      # else is not one, whatever it is called.
+      if [ "$(head -c 7 "$file" 2>/dev/null)" != "PMTiles" ]; then
+        red "$file is not a PMTiles file (its first bytes do not say so). The admin guide, Maps, says how to cut one."
+        exit 1
+      fi
+      make_the_data_folders
+      sudo install -o "$APP_USER" -g "$APP_USER" -m 0640 "$file" "$target"
+      green "The street map is in place: $target ($(du -h "$file" | cut -f1))."
+      echo "  Open a case's Map tab to see it; the Status page's Maps line says it is installed."
+      ;;
+  esac
 }
 
 cmd_backup_db() {
@@ -3585,6 +3632,7 @@ directory) shift && cmd_directory "$@" ;;
 engine) shift && cmd_engine "$@" ;;
 fast-lane) shift && cmd_fast_lane "$@" ;;
 folders) shift && cmd_folders "$@" ;;
+basemap) shift && cmd_basemap "$@" ;;
 backup-db) shift && cmd_backup_db "$@" ;;
 backup) shift && cmd_backup "$@" ;;
 backup-weekly) shift && cmd_backup_weekly "$@" ;;

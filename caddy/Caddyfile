@@ -152,6 +152,25 @@ https://{$APP_HOSTNAME}:443 {
 		}
 	}
 
+	# The street map (Phase 12 chapter 1): one file the Admin placed under
+	# maps/, drawn in the browser with byte ranges, a third root and not a
+	# wider one for the same reason as above. It is a public map of the
+	# region and not content, so it may be kept a week: the browser reads
+	# small ranges of it on every pan, and `no-store` would fetch them again
+	# on every visit over the office's network. Outside the compression
+	# block, so the ranges stay native.
+	handle /maps/* {
+		route {
+			forward_auth app:8000 {
+				uri /maps-auth
+			}
+			header Cache-Control "private, max-age=604800"
+			root * /srv/maps
+			uri strip_prefix /maps
+			file_server
+		}
+	}
+
 	# The sidecar's hook is the app's own business with its sidecar on the
 	# project network. It is a path on the app all the same, and without this
 	# block the catch-all below would carry a browser's post to it. Nobody

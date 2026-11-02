@@ -10,6 +10,7 @@ Every setting the panel exposes, in every phase, grouped as the panel's pages gr
 | Translation available | On or Off | On | 1 | Users may ask for "Translate to English". | Off hides the choice; a Recording holding more than one language is then transcribed in its winning language with a warning, whatever the mixed-language setting says. |
 | Clips available | On or Off | On | 1 | Users may save a chosen span of a Recording as a playable file, a Clip. | Off hides New Clip and the Clips sheet, hides the Clips page in the navigation, and drops Clips from the sign-out dialog and "Download everything"; Clip files already made stay until their Recording goes. In Phase 2, Off hides the Case page's Clips tab too. |
 | Reports | On or Off | On | 8 | People may send a Report from any page (Report a problem, Phase 8 chapter 3). | Off hides the link on every page and refuses the endpoint; the Panel's Reports page and its reports stay for the Admins. At once. |
+| Maps | On or Off | On | 12 | A case's Map tab shows each camera's path from its path file on a map, with a clock; a path file (.vtt, beside the video) is added from the Map tab (Phase 12 chapter 1). Needs Folder management. | Off hides the Map tab, the path endpoints and the street map; path files already there stay. At once. |
 
 ## Limits
 

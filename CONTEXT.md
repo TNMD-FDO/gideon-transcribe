@@ -578,6 +578,26 @@ _Avoid_: mark (that is a live recording's), moment (that is a description), book
 A moment on a Recording the assistant's judgement, the Watch phrases, a Look for run or the Comparison put forward, with a sentence and why it matters, waiting for a person's Accept or Dismiss on the Incident's Proposed events layer (and, from the second release of Phase 10 chapter 4, the case's Proposed events tab); the code and the database call the row a Proposal. It touches nothing until accepted; accepted, it is a Note on that Recording in the acceptor's name, saying where it came from. Until v1.167.0 an Event row marked proposed. Phase 10 chapter 4, v1.168.0.
 _Avoid_: suggestion, candidate, auto event, AI event, proposal (on a page; the row's name in code)
 
+**Path**:
+A camera's positions over its Recording, read from the Path file beside the video: a list of Fixes with the second of the recording each was taken at, the spells with no fix, and the readings the file carries (the microphone, the battery, and for an in-car unit the lights, siren, brakes, crash sensor, bookmark and speed). Kept on the Recording, one per video, and gone with it; drawn on the Map tab; its readings answered by Gideon anywhere in the Case. Never a position the app invented. Phase 12 chapter 1.
+_Avoid_: track, trace, route, GPS log, trajectory
+
+**Fix**:
+One reading of where a camera was: a second of its Recording, a latitude and a longitude from its Path file. A stretch with none ("no fix") is the camera indoors or out of sight of the sky; the app draws nothing there. Phase 12 chapter 1.
+_Avoid_: point, waypoint, ping, location (that is a place, not a reading), coordinate (on a page)
+
+**Path file**:
+The text file a body-worn or in-car camera's export puts beside the video, with the video's name and the ending .vtt, holding one reading a second: the position, the microphone and battery flags, the wearer, the unit, the department, and for an in-car unit its own clock, speed and switches. Added from the Map tab, where a folder's worth finds their videos by name; kept with the Recording as the camera's own record. Phase 12 chapter 1.
+_Avoid_: GPS file, metadata file, subtitle file, sidecar, caption file
+
+**Map**:
+The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras in view, the video a press away in the Preview, a note from the map, and Add path files. Phase 12 chapter 1.
+_Avoid_: GIS, tracking view, GPS tab, geo
+
+**Basemap**:
+The street map behind the Paths: one file of OpenStreetMap-based tiles for the office's own region, cut once on a workstation and placed on the server with `./transcribe basemap`, served to signed-in browsers by the office's own server and never fetched from outside. Without it the Map tab draws its Paths on plain ground and says so. Phase 12 chapter 1.
+_Avoid_: tiles (on a page), tile server, online map, Google Maps, satellite
+
 **Proposed events tab**:
 The Case page's tab that lists every Proposed event of the Case in the chronology's shape (v1.169.0, Phase 10 chapter 4): by day and time of day on the recordings' clocks, with the recordings' band, a lane of the proposals, a lane of the day's notes and the incidents lane; each entry with its sentence, why it matters, the line it rests on, its source, and Accept, Accept and edit and Dismiss; the ones on recordings with no clock under Not yet placed. Its Propose events reads every recording in the Case that has a transcript. A press on a time opens the Preview's window with the proposal above the lines and the same three choices. Between Search and Notes in the bar; hidden when the assistant is Off and no Watch phrase is listed.
 _Avoid_: suggestions tab, AI tab, proposals list, timeline of proposals

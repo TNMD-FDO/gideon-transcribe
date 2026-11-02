@@ -401,6 +401,16 @@ After the backup, `./transcribe install` asks four plain questions: the relay's 
 
 Leave the relay empty to run without mail. The install says what that loses: no retention digest, no other notification, and no Operator mail; the app's pages show everything a message would say. `./transcribe install-mail` asks the questions again later.
 
+### The street map
+
+The Map tab on a case (v1.187.0) draws the cameras' paths on a street map when one is installed, and on plain ground otherwise. The map is one file of the office's own region, cut once on a workstation with the internet and placed on the server; the server never fetches it. The admin guide's **Maps** section gives the three steps; on the server the one command is:
+
+```bash
+./transcribe basemap /path/to/basemap.pmtiles
+```
+
+It goes under `APP_DATA_DIR/maps/` (made by `./transcribe folders`), and the Status page says it is there.
+
 ## 4. Check
 
 `./transcribe check` runs every smoke check and prints a plain report. Run it whenever something seems wrong; it never changes anything. It opens with the pieces table (the same one `./transcribe pieces` prints and the Status page shows), then each line is `pass`, `amber`, or `FAIL`, and a failure says what to do. A piece that is not installed is a note, never a failure.

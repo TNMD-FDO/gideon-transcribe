@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import zipfile
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import (
@@ -267,7 +268,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     asked = request.GET.get("q", "").strip()
     # The four tabs the chapter gives this page; Chat only while the Case
     # Chat exists.
-    from core import case_chat, incidents
+    from core import camera_paths, case_chat, incidents
 
     chat_here = case_chat.available()
     # The Gideon tab went with Phase 8 chapter 1: the panel is Gideon's place.
@@ -278,12 +279,15 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     from core import proposals
 
     proposed_on = proposals.tab_offered()
+    # The Map tab (Phase 12 chapter 1): the setting read once for the page.
+    maps_on = camera_paths.on()
     tabs = (
         ("search",)
         + (("proposed",) if proposed_on else ())
         + ("notes",)
         + (("documents",) if documents.on() else ())
         + (("incidents",) if incidents.on() else ())
+        + (("map",) if maps_on else ())
         + ("clips", "speakers", "details")
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
@@ -335,7 +339,12 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
         else 0
     )
     documents_count = documents.count(case) if documents.on() else 0
-    incidents_context = _incidents_context(case, strip=tab == "incidents")
+    # The Map tab (Phase 12 chapter 1): the cameras with a path file.
+    # The count comes with the dashboard's grouped query, no query of its own.
+    map_count = counts["paths"] if maps_on else 0
+    incidents_context = _incidents_context(
+        case, strip=tab == "incidents", on_map=maps_on and tab == "incidents"
+    )
     case_tabs = case_bar.bar(
         case,
         on=tab,
@@ -345,6 +354,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "notes": notes_count,
             "documents": documents_count,
             "incidents": len(incidents_context.get("incident_rows", [])),
+            "map": map_count,
             "clips": clips_count,
             "speakers": speakers_tab["people_count"],
         },
@@ -447,8 +457,41 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # Incidents (Phase 6 chapter 1): the strip under the case name,
             # the offers, and the videos New incident lists.
             **incidents_context,
+            # The Map tab (Phase 12 chapter 1): drawn by map.js from map.json.
+            "map_count": map_count,
+            **(
+                _map_context(case, request.user)
+                if tab == "map" or (tab == "details" and map_count)
+                else {}
+            ),
         },
     )
+
+
+def _map_context(case: Case, user) -> dict:
+    """What the Map tab's template needs before the script reads map.json:
+    the street map's state and the counts for the lead."""
+    from core import camera_paths, incidents, maps
+
+    videos = sum(
+        1
+        for one in incidents.videos_of(case.recordings.all())
+        if incidents.is_video(one)
+    )
+    return {
+        "map_json_url": reverse("case-map", args=[case.pk]),
+        "map_videos": videos,
+        "map_basemap": maps.basemap_json(),
+        "map_may_add": bool(case.role_of(user)),
+        "map_add_url": reverse("case-paths-add", args=[case.pk]),
+        "map_time_zone": settings.TIME_ZONE,
+        "map_videos_without": max(0, videos - camera_paths.count(case)),
+        # The glyph and sprite folders by their plain names: the map library
+        # builds "{fontstack}/{range}.pbf" itself, which no manifest hash
+        # can name, and the static server serves the plain names beside the
+        # hashed ones.
+        "map_static": settings.STATIC_URL,
+    }
 
 
 @login_required
@@ -475,10 +518,13 @@ def notes_export(request: HttpRequest, case_id) -> HttpResponse:
     return exports.hand_over(body, notes.export_name(case), exports.WORD_TYPE)
 
 
-def _incidents_context(case: Case, *, strip: bool = False) -> dict:
+def _incidents_context(
+    case: Case, *, strip: bool = False, on_map: bool = False
+) -> dict:
     """The Incidents tab's rows and offers; the strip's forming count only
     when the tab in hand is Incidents, since the context is built for every
-    tab and the count reads the case's notes."""
+    tab and the count reads the case's notes; the rows' On the map links
+    (Phase 12) only then too, and only while Maps is on."""
     from core import incidents
 
     if not incidents.on():
@@ -505,11 +551,19 @@ def _incidents_context(case: Case, *, strip: bool = False) -> dict:
                 "elsewhere": elsewhere.incident.name if elsewhere else "",
             }
         )
-    from core import incident_strip
+    from core import camera_paths, incident_strip
+
+    # On the map (Phase 12 chapter 1) on the rows whose cameras have a path.
+    rows = incidents.strip_rows(case)
+    for row in rows:
+        # strip_rows read whether a camera has a path with its own query.
+        row["map_url"] = camera_paths.incident_map_url(
+            row["incident"], {row["incident"].pk} if on_map and row["on_map"] else set()
+        )
 
     return {
         "incidents_on": True,
-        "incident_rows": incidents.strip_rows(case),
+        "incident_rows": rows,
         "incident_offers": incidents.offers(case),
         "incident_videos": videos,
         # The strip (Phase 10 chapter 5, v1.180.0): the lead's forming count.

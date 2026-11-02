@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from django.urls import reverse
 
-from core import documents, incidents, notes, proposals, settings_store
+from core import camera_paths, documents, incidents, notes, proposals, settings_store
 
 
 def _tab(key: str, name: str, icon: str, url: str, count=None, on: str = "") -> dict:
@@ -100,6 +100,19 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
                     "incidents",
                     lambda: incidents.Incident.objects.filter(case=case).count(),
                 ),
+                on,
+            )
+        )
+    # The Map tab (Phase 12 chapter 1), after Incidents: the cameras with
+    # a path file counted.
+    if camera_paths.on():
+        tabs.append(
+            _tab(
+                "map",
+                "Map",
+                "map",
+                f"{base}?tab=map",
+                count("map", lambda: camera_paths.count(case)),
                 on,
             )
         )

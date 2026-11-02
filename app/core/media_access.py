@@ -165,3 +165,23 @@ def may_serve(request: HttpRequest) -> HttpResponse:
         file=name,
     )
     return HttpResponse(status=200)
+
+
+def may_serve_map(request: HttpRequest) -> HttpResponse:
+    """Caddy's question before the street map (Phase 12 chapter 1): the one
+    file under the maps root, to any signed-in person while Maps are on. It
+    is a public map of the region and not content, so no row is written."""
+    if not request.user.is_authenticated:
+        return HttpResponse(status=401)
+    from core import camera_paths, maps
+
+    if not camera_paths.on():
+        return HttpResponse(status=404)
+    path = request.headers.get("X-Forwarded-Uri") or request.META.get("PATH_INFO", "")
+    path = unquote(urlparse(path).path)
+    parts = [piece for piece in path.split("/") if piece]
+    if parts and parts[0] == "maps":
+        parts = parts[1:]
+    if parts != [maps.BASEMAP_NAME]:
+        return HttpResponse(status=404)
+    return HttpResponse(status=200)

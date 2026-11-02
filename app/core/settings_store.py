@@ -437,6 +437,25 @@ def _rows() -> list[Definition]:
                 "nothing is deleted."
             ),
         ),
+        # Maps (Phase 12 chapter 1): a camera's path from the file beside its
+        # video, on the case's Map tab.
+        Definition(
+            key="maps",
+            page=FEATURES,
+            name="Maps",
+            kind=TOGGLE,
+            default=True,
+            needs="folder_management",
+            what_it_does=(
+                "A case's Map tab shows each camera's path from its path file on "
+                "a map, with a clock; a path file (.vtt, beside the video) is "
+                "added from the Map tab."
+            ),
+            when_changed=(
+                "Off hides the Map tab, the path endpoints and the street map; "
+                "path files already there stay. At once."
+            ),
+        ),
         Definition(
             key="live_recording",
             page=FEATURES,

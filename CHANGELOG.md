@@ -17,6 +17,23 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.187.0, 2026-11-02
+
+```
+Models: unchanged
+Database: migrates (0103, the camera's path)
+```
+
+Phase 12 chapter 1, the cameras on a map (the drawing `docs/spec/mockups/phase-12-map.html`, "It stands" on 2026-11-02; `docs/spec/SPEC-PHASE-12.md`, ADR 0029).
+
+- **The path file.** A body-worn or in-car camera's export leaves a small text file beside the video (`.vtt`, one JSON reading a second: the position, the microphone, and for an in-car unit its own clock, speed, lights, siren, brakes and bookmark). The app keeps it on the Recording as its **Path file**, read once into **Fixes** and marks; the file goes with the recording and is never served. What is not a path file is refused with the reason; a file with no position is kept for its readings.
+- **The Map tab** on a case, between Incidents and Clips: **Add path files** takes a folder's worth and matches each to its video by name; the rest come back to settle (flagged with the why and Add anyway, Replace, a chooser for an unmatched one, the reason for a refused one). Every camera's path on the street map, or on plain ground when none is installed, on one clock one day at a time: Play, the speed, the strip with a lane per camera, the markers moving, the trails (Markers only, Trails, Whole paths), the events to press (camera on and off, lights, siren, mic, bookmarks, notes) with a card that says what and when and offers Play here, Add a note and Clip from here; ‹ event and event › step through them. The list beside the map says how many cameras are in view and folds the rest; a press flies to the camera; **Play here** opens the Preview's window at the clock's moment, exactly, and the markers follow the video. **Note here** writes a note on the selected camera at the moment. **Larger map** and the browser's full screen. A camera not on the clock is listed with **Show on its own**.
+- **The camera's clock** for the map: the path file's own clock (Clear or Likely), then the recording's clock, then the file's time, then the minute in its name read as UTC (**By its name**); else off the clock. The path file places nothing on the case's chronology yet (release 2).
+- **Gideon knows the readings.** The case chat and the incident chat are told, beside the cameras' placements, each camera's readings in the office's time of day: when the recording began and ended, when the officer activated the camera (the minute before is the buffer, without sound), the lights and siren on and off, brakes, bookmarks, the top speed, standing still, no fix, and which cameras were within 50 m of each other and when; never a coordinate. "When were the lights turned on" and "when did the officer turn the camera on" are answered from the files alone.
+- **The street map** is one file the Admin cuts once on a workstation (`docs/research/basemap.md`) and places with `./transcribe basemap <file>`; Caddy serves it from a third read-only root to signed-in browsers; the Status page says whether it is there. The drawing library and the map's style, fonts and sprites are vendored (`app/static/vendor/README.md`); nothing on the tab reaches outside the office.
+- **Joined to the case**: **On the map** on an incident's row and page (the tab scoped to the incident), on a search hit, a Notes row and a chronology or Proposed events entry (the tab at that camera's moment); Home's case card and the Details tab count the cameras on the map; a camera's clips sit on its lane; cameras that kept within 50 m for over five minutes outside any incident are offered as one, through the Incidents tab's own Make it.
+- **Maps** on the Features page (shipped On) turns the tab, the endpoints and the street map off; files already there stay.
+
 ## v1.186.1, 2026-11-02
 
 ```

@@ -19,6 +19,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import (
+    camera_paths,
     case_bar,
     cases,
     chronology,
@@ -75,6 +76,9 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "incident": incident,
             "role": role,
             "state": state,
+            # On the map (Phase 12 chapter 1): the Map tab scoped to this
+            # incident, when a camera of it has a path file.
+            "map_url": camera_paths.incident_map_url(incident),
             # Ask Gideon (Phase 7 chapter 5).
             "gideon_on": bool(incident_chat.on() and engine.is_reachable()),
             "gideon_why": (

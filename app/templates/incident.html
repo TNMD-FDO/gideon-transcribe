@@ -28,6 +28,7 @@
     <span class="inc-clock" id="inc-clock" title="The incident clock: the time of day the cameras' clocks give">00:00:00</span>
     <span class="muted small" id="inc-date"></span>
     <button type="button" class="small primary" id="add-event" title="An event at this moment (E)">{% icon "plus" %} Add event here</button>
+    {% if map_url %}<a class="btn small" href="{{ map_url }}" title="The cameras' paths on the Map tab, this incident alone">{% icon "map" %} On the map</a>{% endif %}
     <details class="menu" id="export-menu">
       <summary class="btn small" title="Export the chronology">{% icon "download" %} Export {% icon "chevron-down" %}</summary>
       <ul>

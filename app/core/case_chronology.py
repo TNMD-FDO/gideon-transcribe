@@ -373,6 +373,9 @@ def day_of(
     """
     recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
+    from core import camera_paths
+
+    on_map = camera_paths.ids_with_path(case)
     colours: dict = {}
     bars: list[dict] = []
     entries: list[dict] = []
@@ -397,7 +400,7 @@ def day_of(
         if how == DAY:
             if p_date == date and its_notes and span is None:
                 for note in its_notes:
-                    unknown.append(_entry(note, one, None, "", how))
+                    unknown.append(_entry(note, one, None, "", how, on_map))
             continue
         running = _running(one, date, p_start, p_date, span)
         if running is None:
@@ -414,7 +417,7 @@ def day_of(
                 continue
             if span is not None and not (span[0] <= when <= span[1]):
                 continue
-            entries.append(_entry(note, one, when, colour, how))
+            entries.append(_entry(note, one, when, colour, how, on_map))
             count += 1
         bars.append(
             {
@@ -547,9 +550,20 @@ def day_of(
     }
 
 
-def _entry(note: dict, recording, when: float | None, colour: str, how: str) -> dict:
+def _entry(
+    note: dict,
+    recording,
+    when: float | None,
+    colour: str,
+    how: str,
+    on_map: set | None = None,
+) -> dict:
+    from core import camera_paths
+
     return {
         "key": note["key"],
+        # On the map (Phase 12 chapter 1): where the camera was at this moment.
+        "map": camera_paths.map_url_at(on_map, recording, note["at"]) if on_map else "",
         "kind": note["kind"],
         "id": note["id"],
         "recording": str(recording.pk),
@@ -609,13 +623,16 @@ def proposed_day_of(case, date: dt.date | None, span=None) -> dict:
         day["rail_all"] = []
     recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
+    from core import camera_paths
+
+    on_map = camera_paths.ids_with_path(case)
     unplaced = []
     for one in recordings:
         key = str(one.pk)
         if placements[key][0] is not None:
             continue
         for row in sorted(by_recording.get(key, []), key=lambda r: r["at"]):
-            unplaced.append(_entry(row, one, None, "", "none"))
+            unplaced.append(_entry(row, one, None, "", "none", on_map))
     for number, row in enumerate(unplaced, start=1):
         row["number"] = number
         row["time"] = hms(row["at"])

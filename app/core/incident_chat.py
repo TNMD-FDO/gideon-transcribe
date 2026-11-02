@@ -186,6 +186,10 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             turn.question,
             heading="The report for this incident:",
         )
+        # The cameras' own files (Phase 12 chapter 1), by the incident's clock.
+        from core import camera_paths
+
+        readings = camera_paths.readings_block_for_incident(incident)
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -195,8 +199,11 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
             + "\n\n"
             + prompts.INCIDENT_RULES
             + ("\n\n" + notes.RULE if noted else "")
-            + ("\n\n" + documents.RULE if papers else ""),
+            + ("\n\n" + documents.RULE if papers else "")
+            + ("\n\n" + camera_paths.RULE if readings else ""),
         )
+        if readings:
+            papers = (papers + "\n\n" + readings) if papers else readings
         wanted = settings_store.incident_chat_answer_cap()
         history = [
             (one.question, one.answer)

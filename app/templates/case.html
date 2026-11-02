@@ -113,7 +113,7 @@
                 <table class="tbl search-hits"><tbody>
                   {% for hit in group.hits %}
                     <tr{% if hit.close %} class="close"{% endif %}>
-                      <td class="mono muted nowrap">{% if hit.paragraph %}<a href="{{ hit.url }}" data-para-card="1" data-doc-url="{{ hit.paragraph.url }}" data-page="{{ hit.paragraph.page }}" data-para="{{ hit.paragraph.n }}" data-title="{{ hit.paragraph.title }}">{{ hit.when }}</a>{% elif hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.preview %} <button type="button" class="tiny ghost hit-play" data-preview-recording="{{ hit.preview.recording }}" data-preview-at="{{ hit.preview.at }}" title="Play this moment here, without leaving the search" aria-label="Play this moment here">{% icon "play" %}</button>{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}</td>
+                      <td class="mono muted nowrap">{% if hit.paragraph %}<a href="{{ hit.url }}" data-para-card="1" data-doc-url="{{ hit.paragraph.url }}" data-page="{{ hit.paragraph.page }}" data-para="{{ hit.paragraph.n }}" data-title="{{ hit.paragraph.title }}">{{ hit.when }}</a>{% elif hit.url %}<a href="{{ hit.url }}">{{ hit.when }}</a>{% else %}{{ hit.when }}{% endif %}{% if hit.preview %} <button type="button" class="tiny ghost hit-play" data-preview-recording="{{ hit.preview.recording }}" data-preview-at="{{ hit.preview.at }}" title="Play this moment here, without leaving the search" aria-label="Play this moment here">{% icon "play" %}</button>{% endif %}{% if hit.all_cameras %} <a class="cite all" href="{{ hit.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}{% if hit.map %} <a class="cite all" href="{{ hit.map }}" title="Where the camera was at this moment, on the Map tab">on the map</a>{% endif %}</td>
                       <td class="muted">{{ hit.who }}{% if hit.close %} <span class="pill small">close</span>{% endif %}{% if hit.heard %} <span class="pill small">also heard as</span>{% endif %}</td>
                       <td>{{ hit.text }}{% if hit.under %}<div class="small"><i>{{ hit.under }}</i></div>{% endif %}</td>
                     </tr>
@@ -232,7 +232,7 @@
                   <a class="note-text" href="{{ one.url }}" title="Open where this note was written">{{ one.text|linebreaksbr }}</a>
                   <div class="muted small note-meta">
                     {% comment %}v1.166.0: the time plays the moment in the Preview's window without leaving the tab (the address is the recording page for a press without script); the words still open the recording page with the box ready.{% endcomment %}
-                    {% if one.recording_id %}<a href="{{ one.url }}" class="mono" data-preview-recording="{{ one.recording_id }}" data-preview-at="{{ one.at|floatformat:1 }}" title="Play this moment here, without leaving the tab">{{ one.when }}</a>{% else %}<a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% endif %}{% if one.page_url %} <a class="cite all" href="{{ one.page_url }}" title="This note on the Notes page">on the page</a>{% endif %}{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}
+                    {% if one.recording_id %}<a href="{{ one.url }}" class="mono" data-preview-recording="{{ one.recording_id }}" data-preview-at="{{ one.at|floatformat:1 }}" title="Play this moment here, without leaving the tab">{{ one.when }}</a>{% else %}<a href="{{ one.url }}" class="mono">{{ one.when }}</a>{% endif %}{% if one.page_url %} <a class="cite all" href="{{ one.page_url }}" title="This note on the Notes page">on the page</a>{% endif %}{% if one.all_cameras %} <a class="cite all" href="{{ one.all_cameras }}" title="Every camera at this moment">all cameras</a>{% endif %}{% if one.map %} <a class="cite all" href="{{ one.map }}" title="Where the camera was at this moment, on the Map tab">on the map</a>{% endif %}
                     &middot; {{ one.where }}
                     {% comment %}A note at a moment (v1.99.0) rests on no line and says nothing here (v1.99.1).{% endcomment %}
                     {% if one.rests_on %}&middot; {% if one.kind == "event" %}on the event: {% elif one.who %}{{ one.who }}: {% endif %}<i>{{ one.rests_on|truncatechars:140 }}</i>{% endif %}
@@ -268,6 +268,8 @@
             <dt>Owner</dt><dd>{{ case.owner.shown_name }}</dd>
           {% endif %}
           <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
+          {% comment %}On the map (Phase 12 chapter 1): the cameras with a path file, and the videos without one.{% endcomment %}
+          {% if map_count %}<dt>On the map</dt><dd><a href="{% url 'case' case.pk %}?tab=map">{{ map_count }} camera{{ map_count|pluralize }} with a path file</a>{% if map_videos_without %}, {{ map_videos_without }} video{{ map_videos_without|pluralize }} without{% endif %}</dd>{% endif %}
           <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
           <dt>Retention</dt>
           <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
@@ -447,13 +449,35 @@
                       {% endif %}
                       <td>{{ row.events }}{% if row.memo %}<div class="muted small nowrap">{{ row.memo }}</div>{% endif %}</td>
                       <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
-                      <td class="acts"><a href="{{ row.url }}" class="btn small">Open the incident</a></td>
+                      <td class="acts"><a href="{{ row.url }}" class="btn small">Open the incident</a>{% if row.map_url %} <a href="{{ row.map_url }}" class="btn small ghost" title="Its cameras' paths on the Map tab, this incident alone">{% icon "map" %} On the map</a>{% endif %}</td>
                     </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
           {% endif %}
+        {% elif tab == "map" %}
+          {% comment %}
+            The Map tab (Phase 12 chapter 1; the drawing
+            docs/spec/mockups/phase-12-map.html): every camera's path from
+            the file beside its video, on one clock, with the video a press
+            away. Drawn by map.js from map.json into one host; the street
+            map is the file the Admin placed, or plain ground without it.
+          {% endcomment %}
+          <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
+          <div class="row" style="align-items: center; margin: 14px 0 8px">
+            <p class="lead grow m0">
+              {% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %}
+              <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth here and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</span>
+            </p>
+            {% if map_may_add %}
+              <label class="btn small" id="map-add-files">{% icon "upload" %} Add path files<input type="file" accept=".vtt,text/vtt" multiple hidden></label>
+            {% endif %}
+          </div>
+          <div id="case-map" class="map-tab" data-case="{{ case.pk }}" data-json="{{ map_json_url }}" data-add="{{ map_add_url }}" data-basemap="{{ map_basemap.url }}" data-attribution="{{ map_basemap.attribution }}" data-tz="{{ map_time_zone }}" data-edit="{% if map_may_add %}1{% endif %}" data-style-light="{% static 'maps/style-light.json' %}" data-style-dark="{% static 'maps/style-dark.json' %}" data-glyphs="{{ map_static }}maps/fonts" data-sprite="{{ map_static }}maps/sprites" data-incident="{{ request.GET.incident }}" data-recording="{{ request.GET.recording }}" data-at="{{ request.GET.at }}" data-day="{{ request.GET.day }}">
+            <p class="muted small">Reading the paths...</p>
+            <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
         {% elif tab == "speakers" %}
           {% comment %}
             The Speakers tab (v1.151.0, the drawing phase-5-speakers-tab-and-voices.html):
@@ -1066,6 +1090,8 @@
   {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}
   <script src="{% static 'preview.js' %}"></script>
+  {% comment %}The Map tab (Phase 12 chapter 1): the vendored map library, the pmtiles reader, then the tab's own script, after the Preview it opens.{% endcomment %}
+  {% if tab == "map" %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
   {% if tab == "notes" %}{% if notes.total or recordings %}<script src="{% static 'waveform.js' %}"></script><script src="{% static 'notes-page.js' %}"></script>{% endif %}{% endif %}
   {% if case_chat_available %}
     <script src="{% static 'paragraph-card.js' %}"></script>

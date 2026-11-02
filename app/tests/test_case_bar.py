@@ -77,6 +77,7 @@ ORDER = [
     "notes",
     "documents",
     "incidents",
+    "map",
     "clips",
     "speakers",
     "details",
@@ -103,7 +104,15 @@ def test_the_helper_gives_the_tabs_in_order_with_their_counts(person, a_case):
     settings_store.set_to("incidents_propose", False)
     settings_store.set_to("incidents_watch_phrases", "")
     keys = [t["key"] for t in case_bar.bar(a_case, on="recordings")["tabs"]]
-    assert keys == ["recordings", "search", "notes", "incidents", "speakers", "details"]
+    assert keys == [
+        "recordings",
+        "search",
+        "notes",
+        "incidents",
+        "map",
+        "speakers",
+        "details",
+    ]
 
 
 def _lit(page: str) -> str:

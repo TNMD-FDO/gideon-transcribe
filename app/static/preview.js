@@ -453,7 +453,9 @@
           // On a line whose clock is unsure (v1.151.0) the player starts at
           // the line's own clock and runs on to where the sound is, instead
           // of ten seconds before a moment that may not be there.
-          var from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, told.seconds - 10);
+          // The Map tab (Phase 12) asks for the moment itself, in step with
+          // its clock, so no lead-in there.
+          var from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, told.seconds - (asked.exact ? 0 : 10));
           if (isSnippet()) {
             var line = snippetLine();
             from = told.clock_verdict ? told.clock_verdict.play_from : Math.max(0, (line ? line.start : told.seconds) - 0.5);
@@ -725,7 +727,8 @@
         proposed: given.proposed || null,
         // A comparison's finding with no moment (v1.170.0): Choose the
         // moment, Make it a note here in the foot.
-        finding: given.finding || null
+        finding: given.finding || null,
+        exact: !!given.exact
       };
       if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); }
       noting = null;
@@ -734,7 +737,7 @@
       if (card && !host && card.classList.contains("snippet") !== isSnippet()) { close(); asked = {
         recording: given.recording, seconds: seconds, from: given.from || null,
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
-        speaker: given.speaker || given.person || "", proposed: given.proposed || null, finding: given.finding || null
+        speaker: given.speaker || given.person || "", proposed: given.proposed || null, finding: given.finding || null, exact: !!given.exact
       }; if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); } }
       if (!card) { build(); }
       if (same && media()) {
@@ -834,6 +837,10 @@
     open: floating.open,
     close: floating.close,
     isOpen: floating.isOpen,
+    // The Map tab (Phase 12) keeps its clock in step with the player.
+    media: floating.media,
+    asked: floating.asked,
+    seek: floating.seek,
     mount: function (host, options) { return make(Object.assign({ host: host }, options || {})); }
   };
 })();

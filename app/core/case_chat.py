@@ -661,6 +661,9 @@ def answer_case_turn(turn_id) -> None:
         turn.readings = readings_kept
         calls["read"] = total
 
+        from core import camera_paths
+
+        readings = camera_paths.readings_block(case, read)
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -670,7 +673,8 @@ def answer_case_turn(turn_id) -> None:
                 else prompts.CASE_CHAT_FORMAT
             )
             + ("\n\n" + notes.RULE if notes.any_on(read) else "")
-            + ("\n\n" + documents.RULE if documents.of_case(case) else ""),
+            + ("\n\n" + documents.RULE if documents.of_case(case) else "")
+            + ("\n\n" + camera_paths.RULE if readings else ""),
         )
         people = people_line(case)
         # The Incidents' placements (Phase 6 chapter 3): each synced camera's
@@ -680,6 +684,10 @@ def answer_case_turn(turn_id) -> None:
         placements = incident_assistant.placements_block(case, read)
         if placements:
             people = people + "\n\n" + placements
+        # The cameras' own files (Phase 12 chapter 1): where each was and
+        # what its lights, siren and microphone did, in the time of day.
+        if readings:
+            people = people + "\n\n" + readings
         # The app's own opening lines are not the engine's to repeat (v1.121.3).
         earlier = [
             (one.question, case_scope.without_openings(one.answer))

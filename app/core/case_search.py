@@ -168,10 +168,13 @@ def _hit(
     paragraph: dict | None = None,
     close: bool = False,
     preview: dict | None = None,
+    map_url: str = "",
 ) -> dict:
     return {
         "when": when,
         "url": url,
+        # On the map (Phase 12 chapter 1): where the camera was at this moment.
+        "map": map_url,
         # A document hit (Phase 8 chapter 6): the card's address, page and paragraph.
         "paragraph": paragraph,
         "who": who,
@@ -310,6 +313,10 @@ def search(case, asked: str, kind: str = "") -> dict:
     heard = vocabulary.heard_as(case, words)
     # Every camera's All cameras link in one query (v1.123.0), not one per hit.
     links = incidents.links_in(case)
+    # And the On the map links (Phase 12 chapter 1), one query too.
+    from core import camera_paths
+
+    on_map = camera_paths.ids_with_path(case)
     # A note event is found once, as its note (on a line, or at a moment).
     events_of = Event.objects.filter(
         incident__case=case,
@@ -386,6 +393,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.start,
                     close=near,
                     preview=_plays(recording, one.start),
+                    map_url=camera_paths.map_url_at(on_map, recording, one.start),
                 )
             )
 
@@ -419,6 +427,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.at,
                     close=near,
                     preview=_plays(recording, one.at),
+                    map_url=camera_paths.map_url_at(on_map, recording, one.at),
                 )
             )
 
@@ -486,6 +495,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.start,
                     close=near,
                     preview=_plays(recording, one.start),
+                    map_url=camera_paths.map_url_at(on_map, recording, one.start),
                 )
             )
 
@@ -523,6 +533,7 @@ def search(case, asked: str, kind: str = "") -> dict:
                     at=one.at,
                     close=near,
                     preview=_plays(recording, one.at),
+                    map_url=camera_paths.map_url_at(on_map, recording, one.at),
                 )
             )
 

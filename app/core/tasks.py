@@ -87,6 +87,14 @@ def read_document(document_id: str) -> None:
     documents.read(document_id)
 
 
+@app.task(queue="media", name="read_camera_path")
+def read_camera_path(path_id: str) -> None:
+    """A camera's path file read again by a newer parser (Phase 12 chapter 1)."""
+    from core import camera_paths
+
+    camera_paths.read(path_id)
+
+
 @app.task(queue="media", name="prepare_audio_again")
 def prepare_audio_again(recording_id: str) -> None:
     """Remake a Recording's prepared audio, then put it in the line.

@@ -50,6 +50,10 @@ sys.stdout.buffer.write(bytes(range(256)) * 4096)
 " > "$WORK/scratch/6/$WORKSPACE_ID/playback.mp4"
 cp "$WORK/scratch/6/$WORKSPACE_ID/playback.mp4" \
   "$WORK/cases/$CASE_ID/$CASE_RECORDING/playback.mp4"
+# And the street map's root (Phase 12): the browser reads a map file in
+# small ranges on every pan, so this route must serve ranges too.
+mkdir -p "$WORK/maps"
+cp "$WORK/scratch/6/$WORKSPACE_ID/playback.mp4" "$WORK/maps/basemap.pmtiles"
 
 # The certificate Caddy is told to use. Self-signed and thrown away with the
 # rest: what is being checked is the range, not the trust.
@@ -87,6 +91,7 @@ docker run -d --name "$NAME" \
   -v "$WORK/key.pem:/etc/caddy/tls/key.pem:ro" \
   -v "$WORK/scratch:/srv/scratch:ro" \
   -v "$WORK/cases:/srv/cases:ro" \
+  -v "$WORK/maps:/srv/maps:ro" \
   -p "$PORT:443" \
   "$CADDY_IMAGE" >/dev/null
 
@@ -99,7 +104,7 @@ for _ in $(seq 1 40); do
 done
 
 check_one() {
-  local what="$1" url="$2"
+  local what="$1" url="$2" kept="${3:-no-store}"
 
   local whole
   whole="$(curl -sk -o "$WORK/whole" -w '%{http_code}' "$url")"
@@ -131,21 +136,25 @@ print(open(sys.argv[1], 'rb').read(1)[0])
   # holds privileged recordings on its own disk after the session that was
   # allowed to see them has ended, and a part-held large one is never
   # completed, so it plays and will not scrub.
+  # The street map is the one exception: it is not content, and a browser
+  # that reads it afresh on every pan is slow, so it may be kept privately.
   local keeping
   keeping="$(curl -skI "$url" | grep -i "^cache-control:" || true)"
   case "$keeping" in
-    *no-store*) : ;;
+    *"$kept"*) : ;;
     "") fail "$what: says nothing about caching, so a browser keeps the file" ;;
-    *) fail "$what: says '$keeping', which lets a browser keep the file" ;;
+    *) fail "$what: says '$keeping', not '$kept'" ;;
   esac
 
-  pass "$what serves 206 Partial Content of the right bytes, and is not kept"
+  pass "$what serves 206 Partial Content of the right bytes, and is $kept"
 }
 
 check_one "the Workspace media route" \
   "https://localhost:$PORT/media/6/$WORKSPACE_ID/playback.mp4"
 check_one "the Case media route" \
   "https://localhost:$PORT/case-media/$CASE_ID/$CASE_RECORDING/playback.mp4"
+check_one "the street map route" \
+  "https://localhost:$PORT/maps/basemap.pmtiles" "private"
 
 echo
 echo "A browser can jump about in a recording."

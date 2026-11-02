@@ -5,6 +5,7 @@ from django.urls import path
 from core import (
     assistant_pages,
     bulk_pages,
+    camera_path_pages,
     case_chat_pages,
     case_chronology_pages,
     case_pages,
@@ -389,6 +390,23 @@ urlpatterns = [
         case_chronology_pages.strip,
         name="case-incident-strip",
     ),
+    # The Map tab (Phase 12 chapter 1): the cameras' paths from their files.
+    path("case/<uuid:case_id>/map.json", camera_path_pages.map_json, name="case-map"),
+    path(
+        "case/<uuid:case_id>/paths/add",
+        camera_path_pages.paths_add,
+        name="case-paths-add",
+    ),
+    path(
+        "recording/<uuid:recording_id>/path",
+        camera_path_pages.add,
+        name="camera-path-add",
+    ),
+    path(
+        "recording/<uuid:recording_id>/path/remove",
+        camera_path_pages.remove,
+        name="camera-path-remove",
+    ),
     path(
         "case/<uuid:case_id>/chronology/running",
         case_chronology_pages.running,
@@ -703,6 +721,8 @@ urlpatterns = [
     ),
     # Caddy asks this before it serves a Playback copy, a waveform, or a Clip.
     path("media-auth", media_access.may_serve, name="media-auth"),
+    # And before it serves the street map (Phase 12 chapter 1).
+    path("maps-auth", media_access.may_serve_map, name="maps-auth"),
     # The Admin panel. Users never see any of it.
     path("panel/", panel.panel, name="panel"),
     path("panel/status", panel_pages.status, name="panel-status"),

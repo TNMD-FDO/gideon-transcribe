@@ -1337,14 +1337,22 @@ def placed_words(incident: Incident, cameras=None) -> tuple[str, str]:
 def strip_rows(case) -> list[dict]:
     """The case page's Incidents strip, one line per Incident. The cameras
     and the event counts for every incident at once (v1.134.0)."""
-    from django.db.models import Count
+    from django.db.models import Count, Exists, OuterRef
 
     from core import incident_assistant, sitting
+    from core.camera_paths import CameraPath
     from core.chronology import Event
 
     cameras: dict = {}
-    for camera in IncidentCamera.objects.filter(incident__case=case).select_related(
-        "recording"
+    # Whether the camera has a path file (Phase 12 chapter 1), in this query.
+    for camera in (
+        IncidentCamera.objects.filter(incident__case=case)
+        .select_related("recording")
+        .annotate(
+            on_map=Exists(
+                CameraPath.objects.filter(recording_id=OuterRef("recording_id"))
+            )
+        )
     ):
         cameras.setdefault(camera.incident_id, []).append(camera)
     events = {
@@ -1368,6 +1376,7 @@ def strip_rows(case) -> list[dict]:
                 "events": events.get(incident.pk, 0),
                 "memo": incident_assistant.memo_line(incident),
                 "url": incident.url(),
+                "on_map": any(camera.on_map for camera in own),
                 # The sitting in small (Phase 8 chapter 10), from the kept shares.
                 "sitting": sitting.json_for(incident),
             }

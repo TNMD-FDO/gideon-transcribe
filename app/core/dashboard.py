@@ -178,6 +178,7 @@ def counts_for(cases, user=None) -> dict:
             "shares": 0,
             "incidents": {"incidents": 0, **NO_INCIDENT_COUNTS},
             "incident_ids": [],
+            "paths": 0,
         }
 
     # The recordings: how many, their kept sizes, the assignment counts, and
@@ -198,10 +199,13 @@ def counts_for(cases, user=None) -> dict:
             reviewed=Count("id", filter=Q(reviewed_on__isnull=False)),
             yours=Count("id", filter=mine),
             yours_left=Count("id", filter=mine & Q(reviewed_on__isnull=True)),
+            # The cameras on the map (Phase 12 chapter 1), in the same query.
+            paths=Count("id", filter=Q(camera_path__isnull=False)),
         )
     ):
         case = out[row["case_id"]]
         case["recordings"] = row["n"]
+        case["paths"] = row["paths"]
         case["size_bytes"] = row["total"] or 0
         case["assigned"] = row["assigned"]
         case["reviewed"] = row["reviewed"]
@@ -394,6 +398,14 @@ def pills(
     if incidents.on():
         _incident_pills(
             counts["incidents"], f"{here}?tab=incidents", add, for_case=True
+        )
+
+    # On the map (Phase 12 chapter 1): the cameras with a path file. The
+    # setting is read only when there is one, since the count is free.
+    if counts.get("paths") and settings_store.get("maps"):
+        add(
+            _count(counts["paths"], "camera on the map", "cameras on the map"),
+            f"{here}?tab=map",
         )
 
     # Clips rendering, and failed.

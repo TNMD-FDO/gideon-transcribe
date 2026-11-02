@@ -199,6 +199,9 @@ def status_lines(request: HttpRequest) -> JsonResponse:
             },
             "workspaces": _workspaces(),
             "media": _media(),
+            # The street map (Phase 12 chapter 1): in place or not, with its
+            # size and date, from the file alone.
+            "maps": _maps(),
             "directory": _directory(),
             "versions": _versions(),
         }
@@ -490,6 +493,12 @@ def _media() -> dict:
         ).count(),
         "pieces": waiting,
     }
+
+
+def _maps() -> dict:
+    from core import camera_paths, maps
+
+    return {"on": camera_paths.on(), **maps.basemap_state()}
 
 
 def _directory() -> dict:

@@ -51,6 +51,8 @@ services:
       # are never served, which the app's own answer enforces.
       - "${APP_DATA_DIR}/scratch:/srv/scratch:ro"
       - "${APP_DATA_DIR}/cases:/srv/cases:ro"
+      # The street map the Admin placed (Phase 12 chapter 1), one file.
+      - "${APP_DATA_DIR}/maps:/srv/maps:ro"
       # Caddy keeps nothing that matters, but it wants somewhere to write.
       - caddy-data:/data
       - caddy-config:/config

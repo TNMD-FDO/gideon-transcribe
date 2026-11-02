@@ -160,6 +160,13 @@
       state.media.running + " media job(s) running, " +
       state.media.pieces + " upload part(s) pending";
 
+    // The street map (Phase 12): placed by ./transcribe basemap, never fetched.
+    var maps = document.getElementById("maps");
+    if (maps && state.maps) {
+      maps.textContent = "Street map: " + state.maps.words +
+        (state.maps.on ? "" : ". Maps are off on the Features page, so no Map tab is shown.");
+    }
+
     var directory = document.getElementById("directory");
     if (directory) {
       var told = state.directory;

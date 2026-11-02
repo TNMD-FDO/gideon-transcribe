@@ -526,6 +526,9 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
     # The All cameras links come from one query for the case (Phase 9
     # chapter 1), not one per row.
     links = incidents.links_in(case) if links is None else links
+    from core import camera_paths
+
+    on_map = camera_paths.ids_with_path(case)
     rows = []
     found = (
         Segment.objects.filter(transcript__recording__case=case)
@@ -554,6 +557,8 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
                 "url": f"{viewer}?t={one.start:.1f}&note=1",
                 "page_url": _page_url(recording, f"line:{one.pk}"),
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.start),
+                # On the map (Phase 12 chapter 1): where the camera was.
+                "map": camera_paths.map_url_at(on_map, recording, one.start),
                 "rests_on": one.text,
                 "who": one.speaker,
                 "from": origin_words(one),
@@ -568,6 +573,9 @@ def _moment_rows(case, links: dict | None = None) -> list[dict]:
     """The notes at moments where nothing was said (v1.99.0), listed with the
     notes on lines."""
     links = incidents.links_in(case) if links is None else links
+    from core import camera_paths
+
+    on_map = camera_paths.ids_with_path(case)
     rows = []
     found = MomentNote.objects.filter(recording__case=case).select_related(
         "recording", "note_by"
@@ -594,6 +602,7 @@ def _moment_rows(case, links: dict | None = None) -> list[dict]:
                 "url": f"{viewer}?t={one.at:.1f}&note=1",
                 "page_url": _page_url(recording, f"moment:{one.pk}"),
                 "all_cameras": incidents.url_at(links.get(recording.pk), one.at),
+                "map": camera_paths.map_url_at(on_map, recording, one.at),
                 "rests_on": "",
                 "who": "",
             }
