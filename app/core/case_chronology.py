@@ -360,6 +360,15 @@ def day_of(
                 "how": how,
                 "video": incidents.is_video(one),
                 "movable": how in (HAND, FILE),
+                # Where its playback starts on the day's clock (v1.185.0),
+                # before midnight for a recording that crossed it, so a
+                # moment of the day is a moment into the recording for its
+                # still.
+                "zero": round(
+                    p_start
+                    - (DAY_SECONDS if p_date == date - dt.timedelta(days=1) else 0.0),
+                    1,
+                ),
             }
         )
     entries.sort(key=lambda row: (row["seconds"], row["recording"]))
@@ -743,6 +752,14 @@ def span_words(kept: dict | None) -> str:
     return f"{when}, {kept['from']} to {kept['to']}"
 
 
+def still_address(bar: dict, at: float) -> str:
+    """The still's address (chapter 5, v1.185.0) for a bar at a moment of the
+    day: that moment as seconds into the recording, from where its playback
+    starts on the day, never before its first frame."""
+    into = max(0.0, float(at) - float(bar.get("zero", bar["from"])))
+    return f"/recording/{bar['id']}/still?t={into:.1f}"
+
+
 def span_reading(case, date: dt.date, span) -> dict:
     """What the Make an incident sheet needs for a span: the recordings that
     ran in it with their notes, the eight most noted ticked, the incidents
@@ -762,6 +779,10 @@ def span_reading(case, date: dt.date, span) -> dict:
             "from": hm(bar["from"]),
             "to": hm(bar["to"]),
             "ticked": bar["notes"] > 0 and index < BARS_MOST,
+            # The still (chapter 5, v1.185.0): the same moment from every
+            # camera, the span's start, or the camera's own first moment in
+            # the span when it began later.
+            "still": still_address(bar, max(span[0], bar["from"])),
         }
         for index, bar in enumerate(bars)
     ]
@@ -785,6 +806,8 @@ def span_reading(case, date: dt.date, span) -> dict:
                 "to": hm(bar["to"]),
                 "ticked": False,
                 "same_day": True,
+                # Outside the span, so at its own start.
+                "still": still_address(bar, bar["from"]),
             }
         )
     touched = []

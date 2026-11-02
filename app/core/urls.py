@@ -79,6 +79,12 @@ urlpatterns = [
         viewer.around,
         name="recording-around",
     ),
+    # One frame of a video at a moment, cut on request and never kept (v1.185.0).
+    path(
+        "recording/<uuid:recording_id>/still",
+        viewer.still,
+        name="recording-still",
+    ),
     # A note at a moment, on the line being spoken or where nothing is said (v1.99.0).
     path(
         "recording/<uuid:recording_id>/note-at",

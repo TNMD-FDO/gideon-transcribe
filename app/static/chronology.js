@@ -65,7 +65,12 @@
     // While it reads (v1.176.0): the box keeps a height and shows three grey
     // rows, so the page does not jump when the chronology lands.
     if (!quiet) { host.classList.add("loading"); host.innerHTML = "<p class='muted small'>" + (proposed ? "Reading the proposals..." : stripMode ? "Reading the clocks..." : "Reading the notes...") + "</p><div class='skeleton' aria-hidden='true'><i></i><i></i><i></i></div>"; }
-    return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
+    return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.text(); }).then(function (text) {
+      // The minute's read of the strip (v1.185.0): nothing changed, nothing
+      // redrawn, so the cards' stills are not cut again for the same picture.
+      if (quiet && stripMode && text === state.lastText) { rearm(); return; }
+      state.lastText = text;
+      var told = JSON.parse(text);
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
       state.unplaced = told.unplaced || []; state.run = told.run || null;
       state.most = told.most || 20; state.mayMake = told.may_make !== false;
@@ -118,6 +123,9 @@
     host.innerHTML = dayChips() + ruler(d) + band(d) + notesLane(d) + incidentsLane(d) + formingLane(d) + rail(d);
     wire();
     cards(d);
+    rearm();
+  }
+  function rearm() {
     stripTimer = window.setTimeout(function () { if (document.body.contains(host) && state.day) { load(state.day.date, null, true); } }, 60000);
   }
   function dayChips() {
@@ -179,12 +187,70 @@
     if (same && shown.length < room) { box.insertAdjacentHTML("beforeend", dayCardHtml(same, d, formingHint)); }
     else if (same) { more += 1; }
     if (more > 0) { box.insertAdjacentHTML("beforeend", "<p class='muted small forming-more m0' data-forming='more'>and " + more + " more forming on the strip.</p>"); }
+    // The clocks' offers, drawn by the page (v1.185.0): the same stills at
+    // the bracket's start, for an offer whose videos are on the day shown.
+    box.querySelectorAll(".inc-offer[data-key^='new:']").forEach(function (card) {
+      if (card.querySelector(".stills")) { return; }
+      var ids = card.dataset.key.slice(4).split(",");
+      var bars = d.bars.filter(function (b) { return ids.indexOf(b.id) >= 0; });
+      if (!bars.length) { return; }
+      var hint = (d.hints || []).filter(function (h) { return h.key === card.dataset.key; })[0];
+      var at = hint ? hint.from : Math.min.apply(null, bars.map(function (b) { return b.from; }));
+      card.insertAdjacentHTML("beforeend", stillsHtml(bars, at));
+    });
     box.querySelectorAll("[data-forming] [data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1]), m.dataset.tick ? m.dataset.tick.split(" ") : null); }); });
     box.querySelectorAll("[data-forming] [data-add-day]").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.addDay, b.dataset.tick.split(" "), d); }); });
     box.querySelectorAll("[data-forming] [data-decline]").forEach(function (b) { b.addEventListener("click", function () { decline(b.dataset.decline); }); });
     shown.forEach(function (h) { var card = box.querySelector("[data-forming='" + h.key + "']"); if (card) { sittingBar(card, h.ids); } });
+    stills(box);
     // The box keeps its margin only while it holds a card.
     box.hidden = !box.children.length;
+  }
+  // The stills (Phase 10 chapter 5, v1.185.0): one frame of each video at
+  // the same moment, cut on request from its playback copy by a small
+  // address of its own and never kept. A card shows six at most and says how
+  // many more wait in the picker; the picker's rows get theirs as they come
+  // into view, eight in flight at a time, so twenty rows are not twenty
+  // frames cut at once.
+  var STILLS_MOST = 6, STILLS_AT_ONCE = 8;
+  var stillQueue = [], stillBusy = 0;
+  function stillUrl(b, at) {
+    var moment = at === null ? b.from : Math.max(at, b.from);
+    return "/recording/" + b.id + "/still?t=" + Math.max(0, moment - (b.zero || 0)).toFixed(1);
+  }
+  function stillHtml(b, at, small) {
+    var moment = at === null ? b.from : Math.max(at, b.from);
+    return "<span class='still" + (small ? " sm" : "") + "' title='" + esc(b.title || "") + " at " + hm(moment) + "'><img alt='' data-still='" + stillUrl(b, at) + "'><b>" + esc(shortName(b)) + "</b>" + (small ? "" : "<span class='t'>" + hm(moment) + "</span>") + "</span>";
+  }
+  // The cards' stills: at one moment for a forming card (the span's start),
+  // at each video's own start (at null) for a day card.
+  function stillsHtml(bars, at) {
+    if (!bars.length) { return ""; }
+    var html = "<div class='stills'>";
+    bars.slice(0, STILLS_MOST).forEach(function (b) { html += stillHtml(b, at, false); });
+    if (bars.length > STILLS_MOST) { html += "<span class='muted tiny more'>and " + (bars.length - STILLS_MOST) + " more in the picker</span>"; }
+    return html + "</div>";
+  }
+  function stillNext() {
+    while (stillBusy < STILLS_AT_ONCE && stillQueue.length) {
+      var img = stillQueue.shift();
+      if (img.getAttribute("src") || !document.body.contains(img)) { continue; }
+      stillBusy += 1;
+      var done = function () { stillBusy -= 1; stillNext(); };
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", (function (one) { return function () { var box = one.closest(".still"); if (box) { box.classList.add("none"); } done(); }; })(img), { once: true });
+      img.src = img.dataset.still;
+    }
+  }
+  function stills(root) {
+    var imgs = root.querySelectorAll("img[data-still]:not([src])");
+    if (!imgs.length) { return; }
+    if (!("IntersectionObserver" in window)) { imgs.forEach(function (one) { stillQueue.push(one); }); stillNext(); return; }
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { seen.unobserve(e.target); stillQueue.push(e.target); } });
+      stillNext();
+    }, { rootMargin: "120px" });
+    imgs.forEach(function (one) { seen.observe(one); });
   }
   function cardHtml(h, d) {
     var bars = d.bars.filter(function (b) { return h.ids.indexOf(b.id) >= 0; });
@@ -200,6 +266,7 @@
     var list = names.length > 3 ? names.slice(0, 3).join(", ") + " and " + (names.length - 3) + " more" : names.join(", ");
     return "<div class='card forming-card' data-forming='" + esc(h.key) + "' data-most='" + state.most + "'>" +
       "<div class='h'><b>Forming · " + hm(h.from) + " to " + hm(h.to) + " on " + esc(d.words) + "</b><span class='pill small'>" + plural(h.notes, "note") + "</span></div>" + mini +
+      stillsHtml(bars, h.from) +
       "<div class='small muted'>" + list + " ran together, and the notes gather here. <span data-sitting></span></div>" +
       "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "'>Make it</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
       "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; the bracket stays faint on the strip'>Not these</button></div></div>";
@@ -222,6 +289,7 @@
     else if ((d.incidents || []).length && state.mayMake) { var inc = d.incidents[0]; add = "<button type='button' class='small primary' data-add-day='" + inc.id + "' data-tick='" + same.ids.join(" ") + "'>Add to " + esc(inc.name) + "</button>"; }
     return "<div class='card forming-card day-card' data-forming='" + esc(same.key) + "'>" +
       "<div class='h'><b>Same day · " + esc(d.words) + "</b><span class='pill small'>" + plural(same.ids.length, "video") + " not in an incident</span></div>" +
+      stillsHtml(bars, null) +
       "<div class='small muted'>" + stand + " If " + (same.ids.length === 1 ? "it belongs" : "they belong") + " with them, add " + (same.ids.length === 1 ? "it" : "them") + "; if " + (same.ids.length === 1 ? "it is its" : "they are their") + " own matter, " + (same.ids.length === 1 ? "it waits" : "they wait") + " here.</div>" +
       "<div class='acts'>" + add + (state.mayMake ? "<button type='button' class='small choose-myself' data-recordings='" + same.ids.join(" ") + "'>Choose myself</button>" : "") +
       "<button type='button' class='small ghost' data-decline='" + esc(same.key) + "' title='Put this suggestion away for these videos'>" + (same.ids.length === 1 ? "Its own matter" : "Their own matter") + "</button></div></div>";
@@ -714,7 +782,8 @@
   }
   function rowHtml(r, ticked, inIt) {
     var tick = inIt ? "<input type='checkbox' checked disabled title='Already in it'>" : "<input type='checkbox' name='pick'" + (ticked ? " checked" : "") + " aria-label='" + esc(r.title) + "'>";
-    return "<tr data-row='" + r.id + "'" + (r.notes || r.same_day ? "" : " class='quiet'") + "><td>" + tick + "</td><td>" + esc(r.title) + (r.same_day ? " <span class='muted tiny'>· same day, not in the span</span>" : "") + "</td><td>" + r.notes + "</td><td><span class='pill small'>" + esc(r.placed) + "</span></td><td class='mono'>" + esc(r.from) + " to " + esc(r.to) + "</td>" +
+    var still = r.still ? "<span class='still sm' title='" + esc(r.title) + "'><img alt='' data-still='" + esc(r.still) + "'></span>" : "";
+    return "<tr data-row='" + r.id + "'" + (r.notes || r.same_day ? "" : " class='quiet'") + "><td>" + tick + "</td><td class='still-cell'>" + still + "</td><td>" + esc(r.title) + (r.same_day ? " <span class='muted tiny'>· same day, not in the span</span>" : "") + "</td><td>" + r.notes + "</td><td><span class='pill small'>" + esc(r.placed) + "</span></td><td class='mono'>" + esc(r.from) + " to " + esc(r.to) + "</td>" +
       (inIt === undefined ? "" : "<td class='muted tiny'>" + (inIt ? "already in it" : "not in it yet") + "</td>") + "</tr>";
   }
   function picked(wrap) { return Array.prototype.map.call(wrap.querySelectorAll("tr[data-row] input[name=pick]:checked"), function (box) { return box.closest("tr").dataset.row; }); }
@@ -738,7 +807,7 @@
     var quiet = told.rows.filter(function (r) { return !r.notes; });
     var html = "<div class='sheet chron make' data-most='" + told.most + "'><div class='row' style='justify-content: space-between; align-items: baseline'><b>Make an incident from " + esc(told.words) + ", " + esc(told.from) + " to " + esc(told.to) + "</b><button type='button' class='small ghost' data-close>Close</button></div>" +
       "<div class='muted tiny'>The recordings that ran in the span, the most noted first and ticked. Each arrives on the incident's clock as it sits here; nothing is placed again. A camera with no notes is tickable, and a note on it afterwards is an event.</div>" +
-      "<table><tr><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th></tr>";
+      "<table><tr><th></th><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th></tr>";
     told.rows.forEach(function (r) { html += rowHtml(r, r.ticked); });
     html += "</table>" + (quiet.length ? "<div class='muted tiny' data-more-line>and " + plural(quiet.length, "recording") + " ran in this span with no notes · <button type='button' class='small ghost' data-more>Choose more</button></div>" : "") +
       "<div class='row' data-sitting style='gap: 10px; align-items: center; flex-wrap: wrap'></div>" +
@@ -746,6 +815,7 @@
       "<p class='small' data-error style='margin: 0; color: var(--danger)'></p>" +
       "<div class='row' style='justify-content: flex-end; gap: 8px'><button type='button' class='small' data-close>Cancel</button><button type='button' class='small primary' data-make-it>Make the incident</button></div></div>";
     var wrap = layer(html);
+    stills(wrap);
     wrap.querySelectorAll("tr.quiet").forEach(function (tr) { tr.hidden = true; });
     var more = wrap.querySelector("[data-more]");
     if (more) { more.addEventListener("click", function () { wrap.querySelectorAll("tr.quiet").forEach(function (tr) { tr.hidden = false; }); wrap.querySelector("[data-more-line]").hidden = true; }); }
@@ -769,7 +839,7 @@
     var nothing = !fresh.length && !inc.widens;
     var html = "<div class='sheet chron make' data-most='" + told.most + "'><div class='row' style='justify-content: space-between; align-items: baseline'><b>This span " + (inc.inside ? "lies inside" : "runs past") + " an incident</b><button type='button' class='small ghost' data-close>Close</button></div>" +
       "<div class='notice small'><b>" + esc(inc.name) + "</b> runs " + esc(inc.from) + " to " + esc(inc.to) + " and has " + plural(inc.cameras, "camera") + ". Your span, " + esc(told.from) + " to " + esc(told.to) + ", " + (inc.inside ? "is inside it." : "overlaps it.") + (nothing ? " Everything that ran in the span is already in it." : "") + "</div>" +
-      "<table><tr><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th><th></th></tr>";
+      "<table><tr><th></th><th></th><th>Recording</th><th>Notes</th><th>Placed</th><th>In the span</th><th></th></tr>";
     told.rows.forEach(function (r) { html += rowHtml(r, true, !!inIt[r.id]); });
     html += "</table>" + (inc.widens ? "<div class='muted tiny'>Adding widens the incident to <b>" + esc(inc.union_from) + " to " + esc(inc.union_to) + "</b>; its cameras keep their places.</div>" : "") +
       "<div class='row' data-sitting style='gap: 10px; align-items: center; flex-wrap: wrap'></div>";
@@ -778,6 +848,7 @@
       "<div class='row' style='justify-content: flex-end; gap: 8px'><button type='button' class='small ghost' data-new title='A second incident over this span, on purpose'>Make a new one anyway</button>" +
       (nothing ? "<a class='btn small primary' href='" + esc(inc.url) + "'>Open " + esc(inc.name) + "</a>" : "<button type='button' class='small primary' data-add>" + (fresh.length ? "Add to " + esc(inc.name) + (inc.widens ? " and widen it" : "") : "Widen " + esc(inc.name)) + "</button>") + "</div></div>";
     var wrap = layer(html);
+    stills(wrap);
     function refresh() { sittingBar(wrap, picked(wrap), inc.camera_ids, true); }
     wrap.querySelectorAll("input[name=pick]").forEach(function (box) { box.addEventListener("change", refresh); });
     refresh();

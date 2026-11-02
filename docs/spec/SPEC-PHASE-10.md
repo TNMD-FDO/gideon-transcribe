@@ -208,9 +208,17 @@ Asked 2026-10-30 ("show proposed incidents as they build from the notes, a timel
 
 Asked 2026-11-02 ("suggest incidents that occurred on the same date"), drawn in `docs/spec/mockups/phase-10-incidents-by-day.html` (Figures A, C and D) and agreed with the stills and the panel below it. The loose videos of a day that sit in no forming bracket are suggested together as **Same day** (`CONTEXT.md`) when there are two or more, or one beside an incident or a forming one of the day: a dotted bracket over each on the forming lane with one label, and a day card after the forming cards (three cards in all) with their names, how they stand in time to the day's incidents and forming ones, and **Add to the forming one** (the picker for the forming span, with the same-day videos ticked; or **Add to** the day's incident when there is one and no forming one), **Choose myself** (New incident with them ticked) and **Its own matter**, which puts the set away by the offers' key. The picker lists the day's loose videos outside its span last and unticked, "same day, not in the span", so a related camera is one tick away. The day chips and the Notes tab's Date strip mark a day whose videos ran together, in an incident or not, with a dot; hover says the counts. The lead counts the days to look at. Incidents proposed governs the day cards as it governs the forming ones.
 
-### A still to choose by (the second release)
+### A still to choose by (v1.185.0)
 
-Drawn in the same page (Figures A, B and D): one frame of each video at the same moment, the span's start on a forming card and in the picker, each video's own start on a day card and in the panel below, cut on request from the playback copy by the grabber the notes export uses, served as content to whoever may open the recording, never kept (Phase 4). A card shows six at most; the picker cuts them as the person scrolls, eight at a time.
+Drawn in the same page (Figures A, B and D): one frame of each video at the same moment, the span's start on a forming card and in the picker, each video's own start on a day card and in the panel of the third release, cut on request from the playback copy by the grabber the notes export uses, served as content to whoever may open the recording, never kept (Phase 4). A card shows six at most; the picker cuts them as the person scrolls, eight at a time.
+
+Built in v1.185.0:
+
+- **The address.** `recording/<id>/still?t=<seconds into the recording>` answers one JPEG, 108 lines high (twice the card's box, crisp on a dense screen), cut into a scratch folder that is gone when the answer has left, `Cache-Control: private, no-store`, with a cap of twenty seconds on the cut. Not found for anybody without standing on the recording (`cases.standing`), for an audio recording, for a recording with no playback copy, for a moment past the end, and for a frame the grabber cannot cut; nothing is written and the moment is not logged.
+- **The moment.** Each bar of a day carries `zero`, where its playback starts on the day's clock (before midnight for a recording that crossed it), so a moment of the day is a moment into the recording. A forming card cuts every video at the span's start, or at a video's own first moment when it began later; a day card at each video's own start; the picker's rows the same, the same-day rows at their own start.
+- **The cards.** Six stills at most, the camera's short name over the picture and the moment in its corner, then "and N more in the picker". A frame that cannot be cut leaves the box saying "no still".
+- **The picker.** A still column after the tick, on the Make an incident sheet and the Add-first sheet alike, filled as the rows come into view (the rows folded under Choose more wait until shown), eight in flight at a time.
+- **The minute's read** of the strip redraws nothing, and cuts no still again, while the day's reading is unchanged.
 
 ### Placing by sound (the third release)
 

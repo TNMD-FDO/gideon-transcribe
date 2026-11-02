@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.185.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The stills on the Incidents tab, the second of three releases from the drawing `docs/spec/mockups/phase-10-incidents-by-day.html`, which stands.
+
+- **A still to choose by.** Every forming card shows one frame of each of its videos at the same moment, the span's start, with the camera's name over the picture and the moment in its corner, which is the quickest way to see that three cameras were at one stop, or that one of them was somewhere else. A day card shows each loose video at its own start. A card shows six at most and says how many more wait in the picker.
+- **The picker shows a still on every row**, cut at the span's start from that camera (or at its own start for a same-day row), as the rows come into view, eight in flight at a time.
+- **Cut on request, never kept.** A still is one frame cut from the playback copy by the grabber the notes export uses, by a small address of its own that only a person who may open the recording can read, sent private and never stored on the disk of the machine that looked, as Phase 4 rules. A frame that cannot be cut leaves the box saying "no still". The strip's minute read redraws nothing, and cuts nothing again, while the day is unchanged.
+
+The panel for what is not on the clock, with placing by sound, is the third release.
+
 ## v1.184.0, 2026-11-02
 
 ```

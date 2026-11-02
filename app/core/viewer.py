@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
@@ -557,6 +560,63 @@ def asked_words(request: HttpRequest) -> str:
 # The Preview (v1.98.0): how far each side of the moment its lines reach.
 AROUND_BEFORE = 45.0
 AROUND_AFTER = 90.0
+
+
+# A still's height in lines (v1.185.0): twice the card's 54 px, so it is
+# crisp on a dense screen, and small enough that a frame is a few tenths of a
+# second to cut and a few kilobytes to send.
+STILL_HEIGHT = 108
+# A still is cut while the person waits, so it gets seconds, not the two
+# minutes a description's frames get on the worker.
+STILL_TIMEOUT = 20
+
+
+@login_required
+def still(request: HttpRequest, recording_id) -> HttpResponse:
+    """One frame of a video at a moment (Phase 10 chapter 5, v1.185.0): the
+    still a forming card, a day card and the picker show, cut on request from
+    the playback copy by the grabber the notes export uses, sent as content
+    to whoever may open the recording, and never kept, as Phase 4 rules.
+    Not found for anybody else, for an audio recording, for a moment past the
+    end, and for a frame that cannot be cut: the card keeps its name."""
+    from core import incidents, media, numbers
+
+    recording = Recording.objects.filter(pk=recording_id).first()
+    if recording is None or not cases.standing(recording, request.user):
+        raise Http404("no such recording")
+    if not incidents.is_video(recording):
+        raise Http404("not a video")
+    source = recording.playback_path()
+    if source is None or source.suffix != ".mp4":
+        raise Http404("no playback copy")
+    at = numbers.finite(
+        request.GET.get("t", "0"), least=0.0, most=numbers.A_DAY_AND_MORE
+    )
+    if at is None:
+        at = 0.0
+    length = float(recording.duration_seconds or 0)
+    if length and at > length:
+        raise Http404("past the end")
+    Path(settings.SCRATCH_DIR).mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="still-", dir=str(settings.SCRATCH_DIR)
+    ) as folder:
+        try:
+            written = media.grab_frames(
+                Path(source),
+                Path(folder),
+                [float(at)],
+                height=STILL_HEIGHT,
+                timeout=STILL_TIMEOUT,
+            )
+        except media.MediaError as problem:
+            raise Http404("no frame") from problem
+        data = written[0].read_bytes()
+    answer = HttpResponse(data, content_type="image/jpeg")
+    # Never kept on the disk of the machine that looked, like every
+    # playback copy and a report's page pictures.
+    answer["Cache-Control"] = "private, no-store"
+    return answer
 
 
 @login_required
