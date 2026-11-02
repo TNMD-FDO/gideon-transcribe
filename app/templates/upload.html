@@ -14,9 +14,9 @@
     <header class="page-head">
       <span class="eyebrow"><a href="{% url 'home' %}">Home</a></span>
       <div class="line"><h1>Upload files</h1></div>
+      {% comment %}The lead beside the title from 1280 (v1.182.0, the drawing phase-8-upload-page.html), with the line that stood at the foot.{% endcomment %}
       <p class="lead">
-        One recording or a whole batch. Drop the files in, press start, and
-        the transcripts come back, all of them in one download.
+        One recording or a whole batch, into a case. Nothing leaves this building.
       </p>
     </header>
 
@@ -78,7 +78,7 @@
     </section>
 
     {% if not no_case %}
-    <ol class="steps">    <ol class="steps">
+    <ol class="steps">
       <li id="step-1" class="card here">
         <h2>1. Choose files</h2>
         <div id="drop" class="drop hero">
@@ -89,11 +89,9 @@
             Up to {{ limits.files_per_batch }} files in a batch,
             {{ limits.largest_file }} and {{ limits.longest_hours }} hours each.
             Most audio and video files work; not zip files.
+            <button type="button" class="link" id="which-files" aria-expanded="false">which files</button>
+            <span id="formats" hidden>mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr, 3gp.</span>
           </p>
-          <details class="inline muted small">
-            <summary>Which files</summary>
-            mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr, 3gp.
-          </details>
         </div>
 
         <ul id="chosen" class="cards"></ul>
@@ -103,11 +101,10 @@
       </li>
 
       <li id="step-2" class="card" hidden>
-        <h2>2. Settings <span class="muted">(optional)</span></h2>
-        <p class="muted small">
-          Nothing here needs changing for a plain transcript. Set what you
-          want for the batch, or give one file its own.
-        </p>
+        <div class="row gap8 wrap">
+          <h2 class="grow m0">2. Settings</h2>
+          <span class="muted small">Nothing here needs changing for a plain transcript. Set what you want for the batch, or give one file its own.</span>
+        </div>
 
         <div class="two-panes">
           {# Left: every file, and whether it follows the batch or not. #}
@@ -144,12 +141,10 @@
       <li id="step-3" class="card" hidden>
         <h2>3. Check and start</h2>
         <table class="tbl" id="review"><tbody></tbody></table>
-        <p class="muted small">
-          Uploads start when you press the button, three at a time. Keep this
-          page open until they finish.
-        </p>
         <p id="submit-problem" class="problem" hidden></p>
-        <div class="dialog">
+        {% comment %}The start row (v1.182.0): the count, the size and the button, pinned to the window's foot from 1280 while the page is taller than it, so Upload and transcribe is always in view.{% endcomment %}
+        <div class="dialog start-row">
+          <span class="muted small grow" id="start-words">Uploads start when you press the button, three at a time; keep this page open until they finish.</span>
           <button type="button" id="start" class="primary big">Upload and transcribe</button>
           <button type="button" class="ghost" data-back="2">Back</button>
         </div>
@@ -164,15 +159,6 @@
     {% endif %}
     {% endif %}
 
-    {% comment %}
-      Outside the branch above on purpose. It answers a question about the
-      app, not about whether transcription happens to be available, and
-      somebody who has just been told the service is down is exactly the
-      person wondering where their recordings went.
-    {% endcomment %}
-    <p class="muted small centre mt18">
-      Nothing leaves this building.
-    </p>
   </div>
 
   <script src="{% static 'vendor/tus.min.js' %}"></script>

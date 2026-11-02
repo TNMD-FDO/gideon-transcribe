@@ -11,6 +11,8 @@
 {% endcomment %}
 <div class="row">
   <h3 class="small grow" id="rail-heading">Batch settings</h3>
+  {% comment %}Show the help (v1.182.0, the drawing phase-8-upload-page.html): every setting's long help under it, for anyone who wants it, remembered in the browser; otherwise the short caption stands and the help sits behind the question mark.{% endcomment %}
+  <button type="button" id="show-help" class="ghost tiny" aria-pressed="false">Show the help</button>
   <button type="button" id="back-to-batch" class="ghost tiny" hidden>
     Back to batch settings
   </button>
@@ -57,61 +59,112 @@
     </div>
   {% endif %}
 
-  {% if vision.offered %}
-    {% comment %}
-      Enrich with vision (Phase 4 chapter 5): for the videos of the batch.
-      Under a schedule it needs a case: on the Upload page every batch has
-      one now, so the tick shows; on Bulk transcription, whose batch is this
-      session's, the one line says why there is no tick.
-    {% endcomment %}
-    {% if for_bulk and vision.needs_case %}
-      <p class="muted small" id="vision-session-line">{{ vision.session_line|default:"Vision runs tonight and needs a case; a session's recordings are gone by then. Use Upload files to put it in a case." }}</p>
-    {% else %}
-      <div id="vision-tick" data-needs-case="{% if vision.needs_case %}yes{% else %}no{% endif %}">
+  {% comment %}
+    The ticks (v1.182.0, the drawing phase-8-upload-page.html, at the
+    maintainer's word): two across, each with its one-line caption standing
+    and its longer help behind the question mark or Show the help. The ids
+    and the order of reading are as before; only the layout changed.
+  {% endcomment %}
+  <div class="ticks">
+    <div class="tick-block">
+      <label class="row">
+        <input type="checkbox" id="diarize"> <b>Tell the speakers apart</b>
+        <button type="button" class="q" data-help aria-label="More about Tell the speakers apart" title="More about this setting">?</button>
+      </label>
+      <p class="muted small cap">Labels each line with who is speaking.</p>
+      <p class="muted small help">
+        Off unless you turn it on. Speaker separation is not always right:
+        it can run two people together or split one person in two, and the
+        labels are guesses until somebody checks them against the audio.
+      </p>
+    </div>
+
+    <div class="tick-block">
+      <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
+        <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
+        <button type="button" class="q" data-help aria-label="More about Translate to English" title="More about this setting">?</button>
+      </label>
+      {% if recogniser == "qwen3-asr" and not translation_offered %}
+        {% comment %}ADR 0026: under the Qwen3-ASR recogniser the English is the chat engine's; with no engine configured it cannot be written. Greyed with the reason, never hidden.{% endcomment %}
+        <p class="muted small cap">Not offered: no chat engine is configured.</p>
+        <p class="muted small help">
+          Under the Qwen3-ASR recogniser the English is written by the chat
+          engine from the words as spoken, and no engine is configured. A
+          recording is transcribed in the language spoken.
+        </p>
+      {% elif recogniser == "qwen3-asr" %}
+        {% comment %}ADR 0026: the transcript lands in the language spoken and the English follows, written by the chat engine from the words as spoken, which are kept.{% endcomment %}
+        <p class="muted small cap">The English follows the transcript, line by line.</p>
+        <p class="muted small help">
+          The transcript lands in the language spoken and reads at once;
+          the English follows, written by the chat engine line by line
+          from the words as spoken, which are kept and can be shown. A
+          recording in more than one language is translated whether or
+          not this is ticked.
+        </p>
+      {% else %}
+        <p class="muted small cap">The transcript in English, from any language.</p>
+        <p class="muted small help">
+          A recording in more than one language is translated whether or
+          not this is ticked. A translation has no word timing.
+        </p>
+      {% endif %}
+    </div>
+
+    {% if summaries.offered and not for_bulk %}
+      {% comment %}
+        Summaries tonight (Phase 9 chapter 5): each recording's summary written
+        in the overnight window; only for a batch going into a case, which
+        every batch from the Upload page is since v1.174.0.
+      {% endcomment %}
+      <div class="tick-block" id="summaries-tick" data-needs-case="yes">
         <label class="row">
-          <input type="checkbox" id="enrich-with-vision"{% if vision.ticked %} checked{% endif %}>
-          <b>Enrich with vision</b>
+          <input type="checkbox" id="summaries-tonight"{% if summaries.ticked %} checked{% endif %}>
+          <b>Write each recording's summary tonight</b>
+          <button type="button" class="q" data-help aria-label="More about summaries tonight" title="More about this setting">?</button>
         </label>
-        <p class="muted small">{{ vision.caption }}</p>
+        <p class="muted small cap">A summary for each recording, written overnight.</p>
+        <p class="muted small help">{{ summaries.caption }}</p>
       </div>
     {% endif %}
-  {% endif %}
 
-  {% if summaries.offered and not for_bulk %}
-    {% comment %}
-      Summaries tonight (Phase 9 chapter 5): each recording's summary written
-      in the overnight window; only for a batch going into a case, which
-      every batch from the Upload page is since v1.174.0.
-    {% endcomment %}
-    <div id="summaries-tick" data-needs-case="yes">
-      <label class="row">
-        <input type="checkbox" id="summaries-tonight"{% if summaries.ticked %} checked{% endif %}>
-        <b>Write each recording's summary tonight</b>
-      </label>
-      <p class="muted small">{{ summaries.caption }}</p>
-    </div>
-  {% endif %}
+    {% if batch_mail.offered %}
+      <div class="tick-block">
+        <label class="row">
+          <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>
+          <b>Email me when this batch finishes</b>
+        </label>
+        <p class="muted small cap">
+          {% if batch_mail.address %}
+            One message with the counts and any failures; never a word of a transcript.
+          {% else %}
+            No email address on your account; ask IT.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
 
-  {% if batch_mail.offered %}
-    <label class="row">
-      <input type="checkbox" id="email-when-done"{% if batch_mail.ticked %} checked{% endif %}{% if not batch_mail.address %} disabled{% endif %}>
-      <b>Email me when this batch finishes</b>
-    </label>
-    <p class="muted small">
-      {% if batch_mail.address %}
-        One message with the counts and any failures; never a word of a transcript.
+    {% if vision.offered %}
+      {% comment %}
+        Enrich with vision (Phase 4 chapter 5): for the videos of the batch.
+        Under a schedule it needs a case: on the Upload page every batch has
+        one now, so the tick shows; on Bulk transcription, whose batch is this
+        session's, the one line says why there is no tick.
+      {% endcomment %}
+      {% if for_bulk and vision.needs_case %}
+        <p class="muted small" id="vision-session-line">{{ vision.session_line|default:"Vision runs tonight and needs a case; a session's recordings are gone by then. Use Upload files to put it in a case." }}</p>
       {% else %}
-        No email address on your account; ask IT.
+        <div class="tick-block" id="vision-tick" data-needs-case="{% if vision.needs_case %}yes{% else %}no{% endif %}">
+          <label class="row">
+            <input type="checkbox" id="enrich-with-vision"{% if vision.ticked %} checked{% endif %}>
+            <b>Enrich with vision</b>
+          </label>
+          <p class="muted small cap">{{ vision.caption }}</p>
+        </div>
       {% endif %}
-    </p>
-  {% endif %}
+    {% endif %}
+  </div>
 
-  <label class="row">
-    <input type="checkbox" id="diarize"> <b>Tell the speakers apart</b>
-  </label>
-  <p class="muted small">
-    Labels each line with who is speaking. Off unless you turn it on.
-  </p>
   <p class="notice warn" id="diarize-warning" hidden>
     Speaker separation is not always right. It can run two people
     together or split one person in two, and the labels are guesses
@@ -138,35 +191,8 @@
     </div>
   </div>
 
-  <label class="row"{% if recogniser == "qwen3-asr" and not translation_offered %} title="Translate to English needs the chat engine under the Qwen3-ASR recogniser"{% endif %}>
-    <input type="checkbox" id="translate"{% if recogniser == "qwen3-asr" and not translation_offered %} disabled{% endif %}> <b>Translate to English</b>
-  </label>
-  {% if recogniser == "qwen3-asr" and not translation_offered %}
-    {% comment %}ADR 0026: under the Qwen3-ASR recogniser the English is the chat engine's; with no engine configured it cannot be written. Greyed with the reason, never hidden.{% endcomment %}
-    <p class="muted small">
-      Not offered: under the Qwen3-ASR recogniser the English is
-      written by the chat engine from the words as spoken, and no
-      engine is configured. A recording is transcribed in the
-      language spoken.
-    </p>
-  {% elif recogniser == "qwen3-asr" %}
-    {% comment %}ADR 0026: the transcript lands in the language spoken and the English follows, written by the chat engine from the words as spoken, which are kept.{% endcomment %}
-    <p class="muted small">
-      The transcript lands in the language spoken and reads at once;
-      the English follows, written by the chat engine line by line
-      from the words as spoken, which are kept and can be shown. A
-      recording in more than one language is translated whether or
-      not this is ticked.
-    </p>
-  {% else %}
-    <p class="muted small">
-      A recording in more than one language is translated whether or
-      not this is ticked. A translation has no word timing.
-    </p>
-  {% endif %}
-
   {% comment %}The More options: a fold on the Upload page, plain fields on Bulk transcription, where the whole card is one fold already.{% endcomment %}
-  {% if for_bulk %}<div id="more" class="more-plain">{% else %}<details class="mt10" id="more"><summary>More options</summary>{% endif %}
+  {% if for_bulk %}<div id="more" class="more-plain">{% else %}<details class="mt10" id="more"><summary>More options: language, vocabulary, context, audio clean-up</summary>{% endif %}
 
     <div class="field mt10">
       <label for="language">Spoken language</label>

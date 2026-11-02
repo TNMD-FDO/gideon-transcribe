@@ -3840,3 +3840,25 @@ nav.rail { view-transition-name: rail; }
 .forming-card .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
 .forming-card .sit.over i { background: var(--danger); } .forming-card .sit.near i { background: var(--warn); }
 .forming-more { grid-column: 1 / -1; }
+
+/* The Upload page tightened (v1.182.0, the drawing phase-8-upload-page.html):
+   the ticks two across with a one-line caption each and the longer help
+   behind a question mark or Show the help; the start row pinned to the
+   window's foot from 1280; the lead beside the title; which files inline. */
+.ticks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; margin: 6px 0 4px; }
+@media (max-width: 60rem) { .ticks { grid-template-columns: minmax(0, 1fr); } }
+.tick-block { min-width: 0; }
+.tick-block .cap { margin: 0 0 6px; }
+.tick-block .help { margin: 0 0 6px; display: none; }
+.tick-block.open .help, .show-help .tick-block .help { display: block; }
+.tick-block .q { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; padding: 0; margin-left: 4px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--muted); font: inherit; font-size: var(--t-label); line-height: 1; cursor: pointer; }
+.tick-block .q:hover, .tick-block.open .q { color: var(--accent); border-color: var(--accent); }
+button.link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+#formats { display: block; margin-top: 4px; }
+.start-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (min-width: 1280px) {
+  .workbench #step-3 .start-row.floating { position: fixed; bottom: 0; z-index: 5; box-sizing: border-box; background: var(--surface); border-top: 1px solid var(--line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12); padding: 10px 16px; margin: 0; }
+  .workbench.upload .page-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 16px; }
+  .workbench.upload .page-head .eyebrow { width: 100%; }
+  .workbench.upload .page-head .lead { margin: 0; }
+}

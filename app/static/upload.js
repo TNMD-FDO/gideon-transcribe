@@ -402,6 +402,57 @@
       ? "Upload and transcribe " + usable().length +
         (usable().length === 1 ? " file" : " files")
       : "Upload and transcribe";
+    // The start row's words (v1.182.0): the count and the size beside the
+    // button, with the note that stood above it.
+    var words = document.getElementById("start-words");
+    if (words) {
+      var total = usable().reduce(function (sum, one) { return sum + (one.file.size || 0); }, 0);
+      words.textContent = (usable().length
+        ? usable().length + (usable().length === 1 ? " file" : " files") + " · " + bytes(total) + " · "
+        : "") + "Uploads start when you press the button, three at a time; keep this page open until they finish.";
+    }
+  }
+
+  // The start row pinned (v1.182.0): from 1280, while Check and start sits
+  // below the window, its last row floats at the window's foot over the
+  // right column, so Upload and transcribe is always in view as the spec
+  // asks; sticky alone could not leave the card. The card keeps the row's
+  // room so nothing jumps when the row floats or lands.
+  var startRow = document.querySelector("#step-3 .start-row");
+  if (startRow && "IntersectionObserver" in window) {
+    var stepThree = document.getElementById("step-3");
+    function placeRow() {
+      if (!startRow.classList.contains("floating")) { return; }
+      var rect = stepThree.getBoundingClientRect();
+      startRow.style.left = rect.left + "px";
+      startRow.style.width = rect.width + "px";
+    }
+    function floatRow(on) {
+      if (on === startRow.classList.contains("floating")) { return; }
+      startRow.classList.toggle("floating", on);
+      stepThree.style.paddingBottom = on ? startRow.offsetHeight + "px" : "";
+      if (!on) { startRow.style.left = ""; startRow.style.width = ""; }
+      placeRow();
+    }
+    var sentinel = document.createElement("div");
+    sentinel.className = "start-sentinel";
+    startRow.parentNode.insertBefore(sentinel, startRow);
+    new IntersectionObserver(function (entries) {
+      var entry = entries[0];
+      var below = !entry.isIntersecting && entry.boundingClientRect.top > 0;
+      floatRow(allAtOnce() && below && !stepThree.hidden);
+    }, { threshold: 0 }).observe(sentinel);
+    window.addEventListener("resize", placeRow);
+  }
+
+  // Which files (v1.182.0): the formats behind a link on the limits line.
+  var whichFiles = document.getElementById("which-files");
+  if (whichFiles) {
+    whichFiles.addEventListener("click", function () {
+      var formats = document.getElementById("formats");
+      formats.hidden = !formats.hidden;
+      whichFiles.setAttribute("aria-expanded", formats.hidden ? "false" : "true");
+    });
   }
 
   function escape(text) {

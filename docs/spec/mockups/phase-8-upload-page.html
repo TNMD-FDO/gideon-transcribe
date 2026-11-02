@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Upload page, reorganised</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.big { min-height: 34px; font-size: 14px; padding: 6px 16px; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); }
+
+  /* the window: a frame the height of a 1366x768 laptop's page area, with the fold marked */
+  .window { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .window .bar { display: flex; gap: 14px; align-items: center; padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .window .bar b { color: var(--text); }
+  .window .inner { padding: 14px 18px 18px; }
+  .fold { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--bad); pointer-events: none; }
+  .fold span { position: absolute; right: 10px; top: -22px; font-size: 11px; color: var(--bad); background: var(--surface); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--bad); }
+  .head h1 { font-size: 20px; margin: 0; } .head .lead { margin: 2px 0 10px; color: var(--muted); font-size: 13px; }
+  .asks { display: flex; gap: 10px; align-items: center; margin: 0 0 12px; font-size: 13px; flex-wrap: wrap; }
+  .sel { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 10px; background: var(--surface); font-size: 13px; min-width: 12rem; }
+  .steps { display: grid; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; min-width: 0; }
+  .card h2 { font-size: 14px; margin: 0 0 6px; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius); background: var(--surface-2); text-align: center; padding: 22px 12px; font-size: 13px; }
+  .drop b { font-size: 15px; } .drop .or { color: var(--muted); margin: 4px 0 8px; } .drop .or u { color: var(--accent); }
+  .drop .lim { color: var(--muted); font-size: 12px; margin: 0; }
+  .file { display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; font-size: 12px; margin-top: 6px; }
+  .file .grow { flex: 1; } .file .pill { font-size: 10px; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 6px 0; }
+  .opt .tick { width: 13px; height: 13px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); flex: none; margin-top: 3px; }
+  .opt .tick.on { background: var(--accent); border-color: var(--accent); }
+  .opt .cap { color: var(--muted); font-size: 12px; margin: 1px 0 0; }
+  .opt .q { display: inline-flex; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line); color: var(--muted); font-size: 10px; align-items: center; justify-content: center; margin-left: 4px; vertical-align: -2px; }
+  .field { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
+  .field .lbl { min-width: 7.5rem; color: var(--muted); }
+  .more { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 6px; font-size: 13px; color: var(--accent); }
+  .review { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .review td { padding: 3px 6px; border-bottom: 1px solid var(--line); }
+  .start { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .pinned { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 12px; margin: 10px -12px -10px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px; }
+  .figs div { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface); }
+  .figs b { display: block; font-size: 20px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 5px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 1 chapter 5, amended · a drawing for the maintainer's word · 2026-11-02</span>
+    <h1>The Upload page, reorganised: a fault found, and the page tightened</h1>
+    <p class="lede">Measured on the local office at a 1366 x 768 laptop window (724 pixels of page) and at 1912 x 1000. The spec's layout from 1280 pixels is Choose files on the left, Settings over Check and start on the right, with Upload and transcribe always in view. The page has not read that way since v1.174.0: its step list is opened twice in the template, so the three steps are laid out inside the left half of the page, every card is half its width, every caption wraps, and the page runs 1,221 pixels tall with the start button at 1,100. Figure A is the page as it is, Figure B the same page with the one line fixed, Figure C the fixed page tightened, which is the recommendation.</p>
+  </header>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The figures</span><h2>What the laptop window shows, measured</h2></div>
+    <div class="figs">
+      <div><span class="muted">As it is</span><b>1,221 px</b>tall; the start button at 1,100, the fold at 724</div>
+      <div><span class="muted">Fault fixed (Figure B)</span><b>1,084 px</b>tall; the start button at 917, still under the fold</div>
+      <div><span class="muted">Fixed and tightened (Figure C)</span><b>about 900 px</b>tall; the start button pinned, always in view</div>
+      <div><span class="muted">Settings card, closed</span><b>530 → 386 → about 230</b>as it is, fixed, tightened</div>
+    </div>
+    <table class="t" style="margin-top: 12px">
+      <tr><th>Part at 1366 wide</th><th>As it is</th><th>Fault fixed</th><th>Why</th></tr>
+      <tr><td>Choose files card</td><td>307 wide, 338 tall</td><td>599 wide, 319 tall</td><td>the left column, as the spec has it</td></tr>
+      <tr><td>Settings card</td><td>279 wide, 688 tall</td><td>544 wide, 525 tall</td><td>the right column; the captions stop wrapping</td></tr>
+      <tr><td>Summaries tonight, tick and caption</td><td>167 tall</td><td>81 tall</td><td>the caption wrapped to seven lines in 245 pixels</td></tr>
+      <tr><td>More options, opened</td><td>+498</td><td>+424</td><td>language, vocabulary, context, clean-up</td></tr>
+      <tr><td>Upload and transcribe</td><td>at 1,100</td><td>at 917</td><td>the fold is at 724</td></tr>
+    </table>
+  </section>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>As it is: the three steps squeezed into the left half, at 1366 wide</h2></div>
+    <div class="window">
+      <div class="bar"><b>Upload files</b><span>1366 x 768 · the page runs 1,221 pixels, the fold at 724</span></div>
+      <div class="inner">
+        <div class="head"><h1>Upload files</h1><p class="lead">One recording or a whole batch. Drop the files in, press start, and the transcripts come back, all of them in one download.</p></div>
+        <div class="asks"><span class="muted">Into which case?</span><span class="sel">Harbour Street stop ▾</span><span class="sel">Body camera ▾</span></div>
+        <div class="steps" style="grid-template-columns: 1fr 1fr; width: 52%">
+          <div class="card" style="grid-row: 1 / 3"><h2>1. Choose files</h2><div class="drop"><b>Drop recordings here</b><p class="or">or <u>choose files</u></p><p class="lim">Up to 25 files in a batch, 10 GB and 6 hours each. Most audio and video files work; not zip files.</p><p class="lim" style="color: var(--accent)">Which files</p></div></div>
+          <div class="card"><h2>2. Settings <span class="muted">(optional)</span></h2>
+            <p class="small muted" style="margin: 0 0 6px">Nothing here needs changing for a plain transcript. Set what you want for the batch, or give one file its own.</p>
+            <div class="field"><span class="lbl">Recording type</span><span class="sel" style="min-width: 0">Body camera ▾</span></div>
+            <div class="opt"><span class="tick"></span><div><b>Write each recording's summary tonight</b><p class="cap">A memo for each recording in the batch, written in the overnight window with the template for its type; the rows say when it is done. Only for a batch going into a case.</p></div></div>
+            <div class="opt"><span class="tick"></span><div><b>Email me when this batch finishes</b><p class="cap">One message with the counts and any failures; never a word of a transcript.</p></div></div>
+            <div class="opt"><span class="tick"></span><div><b>Tell the speakers apart</b><p class="cap">Labels each line with who is speaking. Off unless you turn it on.</p></div></div>
+            <div class="field" style="margin-left: 20px"><span class="lbl">Speakers</span><span class="sel" style="min-width: 0">2 to 4 ▾</span></div>
+            <div class="opt"><span class="tick"></span><div><b>Translate to English</b><p class="cap">A recording in more than one language is translated whether or not this is ticked. A translation has no word timing.</p></div></div>
+            <div class="more">More options ▸</div>
+          </div>
+          <div class="card"><h2>3. Check and start</h2><p class="small muted" style="margin: 0 0 6px">Uploads start when you press the button, three at a time. Keep this page open until they finish.</p><span class="btn primary big">Upload and transcribe</span></div>
+        </div>
+      </div>
+      <div class="fold" style="top: 59%"><span>the fold at a 1366 x 768 laptop</span></div>
+    </div>
+    <div class="caption">
+      <p><b>The fault.</b> <code>upload.html</code> opens <code>&lt;ol class="steps"&gt;</code> twice on one line since v1.174.0, so the inner list, with the three steps in it, is one item of the outer grid and sits in its first column. The cards are 307 and 279 pixels wide on a 1,155-pixel page, the drop zone and every caption wrap, and the settings card alone is 688 tall.</p>
+      <p><b>What it costs.</b> Everything below the summaries tick is under the fold on a laptop, and the start button is 376 pixels past it. The spec's "Upload and transcribe always in view" has not held for four days.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The fault fixed, nothing else: the spec's layout, at 1366 wide</h2></div>
+    <div class="window">
+      <div class="bar"><b>Upload files</b><span>1366 x 768 · the page runs 1,084 pixels, the start button at 917</span></div>
+      <div class="inner">
+        <div class="head"><h1>Upload files</h1><p class="lead">One recording or a whole batch. Drop the files in, press start, and the transcripts come back, all of them in one download.</p></div>
+        <div class="asks"><span class="muted">Into which case?</span><span class="sel">Harbour Street stop ▾</span><span class="sel">Body camera ▾</span></div>
+        <div class="steps" style="grid-template-columns: 1.1fr 1fr; align-items: start">
+          <div class="card" style="grid-row: 1 / 3"><h2>1. Choose files</h2><div class="drop" style="padding: 30px 12px"><b>Drop recordings here</b><p class="or">or <u>choose files</u></p><p class="lim">Up to 25 files in a batch, 10 GB and 6 hours each. Most audio and video files work; not zip files.</p><p class="lim" style="color: var(--accent)">Which files</p></div>
+            <div class="file"><span class="grow">BWC1-1 <span class="muted">· BWC1-1.mp4 · 1.2 GB</span></span><span class="pill">Same as batch</span><span class="btn ghost" style="min-height: 22px; font-size: 11px">Remove</span></div>
+            <div class="file"><span class="grow">BWC2-1 <span class="muted">· BWC2-1.mp4 · 980 MB</span></span><span class="pill">Same as batch</span><span class="btn ghost" style="min-height: 22px; font-size: 11px">Remove</span></div>
+          </div>
+          <div class="card"><h2>2. Settings <span class="muted">(optional)</span></h2>
+            <p class="small muted" style="margin: 0 0 6px">Nothing here needs changing for a plain transcript. Set what you want for the batch, or give one file its own.</p>
+            <div class="field"><span class="lbl">Recording type</span><span class="sel" style="min-width: 0">Body camera ▾</span></div>
+            <div class="opt"><span class="tick"></span><div><b>Write each recording's summary tonight</b><p class="cap">A memo for each recording in the batch, written in the overnight window with the template for its type; the rows say when it is done.</p></div></div>
+            <div class="opt"><span class="tick"></span><div><b>Email me when this batch finishes</b><p class="cap">One message with the counts and any failures; never a word of a transcript.</p></div></div>
+            <div class="opt"><span class="tick"></span><div><b>Tell the speakers apart</b><p class="cap">Labels each line with who is speaking. Off unless you turn it on.</p></div></div>
+            <div class="field" style="margin-left: 20px"><span class="lbl">Speakers</span><span class="sel" style="min-width: 0">2 to 4 ▾</span></div>
+            <div class="opt"><span class="tick"></span><div><b>Translate to English</b><p class="cap">A recording in more than one language is translated whether or not this is ticked. A translation has no word timing.</p></div></div>
+            <div class="more">More options ▸</div>
+          </div>
+          <div class="card"><h2>3. Check and start</h2>
+            <table class="review"><tr><td>BWC1-1</td><td class="muted">BWC1-1.mp4 · 1.2 GB</td><td class="muted">batch settings</td></tr><tr><td>BWC2-1</td><td class="muted">BWC2-1.mp4 · 980 MB</td><td class="muted">batch settings</td></tr></table>
+            <p class="small muted" style="margin: 6px 0">Uploads start when you press the button, three at a time. Keep this page open until they finish.</p><span class="btn primary big">Upload and transcribe 2 files</span></div>
+        </div>
+      </div>
+      <div class="fold" style="top: 67%"><span>the fold</span></div>
+    </div>
+    <div class="caption">
+      <p><b>One line.</b> The duplicate list tag removed: the left column is Choose files at 599 wide, the right Settings over Check and start at 544. The captions stop wrapping, the settings card is 386 tall closed, the page 1,084.</p>
+      <p><b>Still short of the spec.</b> The start button sits at 917 on a 724-pixel window, so a person still scrolls to it, and More options opens to 424 more. This is the honest floor: the fault fixed and nothing redesigned.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C, recommended</span><h2>Fixed and tightened: the captions behind a question mark, the start pinned</h2></div>
+    <div class="window">
+      <div class="bar"><b>Upload files</b><span>1366 x 768 · about 900 pixels, the start button always in view</span></div>
+      <div class="inner">
+        <div class="head" style="display: flex; gap: 16px; align-items: baseline"><h1>Upload files</h1><p class="lead" style="margin: 0">One recording or a whole batch, into a case. Nothing leaves this building.</p></div>
+        <div class="asks"><span class="muted">Into which case?</span><span class="sel">Harbour Street stop ▾</span><span class="sel">Body camera ▾</span><span class="small muted">Kept with the case, shared with its people. For this session only, <u style="color: var(--accent)">Bulk transcription</u>.</span></div>
+        <div class="steps" style="grid-template-columns: 1.1fr 1fr; align-items: start">
+          <div class="card" style="grid-row: 1 / 3"><h2>1. Choose files</h2><div class="drop" style="padding: 24px 12px"><b>Drop recordings here</b><p class="or">or <u>choose files</u></p><p class="lim">Up to 25 files, 10 GB and 6 hours each · <u style="color: var(--accent)">which files</u></p></div>
+            <div class="file"><span class="grow">BWC1-1 <span class="muted">· BWC1-1.mp4 · 1.2 GB</span></span><span class="pill">Same as batch</span><span class="btn ghost" style="min-height: 22px; font-size: 11px">Remove</span></div>
+            <div class="file"><span class="grow">BWC2-1 <span class="muted">· BWC2-1.mp4 · 980 MB</span></span><span class="pill">Same as batch</span><span class="btn ghost" style="min-height: 22px; font-size: 11px">Remove</span></div>
+          </div>
+          <div class="card"><h2 style="display: flex; justify-content: space-between; align-items: baseline">2. Settings <span class="muted" style="font-weight: 400; font-size: 12px">nothing needs changing for a plain transcript · <u style="color: var(--accent)">show the help</u></span></h2>
+            <div class="field"><span class="lbl">Recording type</span><span class="sel" style="min-width: 0">Body camera ▾</span></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px">
+              <div class="opt"><span class="tick"></span><div><b>Tell the speakers apart</b><span class="q">?</span></div></div>
+              <div class="opt"><span class="tick"></span><div><b>Translate to English</b><span class="q">?</span></div></div>
+              <div class="opt"><span class="tick"></span><div><b>Summary tonight</b><span class="q">?</span></div></div>
+              <div class="opt"><span class="tick"></span><div><b>Email me when it finishes</b><span class="q">?</span></div></div>
+            </div>
+            <div class="field" style="margin-left: 20px"><span class="lbl">Speakers</span><span class="sel" style="min-width: 0">2 to 4 ▾</span><span class="small muted">shown while Tell the speakers apart is ticked</span></div>
+            <div class="more">More options: language, vocabulary, context, audio clean-up ▸</div>
+          </div>
+          <div class="card"><h2>3. Check and start</h2>
+            <table class="review"><tr><td>BWC1-1</td><td class="muted">BWC1-1.mp4 · 1.2 GB</td><td class="muted">batch settings</td></tr><tr><td>BWC2-1</td><td class="muted">BWC2-1.mp4 · 980 MB</td><td class="muted">batch settings</td></tr></table>
+            <div class="start pinned"><span>2 files · 2.2 GB · uploads three at a time; keep this page open until they finish</span><span class="btn primary big">Upload and transcribe 2 files</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="fold" style="top: 78%"><span>the fold</span></div>
+    </div>
+    <div class="caption">
+      <p><b>The captions, as agreed 2026-11-02.</b> Each setting keeps a one-line caption standing under it (the maintainer's change: "some of the captions under each setting to stand"); the longer help sits behind the small question mark, and <b>show the help</b> in the card's head puts every help line back under its setting for anyone who wants them, remembered in the browser. The four ticks sit two across in the 544-pixel column. The settings card is about 260 tall closed.</p>
+      <p><b>The start pinned.</b> Check and start keeps its review table; its last row, the count, the size and the start button, is pinned to the bottom of the window while the page is taller than it (the stepper already pins the step's buttons below 1280, in the same way), so Upload and transcribe is always in view as the spec asks. The "three at a time, keep this page open" sentence moves beside the button.</p>
+      <p><b>Smaller words up top.</b> The lead sentence sits beside the title on one line and takes "Nothing leaves this building" with it from the foot; "Which files" is a link on the limits line rather than a fold of its own; More options names what it holds. The warning under Tell the speakers apart, the notices (a quota raised, low disk, the service away) and the file cards with their chips are unchanged.</p>
+      <p><b>What stays.</b> The three steps and their order, the two columns from 1280, the stepper with Next and Back below it, every setting and its default, the exceptions for single files through the chips, the Batch page.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D, weighed</span><h2>Three across: Choose files, Settings and Check and start side by side</h2></div>
+    <div class="two">
+      <div class="window" style="min-height: 0">
+        <div class="bar"><b>Upload files</b><span>1366 wide: three columns of 370</span></div>
+        <div class="inner" style="padding: 10px 12px">
+          <div class="steps" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px">
+            <div class="card"><h2>1. Choose files</h2><div class="drop" style="padding: 14px 8px; font-size: 12px"><b style="font-size: 13px">Drop recordings here</b><p class="or">or <u>choose files</u></p></div><div class="file"><span class="grow">BWC1-1</span><span class="pill">batch</span></div></div>
+            <div class="card"><h2>2. Settings</h2><div class="opt"><span class="tick"></span><div><b>Tell the speakers apart</b></div></div><div class="opt"><span class="tick"></span><div><b>Translate to English</b></div></div><div class="opt"><span class="tick"></span><div><b>Summary tonight</b></div></div><div class="opt"><span class="tick"></span><div><b>Email me when it finishes</b></div></div><div class="more">More options ▸</div></div>
+            <div class="card"><h2>3. Check and start</h2><table class="review"><tr><td>BWC1-1</td><td class="muted">1.2 GB</td></tr></table><p class="small muted">2 files · 2.2 GB</p><span class="btn primary big">Upload and transcribe</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="small"><b>Why not.</b> Three columns at 1366 are 370 pixels each, which is the width that made every caption wrap in Figure A; the file cards with their names, sizes and chips wrap too, and the review table loses its original-name column. At 1912 it reads well, but the office's laptops are the case that matters. The start button is in view only because the third column is short; a batch of eight files pushes the review table past the fold again.</p>
+        <p class="small"><b>Not drawn: one step at a time on every width.</b> The stepper below 1280 does this already; above it the spec chose all three at once so the page is read in one glance, and nothing in the measurement argues against that once the fault is fixed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>What it would take</h2></div>
+    <div class="verdict"><p style="margin: 0"><b>Recommended: Figure C</b>, as one release, the fault fixed in the same change (it is one line, and Figure C is drawn on top of it). Template and stylesheet only: the question marks and show the help (the captions kept in the template, shown or hidden by a class the browser remembers), the two-across ticks, the pinned start row, the lead beside the title, the limits line with its link. No setting changes, no migration.</p></div>
+    <ul class="small">
+      <li><b>If the fault alone is wanted first:</b> Figure B is a one-line patch release, and Figure C follows at your word.</li>
+      <li><b>Bulk transcription</b> shares the settings card and takes the question marks and show the help with it; its own layout is one column and is not touched.</li>
+      <li><b>The spec</b> (Phase 1 chapter 5) gains the amendment: the captions behind a question mark with show the help, and the pinned start row.</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

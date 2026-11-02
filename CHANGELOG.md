@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.182.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Upload page reorganised, at the maintainer's word, from the drawing `docs/spec/mockups/phase-8-upload-page.html` (Figure C, with the short captions standing).
+
+- **A fault fixed.** Since v1.174.0 the page's step list was opened twice, so the three steps were laid out inside the left half of the page: every card half its width, every caption wrapped, the settings card 688 pixels tall and the page 1,221 on a laptop, with Upload and transcribe far under the fold. The spec's layout is back: Choose files on the left, Settings over Check and start on the right.
+- **The settings card tightened.** The ticks (Tell the speakers apart, Translate to English, the summary tonight, the email, Enrich with vision when offered) sit two across, each with a one-line caption standing under it and its longer help behind a small question mark; **Show the help** in the card's head puts every help line back, remembered in the browser. More options names what it holds. Bulk transcription shares the card and takes this with it.
+- **The start row pinned.** The count, the size and Upload and transcribe sit in one row at the foot of Check and start, pinned to the window's foot from 1280 wide while the page is taller than it, so the button is always in view as the spec asks.
+- **Smaller words up top.** The lead sits beside the title from 1280 and carries "Nothing leaves this building", which stood at the foot; "which files" is a link on the limits line rather than a fold of its own.
+
 ## v1.181.0, 2026-11-02
 
 ```

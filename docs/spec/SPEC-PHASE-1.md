@@ -1718,7 +1718,7 @@ Two panes. Each chosen file's card in step 1 also carries the `Same as batch` or
 
 - The review table: title, original name, size, and the effective settings with a "custom" mark where a file has its own.
 - The button "Upload and transcribe N files".
-- The note `Uploads start when you press the button, three at a time. Keep this page open until they finish.`
+- The note `Uploads start when you press the button, three at a time. Keep this page open until they finish.` Amended v1.182.0 (the drawing `docs/spec/mockups/phase-8-upload-page.html`, at the maintainer's word): the note, the count, the size and the button are one row at the foot of the step, pinned to the window's foot from 1280 pixels while the page is taller than it; in the settings card each tick's one-line caption stands and its longer help sits behind a question mark, with Show the help in the card's head putting every help line back, remembered in the browser; the ticks sit two across. The step list had been opened twice in the template since v1.174.0, which laid the three steps out inside the left half of the page; v1.182.0 fixes it.
 - The storage warning, when it applies (below).
 
 ### The Batch settings and one file's own settings

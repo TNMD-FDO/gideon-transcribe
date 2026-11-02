@@ -128,5 +128,30 @@
   diarizeBox.addEventListener("change", showDiarizeWarning);
   hint.addEventListener("change", showHintBoxes);
 
+  // The help behind the question mark (v1.182.0, the drawing
+  // phase-8-upload-page.html): a mark opens its own setting's help; Show
+  // the help opens every one and is remembered in the browser.
+  var HELP_KEY = "upload-help";
+  var settingsBox = by("the-settings");
+  var showHelp = by("show-help");
+  function setHelp(on) {
+    if (settingsBox) { settingsBox.classList.toggle("show-help", on); }
+    if (showHelp) { showHelp.setAttribute("aria-pressed", on ? "true" : "false"); showHelp.textContent = on ? "Hide the help" : "Show the help"; }
+    try { localStorage.setItem(HELP_KEY, on ? "1" : "0"); } catch (e) { /* no storage */ }
+  }
+  if (showHelp) {
+    var kept = null;
+    try { kept = localStorage.getItem(HELP_KEY); } catch (e) { /* no storage */ }
+    if (kept === "1") { setHelp(true); }
+    showHelp.addEventListener("click", function () { setHelp(!(settingsBox && settingsBox.classList.contains("show-help"))); });
+  }
+  document.addEventListener("click", function (event) {
+    var mark = event.target.closest("[data-help]");
+    if (!mark) { return; }
+    event.preventDefault();
+    var block = mark.closest(".tick-block");
+    if (block) { block.classList.toggle("open"); }
+  });
+
   window.UploadSettings = { read: read, write: write, enable: enable, onChange: onChange, copyOf: copyOf, showHintBoxes: showHintBoxes };
 })();
