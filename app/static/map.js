@@ -55,6 +55,9 @@
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       S.told = told; S.day = told.day || ""; S.loaded = true;
       prepare();
+      // The address may name a camera or an incident on another day than
+      // the one the server chose: decided once, before the first drawing.
+      if (!S.dayChosen) { S.dayChosen = true; var wanted = wantedDay(); if (wanted) { S.day = wanted; } }
       if (!quiet || !map) { layout(); } else { drawList(); drawStrip(); tick(); refreshLayers(); }
     }).catch(function () { host.innerHTML = "<p class='muted small'>The paths could not be read. Reload the page.</p>"; });
   }
@@ -230,6 +233,8 @@
   }
   function drawMap() {
     mapReady = false;
+    // A map drawn before (a day chip, a reload) goes with its pane.
+    if (map) { try { map.remove(); } catch (e) { /* gone with its pane */ } map = null; markers = {}; trailIndex = {}; }
     if (host.dataset.basemap && window.pmtiles && !drawMap.protocol) {
       try { maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile); drawMap.protocol = true; } catch (e) { /* the reader is missing; plain ground */ }
     }
@@ -247,15 +252,19 @@
       if (host.dataset.basemap) { map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: host.dataset.attribution }), "bottom-right"); }
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
-      map.on("load", function () { mapReady = true; addLayers(); fitAll(); drawList(); tick(); });
+      var mine = map;
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); });
       map.on("moveend", function () { drawList(); });
       map.on("click", "map-events", function (e) { var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
       map.on("mouseenter", "map-events", function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "map-events", function () { map.getCanvas().style.cursor = ""; });
       document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); window.setTimeout(function () { map.resize(); }, 50); });
     });
-    var observer = new MutationObserver(function () { if (map) { groundStyle().then(function (style) { map.setStyle(style); map.once("style.load", function () { addLayers(); refreshLayers(); }); recolourMarkers(); }); } });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (!drawMap.observing) {
+      drawMap.observing = true;
+      var observer = new MutationObserver(function () { if (map) { groundStyle().then(function (style) { map.setStyle(style); map.once("style.load", function () { addLayers(); refreshLayers(); }); recolourMarkers(); }); } });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    }
   }
   function featureOf(cam, segments) {
     return { type: "Feature", id: cam.n, properties: { id: cam.id, colour: colourOf(cam) }, geometry: { type: "MultiLineString", coordinates: segments.map(function (seg) { return seg.map(function (f) { return [f[2], f[1]]; }); }) } };
@@ -743,11 +752,13 @@
     history.replaceState(null, "", location.pathname + "?" + p.toString());
   }
 
-  if (host.dataset.day) { S.day = host.dataset.day; }
-  if (host.dataset.recording && S.day === "") { /* the day comes from the camera asked for */ }
-  load(false).then(function () {
+  function wantedDay() {
+    if (host.dataset.day) { return ""; }
     var rec = host.dataset.recording;
-    if (rec && S.byId[rec] && S.byId[rec].onClock && S.byId[rec].date !== S.day && !host.dataset.day) { S.day = S.byId[rec].date; load(false); }
-    if (S.scope && S.scope.date && S.scope.date !== S.day && !host.dataset.day) { S.day = S.scope.date; load(false); }
-  });
+    if (rec && S.byId[rec] && S.byId[rec].onClock) { return S.byId[rec].date; }
+    if (S.scope && S.scope.date) { return S.scope.date; }
+    return "";
+  }
+  if (host.dataset.day) { S.day = host.dataset.day; }
+  load(false);
 })();
