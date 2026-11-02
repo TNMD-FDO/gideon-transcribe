@@ -1617,19 +1617,29 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
             # Pass one, the facts sheet: the record read once, into data.
             # One sitting (Phase 8 chapter 9): everything said is read; the
             # longest cameras' pictures go first when the whole does not fit.
-            from core import sitting
+            from core import camera_paths, sitting
 
+            # The cameras' own files (Phase 12 chapter 2): the readings
+            # beside the record, and their rule, for the facts sheet.
+            readings = camera_paths.readings_block_for_incident(incident)
             sheet_system = prompts.system_message(
                 ground.text,
                 sheet_template.text,
-                prompts.MEMO_SHEET_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
+                prompts.MEMO_SHEET_FORMAT
+                + "\n\n"
+                + prompts.INCIDENT_RULES
+                + ("\n\n" + camera_paths.RULE if readings else ""),
             )
             sheet_cap = settings_store.memo_sheet_answer_cap()
             record, user, words_alone = sitting.fit(
                 incident,
                 system=sheet_system,
                 wrap=lambda body: prompts.incident_memo_input(
-                    _cameras_line(incident), event_lines, body, about=incident.about
+                    _cameras_line(incident),
+                    event_lines,
+                    body,
+                    about=incident.about,
+                    readings=readings,
                 ),
                 answer_cap=assistant.cap(sheet_cap),
             )

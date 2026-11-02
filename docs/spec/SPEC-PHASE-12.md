@@ -20,6 +20,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 ## Contents
 
 1. The cameras on a map
+2. The path file's clock, and the readings beside the record
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -110,6 +111,20 @@ No live positions and no address lookup: the app knows the streets only as the b
 - The three Preview exports (`media`, `asked`, `seek`) and the `exact` open, the one change to `preview.js`.
 - The forming offer counted at ten-second steps from the fixes, in the request, for a case's cameras on one day.
 
+## 2. The path file's clock, and the readings beside the record (the second release, v1.188.0)
+
+### The path file's clock places the recording
+
+An in-car unit's path file carries the unit's own wall clock on every reading (chapter 1). When such a file is added to a recording that nothing has placed on the case's clock, the recording is placed from it: `clock_how` **path**, the date and the second of the day from the first dated cue less its offset, in the name of the person who added the file, with the usual "recording placed on the clock" row (how `path`). The rules of ADR 0027 bend by this much and no more (its amendment of 2026-11-02): the stamp still wins; anything a person chose (by hand, by the day, from the file's time, by sound) stands; the path clock takes only a recording with no clock at all, or one its own forerunner placed. Removing the file takes the clock with it ("recording taken off the clock"); replacing the file places afresh. The surety word is **Clear** when the file's first and last readings agree within two seconds and **Likely** otherwise, with the chapter 1 words; the chronology's pill reads "from its path file, <who added it>". A body camera's file carries no clock and places nothing. No migration.
+
+### The readings beside the record
+
+The memo's facts sheet and the comparison with the report are given each camera's readings beside the incident record, as the incident chat is (chapter 1): one line per camera with a path file, in the time of day, placed after the record and before the report's pages, with the readings rule joined to the system message. So a claim in the report about the lights, the siren, a camera turned off or a vehicle stopped is read against the file that knows, and the facts sheet can give the moment the officer activated the camera without the picture. The second pass of the memo is unchanged: it writes from the sheet alone. The timeline report prints **The cameras' own files** after the cameras' table, one bulleted line per camera, with a note saying what the lines are read from and that a body camera keeps the minute before activation without sound. Never a position in any of them.
+
+### Also in this release
+
+`./transcribe folders`, `install`, `upgrade` and `basemap` asked whether each data folder existed without sudo, on a folder the operator cannot read, and so reported having made every folder on every run; the check asks with sudo now.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |
@@ -117,6 +132,7 @@ No live positions and no address lookup: the app knows the streets only as the b
 | Path file added | Recordings | the recording, the case, the source (body or car), the fix and cue counts, whether the name matched, whether the file carries a clock | a position, the wearer, the unit, the department, a time |
 | Path file replaced | Recordings | as above | as above |
 | Path file removed | Recordings | the recording, the case | a position |
+| Recording placed on the clock, how `path` (chapter 2) | Recordings | the recording, the case, the how | a time, a date |
 
 The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row.
 

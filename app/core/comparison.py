@@ -788,10 +788,23 @@ def compare(comparison_id, attempt: int = 1) -> None:
         known = {
             (row["page"], row["n"]): row["text"] for window in windows for row in window
         }
+        # The cameras' own files (Phase 12 chapter 2): an incident's readings
+        # beside the record, so a report's claim about the lights, the siren
+        # or a camera turned off is read against the file that knows.
+        from core import camera_paths
+
+        readings = (
+            camera_paths.readings_block_for_incident(comparison.incident)
+            if comparison.incident_id
+            else ""
+        )
         system = prompts.system_message(
             ground.text,
             template.text,
-            prompts.COMPARISON_FORMAT + "\n\n" + prompts.INCIDENT_RULES,
+            prompts.COMPARISON_FORMAT
+            + "\n\n"
+            + prompts.INCIDENT_RULES
+            + ("\n\n" + camera_paths.RULE if readings else ""),
         )
         cap = assistant.cap(answer_cap())
         # One sitting (Phase 8 chapter 9): the record fitted once, against
@@ -811,6 +824,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
                         _paragraph_lines(largest),
                         first=largest[0]["page"],
                         last=largest[-1]["page"],
+                        readings=readings,
                     ),
                     answer_cap=cap,
                 )
@@ -834,6 +848,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
                     _paragraph_lines(rows),
                     first=rows[0]["page"],
                     last=rows[-1]["page"],
+                    readings=readings,
                 ),
                 answer_cap=cap,
                 window=assistant.window(),
@@ -859,6 +874,7 @@ def compare(comparison_id, attempt: int = 1) -> None:
                 _paragraph_lines(window),
                 first=window[0]["page"],
                 last=window[-1]["page"],
+                readings=readings,
             )
             if not prompts.fits(
                 system, user, answer_cap=cap, window=assistant.window()

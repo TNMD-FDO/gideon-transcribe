@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.188.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 2: the path file's clock, and the readings beside the record.
+
+- **An in-car unit's path file places its video on the case's clock.** The file carries the unit's own wall clock on every reading; when it is added to a video that nothing has placed, the video is placed from it ("from its path file", Clear when the file's first and last readings agree, Likely otherwise), in the name of the person who added the file, with the usual row. The stamp and anything a person chose stand; removing the file takes the clock with it; replacing places afresh (ADR 0027 amended).
+- **The readings beside the record.** The memo's facts sheet and the comparison with the report read each camera's own file beside the cameras' record, with the same rule the chats have, so a claim about the lights, the siren or a camera turned off is checked against the file that knows. The timeline report prints "The cameras' own files", one line per camera, after the cameras' table.
+- `./transcribe folders`, `install`, `upgrade` and `basemap` no longer claim to have made every data folder on every run: the check now asks with sudo, since the data folder is the app's and not the operator's to read.
+
 ## v1.187.0, 2026-11-02
 
 ```

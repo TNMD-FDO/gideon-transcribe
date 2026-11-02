@@ -195,6 +195,7 @@ def test_the_street_map_is_served_from_a_third_root_and_placed_by_the_command():
     assert "basemap) shift && cmd_basemap" in script
     assert 'head -c 7 "$file"' in script and "PMTiles" in script
     assert "./transcribe basemap FILE" in script
+    assert 'if ! sudo test -d "$data/$folder"; then' in script
     check = (ROOT / "caddy" / "check-ranges.sh").read_text(encoding="utf-8")
     assert "/maps/basemap.pmtiles" in check
     assert chr(0x2014) not in caddy + compose + check

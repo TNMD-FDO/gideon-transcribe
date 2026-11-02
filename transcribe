@@ -1605,7 +1605,10 @@ make_the_data_folders() {
   local made=""
   # And maps (Phase 12): Caddy mounts it read-only for the street map.
   for folder in scratch cases uploads models models/whisperx whisperx models/vllm maps; do
-    if [ ! -d "$data/$folder" ]; then
+    # Asked with sudo (v1.188.0): the data folder is the app's and not
+    # readable by the operator, so a plain test said every folder was
+    # missing and the message claimed to have made them all.
+    if ! sudo test -d "$data/$folder"; then
       sudo mkdir -p "$data/$folder" || return 0
       made="$made $folder"
     fi

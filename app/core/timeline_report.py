@@ -265,6 +265,27 @@ def word(incident, exported_by: str) -> bytes:
     document.add_paragraph()
     _band(document, incident, Inches, Pt, RGBColor)
     document.add_paragraph()
+    # The cameras' own files (Phase 12 chapter 2): what each camera's path
+    # file says of itself, in the time of day; never a position.
+    from core import camera_paths
+
+    readings = camera_paths.readings_lines_for_incident(incident)
+    if readings:
+        head = document.add_paragraph("The cameras' own files")
+        head.runs[0].bold = True
+        for line in readings:
+            document.add_paragraph(line, style="List Bullet")
+        note = document.add_paragraph(
+            "Each line is read from the file the camera wrote beside its video: "
+            "when it began and ended, when the officer activated it, the lights, "
+            "the siren, the microphone, the speed, where it stood still and where "
+            "it had no fix. A body camera keeps the minute before the officer "
+            "activates it, without sound."
+        )
+        note.runs[0].italic = True
+        note.runs[0].font.size = Pt(9)
+        note.runs[0].font.color.rgb = RGBColor(*MUTED)
+        document.add_paragraph()
     how = document.add_paragraph()
     how_run = how.add_run(
         "Each entry is one event of the chronology: its number, its time of day "

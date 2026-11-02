@@ -36,14 +36,18 @@ from core.chronology import FIGURE_COLOURS, spells
 CLOCK, HAND, DAY, FILE = "clock", "hand", "day", "file"
 # Placed by sound (v1.186.0): the match a person took on the Not-on-the-clock panel.
 SOUND = incidents.SOUND
+# Placed from its path file (v1.188.0, Phase 12 chapter 2): an in-car unit's
+# own clock, read from the file beside the video when nothing else placed it.
+PATH = "path"
 HOW_WORDS = {
     CLOCK: "clock",
     HAND: "by hand",
     DAY: "by the day",
     FILE: "from the file",
     SOUND: "by sound",
+    PATH: "from its path file",
 }
-PLACED_WAYS = (HAND, DAY, FILE, SOUND)
+PLACED_WAYS = (HAND, DAY, FILE, SOUND, PATH)
 # The band's shapes, chosen by the day's recordings (never the person).
 LANES, PACKED, COVERAGE = "lanes", "packed", "coverage"
 # Up to this many overlapping, lanes in colour; more overlapping, the
@@ -110,6 +114,15 @@ def clock_surety(recording) -> dict:
         return {"word": word, "why": why, "tone": tone}
     if how == HAND:
         return {"word": "As typed", "why": "placed by hand", "tone": ""}
+    if how == PATH:
+        from core import camera_paths
+
+        path = camera_paths.of(recording)
+        if path is not None and path.clock_agrees:
+            word, why, tone = camera_paths.SURETY_PATH_CLEAR
+        else:
+            word, why, tone = camera_paths.SURETY_PATH_ONCE
+        return {"word": word, "why": why, "tone": tone}
     if how == FILE:
         return {
             "word": "Unchecked",

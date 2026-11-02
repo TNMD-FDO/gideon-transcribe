@@ -695,3 +695,83 @@ def test_the_counts_and_links_reach_home_search_notes_and_incidents(
     pills = dashboard.pills(a_case, "owner", person, counts)
     assert not any("on the map" in p["words"] for p in pills)
     assert camera_paths.incident_map_url(incident) == ""
+
+
+# The path file's clock places the recording (chapter 2, v1.188.0) ----------------
+
+
+def test_an_in_car_file_places_a_clockless_recording_and_goes_with_the_file(
+    person, a_case
+):
+    car = video(person, a_case, "Dash-4", name="clip.mp4", seconds=300)
+    assert case_chronology.clock_of(car) == (None, None, "")
+    path, _ = added(car, car_file(), by=person)
+    car.refresh_from_db()
+    assert case_chronology.clock_of(car) == (dt.date(2025, 11, 6), 51603.0, "path")
+    assert case_chronology.placed_words(car) == "from its path file, walker"
+    assert case_chronology.clock_surety(car)["word"] == "Clear"
+    row = Row.objects.get(event="recording placed on the clock")
+    assert row.details["how"] == "path"
+    # A replacement places afresh; a removal takes the clock with the file.
+    added(car, car_file(drift=5.0), by=person, replace=True)
+    car.refresh_from_db()
+    assert case_chronology.clock_of(car)[2] == "path"
+    assert case_chronology.clock_surety(car)["word"] == "Likely"
+    camera_paths.remove(camera_paths.of(car), by=person)
+    car.refresh_from_db()
+    assert case_chronology.clock_of(car) == (None, None, "")
+    assert Row.objects.filter(event="recording taken off the clock").count() == 1
+
+
+def test_the_path_clock_never_takes_over_a_clock_somebody_else_gave(person, a_case):
+    by_hand = video(person, a_case, "Dash-5", seconds=300)
+    case_chronology.place(by_hand, dt.date(2025, 11, 6), 1000.0, by=person)
+    added(by_hand, car_file(), by=person)
+    by_hand.refresh_from_db()
+    placed = case_chronology.clock_of(by_hand)
+    assert placed == (dt.date(2025, 11, 6), 1000.0, "hand")
+    stamped = video(
+        person, a_case, "Dash-6", seconds=300, stamp=stamp("09:00:00", "D6")
+    )
+    added(stamped, car_file(), by=person)
+    stamped.refresh_from_db()
+    assert case_chronology.clock_of(stamped)[2] == "clock"
+    body = video(person, a_case, "BWC2-1")
+    added(body, body_file(), by=person)
+    body.refresh_from_db()
+    assert case_chronology.clock_of(body) == (None, None, "")
+    assert Row.objects.filter(event="recording placed on the clock").count() == 1
+
+
+# The readings in the memo, the comparison and the timeline report (chapter 2) -----
+
+
+def test_the_readings_join_the_memo_the_comparison_and_the_report(person, a_case):
+    from core import prompts, timeline_report
+
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = Incident.objects.create(case=a_case, name="Stop", created_by=person)
+    IncidentCamera.objects.create(incident=incident, recording=car)
+    lines = camera_paths.readings_lines_for_incident(incident)
+    assert len(lines) == 1 and lines[0].startswith("Camera ")
+    assert "lights on" in lines[0] and "unit" not in lines[0].split(":")[0].lower()
+    block = camera_paths.readings_block_for_incident(incident)
+    assert block.startswith("The cameras' own files")
+    memo = prompts.incident_memo_input("Cameras: one", [], "the record", readings=block)
+    assert block in memo and memo.index("the record") < memo.index(block)
+    without = prompts.incident_memo_input("Cameras: one", [], "the record")
+    assert "own files" not in without
+    compare = prompts.comparison_input(
+        "head", [], "the record", "1. words", first=1, last=1, readings=block
+    )
+    assert block in compare and compare.index(block) < compare.index("The report")
+    source = (HERE / "core" / "comparison.py").read_text(encoding="utf-8")
+    assert "readings_block_for_incident(comparison.incident)" in source
+    source = (HERE / "core" / "incident_assistant.py").read_text(encoding="utf-8")
+    assert "readings=readings" in source and "camera_paths.RULE" in source
+    report = (HERE / "core" / "timeline_report.py").read_text(encoding="utf-8")
+    assert "readings_lines_for_incident(incident)" in report
+    assert "The cameras' own files" in report
+    assert str(LAT) not in block and "N10" not in "".join(lines)
+    _ = timeline_report

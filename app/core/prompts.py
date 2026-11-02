@@ -1851,9 +1851,17 @@ def case_events_input(
 
 
 def comparison_input(
-    head: str, events: list[str], record: str, paragraphs: str, *, first: int, last: int
+    head: str,
+    events: list[str],
+    record: str,
+    paragraphs: str,
+    *,
+    first: int,
+    last: int,
+    readings: str = "",
 ) -> str:
-    """One window of the report against the whole record."""
+    """One window of the report against the whole record; the cameras' own
+    readings beside it when they have path files (Phase 12 chapter 2)."""
     listed = "\n".join(events) if events else "none."
     return "\n\n".join(
         [
@@ -1861,6 +1869,7 @@ def comparison_input(
             "The chronology, as the office wrote it:\n" + listed,
             "The record (every time is by that clock, and each line names the "
             "camera it comes from):\n" + record,
+            *([readings] if readings.strip() else []),
             f"The report, pages {first} to {last} (each paragraph on its own line, "
             "with its page and paragraph number in front):\n" + paragraphs,
             "Compare these pages of the report with the record: for each claim of "
@@ -1917,11 +1926,16 @@ def comparison_check_input(rows: list[dict]) -> str:
 
 
 def incident_memo_input(
-    cameras_line: str, events: list[str], record: str, about: str = ""
+    cameras_line: str,
+    events: list[str],
+    record: str,
+    about: str = "",
+    readings: str = "",
 ) -> str:
     """What the memo's facts sheet is drawn from (v1.91.0; the memo itself
     until then): the cameras, the office's About, the chronology with its
-    notes, the record."""
+    notes, the record, and the cameras' own readings when they have path
+    files (Phase 12 chapter 2)."""
     listed = "\n".join(events) if events else "none; write on the record alone."
     return "\n\n".join(
         [
@@ -1935,6 +1949,7 @@ def incident_memo_input(
             "The incident record (the cameras' records merged onto the incident "
             "clock; every time is by that clock, and each line names the camera "
             "it comes from):\n" + record,
+            *([readings] if readings.strip() else []),
             LENGTH_LINES["detailed"],
         ]
     )

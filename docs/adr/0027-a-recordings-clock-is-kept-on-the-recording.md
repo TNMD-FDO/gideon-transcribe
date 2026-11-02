@@ -65,3 +65,18 @@ match's strength, and `clock_follows`, the placed video its sound followed,
 so a reader can see what a by-sound placement rests on; both are empty for
 every other way. One migration (0102), which also adds the `ClockMatch` row
 that keeps each clockless video's best match.
+
+## Amendment, 2026-11-02 (v1.188.0): placed from its path file
+
+Phase 12 chapter 2 adds one read clock below the stamp: an in-car unit's
+path file (ADR 0029) carries the unit's own wall clock on every reading,
+and when such a file is added to a recording that nothing has placed, the
+app places the recording from it, how **path**, in the name of the person
+who added the file, with the usual "recording placed on the clock" row.
+The decision's rules bend by exactly this much: the stamp still wins, and
+so does anything a person chose (by hand, by the day, from the file's time,
+by sound); the path clock takes only a recording with no clock at all, or
+one its own forerunner placed. Removing the file takes the clock with it;
+replacing the file places afresh. The surety word is Clear when the file's
+first and last readings agree within two seconds, Likely otherwise. No
+migration: `clock_how` takes a sixth value.

@@ -512,6 +512,7 @@ def add(
         raise Refused("That file could not be kept on the server.") from None
     path.save()
     recording.measure_disk()
+    place_from_path(path, by=by, request=request)
     from core import cases
 
     audit.write(
@@ -536,6 +537,12 @@ def add(
 
 def remove(path: CameraPath, *, by, request=None, replacing: bool = False) -> None:
     recording = path.recording
+    # A clock the file gave goes with the file; a replacement places afresh.
+    if not replacing:
+        from core import case_chronology
+
+        if recording.clock_how == case_chronology.PATH:
+            case_chronology.unplace(recording, by=by, request=request)
     path.delete()
     try:
         (recording.folder / FILE_NAME).unlink(missing_ok=True)
@@ -556,6 +563,33 @@ def remove(path: CameraPath, *, by, request=None, replacing: bool = False) -> No
         object_id=recording.pk,
         object_label=recording.title,
     )
+
+
+def place_from_path(path: CameraPath, *, by, request=None) -> bool:
+    """The path file's own clock places the recording on the case's clock
+    (Phase 12 chapter 2, v1.188.0; ADR 0027 amended): only an in-car file
+    that carries a clock, and only a recording nothing else has placed, or
+    that this file's forerunner placed. Never over a stamp, a hand placement,
+    a day, the file's time or a sound match: those are read or chosen, and
+    stand. The person who added the file is the placement's name."""
+    from core import case_chronology
+
+    recording = path.recording
+    if path.clock_start is None:
+        return False
+    _date, _second, how = case_chronology.clock_of(recording)
+    if how not in ("", case_chronology.PATH):
+        return False
+    date, second = _day_second(path.clock_start)
+    case_chronology.place(
+        recording,
+        dt.date.fromisoformat(date),
+        second,
+        by=by,
+        request=request,
+        how=case_chronology.PATH,
+    )
+    return True
 
 
 def read_again_the_old() -> int:
@@ -1042,11 +1076,21 @@ def _hms(second: float) -> str:
 
 
 def readings_block_for_incident(incident) -> str:
-    """The incident chat's block: the same readings, named by the camera
-    ids the incident's record uses, by the incident's clock where it has
-    one (the cameras were placed on it) and the recording's own otherwise."""
-    if not on():
+    """The incident chat's, the memo's and the comparison's block: the same
+    readings, named by the camera ids the incident's record uses, by the
+    incident's clock where it has one (the cameras were placed on it) and
+    the recording's own otherwise."""
+    lines = readings_lines_for_incident(incident)
+    if not lines:
         return ""
+    return "The cameras' own files, in the time of day:\n" + "\n".join(lines)
+
+
+def readings_lines_for_incident(incident) -> list[str]:
+    """One line per camera of the incident that has a path file, for the
+    block above and the timeline report's section (Phase 12 chapter 2)."""
+    if not on():
+        return []
     cameras = list(incident.cameras.select_related("recording"))
     paths = {one.recording_id: one for one in for_case(incident.case)}
     lines = []
@@ -1071,9 +1115,7 @@ def readings_block_for_incident(incident) -> str:
         if not path.fixes:
             words.append("no position in its file")
         lines.append(f"Camera {camera.camera_id()} ({head}): " + "; ".join(words) + ".")
-    if not lines:
-        return ""
-    return "The cameras' own files, in the time of day:\n" + "\n".join(lines)
+    return lines
 
 
 # The Map tab's reading ----------------------------------------------------------------
