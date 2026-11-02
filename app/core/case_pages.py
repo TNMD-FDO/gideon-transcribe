@@ -518,6 +518,12 @@ def _incidents_context(case: Case, *, strip: bool = False) -> dict:
             if strip and incidents.proposed_on()
             else 0
         ),
+        # Days with a same-day suggestion standing (v1.184.0).
+        "incident_sameday": (
+            incident_strip.same_day_count(case)
+            if strip and incidents.proposed_on()
+            else 0
+        ),
         # The sitting's column and the offer's bar (Phase 8 chapter 10).
         "sitting_on": sitting.available(),
         "incident_most": incidents.most_cameras(),

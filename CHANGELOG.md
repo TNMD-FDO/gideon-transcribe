@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.184.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The same day on the Incidents tab, the first of three releases from the drawing `docs/spec/mockups/phase-10-incidents-by-day.html`, which stands.
+
+- **The same day, suggested.** The loose videos of a day that sit in no forming bracket, two or more, or one beside an incident or a forming one, get a dotted bracket each on the strip and a day card after the forming cards: their names, how they stand in time to the day's incidents and forming ones, and Add to the forming one (or to the day's incident), Choose myself, and Its own matter, which puts the set away. They are never called an incident until one is made.
+- **The picker lists the day's other loose videos** outside its span last and unticked, "same day, not in the span", so a related camera is one tick away.
+- **Days whose videos ran together are marked** with a dot, on the strip's day chips and on the Notes tab's Date strip, whether or not they are in an incident; hover says the counts. The lead counts the days to look at.
+
+The stills and the panel for what is not on the clock are the next two releases.
+
 ## v1.183.0, 2026-11-02
 
 ```

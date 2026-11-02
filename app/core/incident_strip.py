@@ -56,16 +56,29 @@ def days(case) -> list[dict]:
                 at -= case_chronology.DAY_SECONDS
                 when = date + dt.timedelta(days=1)
             marks[when].append(at)
+    incidents_days = _incident_days(case)
     out = []
     for when in sorted(set(bars) | set(marks)):
         todays = bars.get(when, [])
         forming = 0
-        for run in case_chronology._runs([b for b in todays if b["id"] not in taken]):
+        forming_ids: set = set()
+        loose = [b for b in todays if b["id"] not in taken]
+        for run in case_chronology._runs(loose):
             notes = sum(
                 1 for at in marks.get(when, []) if run["from"] <= at <= run["to"]
             )
-            if notes and incidents.offer_key(sorted(run["ids"])) not in declined:
-                forming += 1
+            if notes:
+                forming_ids |= run["ids"]
+                if incidents.offer_key(sorted(run["ids"])) not in declined:
+                    forming += 1
+        # The same day (chapter 5, v1.184.0): the loose videos in no forming
+        # bracket, two or more, or one beside an incident or a forming one.
+        rest = [b for b in loose if b["video"] and b["id"] not in forming_ids]
+        same_day = 0
+        suggested = rest and (len(rest) > 1 or forming_ids or when in incidents_days)
+        key = incidents.offer_key(sorted(b["id"] for b in rest)) if rest else ""
+        if suggested and key not in declined:
+            same_day = 1
         out.append(
             {
                 "date": when.isoformat(),
@@ -75,9 +88,33 @@ def days(case) -> list[dict]:
                 "recordings": len(todays),
                 "notes": len(marks.get(when, [])),
                 "forming": forming,
+                "same_day": same_day,
+                # Videos ran together on this day (the chips' and the Date
+                # strip's mark), whether or not in an incident.
+                "together": bool(case_chronology._runs(todays)),
             }
         )
     return out
+
+
+def _incident_days(case) -> set:
+    """The days the case's incidents fall on, from their clock date, which
+    the stamp writes as the camera does (month/day/year) or as ISO."""
+    out = set()
+    for text in case.incidents.values_list("clock_date", flat=True):
+        text = (text or "").strip()
+        for shape in ("%m/%d/%Y", "%Y-%m-%d"):
+            try:
+                out.add(dt.datetime.strptime(text, shape).date())
+                break
+            except ValueError:
+                continue
+    return out
+
+
+def same_day_count(case) -> int:
+    """The lead's figure: days with a same-day suggestion standing."""
+    return sum(day["same_day"] for day in days(case))
 
 
 def forming_count(case) -> int:

@@ -3862,3 +3862,13 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
   .workbench.upload .page-head .eyebrow { width: 100%; }
   .workbench.upload .page-head .lead { margin: 0; }
 }
+
+/* Incidents by day (Phase 10 chapter 5, v1.184.0, the drawing
+   phase-10-incidents-by-day.html): the same-day bracket dotted, the day card
+   dotted, the together dot on the day chips and the Date strip bars. */
+.chron .form-lane .br.day { border-style: dotted; border-color: var(--muted); }
+.chron .form-lane .hl.day b { color: var(--muted); font-weight: 500; }
+.forming-card.day-card { border-style: dotted; border-color: var(--muted); }
+.chron .days button i.together { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 0; }
+.chron .month .days-bars button { position: relative; overflow: visible; }
+.chron .month .days-bars button.together::after { content: ""; position: absolute; left: 1px; top: -9px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }

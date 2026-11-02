@@ -124,15 +124,25 @@
     if (!state.days.length) { return ""; }
     var html = "<div class='days'><span class='lbl'>Days</span>";
     state.days.forEach(function (one) {
-      var words = esc(one.words) + " · " + plural(one.videos, "video") + (one.notes ? " · " + plural(one.notes, "note") : "") + (one.forming ? " · " + one.forming + " forming" : "");
-      html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + "'>" + words + "</button>";
+      var words = esc(one.words) + " · " + plural(one.videos, "video") + (one.notes ? " · " + plural(one.notes, "note") : "") + (one.forming ? " · " + one.forming + " forming" : "") + (one.same_day ? " · same day" : "");
+      html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + "' title='" + (one.together ? "videos ran together on this day" : "") + "'>" + words + (one.together ? "<i class='together' aria-hidden='true'></i>" : "") + "</button>";
     });
     return html + "</div>";
   }
   function formingLane(d) {
     var runs = d.hints || [];
-    if (!runs.length || !d.incidents_on) { return ""; }
+    var same = d.same_day && !d.same_day.declined ? d.same_day : null;
+    if ((!runs.length && !same) || !d.incidents_on) { return ""; }
     var html = "<div class='form-lane' id='chron-forming'>";
+    // The same day (v1.184.0): a dotted bracket over each loose video in no
+    // forming bracket, one label for the set.
+    if (same) {
+      same.spans.forEach(function (s) {
+        var l = x(s[1], d), wd = Math.max(1, x(s[2], d) - l);
+        html += "<span class='br day' style='left: " + l + "%; width: " + wd + "%' title='" + esc(same.words) + "'></span>";
+      });
+      html += "<span class='hl day' style='left: " + inside(x((same.from + same.to) / 2, d)) + "%' title='" + esc(same.words) + "'><b>" + esc(same.words) + "</b></span>";
+    }
     runs.forEach(function (h) {
       var left = x(h.from, d), width = Math.max(1, x(h.to, d) - left);
       var faint = h.faint || h.declined;
@@ -161,8 +171,16 @@
     var room = Math.max(0, 3 - Object.keys(have).length);
     var shown = worth.slice(0, room), more = worth.length - shown.length;
     shown.forEach(function (h) { box.insertAdjacentHTML("beforeend", cardHtml(h, d)); });
+    // The day card (v1.184.0), after the forming ones while there is room.
+    var same = d.same_day && !d.same_day.declined && !have[d.same_day.key] ? d.same_day : null;
+    // The forming one the day card adds to: the most noted bracket of the
+    // day, whether its card is the strip's or the clocks' offer.
+    var formingHint = (d.hints || []).filter(function (h) { return h.notes && !h.declined; }).sort(function (a, b) { return b.notes - a.notes; })[0] || null;
+    if (same && shown.length < room) { box.insertAdjacentHTML("beforeend", dayCardHtml(same, d, formingHint)); }
+    else if (same) { more += 1; }
     if (more > 0) { box.insertAdjacentHTML("beforeend", "<p class='muted small forming-more m0' data-forming='more'>and " + more + " more forming on the strip.</p>"); }
-    box.querySelectorAll("[data-forming] [data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1])); }); });
+    box.querySelectorAll("[data-forming] [data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1]), m.dataset.tick ? m.dataset.tick.split(" ") : null); }); });
+    box.querySelectorAll("[data-forming] [data-add-day]").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.addDay, b.dataset.tick.split(" "), d); }); });
     box.querySelectorAll("[data-forming] [data-decline]").forEach(function (b) { b.addEventListener("click", function () { decline(b.dataset.decline); }); });
     shown.forEach(function (h) { var card = box.querySelector("[data-forming='" + h.key + "']"); if (card) { sittingBar(card, h.ids); } });
     // The box keeps its margin only while it holds a card.
@@ -186,6 +204,37 @@
       "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "'>Make it</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
       "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; the bracket stays faint on the strip'>Not these</button></div></div>";
   }
+  // The day card (v1.184.0): the loose videos of the day in no forming
+  // bracket, how they stand in time to the day's incidents and forming
+  // ones, and the three presses.
+  function dayCardHtml(same, d, forming) {
+    var bars = d.bars.filter(function (b) { return same.ids.indexOf(b.id) >= 0; });
+    var names = bars.map(function (b) { return esc(shortName(b)); });
+    var list = names.length > 3 ? names.slice(0, 3).join(", ") + " and " + (names.length - 3) + " more" : names.join(", ");
+    var neighbours = [];
+    if (forming) { neighbours.push("the forming one, " + hm(forming.from) + " to " + hm(forming.to)); }
+    (d.incidents || []).forEach(function (one) { neighbours.push(esc(one.name) + ", " + hm(one.from) + " to " + hm(one.to)); });
+    var stand = neighbours.length
+      ? list + (same.ids.length === 1 ? " ran" : " ran") + " on the same day as " + neighbours.join(" and ") + ", sharing no minute with " + (neighbours.length === 1 ? "it" : "them") + "."
+      : list + " ran on this day, in no incident.";
+    var add = "";
+    if (forming && state.mayMake) { add = "<button type='button' class='small primary' data-make='" + forming.from + "," + forming.to + "' data-tick='" + same.ids.join(" ") + "'>Add to the forming one</button>"; }
+    else if ((d.incidents || []).length && state.mayMake) { var inc = d.incidents[0]; add = "<button type='button' class='small primary' data-add-day='" + inc.id + "' data-tick='" + same.ids.join(" ") + "'>Add to " + esc(inc.name) + "</button>"; }
+    return "<div class='card forming-card day-card' data-forming='" + esc(same.key) + "'>" +
+      "<div class='h'><b>Same day · " + esc(d.words) + "</b><span class='pill small'>" + plural(same.ids.length, "video") + " not in an incident</span></div>" +
+      "<div class='small muted'>" + stand + " If " + (same.ids.length === 1 ? "it belongs" : "they belong") + " with them, add " + (same.ids.length === 1 ? "it" : "them") + "; if " + (same.ids.length === 1 ? "it is its" : "they are their") + " own matter, " + (same.ids.length === 1 ? "it waits" : "they wait") + " here.</div>" +
+      "<div class='acts'>" + add + (state.mayMake ? "<button type='button' class='small choose-myself' data-recordings='" + same.ids.join(" ") + "'>Choose myself</button>" : "") +
+      "<button type='button' class='small ghost' data-decline='" + esc(same.key) + "' title='Put this suggestion away for these videos'>" + (same.ids.length === 1 ? "Its own matter" : "Their own matter") + "</button></div></div>";
+  }
+  function addDay(incidentId, ids, d) {
+    var bars = d.bars.filter(function (b) { return ids.indexOf(b.id) >= 0; });
+    if (!bars.length) { return; }
+    var from = Math.min.apply(null, bars.map(function (b) { return b.from; })), to = Math.max.apply(null, bars.map(function (b) { return b.to; }));
+    post("/case/" + caseId + "/incident/" + incidentId + "/add-from-chronology", { day: d.date, from: hm(from), to: hm(to), recordings: ids })
+      .then(function (done) { location.href = done.url; })
+      .catch(function (err) { window.UI.toast(err.message || "That did not work.", { problem: true, icon: "warning" }); });
+  }
+
   function decline(key) {
     var body = new FormData();
     body.append("key", key);
@@ -305,7 +354,8 @@
       html += "<div class='month'><div class='days-bars'>";
       months[name].forEach(function (one) {
         var h = Math.max(3, Math.round(34 * one.notes / most));
-        html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + "' style='height: " + h + "px' title='" + esc(one.words + " · " + plural(one.notes, "note") + " · " + plural(one.recordings, "recording")) + "'></button>";
+        // The together dot (v1.184.0): videos ran together on this day.
+        html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + (one.together ? " together" : "") + "' style='height: " + h + "px' title='" + esc(one.words + " · " + plural(one.notes, "note") + " · " + plural(one.recordings, "recording") + (one.together ? " · videos ran together" : "")) + "'></button>";
       });
       html += "</div><div class='name'>" + esc(name) + " · " + plural(months[name].length, "day") + "</div></div>";
     });
@@ -655,14 +705,16 @@
     return entries.every(function (e) { return e.incident && e.incident.id === first.id; }) ? first : null;
   }
   function spanUrl(path, from, to) { return "/case/" + caseId + path + "?day=" + state.day.date + "&from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to); }
-  function makeSheet(from, to) {
+  function makeSheet(from, to, tick) {
     fetch(spanUrl("/chronology/span", hm(from), hm(to)), { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
+      // The day card's Add to the forming one (v1.184.0): its videos ticked.
+      if (tick) { told.rows.forEach(function (r) { if (tick.indexOf(r.id) >= 0) { r.ticked = true; } }); }
       if (told.incidents && told.incidents.length) { addFirstSheet(told); } else { pickerSheet(told); }
     }).catch(function () { window.UI.toast("The span could not be read. Try again.", { problem: true, icon: "warning" }); });
   }
   function rowHtml(r, ticked, inIt) {
     var tick = inIt ? "<input type='checkbox' checked disabled title='Already in it'>" : "<input type='checkbox' name='pick'" + (ticked ? " checked" : "") + " aria-label='" + esc(r.title) + "'>";
-    return "<tr data-row='" + r.id + "'" + (r.notes ? "" : " class='quiet'") + "><td>" + tick + "</td><td>" + esc(r.title) + "</td><td>" + r.notes + "</td><td><span class='pill small'>" + esc(r.placed) + "</span></td><td class='mono'>" + esc(r.from) + " to " + esc(r.to) + "</td>" +
+    return "<tr data-row='" + r.id + "'" + (r.notes || r.same_day ? "" : " class='quiet'") + "><td>" + tick + "</td><td>" + esc(r.title) + (r.same_day ? " <span class='muted tiny'>· same day, not in the span</span>" : "") + "</td><td>" + r.notes + "</td><td><span class='pill small'>" + esc(r.placed) + "</span></td><td class='mono'>" + esc(r.from) + " to " + esc(r.to) + "</td>" +
       (inIt === undefined ? "" : "<td class='muted tiny'>" + (inIt ? "already in it" : "not in it yet") + "</td>") + "</tr>";
   }
   function picked(wrap) { return Array.prototype.map.call(wrap.querySelectorAll("tr[data-row] input[name=pick]:checked"), function (box) { return box.closest("tr").dataset.row; }); }

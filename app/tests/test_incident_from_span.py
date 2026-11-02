@@ -124,8 +124,16 @@ def test_the_day_reads_without_incidents_and_the_span_ticks_the_noted(
     span = (seconds("20:24"), seconds("20:40"))
     told = case_chronology.span_reading(a_case, DAY, span)
     assert told["incidents"] == []
-    assert [row["title"] for row in told["rows"]] == ["BWC1-1", "BWC2-1", "BWC3-1"]
-    assert [row["ticked"] for row in told["rows"]] == [True, True, True]
+    # The day's loose video outside the span is listed last, unticked, as a
+    # same-day row (v1.184.0).
+    assert [row["title"] for row in told["rows"]] == [
+        "BWC1-1",
+        "BWC2-1",
+        "BWC3-1",
+        "Dash-4",
+    ]
+    assert [row["ticked"] for row in told["rows"]] == [True, True, True, False]
+    assert told["rows"][3]["same_day"] is True and "same_day" not in told["rows"][0]
     assert told["rows"][0]["notes"] == 2 and told["rows"][2]["placed"].startswith(
         "by hand"
     )
@@ -349,7 +357,7 @@ def test_the_page_draws_the_lane_the_sheets_and_the_line():
         "html += incidentsLane(d);",
         "data-act='make-span'",
         'data-make=\'" + h.from + "," + h.to + "\'',
-        "function makeSheet(from, to)",
+        "function makeSheet(from, to, tick)",
         "function pickerSheet(told)",
         "function addFirstSheet(told)",
         "Make a new one anyway",

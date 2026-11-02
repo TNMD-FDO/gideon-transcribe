@@ -369,8 +369,8 @@
           {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px">
             <p class="lead grow m0">
-              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}{% if incident_forming %}, {{ incident_forming }} forming{% endif %}.
-              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.{% if incident_forming %} A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press.{% endif %}
+              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}{% if incident_forming %}, {{ incident_forming }} forming{% endif %}{% if incident_sameday %}, {{ incident_sameday }} day{{ incident_sameday|pluralize }} to look at{% endif %}.
+              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.{% if incident_forming %} A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press.{% endif %}{% if incident_sameday %} A day to look at has videos on it not yet in an incident, whether or not they overlap.{% endif %}
             </p>
             <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
           </div>

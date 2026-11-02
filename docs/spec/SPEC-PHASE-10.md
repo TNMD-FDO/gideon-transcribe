@@ -204,7 +204,15 @@ Asked 2026-10-30 ("show proposed incidents as they build from the notes, a timel
 - **Reading by the minute.** While the tab is open the strip reads again each minute, quietly, so a note written on the Notes tab or a video landing shows without a reload.
 - **Settings.** None added. Incidents proposed governs the forming lane's buttons and the cards; Most cameras in an incident the picker; Match by sound the sound line of the second release.
 
-### Placing by sound (the second release)
+### The same day (v1.184.0)
+
+Asked 2026-11-02 ("suggest incidents that occurred on the same date"), drawn in `docs/spec/mockups/phase-10-incidents-by-day.html` (Figures A, C and D) and agreed with the stills and the panel below it. The loose videos of a day that sit in no forming bracket are suggested together as **Same day** (`CONTEXT.md`) when there are two or more, or one beside an incident or a forming one of the day: a dotted bracket over each on the forming lane with one label, and a day card after the forming cards (three cards in all) with their names, how they stand in time to the day's incidents and forming ones, and **Add to the forming one** (the picker for the forming span, with the same-day videos ticked; or **Add to** the day's incident when there is one and no forming one), **Choose myself** (New incident with them ticked) and **Its own matter**, which puts the set away by the offers' key. The picker lists the day's loose videos outside its span last and unticked, "same day, not in the span", so a related camera is one tick away. The day chips and the Notes tab's Date strip mark a day whose videos ran together, in an incident or not, with a dot; hover says the counts. The lead counts the days to look at. Incidents proposed governs the day cards as it governs the forming ones.
+
+### A still to choose by (the second release)
+
+Drawn in the same page (Figures A, B and D): one frame of each video at the same moment, the span's start on a forming card and in the picker, each video's own start on a day card and in the panel below, cut on request from the playback copy by the grabber the notes export uses, served as content to whoever may open the recording, never kept (Phase 4). A card shows six at most; the picker cuts them as the person scrolls, eight at a time.
+
+### Placing by sound (the third release)
 
 A video with no clock in its picture sits on the rail. Match by sound, which serves the incident page, runs for it on the media worker against the placed videos of its day (its file time first, then the day): a clear match (the matcher's spike, not a plateau) is one line on the rail, "<video> has no clock in its picture. Its sound matches <video> from hh:mm:ss", with **Place it there** and **Not this**. Placing it writes the recording's clock as *by sound* (ADR 0027 widened: the match's strength and the video it followed kept), and the bars and brackets redraw. Sound places a video; the notes form the incident. Held for its own release with its migration.
 

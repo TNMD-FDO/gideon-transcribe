@@ -203,9 +203,19 @@ def days_of(case, rows: list[dict] | None = None) -> list[dict]:
     recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
     counts: dict = defaultdict(lambda: {"notes": 0, "recordings": set()})
+    # The videos' spans per day (v1.184.0): a day whose videos ran together
+    # wears a dot on the Date strip, in an incident or not.
+    spans: dict = defaultdict(list)
     for one in recordings:
         key = str(one.pk)
         date, start, how = placements[key]
+        if date is not None and start is not None and incidents.is_video(one):
+            for when in (date, date + dt.timedelta(days=1)):
+                running = _running(one, when, start, date, None)
+                if running is not None:
+                    spans[when].append(
+                        {"id": key, "from": running[0], "to": running[1], "video": True}
+                    )
         if date is None or not by_recording.get(key):
             continue
         for note in by_recording[key]:
@@ -221,6 +231,7 @@ def days_of(case, rows: list[dict] | None = None) -> list[dict]:
             "month": when.strftime("%b %Y"),
             "notes": here["notes"],
             "recordings": len(here["recordings"]),
+            "together": bool(_runs(spans.get(when, []))),
         }
         for when, here in sorted(counts.items())
     ]
@@ -384,10 +395,35 @@ def day_of(
             declined=frozenset(case.declined_offers or []),
         )
     else:
+        taken = set()
         hints = _hints(bars, entries)
     # The case's incidents on the day (chapter 2), and each entry's place
     # against them: an event of one, or inside one on a camera not in it.
     on_day = _incidents_on_day(case, date, span, placements)
+    # The same day (chapter 5, v1.184.0): on the strip, the loose videos of
+    # the day that sit in no forming bracket, suggested together when there
+    # are two or more, or one beside an incident or a forming one.
+    same_day = None
+    if strip:
+        forming_ids = {one for h in hints if h["notes"] for one in h["ids"]}
+        loose = [
+            b
+            for b in bars
+            if b["video"] and b["id"] not in taken and b["id"] not in forming_ids
+        ]
+        if loose and (len(loose) > 1 or on_day or forming_ids):
+            ids = sorted(b["id"] for b in loose)
+            key = incidents.offer_key(ids)
+            same_day = {
+                "ids": ids,
+                "cameras": len(ids),
+                "from": min(b["from"] for b in loose),
+                "to": max(b["to"] for b in loose),
+                "spans": [[b["id"], b["from"], b["to"]] for b in loose],
+                "key": key,
+                "declined": key in (case.declined_offers or []),
+                "words": f"same day · {len(ids)}",
+            }
     for row in entries:
         _place_in_incidents(row, on_day)
     groups = spells(entries)
@@ -409,6 +445,7 @@ def day_of(
             for row in entries
         ],
         "hints": hints,
+        "same_day": same_day,
         "incidents": on_day,
         "incidents_on": incidents.on(),
         "spells": [
@@ -728,6 +765,28 @@ def span_reading(case, date: dt.date, span) -> dict:
         }
         for index, bar in enumerate(bars)
     ]
+    # The same day's loose videos outside the span (chapter 5, v1.184.0):
+    # listed last and unticked, one tick away.
+    whole = day_of(case, date, strip=True)
+    listed = {row["id"] for row in rows}
+    for bar in whole["bars"]:
+        same = whole["same_day"]
+        if same is None or bar["id"] not in same["ids"] or bar["id"] in listed:
+            continue
+        rows.append(
+            {
+                "id": bar["id"],
+                "title": bar["title"],
+                "notes": bar["notes"],
+                "placed": bar["placed"],
+                "how": bar["how"],
+                "video": bar["video"],
+                "from": hm(bar["from"]),
+                "to": hm(bar["to"]),
+                "ticked": False,
+                "same_day": True,
+            }
+        )
     touched = []
     for one in reading["incidents"]:
         # Judged to the minute, as the spans are said and kept: a span that
