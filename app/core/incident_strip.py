@@ -105,16 +105,15 @@ def days(case) -> list[dict]:
 
 def _incident_days(case) -> set:
     """The days the case's incidents fall on, from their clock date, which
-    the stamp writes as the camera does (month/day/year) or as ISO."""
+    the stamp writes as the camera does, in any form the one reader knows
+    (v1.186.1), or as ISO."""
+    from core import prompts
+
     out = set()
     for text in case.incidents.values_list("clock_date", flat=True):
-        text = (text or "").strip()
-        for shape in ("%m/%d/%Y", "%Y-%m-%d"):
-            try:
-                out.add(dt.datetime.strptime(text, shape).date())
-                break
-            except ValueError:
-                continue
+        when = prompts.stamp_date_of(text or "")
+        if when is not None:
+            out.add(when)
     return out
 
 

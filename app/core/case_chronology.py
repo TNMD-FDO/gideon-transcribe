@@ -68,13 +68,9 @@ MUTED = (0x5B, 0x66, 0x73)
 
 
 def stamp_date(recording) -> dt.date | None:
-    text = ((recording.stamp or {}).get("date") or "").strip()
-    for form in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
-        try:
-            return dt.datetime.strptime(text, form).date()
-        except ValueError:
-            continue
-    return None
+    """The stamp's date as a date, in any form a camera burns it (v1.186.1:
+    an aircraft camera's 02NOV2026 had read as no date, and so no clock)."""
+    return prompts.stamp_date_of((recording.stamp or {}).get("date") or "")
 
 
 def clock_of(recording) -> tuple[dt.date | None, float | None, str]:

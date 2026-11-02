@@ -539,7 +539,7 @@ The time of day a Recording started at, kept on the Recording (v1.164.0, ADR 002
 _Avoid_: offset, sync (an Incident's word), timestamp, start time (say "its clock")
 
 **Not on the clock**:
-A video of a Case whose clock nobody has read or placed, and the panel under the Incidents tab's cards that lists every such video (Phase 10 chapter 5, v1.186.0): one row each with its Still, what its file says, what its sound says against the placed videos of its file's day (a line with its Surety, found on the media worker when the video lands and whenever a video of the case is placed), and the presses it earns: Place it there (a Clear or Likely match only), Not this, Place from the file, Type a time, Place by the day. The day chips and the Date strip count them by the file's day; the Date strip wears a ring. Audio with notes keeps the Notes tab's rail.
+A video of a Case whose clock nobody has read or placed, and the panel under the Incidents tab's cards that lists every such video (Phase 10 chapter 5, v1.186.0): one row each with its Still, what its file says, what its sound says against the placed videos of its file's day (a line with its Surety, found on the media worker when the video lands and whenever a video of the case is placed), and the presses it earns: Place it there (a Clear or Likely match only), Not this, Place from the file, Type a time, Place by the day. The day chips and the Date strip count them by the file's day; the Date strip wears a ring. A video placed by the day alone, a day and no hour, sits on the panel too (v1.186.1), last, with Take off the clock and no sound line. Audio with notes keeps the Notes tab's rail.
 _Avoid_: unsynced, unplaced videos (say "not on the clock"), orphan, pending
 
 **Date strip**:

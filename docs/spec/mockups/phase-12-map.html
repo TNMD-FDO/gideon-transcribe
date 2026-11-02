@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Map tab</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --sys: #6b7480; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --water: #d6e6f2; --park: #dfeadb; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --water: #1b2a38; --park: #1f2a22; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"], .dark {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --water: #1b2a38; --park: #1f2a22; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .lead { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .lead p { margin: 0; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); font-size: 13px; flex-wrap: wrap; }
+  .tabs span { padding: 6px 10px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs span.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tabs span i { font-style: normal; color: var(--muted); margin-left: 4px; font-size: 11px; }
+
+  /* the tab */
+  .maptab { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-areas: "lead lead" "map list" "strip strip"; gap: 12px; }
+  .maptab .lead { grid-area: lead; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); }
+  .maptab .pane { grid-area: map; min-height: 380px; }
+  .maptab .list { grid-area: list; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); font-size: 13px; }
+  .maptab .strip { grid-area: strip; }
+  .maptab.one { grid-template-columns: minmax(0, 1fr); grid-template-areas: "lead" "map" "strip" "list"; }
+  .transport { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .transport .clock { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .transport .zone { font-size: 11px; color: var(--muted); display: block; }
+  .transport select { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+  .days span { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .days span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .days .lbl { background: none; padding: 0; margin-right: 4px; }
+  .days i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--inc); margin-left: 5px; vertical-align: 0; }
+
+  /* the map's own furniture */
+  .pane svg { display: block; width: 100%; height: auto; }
+  .pane .corner { position: absolute; font-size: 10px; color: var(--muted); background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 6px; border-radius: 3px; }
+  .pane .attr { right: 6px; bottom: 6px; }
+  .pane .nomap { left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 12px; padding: 4px 10px; border: 1px solid var(--line); }
+  .pane .scale { left: 8px; bottom: 8px; font-family: var(--mono); border-bottom: 2px solid var(--text); border-left: 2px solid var(--text); border-right: 2px solid var(--text); padding: 0 4px 1px; background: none; }
+  .pane .north { right: 8px; top: 8px; font-weight: 700; font-size: 12px; background: none; }
+  .pane .zoom { right: 8px; top: 30px; display: flex; flex-direction: column; gap: 2px; background: none; padding: 0; }
+  .pane .zoom b { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 14px; }
+  .pane .near { position: absolute; left: 12px; top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; width: 230px; }
+  .pane .near b { display: block; margin-bottom: 4px; }
+  .pane .near p { margin: 2px 0; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; }
+  .blk { fill: var(--surface-2); opacity: .55; }
+  .wat { fill: var(--water); } .prk { fill: var(--park); }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; }
+  .lbl.big { font-size: 11px; }
+  .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .35; }
+  .pt { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .pf.lit, .pt.lit { stroke-width: 5; }
+  .gap { stroke-dasharray: 2 5; opacity: .5; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .hd.dim { opacity: .45; }
+  .hd.hollow { fill: var(--surface); stroke-width: 3; }
+  .hl { font: 600 9px var(--font); fill: var(--surface); paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2; }
+  .badge { fill: var(--warn); stroke: var(--surface); stroke-width: 1; }
+  .badge.siren { fill: var(--bad); }
+  .pin { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+  .ring { fill: none; stroke: var(--accent); stroke-dasharray: 3 3; }
+
+  /* the list */
+  .list .h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); padding: 0 0 6px; }
+  .row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 4px; border-top: 1px solid var(--line); border-radius: 4px; }
+  .row.lit { background: var(--accent-soft); }
+  .row.dim { opacity: .6; }
+  .row .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .row .dot.sq { border-radius: 2px; }
+  .row .facts { color: var(--muted); font-size: 11px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .row .acts { display: flex; gap: 4px; }
+  .fold { font-size: 12px; color: var(--muted); padding: 6px 4px; border-top: 1px solid var(--line); }
+  .fold b { color: var(--accent); font-weight: 600; }
+  .streams { font-size: 10px; color: var(--muted); }
+  .streams span { padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; margin-right: 3px; }
+
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px 8px; background: var(--surface); display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 4px 10px; position: relative; font-size: 12px; }
+  .strip.narrow { grid-template-columns: 90px minmax(0, 1fr); }
+  .strip .ruler { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: 10px; color: var(--muted); }
+  .strip .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 18px; font-size: 12px; white-space: nowrap; overflow: hidden; }
+  .strip .head i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .strip .head i.sq { border-radius: 2px; }
+  .strip .head .spd { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-left: auto; }
+  .strip .track { position: relative; height: 18px; }
+  .strip .track i { position: absolute; top: 4px; height: 10px; border-radius: 5px; display: block; }
+  .strip .track i.gp { height: 4px; top: 7px; border-radius: 2px; opacity: .35; }
+  .strip .track em { position: absolute; top: 1px; width: 2px; height: 16px; background: var(--warn); border-radius: 1px; }
+  .strip .track em.siren { background: var(--bad); } .strip .track em.mic { background: var(--muted); } .strip .track em.bm { background: var(--accent); height: 8px; top: 0; }
+  .strip .track em.on { width: auto; height: 3px; top: 0; background: var(--warn); border-radius: 2px; }
+  .strip .track .spd { position: absolute; left: 0; right: 0; top: 14px; height: 3px; }
+  .strip .track .spd i { height: 3px; top: 0; border-radius: 0; opacity: .5; }
+  .strip .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); z-index: 2; }
+  .strip .ph b { position: absolute; top: -2px; left: -18px; font: 600 10px var(--mono); color: var(--accent-ink); background: var(--accent); padding: 0 4px; border-radius: 3px; }
+  .strip .faint { opacity: .45; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); }
+
+  /* the preview window, the drawer, the layer */
+  .preview { position: absolute; right: 16px; bottom: 16px; width: 300px; border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; z-index: 3; font-size: 12px; }
+  .preview .bar { background: var(--accent); color: var(--accent-ink); padding: 4px 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+  .preview .bar span { font-weight: 400; font-size: 11px; opacity: .85; }
+  .preview .video { height: 110px; background: linear-gradient(135deg, #2a3038, #10151b); position: relative; }
+  .preview .video b { position: absolute; left: 8px; bottom: 6px; color: #fff; font: 600 10px var(--mono); background: rgba(0,0,0,.5); padding: 0 4px; border-radius: 3px; }
+  .preview .foot { padding: 6px 10px; display: flex; gap: 8px; align-items: center; color: var(--muted); }
+  .preview .foot .pb { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); position: relative; }
+  .preview .foot .pb i { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: var(--accent); border-radius: 2px; }
+  .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .layer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 620px; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 5px 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .drawer { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; font-size: 13px; }
+  .drawer .dh { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .drawer .q, .drawer .a { padding: 8px 12px; }
+  .drawer .q { background: var(--surface-2); }
+  .drawer .a p { margin: 0 0 6px; }
+  .drawer .cite { color: var(--accent); font-family: var(--mono); font-size: 12px; text-decoration: underline; }
+  .drawer .ask { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); }
+  .drawer .ask span { flex: 1; border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 8px; color: var(--muted); }
+  .readings { display: flex; flex-direction: column; gap: 0; font-size: 12px; }
+  .readings .r { display: grid; grid-template-columns: 62px 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
+  .readings .r i { width: 10px; height: 10px; border-radius: 2px; }
+  .readings .r .mono { color: var(--muted); }
+  .phone { width: 300px; border: 1px solid var(--line); border-radius: 18px; padding: 10px 8px 0; background: var(--bg); display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .phone .pane { min-height: 220px; }
+  .slim { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .slim .clock { font-family: var(--mono); font-size: 16px; }
+  .maptab.large { grid-template-columns: minmax(0, 1fr); grid-template-areas: "lead" "map" "strip"; }
+  .maptab.large .pane { min-height: 520px; }
+  .maptab.large .list { grid-area: map; justify-self: end; align-self: start; margin: 118px 12px 12px; width: 260px; max-height: 60%; overflow: hidden; background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: var(--shadow); z-index: 2; }
+  .maptab.large .list.folded { width: auto; padding: 4px 10px; }
+  .maptab.large .strip { grid-template-columns: 110px minmax(0, 1fr); }
+  .pane .big { right: 8px; top: 86px; background: none; padding: 0; }
+  .pane .big b { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 12px; }
+  .seg span { padding: 4px 9px; color: var(--muted); border-right: 1px solid var(--line); }
+  .seg span:last-child { border-right: 0; }
+  .seg span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .evfilter { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+  .evfilter label { display: inline-flex; gap: 4px; align-items: center; }
+  .evfilter .k { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+  .ev { stroke: var(--surface); stroke-width: 1.5; }
+  .ev.lights { fill: var(--warn); } .ev.siren { fill: var(--bad); } .ev.mic { fill: var(--muted); } .ev.bm { fill: var(--accent); }
+  .ev.start { fill: var(--surface); stroke-width: 2.5; } .ev.end { fill: var(--text); }
+  .ev.sel { stroke: var(--accent); stroke-width: 3; }
+  .evcard { position: absolute; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; width: 250px; z-index: 3; }
+  .evcard b { display: block; }
+  .evcard .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .strip .track em.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .strip .track em.cam { width: 6px; height: 6px; border-radius: 50%; top: 6px; background: var(--text); }
+  .strip .track em.cam.on { background: var(--surface); border: 2px solid var(--text); width: 4px; height: 4px; top: 5px; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 12px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .empty b { color: var(--text); font-size: 15px; }
+  .toast { display: inline-block; background: var(--text); color: var(--bg); padding: 6px 12px; border-radius: var(--radius); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, a new chapter · a drawing for the maintainer's word · 2026-11-02</span>
+    <h1>The Map tab: every camera's path from its own file, on one clock, with the video a press away</h1>
+    <p class="lede">The ask of 2026-11-02: some body-worn and in-car video comes with a separate file beside it holding the camera's position second by second (and for a vehicle its clock, speed, lights, siren and brakes). A tab in the case should take those files in and show the cameras moving on a map: zoom and pan to see which are in view, scrub a clock and watch everyone move, press a camera and its video plays in step; the readings (lights on, siren, the microphone muted) should be smart data the chat can answer from. Answered the same day: the street map comes in the first release from one file the Admin places on the server (nothing reaches outside the office); the word is <b>Path</b>, made of <b>Fixes</b>, from a <b>Path file</b>; a camera's clock comes from its own file first, then the clock the app already holds, then the minute in its file name; files come in through this tab, matched to their videos by name. The fictional office of the local demo throughout; no real place is drawn.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The tab at 1366 wide: the map, the cameras beside it, the clock under</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <i>6</i></span><span>Search</span><span>Proposed <i>4</i></span><span>Notes <i>12</i></span><span>Documents <i>2</i></span><span>Incidents <i>1</i></span><span class="on">Map <i>4</i></span><span>Clips <i>3</i></span><span>Speakers</span><span>Details</span></div>
+      <div class="maptab">
+        <div class="lead">
+          <div>
+            <p><b>6 cameras, 4 with a path file · 6 Nov 2025.</b> <span class="muted">The clock runs one day at a time; the cameras of the other day are listed below the fold.</span></p>
+            <div class="days" style="margin-top:4px"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 4 cameras<i title="cameras ran together on this day"></i></span><span>7 Nov · 1 camera</span></div>
+          </div>
+          <div class="transport">
+            <span class="btn primary">▶ Play</span><span class="btn">−10 s</span><span class="btn">+10 s</span>
+            <select><option>Speed 1×</option><option selected>Speed 4×</option><option>16×</option><option>60×</option></select>
+            <span><span class="clock">20:31:08</span><span class="zone">Central · 6 Nov 2025</span></span>
+            <span class="btn">Fit all</span><span class="btn">Larger map</span><span class="btn">Add path files</span>
+          </div>
+        </div>
+
+        <div class="pane">
+          <svg viewBox="0 0 760 400" aria-label="a drawn map">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="0" y="300" width="760" height="100" class="wat"/>
+            <rect x="520" y="40" width="160" height="110" rx="6" class="prk"/>
+            <!-- blocks -->
+            <rect x="60" y="60" width="130" height="80" rx="3" class="blk"/><rect x="230" y="60" width="150" height="80" rx="3" class="blk"/><rect x="420" y="60" width="70" height="80" rx="3" class="blk"/>
+            <rect x="60" y="180" width="130" height="80" rx="3" class="blk"/><rect x="230" y="180" width="150" height="80" rx="3" class="blk"/><rect x="420" y="180" width="260" height="80" rx="3" class="blk"/>
+            <!-- roads -->
+            <rect x="0" y="146" width="760" height="22" class="ro"/><rect x="0" y="266" width="760" height="22" class="ro"/>
+            <rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/><rect x="500" y="0" width="14" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="161">HARBOUR STREET</text><text class="lbl big" x="560" y="281">QUAY ROAD</text>
+            <text class="lbl" transform="translate(214 30) rotate(90)">MILL LANE</text><text class="lbl" transform="translate(404 30) rotate(90)">ROPEWALK</text>
+            <text class="lbl" x="575" y="100">The Green</text><text class="lbl" x="30" y="350">Harbour</text>
+            <!-- faint full paths -->
+            <polyline class="pf p4" points="40,277 200,277 300,277 400,277 440,277 440,200 445,180 460,165"/>
+            <polyline class="pf p1" points="80,157 210,157 300,157 380,157 400,160 405,200 420,210"/>
+            <polyline class="pf p2" points="700,80 650,120 560,157 470,157 430,165 420,200 420,230"/>
+            <polyline class="pf p3" points="212,30 212,100 212,157 260,157 330,157 400,160 440,170"/>
+            <!-- trails up to the clock -->
+            <polyline class="pt p4" points="40,277 200,277 300,277 400,277 440,277 440,200"/>
+            <polyline class="pt p1" points="80,157 210,157 300,157 380,157"/>
+            <polyline class="pt p2" points="700,80 650,120 560,157 470,157"/>
+            <polyline class="pt p3" points="212,30 212,100 212,157 260,157"/>
+            <polyline class="pt p3 gap" points="260,157 300,157"/>
+            <!-- markers -->
+            <rect x="431" y="191" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="440" y="204" text-anchor="middle">D4</text><circle cx="449" cy="192" r="4" class="badge"/>
+            <circle cx="380" cy="157" r="10" class="f1 hd"/><text class="hl" x="380" y="161" text-anchor="middle">1</text>
+            <circle cx="470" cy="157" r="10" class="f2 hd"/><text class="hl" x="470" y="161" text-anchor="middle">2</text>
+            <circle cx="300" cy="157" r="10" class="f3 hd dim"/><text class="hl" x="300" y="161" text-anchor="middle">3</text>
+          </svg>
+          <span class="corner north">N</span>
+          <span class="corner zoom"><b>+</b><b>−</b></span>
+          <span class="corner scale">200 ft</span>
+          <span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+
+        <div class="list">
+          <div class="h"><span>4 of 4 in view</span><span>on the clock</span></div>
+          <div class="row"><span class="dot c1"></span><div><b>BWC1-1</b> <span class="muted tiny">Ofc. Pell</span><div class="facts"><span class="pill ok" title="from the clock read in its picture">Clear</span><span class="mono">20:24 to 20:53</span><span>body</span></div></div><div class="acts"><span class="btn tiny">Play here</span><span class="btn tiny ghost">⋯</span></div></div>
+          <div class="row"><span class="dot c2"></span><div><b>BWC2-1</b> <span class="muted tiny">Ofc. Amari</span><div class="facts"><span class="pill ok" title="from the clock read in its picture">Clear</span><span class="mono">20:26 to 20:53</span><span>body</span></div></div><div class="acts"><span class="btn tiny">Play here</span><span class="btn tiny ghost">⋯</span></div></div>
+          <div class="row"><span class="dot c3"></span><div><b>BWC3-1</b> <span class="muted tiny">Ofc. Dunne · no fix now</span><div class="facts"><span class="pill warn" title="from the minute in its file name, read as UTC">By its name</span><span class="mono">20:29 to 20:53</span><span>body</span></div></div><div class="acts"><span class="btn tiny">Play here</span><span class="btn tiny ghost">⋯</span></div></div>
+          <div class="row"><span class="dot c4 sq"></span><div><b>Dash-4</b> <span class="muted tiny">Ofc. Pell's vehicle</span><div class="facts"><span class="pill ok" title="from its path file, the first and last readings agree">Clear</span><span class="mono">20:18 to 20:51</span><span>in-car</span></div><div class="streams"><span>front</span><span>cabin</span></div></div><div class="acts"><span class="btn tiny">Play here</span><span class="btn tiny ghost">⋯</span></div></div>
+          <div class="fold">No path file: <b>Cell-5</b>, <b>Interview room</b> · <b>Add a path file</b></div>
+          <div class="fold">Other days: 1 camera on 7 Nov · <b>show faint</b></div>
+        </div>
+
+        <div class="strip">
+          <div></div>
+          <div class="ruler"><span style="left:0%">20:00</span><span style="left:25%">20:15</span><span style="left:50%">20:30</span><span style="left:75%">20:45</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><em class="mic" style="left:41.5%" title="mic on 20:24:55"></em><div class="ph" style="left:51.9%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><em class="mic" style="left:44%"></em><em class="mic" style="left:66%" title="muted 20:40:10 to 20:44:02"></em><em class="mic" style="left:73%"></em></div>
+          <div class="head"><i class="c3"></i>BWC3-1</div><div class="track"><i class="c3" style="left:48%;width:3%"></i><i class="c3 gp" style="left:51%;width:7%" title="no fix 20:31 to 20:36"></i><i class="c3" style="left:58%;width:30%"></i></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4 <span class="spd">0 mph</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%" title="lights on 20:22:08 to 20:31:40"></em><em class="siren" style="left:36.9%" title="siren on 20:22:08"></em><em class="siren" style="left:44%" title="siren off 20:26:30"></em><em class="bm" style="left:50%" title="bookmark pressed 20:30:01"></em><div class="spd"><i class="c4" style="left:30%;width:7%"></i><i class="c4" style="left:37%;width:14%;opacity:.9"></i><i class="c4" style="left:51%;width:34%;opacity:.2"></i></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The map.</b> Each camera's whole path lies faint; the part up to the clock is solid, in the camera's colour (the chronology's colours, so a camera is one colour everywhere). The marker sits where the camera was at the clock's moment, a round head for a body camera, a square one for an in-car unit, dimmed while the camera had no fix (BWC3-1 indoors, dashed on the map and a thin bar on its lane). North is up and never rotates; + and − zoom; the scale bar and the attribution corner are the map's.</p>
+      <p><b>The clock.</b> The office's time of day at the top of the transport, with the day under it. Play runs it at the chosen speed and every marker moves; −10 s and +10 s step; a press on the ruler or a lane seeks; dragging the playhead scrubs. Space, Left and Right, Shift for ten seconds.</p>
+      <p><b>The list.</b> The cameras whose path crosses the view, in colour, with the wearer as the file names them, the surety pill and its why on hover, the span on the clock and the kind. Hovering a row lights its path; pressing a row flies to it; Play here opens the camera. Below the fold: the videos without a path file, with Add a path file, and the other days' cameras.</p>
+      <p><b>The strip.</b> One lane per camera on the clock; the bar is its path's span; marks for mic on and off, lights (a bar along the top while on), siren on and off, a bookmark press; an in-car lane carries a faint speed trace and its speed in the head while playing.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Zoomed in: the list follows the view</h2></div>
+    <div class="frame">
+      <div class="maptab">
+        <div class="lead"><p><b>6 cameras, 4 with a path file · 6 Nov 2025.</b></p><div class="transport"><span class="btn">⏸ Pause</span><span><span class="clock">20:31:08</span><span class="zone">Central</span></span><span class="btn">Fit all</span></div></div>
+        <div class="pane">
+          <svg viewBox="0 0 760 400">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="80" y="40" width="260" height="130" rx="4" class="blk"/><rect x="80" y="240" width="260" height="130" rx="4" class="blk"/><rect x="440" y="40" width="300" height="130" rx="4" class="blk"/><rect x="440" y="240" width="300" height="130" rx="4" class="blk"/>
+            <rect x="0" y="180" width="760" height="50" class="ro"/><rect x="350" y="0" width="80" height="400" class="ro"/>
+            <text class="lbl big" x="120" y="210">HARBOUR STREET</text><text class="lbl" transform="translate(395 40) rotate(90)">ROPEWALK</text>
+            <text class="lbl" x="160" y="110">No 14</text><text class="lbl" x="560" y="110">Corner shop</text>
+            <polyline class="pf p1" points="0,205 150,205 330,205 390,210 400,300 420,330"/>
+            <polyline class="pf p2 lit" points="760,120 700,160 560,205 470,205 420,215 400,300"/>
+            <polyline class="pf p3" points="395,0 395,120 395,205 470,205"/>
+            <polyline class="pt p1" points="0,205 150,205 330,205"/>
+            <polyline class="pt p2 lit" points="760,120 700,160 560,205 470,205"/>
+            <polyline class="pt p3" points="395,0 395,120"/>
+            <circle cx="330" cy="205" r="11" class="f1 hd"/><text class="hl" x="330" y="209" text-anchor="middle">1</text>
+            <circle cx="470" cy="205" r="13" class="f2 hd"/><text class="hl" x="470" y="209" text-anchor="middle">2</text>
+            <circle cx="395" cy="120" r="11" class="f3 hd dim"/><text class="hl" x="395" y="124" text-anchor="middle">3</text>
+          </svg>
+          <span class="corner north">N</span><span class="corner zoom"><b>+</b><b>−</b></span><span class="corner scale">50 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+        <div class="list">
+          <div class="h"><span>3 of 4 in view</span><span><b style="color:var(--accent)">show all</b></span></div>
+          <div class="row"><span class="dot c1"></span><div><b>BWC1-1</b> <span class="muted tiny">Ofc. Pell</span><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:24 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row lit"><span class="dot c2"></span><div><b>BWC2-1</b> <span class="muted tiny">Ofc. Amari · here at 20:31:08</span><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:26 to 20:53</span></div></div><div class="acts"><span class="btn tiny primary">Play here</span></div></div>
+          <div class="row"><span class="dot c3"></span><div><b>BWC3-1</b> <span class="muted tiny">Ofc. Dunne · no fix now</span><div class="facts"><span class="pill warn">By its name</span><span class="mono">20:29 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="fold">1 more out of view: <b>Dash-4</b> · <b>show</b></div>
+          <div class="fold">No path file: <b>Cell-5</b>, <b>Interview room</b></div>
+        </div>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:50%">20:30</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><div class="ph" style="left:51.9%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i></div>
+          <div class="head"><i class="c3"></i>BWC3-1</div><div class="track"><i class="c3" style="left:48%;width:3%"></i><i class="c3 gp" style="left:51%;width:7%"></i><i class="c3" style="left:58%;width:30%"></i></div>
+          <div class="head faint"><i class="c4 sq"></i>Dash-4</div><div class="track faint"><i class="c4" style="left:30%;width:55%"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>In view.</b> After every pan or zoom the list re-reads: a camera is in view when any part of its path crosses the map. "3 of 4 in view", the one outside under the fold with "show"; its lane stays on the strip, faded to 45 % so the clock still reads whole.</p>
+      <p><b>A row lit.</b> Hovering BWC2-1 thickens its path and marker; the row says where it is at the clock's moment. Pressing the row flies to the path (not the whole day's span). Play here is the camera's press.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>A camera opened: the Preview plays and the clock follows the video</h2></div>
+    <div class="frame">
+      <div class="maptab">
+        <div class="lead"><p><b>6 cameras, 4 with a path file · 6 Nov 2025.</b></p><div class="transport"><span class="btn on">following BWC2-1</span><span class="btn">−10 s</span><span class="btn">+10 s</span><select><option selected>Speed 1×</option></select><span><span class="clock">20:31:18</span><span class="zone">Central</span></span></div></div>
+        <div class="pane">
+          <svg viewBox="0 0 760 400">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="0" y="300" width="760" height="100" class="wat"/><rect x="520" y="40" width="160" height="110" rx="6" class="prk"/>
+            <rect x="60" y="60" width="130" height="80" rx="3" class="blk"/><rect x="230" y="60" width="150" height="80" rx="3" class="blk"/><rect x="420" y="60" width="70" height="80" rx="3" class="blk"/><rect x="60" y="180" width="130" height="80" rx="3" class="blk"/><rect x="230" y="180" width="150" height="80" rx="3" class="blk"/><rect x="420" y="180" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="146" width="760" height="22" class="ro"/><rect x="0" y="266" width="760" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="161">HARBOUR STREET</text><text class="lbl big" x="560" y="281">QUAY ROAD</text>
+            <polyline class="pf p4" points="40,277 200,277 300,277 400,277 440,277 440,200 445,180 460,165"/><polyline class="pf p1" points="80,157 210,157 300,157 380,157 400,160 405,200 420,210"/><polyline class="pf p2 lit" points="700,80 650,120 560,157 470,157 430,165 420,200 420,230"/><polyline class="pf p3" points="212,30 212,100 212,157 260,157 330,157 400,160 440,170"/>
+            <polyline class="pt p4" points="40,277 200,277 300,277 400,277 440,277 440,200 445,190"/><polyline class="pt p1" points="80,157 210,157 300,157 380,157 386,157"/><polyline class="pt p2 lit" points="700,80 650,120 560,157 470,157 462,157"/><polyline class="pt p3" points="212,30 212,100 212,157 260,157"/><polyline class="pt p3 gap" points="260,157 302,157"/>
+            <rect x="436" y="181" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="445" y="194" text-anchor="middle">D4</text><circle cx="454" cy="182" r="4" class="badge"/>
+            <circle cx="386" cy="157" r="10" class="f1 hd"/><text class="hl" x="386" y="161" text-anchor="middle">1</text>
+            <circle cx="462" cy="157" r="12" class="f2 hd"/><text class="hl" x="462" y="161" text-anchor="middle">2</text>
+            <circle cx="302" cy="157" r="10" class="f3 hd dim"/><text class="hl" x="302" y="161" text-anchor="middle">3</text>
+          </svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+          <div class="preview">
+            <div class="bar">BWC2-1 <span>20:31:18 · 5:14 in</span> <span>Close</span></div>
+            <div class="video"><b>20:31:18</b></div>
+            <div class="foot"><span>▶</span><span class="pb"><i></i></span><span class="mono">5:14 / 27:02</span></div>
+          </div>
+        </div>
+        <div class="list">
+          <div class="h"><span>4 of 4 in view</span><span>on the clock</span></div>
+          <div class="row"><span class="dot c1"></span><div><b>BWC1-1</b><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:24 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row lit"><span class="dot c2"></span><div><b>BWC2-1</b> <span class="muted tiny">playing</span><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:26 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Open the recording</span></div></div>
+          <div class="row"><span class="dot c3"></span><div><b>BWC3-1</b> <span class="muted tiny">no fix now</span><div class="facts"><span class="pill warn">By its name</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row"><span class="dot c4 sq"></span><div><b>Dash-4</b> <span class="muted tiny">lights on · 0 mph</span><div class="facts"><span class="pill ok">Clear</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+        </div>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:50%">20:30</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><div class="ph" style="left:52.2%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i></div>
+          <div class="head"><i class="c3"></i>BWC3-1</div><div class="track"><i class="c3" style="left:48%;width:3%"></i><i class="c3 gp" style="left:51%;width:7%"></i><i class="c3" style="left:58%;width:30%"></i></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4 <span class="spd">0 mph</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%"></em><em class="siren" style="left:36.9%"></em><em class="siren" style="left:44%"></em><em class="bm" style="left:50%"></em></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Play here.</b> The Preview (the same window the chat's citations open) plays BWC2-1 from the clock's moment. While it plays, the map's clock is the video's: 20:31:18 is the camera's zero plus how far the video is in, so every other marker moves in step and the transport reads "following BWC2-1". Scrubbing the strip seeks the video; pausing the video stands the clock; Close leaves the clock where it is. One camera plays at a time.</p>
+      <p><b>The lead-in.</b> Today the Preview starts ten seconds before the moment asked, so the clock steps back ten seconds on opening. Kept as drawn, or opened exact: a choice below.</p>
+      <p><b>Dash-4 meanwhile.</b> Its marker carries the lights badge while the lights are on, and its row and lane head say the speed from the file as the clock passes each reading.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>The states: no file yet, no map installed, not on the clock, three days</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3>No camera has a path file yet</h3>
+        <div class="empty"><b>No camera has a path file yet</b><span class="small">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt. Add the folder's files here and they find their videos by name.</span><span class="btn primary">Add path files</span></div>
+        <div class="list">
+          <div class="row dim"><span class="dot c1"></span><div><b>BWC1-1</b><div class="facts">no path file</div></div><div class="acts"><span class="btn tiny">Add a path file</span></div></div>
+          <div class="row dim"><span class="dot c2"></span><div><b>BWC2-1</b><div class="facts">no path file</div></div><div class="acts"><span class="btn tiny">Add a path file</span></div></div>
+          <div class="row dim"><span class="dot c4 sq"></span><div><b>Dash-4</b><div class="facts">no path file</div></div><div class="acts"><span class="btn tiny">Add a path file</span></div></div>
+        </div>
+      </div>
+      <div class="frame">
+        <h3>No map installed</h3>
+        <div class="pane" style="min-height:220px">
+          <svg viewBox="0 0 560 220"><rect width="560" height="220" fill="var(--surface-2)"/>
+            <polyline class="pf p4" points="30,150 150,150 300,150 330,150 330,100 340,90"/><polyline class="pf p1" points="60,80 160,80 280,80 300,82 305,110"/><polyline class="pf p2" points="520,30 480,60 400,80 340,80 320,86 315,110"/>
+            <polyline class="pt p4" points="30,150 150,150 300,150 330,150 330,100"/><polyline class="pt p1" points="60,80 160,80 280,80"/><polyline class="pt p2" points="520,30 480,60 400,80 340,80"/>
+            <rect x="321" y="91" width="18" height="18" rx="3" class="f4 hd"/><circle cx="280" cy="80" r="10" class="f1 hd"/><circle cx="340" cy="80" r="10" class="f2 hd"/>
+          </svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span>
+          <span class="corner nomap">No map installed · the paths are drawn on plain ground. <b>The Admin can install one</b> (admin guide, Maps).</span>
+        </div>
+        <p class="small muted" style="margin:0">The street map is one file of the region the Admin places on the server once; nothing on this page reaches outside the office. Without it the tab is whole: the paths, the clock, the list and the Preview all work.</p>
+      </div>
+      <div class="frame">
+        <h3>Not on the clock</h3>
+        <div class="list">
+          <div class="row"><span class="dot c5"></span><div><b>Cell-5</b> <span class="muted tiny">Ofc. Rowe</span><div class="facts"><span class="pill warn" title="no clock in its picture, no clock in its file, no minute in its name">Not placed</span><span class="mono">31 min</span><span>body</span></div></div><div class="acts"><span class="btn tiny on">Show on its own</span><span class="btn tiny ghost">Place it</span></div></div>
+          <div style="padding:6px 4px 2px;font-size:12px;color:var(--muted)">On its own: <span class="mono">0:00</span> <span class="sit" style="display:inline-block;width:160px;height:6px;border-radius:3px;background:var(--surface-2);position:relative;vertical-align:middle"><i style="position:absolute;left:0;top:0;bottom:0;width:30%;background:var(--c5);border-radius:3px"></i></span> <span class="mono">31:02</span> · its path is lit and its marker rides this bar, not the shared clock.</div>
+        </div>
+        <p class="small muted" style="margin:0">A camera with a path but no clock has no lane on the strip and no marker on the shared clock. Its path can be shown on its own with its own bar; Place it goes to the Incidents tab's panel, where the app's clocks live.</p>
+      </div>
+      <div class="frame">
+        <h3>Three days in the case</h3>
+        <div class="days"><span class="lbl">Days</span><span>3 Nov · 1 camera</span><span class="on">6 Nov 2025 · 4 cameras<i></i></span><span>7 Nov · 2 cameras<i></i></span></div>
+        <div class="list" style="margin-top:8px">
+          <div class="h"><span>4 of 4 in view · 6 Nov</span></div>
+          <div class="fold">Other days: 1 camera on 3 Nov, 2 on 7 Nov · <b>show faint</b> · pressing a chip moves the whole tab to that day</div>
+        </div>
+        <p class="small muted" style="margin:0">The clock runs one day at a time. The chips are the Date strip's idiom; the day with the most cameras opens first and the address keeps the choice. A recording that runs past midnight belongs to the day it started.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>At 390 wide: the map, a slim bar, the strip, the rows as cards, the Preview as a sheet</h2></div>
+    <div class="two" style="grid-template-columns: 320px minmax(0,1fr)">
+      <div class="phone">
+        <div class="tabs" style="font-size:12px"><span>Incidents</span><span class="on">Map <i>4</i></span><span>Clips</span></div>
+        <div class="pane">
+          <svg viewBox="0 0 300 220"><rect width="300" height="220" fill="var(--ground)"/><rect x="0" y="170" width="300" height="50" class="wat"/><rect x="0" y="90" width="300" height="16" class="ro"/><rect x="120" y="0" width="16" height="170" class="ro"/><text class="lbl" x="150" y="101">HARBOUR STREET</text>
+            <polyline class="pf p1" points="20,98 128,98 200,98 230,100"/><polyline class="pf p2" points="290,40 240,70 200,98 170,98"/><polyline class="pt p1" points="20,98 128,98 170,98"/><polyline class="pt p2" points="290,40 240,70 200,98"/>
+            <circle cx="170" cy="98" r="9" class="f1 hd"/><circle cx="200" cy="98" r="9" class="f2 hd"/></svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span>
+        </div>
+        <div class="slim"><span class="btn tiny primary">▶</span><span class="clock">20:31:08</span><span class="muted tiny">4×</span><span class="muted tiny" style="margin-left:auto">6 Nov</span></div>
+        <div class="strip narrow">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><div class="ph" style="left:52%"></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i></div>
+        </div>
+        <div class="sheet">
+          <div style="display:flex;justify-content:space-between"><b>BWC2-1</b><span class="muted">20:31:18 · Close</span></div>
+          <div class="preview" style="position:static;width:auto;box-shadow:none;border-color:var(--line)"><div class="video" style="height:90px"><b>20:31:18</b></div><div class="foot"><span>▶</span><span class="pb"><i></i></span><span class="mono">5:14</span></div></div>
+        </div>
+      </div>
+      <div class="caption" style="margin:0;align-content:start">
+        <p><b>Narrow.</b> One column: the map at 46 % of the height, a slim bar with play, the clock and the speed, then the strip with 90 px heads, then the rows as cards. The Preview rises as a sheet from the foot (the same sheet as everywhere under 900); the slim bar stays above it so the clock is never hidden, and the page pads its foot while the sheet is open.</p>
+        <p><b>Touch.</b> Pinch zooms and drags pan the map; a drag on the strip scrubs; a tap on a lane seeks; two fingers never rotate the map.</p>
+        <p><b>From 768 to 1023.</b> One column too, the map taller, the list after the strip.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- F -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure F</span><h2>Taking the files in: matched by name, the leftovers settled, and the dark theme</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3>Add path files</h3>
+        <p class="small muted" style="margin:0">The person picks the whole folder's worth of .vtt files at once. Each one whose name matches a video in the case lands on it straight away; the answer says what landed and lists only the leftovers.</p>
+        <span class="toast">12 files added to their videos · 3 to settle</span>
+        <div class="layer">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><b>3 files to settle</b><span class="muted tiny">the other 12 are on their videos</span></div>
+          <table class="t">
+            <thead><tr><th>File</th><th>What the app found</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="mono small">BWC3-1.vtt</td><td class="small">Matches <b>BWC3-1</b> by name, but the unit inside it reads BWL-7718 and the clock read from the picture says BWL-7720. <span class="pill warn">Flagged</span></td><td><span class="btn tiny">Add anyway</span> <span class="btn tiny ghost">Skip</span></td></tr>
+              <tr><td class="mono small">Dash-4-0.vtt</td><td class="small"><b>Dash-4 front</b> already has a path file (812 fixes, added 1 Nov). <span class="pill">Has one</span></td><td><span class="btn tiny">Replace</span> <span class="btn tiny ghost">Skip</span></td></tr>
+              <tr><td class="mono small">unit-2206-a.vtt</td><td class="small">No video of that name in this case. <span class="pill">Unmatched</span><br><span class="muted tiny">A body camera, worn by Ofc. Rowe, 31 minutes, 6 Nov by its name.</span></td><td><select><option>Choose its video…</option><option>Cell-5</option><option>Interview room</option></select></td></tr>
+            </tbody>
+          </table>
+          <div style="display:flex;gap:6px;justify-content:flex-end"><span class="btn">Close</span><span class="btn primary">Add the settled files</span></div>
+        </div>
+        <p class="small muted" style="margin:0">A refused file (not a WebVTT, no position in it, over 20 MB) is listed here with its reason and no action. A file never attaches to the wrong video quietly: a flag always shows, and an unmatched one waits for a choice. A row's own ⋯ menu carries Add a path file, Replace and Remove for one camera.</p>
+      </div>
+      <div class="frame dark" style="background:var(--bg);color:var(--text)">
+        <h3>Dark</h3>
+        <div class="pane" style="min-height:240px">
+          <svg viewBox="0 0 560 240"><rect width="560" height="240" fill="var(--ground)"/><rect x="0" y="180" width="560" height="60" class="wat"/><rect x="380" y="20" width="120" height="70" rx="4" class="prk"/>
+            <rect x="40" y="30" width="100" height="60" rx="3" class="blk"/><rect x="170" y="30" width="110" height="60" rx="3" class="blk"/><rect x="40" y="120" width="100" height="50" rx="3" class="blk"/><rect x="170" y="120" width="300" height="50" rx="3" class="blk"/>
+            <rect x="0" y="96" width="560" height="18" class="ro"/><rect x="150" y="0" width="16" height="180" class="ro"/><rect x="290" y="0" width="16" height="180" class="ro"/><text class="lbl" x="190" y="108">HARBOUR STREET</text>
+            <polyline class="pf p4" points="20,175 150,175 300,175 330,175 330,120 335,110"/><polyline class="pf p1" points="60,104 158,104 240,104 280,104 300,108 305,130"/><polyline class="pf p2" points="520,50 480,75 400,104 340,104 320,110 315,130"/>
+            <polyline class="pt p4" points="20,175 150,175 300,175 330,175 330,120"/><polyline class="pt p1" points="60,104 158,104 240,104 280,104"/><polyline class="pt p2" points="520,50 480,75 400,104 340,104"/>
+            <rect x="321" y="111" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="330" y="124" text-anchor="middle">D4</text><circle cx="339" cy="112" r="4" class="badge"/>
+            <circle cx="280" cy="104" r="10" class="f1 hd"/><text class="hl" x="280" y="108" text-anchor="middle">1</text><circle cx="340" cy="104" r="10" class="f2 hd"/><text class="hl" x="340" y="108" text-anchor="middle">2</text>
+          </svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+        <p class="small muted" style="margin:0">The street map has a light and a dark drawing of the same file; the theme picks one, and the path colours are the dark palette's camera colours. The attribution reads the same in both.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- G -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure G</span><h2>The readings: what the files say beyond where, and the chat that answers from them</h2></div>
+    <div class="two">
+      <div class="frame">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Dash-4 · readings</h3><span class="muted tiny">in-car · from its path file</span></div>
+        <div class="readings">
+          <div class="r"><span class="mono">20:18:00</span><i class="c4"></i><span>Recording began</span><span class="btn tiny ghost">Open</span></div>
+          <div class="r"><span class="mono">20:22:08</span><i style="background:var(--warn)"></i><span><b>Lights on</b> · until 20:31:40</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:22:08</span><i style="background:var(--bad)"></i><span><b>Siren on</b> · until 20:26:30</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:24:10</span><i style="background:var(--muted)"></i><span>Reached 41 mph</span><span class="btn tiny ghost">Open</span></div>
+          <div class="r"><span class="mono">20:26:28</span><i style="background:var(--muted)"></i><span>Brakes</span><span class="btn tiny ghost">Open</span></div>
+          <div class="r"><span class="mono">20:30:01</span><i style="background:var(--accent)"></i><span><b>Bookmark pressed</b> by the officer</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:31:50</span><i style="background:var(--muted)"></i><span><b>Stood still</b> · 19 minutes, on Harbour Street</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:51:12</span><i class="c4"></i><span>Recording ended</span><span class="btn tiny ghost">Open</span></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px"><h3>BWC2-1 · readings</h3><span class="muted tiny">body · clock from its picture</span></div>
+        <div class="readings">
+          <div class="r"><span class="mono">20:26:04</span><i class="c2"></i><span>Recording began · Ofc. Amari</span><span class="btn tiny ghost">Open</span></div>
+          <div class="r"><span class="mono">20:27:05</span><i style="background:var(--muted)"></i><span><b>Mic on</b></span><span class="btn tiny ghost">Open</span></div>
+          <div class="r"><span class="mono">20:40:10</span><i style="background:var(--muted)"></i><span><b>Muted</b> · 3 minutes 52 seconds</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:45:30</span><i style="background:var(--muted)"></i><span><b>Stood still</b> · 6 minutes, with Dash-4</span><span class="btn tiny">Offer to the chronology</span></div>
+          <div class="r"><span class="mono">20:53:40</span><i class="c2"></i><span>Recording ended</span><span class="btn tiny ghost">Open</span></div>
+        </div>
+      </div>
+      <div class="frame" style="gap:16px">
+        <div class="pane" style="min-height:200px">
+          <svg viewBox="0 0 560 200"><rect width="560" height="200" fill="var(--ground)"/><rect x="0" y="86" width="560" height="18" class="ro"/><rect x="290" y="0" width="16" height="200" class="ro"/><text class="lbl" x="190" y="98">HARBOUR STREET</text>
+            <polyline class="pf p1" points="60,94 240,94 280,94 300,98 305,130"/><polyline class="pf p2" points="520,40 480,65 400,94 340,94 320,100 315,130"/><polyline class="pf p4" points="20,165 300,165 330,165 330,110"/>
+            <circle cx="330" cy="100" r="46" class="ring"/><circle cx="330" cy="100" r="5" class="pin"/>
+          </svg>
+          <div class="near"><b>Who was near here · within 50 m</b><p><span class="mono">20:22:40</span> Dash-4 arrived, stayed to the end</p><p><span class="mono">20:31:12</span> BWC2-1, until 20:53:40</p><p><span class="mono">20:36:05</span> BWC3-1, until 20:49:00</p><p class="muted tiny">BWC1-1 came no nearer than 180 m.</p></div>
+        </div>
+        <div class="drawer">
+          <div class="dh"><b>Ask Gideon · Harbour Street stop</b><span class="muted tiny">the drawer, as on every page in the case</span></div>
+          <div class="q"><b>You:</b> When were Dash-4's lights turned on, and had Ofc. Amari's camera started by then?</div>
+          <div class="a"><p>Dash-4's lights came on at <span class="cite">[Recording 4, 20:22:08]</span> and stayed on until 20:31:40; the siren ran with them until 20:26:30. Ofc. Amari's camera (BWC2-1) began recording at 20:26:04, four minutes after the lights, and its microphone came on at <span class="cite">[Recording 2, 20:27:05]</span>. Both were within 50 m of the stop from 20:31:12.</p><p class="muted tiny">Read from the cameras' path files; the transcripts were not needed for this.</p></div>
+          <div class="ask"><span>Ask about this case…</span><span class="btn tiny primary">Ask</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Readings.</b> Everything a file says beyond where: lights and siren on and off, brakes, the crash sensor, a bookmark press, the microphone on and muted (with how long), low battery, and two things worked out from the fixes: stood still (no movement for over two minutes) and the top speed reached. Each is a time of day; Open moves the clock there and opens the camera; Offer to the chronology makes a proposed event the person accepts into the case's record, beside the notes.</p>
+      <p><b>Who was near here.</b> A press on the map asks which cameras came within a chosen distance of that spot and when, sorted by arrival. The answer is from the fixes alone.</p>
+      <p><b>The chat.</b> The Ask Gideon drawer is on every page in a case already. From the first release the case chat reads the readings with the transcripts: one short paragraph per camera in the office's time of day (when it began and ended, lights, siren, mic, stood still, who was together) and a rule to say which camera and cite the moment. A cited moment opens the Preview as citations do today; on the Map tab it also moves the clock. Positions themselves are never put to the engine, only times, distances and the readings' words.</p>
+    </div>
+  </section>
+
+  <!-- H -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure H</span><h2>The larger map: the whole page for the map, the list folded over its edge, full screen a press further</h2></div>
+    <div class="frame">
+      <div class="maptab large">
+        <div class="lead">
+          <p><b>6 cameras, 4 with a path file · 6 Nov 2025.</b></p>
+          <div class="transport">
+            <span class="btn primary">▶ Play</span><span class="btn">−10 s</span><span class="btn">+10 s</span>
+            <select><option selected>Speed 4×</option></select>
+            <span><span class="clock">20:31:08</span><span class="zone">Central · 6 Nov 2025</span></span>
+            <span class="btn">Fit all</span><span class="btn on">Smaller map</span>
+          </div>
+        </div>
+        <div class="pane">
+          <svg viewBox="0 0 1180 520" aria-label="a drawn map, larger">
+            <rect width="1180" height="520" fill="var(--ground)"/>
+            <rect x="0" y="400" width="1180" height="120" class="wat"/>
+            <rect x="800" y="40" width="240" height="150" rx="6" class="prk"/>
+            <rect x="80" y="70" width="200" height="110" rx="3" class="blk"/><rect x="340" y="70" width="230" height="110" rx="3" class="blk"/><rect x="640" y="70" width="100" height="110" rx="3" class="blk"/>
+            <rect x="80" y="230" width="200" height="110" rx="3" class="blk"/><rect x="340" y="230" width="230" height="110" rx="3" class="blk"/><rect x="640" y="230" width="400" height="110" rx="3" class="blk"/>
+            <rect x="0" y="190" width="1180" height="30" class="ro"/><rect x="0" y="350" width="1180" height="30" class="ro"/>
+            <rect x="300" y="0" width="30" height="400" class="ro"/><rect x="590" y="0" width="30" height="400" class="ro"/><rect x="760" y="0" width="20" height="400" class="ro"/>
+            <text class="lbl big" x="380" y="210">HARBOUR STREET</text><text class="lbl big" x="860" y="370">QUAY ROAD</text>
+            <text class="lbl" transform="translate(319 40) rotate(90)">MILL LANE</text><text class="lbl" transform="translate(609 40) rotate(90)">ROPEWALK</text>
+            <text class="lbl" x="880" y="120">The Green</text><text class="lbl" x="40" y="470">Harbour</text>
+            <polyline class="pf p4" points="60,365 300,365 450,365 600,365 665,365 665,280 672,250 690,225"/>
+            <polyline class="pf p1" points="120,205 320,205 450,205 575,205 605,210 612,270 630,290"/>
+            <polyline class="pf p2" points="1050,110 980,160 840,205 705,205 650,218 635,270 635,315"/>
+            <polyline class="pf p3" points="318,40 318,140 318,205 390,205 500,205 600,210 660,230"/>
+            <polyline class="pt p4" points="60,365 300,365 450,365 600,365 665,365 665,280"/>
+            <polyline class="pt p1" points="120,205 320,205 450,205 575,205"/>
+            <polyline class="pt p2" points="1050,110 980,160 840,205 705,205"/>
+            <polyline class="pt p3" points="318,40 318,140 318,205 390,205"/><polyline class="pt p3 gap" points="390,205 450,205"/>
+            <rect x="654" y="269" width="22" height="22" rx="3" class="f4 hd"/><text class="hl" x="665" y="284" text-anchor="middle">D4</text><circle cx="676" cy="270" r="5" class="badge"/>
+            <circle cx="575" cy="205" r="12" class="f1 hd"/><text class="hl" x="575" y="209" text-anchor="middle">1</text>
+            <circle cx="705" cy="205" r="12" class="f2 hd"/><text class="hl" x="705" y="209" text-anchor="middle">2</text>
+            <circle cx="450" cy="205" r="12" class="f3 hd dim"/><text class="hl" x="450" y="209" text-anchor="middle">3</text>
+          </svg>
+          <span class="corner north">N</span>
+          <span class="corner zoom"><b>+</b><b>−</b></span>
+          <span class="corner big" title="Full screen"><b>⤢</b></span>
+          <span class="corner scale">200 ft</span>
+          <span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+        <div class="list">
+          <div class="h"><span>4 of 4 in view</span><span><b style="color:var(--accent)">fold ›</b></span></div>
+          <div class="row"><span class="dot c1"></span><div><b>BWC1-1</b><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:24 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row"><span class="dot c2"></span><div><b>BWC2-1</b><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:26 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row"><span class="dot c3"></span><div><b>BWC3-1</b> <span class="muted tiny">no fix now</span><div class="facts"><span class="pill warn">By its name</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row"><span class="dot c4 sq"></span><div><b>Dash-4</b> <span class="muted tiny">lights on</span><div class="facts"><span class="pill ok">Clear</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="fold">2 without a path file · 1 on another day</div>
+        </div>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:25%">20:15</span><span style="left:50%">20:30</span><span style="left:75%">20:45</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><div class="ph" style="left:51.9%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><em class="mic" style="left:66%"></em><em class="mic" style="left:73%"></em></div>
+          <div class="head"><i class="c3"></i>BWC3-1</div><div class="track"><i class="c3" style="left:48%;width:3%"></i><i class="c3 gp" style="left:51%;width:7%"></i><i class="c3" style="left:58%;width:30%"></i></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4 <span class="spd">0 mph</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%"></em><em class="siren" style="left:36.9%"></em><em class="siren" style="left:44%"></em><em class="bm" style="left:50%"></em></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)"><span>Folded, the list is a chip over the map's edge:</span><span class="list folded" style="display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:12px"><b>4 of 4 in view</b><span style="color:var(--accent)">‹ show</span></span><span>· and in full screen the slim bar from Figure E floats at the foot with the clock, play, speed and Leave full screen; Escape leaves too.</span></div>
+    </div>
+    <div class="caption">
+      <p><b>Larger map.</b> A toggle on the transport (Larger map / Smaller map, remembered per person in the browser) gives the map the whole width and most of the window's height; the list becomes a translucent panel over the map's right edge that folds to a chip, and the strip stays under with narrower heads. Everything else is the same: the clock, the pans and zooms re-reading the list, Play here opening the Preview.</p>
+      <p><b>Full screen.</b> The ⤢ corner on the map (the browser's own full screen, so the whole screen is the map) carries the slim bar at the foot with the clock, play, speed and Leave full screen; the list chip stays at the right edge; the Preview opens over it as usual. Escape leaves. On a phone the toggle is the same button and full screen is the natural large view.</p>
+    </div>
+  </section>
+
+  <!-- I -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure I</span><h2>How the movement is drawn, and the events as things to press</h2></div>
+    <div class="frame">
+      <div class="maptab">
+        <div class="lead">
+          <div>
+            <p><b>6 cameras, 4 with a path file · 6 Nov 2025.</b></p>
+            <div class="evfilter" style="margin-top:6px"><span>Show</span><span class="seg"><span>Markers only</span><span class="on">Trails</span><span>Whole paths</span></span><span style="margin-left:6px">Events</span><label><span class="tick on" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--text);border-radius:50%"></span> camera on and off</label><label><span class="tick on" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--warn)"></span> lights</label><label><span class="tick on" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--bad)"></span> siren</label><label><span class="tick on" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--muted)"></span> mic</label><label><span class="tick" style="display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--line)"></span><span class="k" style="background:var(--accent)"></span> bookmarks</label></div>
+          </div>
+          <div class="transport">
+            <span class="btn primary">▶ Play</span><span class="btn">‹ event</span><span class="btn">event ›</span>
+            <span><span class="clock">20:22:08</span><span class="zone">Central · 6 Nov 2025</span></span>
+            <span class="btn">Larger map</span>
+          </div>
+        </div>
+        <div class="pane">
+          <svg viewBox="0 0 760 400" aria-label="a drawn map with events">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="0" y="300" width="760" height="100" class="wat"/><rect x="520" y="40" width="160" height="110" rx="6" class="prk"/>
+            <rect x="60" y="60" width="130" height="80" rx="3" class="blk"/><rect x="230" y="60" width="150" height="80" rx="3" class="blk"/><rect x="420" y="60" width="70" height="80" rx="3" class="blk"/><rect x="60" y="180" width="130" height="80" rx="3" class="blk"/><rect x="230" y="180" width="150" height="80" rx="3" class="blk"/><rect x="420" y="180" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="146" width="760" height="22" class="ro"/><rect x="0" y="266" width="760" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="161">HARBOUR STREET</text><text class="lbl big" x="560" y="281">QUAY ROAD</text>
+            <!-- whole paths faint, trails to 20:22:08 -->
+            <polyline class="pf p4" points="40,277 200,277 300,277 400,277 440,277 440,200 445,180 460,165"/>
+            <polyline class="pf p1" points="80,157 210,157 300,157 380,157 400,160 405,200 420,210"/>
+            <polyline class="pf p2" points="700,80 650,120 560,157 470,157 430,165 420,200 420,230"/>
+            <polyline class="pf p3" points="212,30 212,100 212,157 260,157 330,157 400,160 440,170"/>
+            <polyline class="pt p4" points="40,277 200,277 260,277"/>
+            <!-- event pips -->
+            <circle cx="40" cy="277" r="5" class="ev start p4" style="stroke:var(--c4)"/>
+            <polygon points="260,268 266,277 260,286 254,277" class="ev lights sel"/>
+            <polygon points="262,284 268,292 256,292" class="ev siren"/>
+            <circle cx="80" cy="157" r="5" class="ev start" style="stroke:var(--c1)"/>
+            <circle cx="700" cy="80" r="5" class="ev start" style="stroke:var(--c2)"/>
+            <rect x="416" y="226" width="8" height="8" class="ev end"/>
+            <rect x="416" y="206" width="8" height="8" class="ev end"/>
+            <circle cx="212" cy="30" r="5" class="ev start" style="stroke:var(--c3)"/>
+            <rect x="436" y="166" width="8" height="8" class="ev end"/>
+            <rect x="456" y="161" width="8" height="8" class="ev end"/>
+            <circle cx="470" cy="157" r="4" class="ev mic"/><circle cx="430" cy="165" r="4" class="ev mic"/>
+            <!-- the markers at 20:22:08: only Dash-4 has started -->
+            <rect x="251" y="268" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="260" y="281" text-anchor="middle">D4</text><circle cx="269" cy="269" r="4" class="badge"/>
+          </svg>
+          <span class="corner north">N</span><span class="corner zoom"><b>+</b><b>−</b></span><span class="corner scale">200 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+          <div class="evcard" style="left:290px;top:190px"><b>Lights on · Dash-4</b><span class="mono">20:22:08</span> on Quay Road, until 20:31:40 · siren on at the same moment<div class="acts"><span class="btn tiny primary">Play here</span><span class="btn tiny">Offer to the chronology</span><span class="btn tiny ghost">‹ 20:18:00 began</span><span class="btn tiny ghost">20:24:55 mic on ›</span></div></div>
+        </div>
+        <div class="list">
+          <div class="h"><span>Events at this moment</span><span>4 of 4 in view</span></div>
+          <div class="row lit"><span class="dot c4 sq"></span><div><b>Dash-4</b> <span class="muted tiny">selected: lights on</span><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:18 to 20:51</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row dim"><span class="dot c1"></span><div><b>BWC1-1</b> <span class="muted tiny">starts in 1:52</span><div class="facts"><span class="pill ok">Clear</span><span class="mono">20:24 to 20:53</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row dim"><span class="dot c2"></span><div><b>BWC2-1</b> <span class="muted tiny">starts in 3:56</span><div class="facts"><span class="pill ok">Clear</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+          <div class="row dim"><span class="dot c3"></span><div><b>BWC3-1</b> <span class="muted tiny">starts in 6:52</span><div class="facts"><span class="pill warn">By its name</span></div></div><div class="acts"><span class="btn tiny">Play here</span></div></div>
+        </div>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:25%">20:15</span><span style="left:50%">20:30</span><span style="left:75%">20:45</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>BWC1-1</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><em class="cam on" style="left:40%" title="camera on 20:24:00"></em><em class="mic" style="left:41.5%"></em><em class="cam" style="left:88%" title="camera off 20:53:00"></em><div class="ph" style="left:36.9%"><b>20:22</b></div></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><em class="cam on" style="left:43%"></em><em class="mic" style="left:44%"></em><em class="mic" style="left:66%"></em><em class="mic" style="left:73%"></em><em class="cam" style="left:88%"></em></div>
+          <div class="head"><i class="c3"></i>BWC3-1</div><div class="track"><i class="c3" style="left:48%;width:3%"></i><i class="c3 gp" style="left:51%;width:7%"></i><i class="c3" style="left:58%;width:30%"></i><em class="cam on" style="left:48%"></em><em class="cam" style="left:88%"></em></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4</div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="cam on" style="left:30%"></em><em class="on" style="left:36.9%;width:16%"></em><em class="sel" style="left:36.9%" title="lights on 20:22:08"></em><em class="siren" style="left:37.3%"></em><em class="siren" style="left:44%"></em><em style="left:52.8%"></em><em class="cam" style="left:85%"></em></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Show.</b> Three ways to draw the movement, one control, remembered per person: <b>Markers only</b> (heads move over the faint whole paths, nothing grows behind them), <b>Trails</b> (the solid part grows behind each head as the clock runs, as Figure A), <b>Whole paths</b> (every path solid all the time, the heads riding on them). A fourth press hides the faint whole paths altogether under Markers only.</p>
+      <p><b>Events.</b> The readings that are moments, drawn where they happened on the map and when on the lanes: a camera turning on (a ring at the start of its path, a hollow pip on the lane) and off (a square at the end, a filled pip), lights on and off, siren on and off, the mic on and muted, a bookmark press. The Events ticks choose which kinds show, on the map and the strip alike.</p>
+      <p><b>Pressing one.</b> On the map or the lane, a press selects the event: the clock moves to its moment, the camera is lit, and a card says what it is, where (the street from the map file when there is one) and until when, with Play here, Offer to the chronology (the third release), and the previous and next event of that camera. The transport's ‹ event and event › step through every shown event of the day in order. Escape clears the selection.</p>
+    </div>
+  </section>
+
+  <!-- J -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure J</span><h2>Notes from the map: written at the clock's moment on a camera, kept with the case's notes</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3>Writing one</h3>
+        <div class="pane" style="min-height:260px">
+          <svg viewBox="0 0 560 260"><rect width="560" height="260" fill="var(--ground)"/><rect x="0" y="200" width="560" height="60" class="wat"/><rect x="0" y="96" width="560" height="18" class="ro"/><rect x="0" y="176" width="560" height="18" class="ro"/><rect x="290" y="0" width="16" height="200" class="ro"/><text class="lbl" x="150" y="108">HARBOUR STREET</text><text class="lbl" x="400" y="188">QUAY ROAD</text>
+            <polyline class="pf p4" points="20,185 200,185 330,185 330,140 335,120"/><polyline class="pf p2" points="520,40 480,70 400,104 340,104 320,110 315,130"/>
+            <polyline class="pt p4" points="20,185 200,185"/><polyline class="pt p2" points="520,40 480,70 400,104 350,104"/>
+            <rect x="191" y="176" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="200" y="189" text-anchor="middle">D4</text><circle cx="209" cy="177" r="4" class="badge"/>
+            <circle cx="350" cy="104" r="10" class="f2 hd"/><text class="hl" x="350" y="108" text-anchor="middle">2</text>
+            <!-- an earlier note pin -->
+            <path d="M480 60 l-7 -12 a7 7 0 1 1 14 0 z" class="pin"/>
+          </svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span>
+          <div class="evcard" style="left:220px;top:40px;width:280px"><b>Note on Dash-4 · 20:22:08</b><span class="muted tiny">From the map, at the lights-on event. Kept on the recording at this moment, shown on the Notes tab.</span>
+            <div style="border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;margin-top:6px;min-height:40px;color:var(--text)">Lights on as the vehicle reaches the corner of Quay Road; BWC2-1 is still two streets away.</div>
+            <div class="acts"><span class="btn tiny primary">Save the note</span><span class="btn tiny">To check</span><span class="btn tiny ghost">Cancel</span></div></div>
+        </div>
+        <p class="small muted" style="margin:0">Three ways in: <b>Note here</b> on the transport (on the camera whose row or marker is selected, at the clock's moment), <b>Add a note</b> on an event's card (the note carries the event as its origin), and the Preview's own note box while a camera plays, as it works today. The note is written through the same address the Preview uses, so it lands on the line being spoken at that moment or at the moment itself when nothing is said.</p>
+      </div>
+      <div class="frame">
+        <h3>Where it shows</h3>
+        <div class="pane" style="min-height:150px">
+          <svg viewBox="0 0 560 150"><rect width="560" height="150" fill="var(--ground)"/><rect x="0" y="96" width="560" height="18" class="ro"/><rect x="290" y="0" width="16" height="150" class="ro"/><text class="lbl" x="150" y="108">HARBOUR STREET</text>
+            <polyline class="pf p4" points="20,135 200,135 330,135 330,110"/><polyline class="pf p2" points="520,30 480,60 400,104 340,104"/>
+            <path d="M200 134 l-7 -12 a7 7 0 1 1 14 0 z" class="pin"/><path d="M480 58 l-7 -12 a7 7 0 1 1 14 0 z" class="pin"/>
+          </svg>
+          <span class="corner scale">200 ft</span>
+          <div class="evcard" style="left:216px;top:86px;width:230px"><b>Note · Dash-4 · 20:22:08</b>Lights on as the vehicle reaches the corner of Quay Road; BWC2-1 is still two streets away.<span class="muted tiny" style="display:block;margin-top:2px">Pat · 6 Nov 2026 · from the map</span><div class="acts"><span class="btn tiny">Play here</span><span class="btn tiny">Edit</span><span class="btn tiny ghost">On the Notes tab</span></div></div>
+        </div>
+        <div class="strip" style="margin-top:8px">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:50%">20:30</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><em class="bm" style="left:60%" title="note 20:36:12"></em></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4</div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%"></em><em class="bm sel" style="left:36.9%" title="note 20:22:08"></em></div>
+        </div>
+        <div class="evfilter" style="margin-top:8px"><span>Events</span><label><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--accent)"></span> notes</label><label><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent)"></span><span class="k" style="background:var(--warn)"></span> lights</label><span class="muted">…</span></div>
+        <p class="small muted" style="margin:0">A note is a pin on the map where the camera was at its moment and a mark on the lane, with its own tick in the Events row; pressing it selects it like an event, with Play here, Edit and the Notes tab. On the Notes tab's chronology the note sits at 20:22:08 on Dash-4's lane with "from the map, at the lights-on event" on hover, and the case chat reads it as it reads every note. Notes written anywhere else on the camera (the recording page, the Preview, the Notes tab) show on the map the same way.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What it rests on.</b> The note is a moment note on the recording (Phase 10 chapter 1), nothing new to keep: the map only adds a way in and a place to see it. The audit row is the note's usual one and never holds the words or a position.</p>
+      <p><b>A note on no camera.</b> Not in this phase: a note is on a camera at a moment, as everywhere in the app; a mark on the ground with no camera (a place of interest) is left to the build's later list.</p>
+    </div>
+  </section>
+
+  <!-- K -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure K</span><h2>Joined to what the case already has, in the first release: incidents, the counts, search hits, clips</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3>1 · Incidents and the map, both ways</h3>
+        <table class="t">
+          <thead><tr><th>Incident</th><th>Cameras</th><th>Span</th><th>Placed</th><th></th></tr></thead>
+          <tbody><tr><td><b>Traffic stop, 6 Nov</b></td><td>3</td><td class="mono">20:22 to 20:53</td><td><span class="pill ok">3 of 3 · Clear</span></td><td><span class="btn tiny">Open the incident</span> <span class="btn tiny">On the map</span></td></tr></tbody>
+        </table>
+        <div class="days" style="margin-top:4px"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 4 cameras<i></i> · 1 incident</span><span>7 Nov · 1 camera</span></div>
+        <div class="lead" style="margin-top:4px"><p class="small"><b>Map · Traffic stop, 6 Nov</b> <span class="muted">3 cameras of the incident, 20:22 to 20:53 · <b style="color:var(--accent)">whole day</b></span></p><span class="btn tiny">Open the incident</span></div>
+        <div style="border:1px dashed var(--accent);border-radius:var(--radius-lg);padding:8px 10px;font-size:12px;margin-top:4px"><b>Forming on the map.</b> BWC1-1, BWC2-1 and Dash-4 were within 50 m of each other from 20:31 to 20:51 and are in no incident. <span class="btn tiny primary">Make an incident of them</span> <span class="btn tiny ghost">Not these</span></div>
+        <p class="small muted" style="margin:0">On the map from an incident's row and from the incident page's head: the tab opens scoped to the incident's cameras and span, with "whole day" to widen. The day chips mark days with an incident. And the map makes the Incidents tab's forming offer when cameras it can see ran together and are in none; the offer uses the same path as the strip's.</p>
+      </div>
+      <div class="frame">
+        <h3>2 · Home and the Details tab</h3>
+        <div class="card" style="border:1px solid var(--line);border-radius:var(--radius-lg);padding:10px 12px;display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between"><b>Harbour Street stop</b><span class="muted tiny">yesterday</span></div><div class="small muted">6 recordings · 1 incident · 12 notes · 2 reports · <b style="color:var(--text)">4 cameras on the map</b>, 2 without a path file</div></div>
+        <table class="t" style="margin-top:8px"><tbody>
+          <tr><td class="muted">Cameras on the map</td><td>4 of 6 videos have a path file · 2 in-car, 2 body · 6 Nov and 7 Nov</td></tr>
+          <tr><td class="muted">Street map</td><td>installed by the Admin, 184 MB, 20 Oct 2026 · <span class="muted tiny">the region's roads and names, from OpenStreetMap</span></td></tr>
+        </tbody></table>
+        <p class="small muted" style="margin:0">The case card on Home counts the cameras on the map as it counts incidents and reports. The Details tab's About this case carries the same line and whether a street map is installed; the Admin's Status page says the same with the file's size and date.</p>
+      </div>
+      <div class="frame">
+        <h3>4 · A search hit, on the map</h3>
+        <div class="card" style="border:1px solid var(--line);border-radius:var(--radius-lg);padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between"><b>"step out of the vehicle"</b><span class="muted tiny">BWC2-1 · 20:33:41</span></div>
+          <div class="muted">…then I need you to <mark style="background:var(--accent-soft);color:var(--text)">step out of the vehicle</mark> for me, sir…</div>
+          <div class="acts" style="display:flex;gap:4px;margin-top:4px"><span class="btn tiny">Preview</span><span class="btn tiny">Open the recording</span><span class="btn tiny">On the map</span></div>
+        </div>
+        <p class="small muted" style="margin:0">Every search hit and Look-for match already opens the Preview at its moment; <b>On the map</b> opens the tab at that moment with the camera selected, so a found phrase shows where the officer stood when it was said and who else was near. The same button on a note and on a proposed event.</p>
+      </div>
+      <div class="frame">
+        <h3>5 · Clips on the lanes, and a clip from an event</h3>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:50%">20:30</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c2"></i>BWC2-1</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><i style="left:55%;width:6%;top:0;height:4px;border-radius:2px;background:var(--inc)" title="clip 20:33 to 20:36"></i></div>
+          <div class="head"><i class="c4 sq"></i>Dash-4</div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%"></em><em class="sel" style="left:36.9%"></em></div>
+        </div>
+        <div class="evcard" style="position:static;width:auto;margin-top:8px"><b>Lights on · Dash-4 · 20:22:08</b><div class="acts"><span class="btn tiny primary">Play here</span><span class="btn tiny">Clip from here</span><span class="btn tiny">Add a note</span><span class="btn tiny ghost">‹ 20:18:00 began</span><span class="btn tiny ghost">20:24:55 mic on ›</span></div></div>
+        <p class="small muted" style="margin:0">A camera's clips lie along the top of its lane in the clip colour; pressing one plays it. <b>Clip from here</b> on an event's card starts a clip at that moment on that camera, the way a clip starts from a line today; the clip's name offers the event's words ("Lights on, 20:22").</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- L -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure L</span><h2>Joined in the releases after: the wearer's name, where a line was said, the incident page's map, the readings in the written outputs, a picture of the map</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3>6 · The wearer on the Speakers page</h3>
+        <table class="t"><thead><tr><th>Voice</th><th>Suggested</th><th>Why</th><th></th></tr></thead><tbody>
+          <tr><td><span class="pill acc">Speaker 1</span></td><td><b>Ofc. Amari</b></td><td class="small muted">wore BWC2-1 by its path file; the voice nearest the microphone through the recording</td><td><span class="btn tiny primary">Use it</span> <span class="btn tiny ghost">Not them</span></td></tr>
+          <tr><td><span class="pill acc">Speaker 2</span></td><td><b>Ofc. Pell</b></td><td class="small muted">wore BWC1-1, within 20 m of this camera from 20:31; also heard on their own camera</td><td><span class="btn tiny primary">Use it</span> <span class="btn tiny ghost">Not them</span></td></tr>
+        </tbody></table>
+        <p class="small muted" style="margin:0">Suggest names already offers names from the case's People and the transcripts; the path file's wearer joins the offers: the nearest voice on their own camera, and on other cameras when the paths say they stood together. A name taken becomes a Person in the case, so the chat answers by it, and the officer voice book can key a print to the wearer.</p>
+      </div>
+      <div class="frame">
+        <h3>8 · Where a line was said</h3>
+        <div style="border:1px solid var(--line);border-radius:var(--radius-lg);padding:8px 10px;font-size:13px">
+          <div class="muted tiny mono">20:33:41 · Speaker 1</div>
+          <div>Then I need you to step out of the vehicle for me, sir.</div>
+          <div class="muted tiny" style="margin-top:4px;display:flex;gap:8px;align-items:center"><span>On Quay Road · Dash-4 12 m away, BWC1-1 40 m</span><span class="btn tiny">On the map</span></div>
+        </div>
+        <p class="small muted" style="margin:0">On the recording page a line's hover gains where the camera was and who was near, from the paths alone, with On the map at that moment. The event card on the map already shows the line being spoken at its moment through the Preview's reading. Nothing is told to the engine here.</p>
+      </div>
+      <div class="frame">
+        <h3>9 · The incident page's map pane</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px"><div class="still" style="width:auto;height:54px"><b>BWC1-1</b></div><div class="still" style="width:auto;height:54px"><b>BWC2-1</b></div><div class="still" style="width:auto;height:54px"><b>Dash-4</b></div><div class="still" style="width:auto;height:54px;display:grid;place-items:center;font-size:11px;color:var(--muted)">sound: BWC2-1</div></div>
+          <div class="pane" style="min-height:116px"><svg viewBox="0 0 280 116"><rect width="280" height="116" fill="var(--ground)"/><rect x="0" y="50" width="280" height="12" class="ro"/><rect x="140" y="0" width="12" height="116" class="ro"/><polyline class="pt p1" points="20,56 100,56 130,56"/><polyline class="pt p2" points="260,20 200,40 170,56"/><polyline class="pt p4" points="10,100 146,100 146,70"/><circle cx="130" cy="56" r="7" class="f1 hd"/><circle cx="170" cy="56" r="7" class="f2 hd"/><rect x="140" y="64" width="12" height="12" rx="2" class="f4 hd"/></svg><span class="corner scale" style="font-size:9px">100 ft</span></div>
+        </div>
+        <p class="small muted" style="margin:0">The incident page's wall already runs one clock over its videos; a map pane beside the wall follows that clock with the same drawing (markers, trails, events), with Larger map to swap the wall for the map. One script serves both pages.</p>
+      </div>
+      <div class="frame">
+        <h3>10 · The readings in the memo, the comparison and the timeline report</h3>
+        <div style="border-left:3px solid var(--line);padding:4px 10px;font-size:13px">
+          <p style="margin:0 0 4px"><b>Comparison, BWC2-1 against Dash-4, 20:22 to 20:26.</b> Dash-4's lights and siren came on at 20:22:08 on Quay Road <span class="cite" style="color:var(--accent);font-family:var(--mono);font-size:12px">[Recording 4, 20:22:08]</span>; BWC2-1 was two streets away until 20:31:12 and its picture shows no vehicle before then, so the two accounts do not meet until the stop.</p>
+          <p style="margin:0" class="muted tiny">Timeline report, 20:40:10: BWC2-1 microphone muted, 3 minutes 52 seconds (from its path file).</p>
+        </div>
+        <p class="small muted" style="margin:0">The chat reads the readings from the first release; the memo, the camera-to-camera comparison and the timeline report read the same block, so distances and the flags enter the written outputs with the same citations. Times, distances and words only, never a coordinate.</p>
+      </div>
+      <div class="frame">
+        <h3>11 · A picture of the map</h3>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div class="still" style="width:160px;height:90px"><b>Map · 20:22:08</b></div>
+          <div class="small"><b>Save a picture of the map</b> <span class="muted">on the transport: the map as drawn at this moment (the paths, the markers, the pins, the scale and the attribution) becomes a picture Document on the case, named by the day and the moment, ready for the notes export and the memo's appendix.</span><div class="acts" style="display:flex;gap:4px;margin-top:6px"><span class="btn tiny">Save a picture</span></div></div>
+        </div>
+        <p class="small muted" style="margin:0">The map is drawn in the browser, so the picture is taken there and sent up as a Document, not drawn on the server. A note's export can then show the map still beside the camera's still at the same moment.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Order.</b> 10 with the second release (it is server-side words, next to the chat's block); 6 and 8 as the fourth release; 9 and 11 as the fifth. Left aside at your word: Bulk noticing path files (3) and the two clocks checking each other (7).</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>Choices on the drawing, and what it would take</h2></div>
+    <div class="caption">
+      <p><b>1.</b> The list beside the map (drawn) or under it.</p>
+      <p><b>2.</b> The strip shows every camera of the day, the out-of-view ones faded (drawn), or only those in view.</p>
+      <p><b>3.</b> Marker labels: the camera's number and the unit (drawn), or the wearer's initials.</p>
+      <p><b>4.</b> A row press flies to the path and Play here opens the camera (drawn), or one press does both.</p>
+      <p><b>5.</b> The scale bar in feet (drawn) or metres.</p>
+      <p><b>6.</b> The Preview's ten-second lead-in kept (drawn) or the camera opened exact.</p>
+      <p><b>7.</b> A vehicle's streams as one row and one marker with the streams as chips (drawn), or a row each.</p>
+      <p><b>8.</b> In-car markers square, body cameras round (drawn), or all round.</p>
+      <p><b>9.</b> Stood still after two minutes without movement, and "near" at 50 m (drawn), or other figures.</p>
+      <p><b>10.</b> The larger map keeps the list as a folding panel over its edge (drawn), or hides it until Smaller map; and whether the browser's full screen is offered too (drawn).</p>
+      <p><b>11.</b> The Show control's three ways (Markers only, Trails, Whole paths) as drawn, or a plain Trails on/off switch.</p>
+      <p><b>12.</b> Events on the map as small shapes at the spot (drawn) or only on the lanes; the event card's street name from the map file (drawn) or the coordinates left out of words entirely; ‹ event and event › stepping every camera's events (drawn) or the selected camera's alone.</p>
+      <p><b>13.</b> Notes from the map through Note here, an event's card and the Preview (drawn); and notes shown as pins on the map with their own Events tick (drawn), or on the lanes alone.</p>
+      <p><b>14.</b> The map's forming offer ("make an incident of them") at 50 m and 5 minutes together (drawn), or left to the Incidents tab alone.</p>
+      <p><b>15.</b> A picture of the map saved as a Document on the case (drawn) or only into the notes export; the incident page's map pane beside the wall (drawn) or under it.</p>
+    </div>
+    <div class="verdict" style="margin-top:16px">
+      <b>Recommended: five releases.</b>
+      <ul>
+        <li><b>v1.187.0</b> (one migration): the path file taken in through this tab and matched by name; the paths, markers, clock, list and strip; the Show control and the larger map; the events on the lanes and the map, pressable, with the card and ‹ event ›; notes written from the map and shown on it; the Preview coupling; the street map from the Admin's file with <code>./transcribe basemap</code>; the chat reading the readings; On the map from incidents, search hits, notes and proposed events, the incident scope, the forming offer, the counts on Home and Details, clips on the lanes and Clip from here. After v1.186.0 is committed.</li>
+        <li><b>v1.188.0</b>: an in-car file's own clock places a recording that has none (never over a read clock or a hand placement), so the chronology and the Incidents tab gain it too; the readings block in the memo, the comparison and the timeline report.</li>
+        <li><b>v1.189.0</b>: the Readings list, Offer to the chronology on an event, Who was near here, stood still and the speed trace; the narrow slim bar; what the walk turns up.</li>
+        <li><b>v1.190.0</b>: the wearer offered on the Speakers page and keyed in the voice book; where a line was said on the recording page.</li>
+        <li><b>v1.191.0</b>: the map pane on the incident page; Save a picture of the map as a Document.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -154,6 +154,7 @@
     el.querySelectorAll("[data-file]").forEach(function (b) { b.addEventListener("click", function () { var r = rowOf(b.dataset.file); panelPost("/recording/" + r.id + "/clock", { date: r.file.date, how: "file" }); }); });
     el.querySelectorAll("[data-type]").forEach(function (b) { b.addEventListener("click", function () { placeBox(rowOf(b.dataset.type), null); }); });
     el.querySelectorAll("[data-by-day]").forEach(function (b) { b.addEventListener("click", function () { placeBox(rowOf(b.dataset.byDay), null, true); }); });
+    el.querySelectorAll("[data-off]").forEach(function (b) { b.addEventListener("click", function () { panelPost("/recording/" + b.dataset.off + "/clock/off", {}); }); });
     stills(el);
   }
   function panelPost(url, body) {
@@ -161,6 +162,15 @@
       .catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
   }
   function panelRow(r) {
+    var stillBox = "<span class='still sm' title='" + esc(r.title) + "'><img alt='' data-still='" + esc(r.still) + "'></span>";
+    var noteWords = r.notes ? " <span class='muted tiny'>· " + plural(r.notes, "note") + "</span>" : "";
+    // Placed by the day alone (v1.186.1): a day and no hour, so it sits
+    // here with Take off the clock, and is never matched by sound.
+    if (r.placed_by_day) {
+      return "<div class='urow' data-row='" + r.id + "'>" + stillBox + "<div><b>" + esc(r.title) + "</b> <span class='pill small'>" + esc(r.placed) + "</span>" + noteWords +
+        "<div class='facts'>Placed by the day alone, no hour, on " + esc(r.day_words) + "." + (r.file ? " File says " + esc(r.file.words) + "." : "") + "</div></div><div class='acts'>" +
+        (r.file ? "<button type='button' class='tiny' data-file='" + r.id + "'>Place from the file</button>" : "") + "<button type='button' class='tiny' data-type='" + r.id + "'>Type a time</button><button type='button' class='tiny ghost' data-off='" + r.id + "'>Take off the clock</button></div></div>";
+    }
     var facts = r.file ? "File says " + esc(r.file.words) + "." : "No time in its file.";
     var s = r.sound, sound = "", acts = "";
     if (s && (s.state === "queued" || s.state === "running")) { sound = "Matching the sound; about a minute."; }
@@ -170,7 +180,7 @@
     else if (r.set_aside) { sound = "The sound suggestion was set aside."; }
     if (s && s.state === "done" && s.may_place) { acts = "<button type='button' class='tiny primary' data-sound='" + r.id + "'>Place it there</button><button type='button' class='tiny ghost' data-aside='" + r.id + "'>Not this</button>"; }
     else { acts = (r.file ? "<button type='button' class='tiny' data-file='" + r.id + "'>Place from the file</button>" : "") + "<button type='button' class='tiny' data-type='" + r.id + "'>Type a time</button><button type='button' class='tiny' data-by-day='" + r.id + "'>Place by the day</button>"; }
-    return "<div class='urow' data-row='" + r.id + "'><span class='still sm' title='" + esc(r.title) + "'><img alt='' data-still='" + esc(r.still) + "'></span><div><b>" + esc(r.title) + "</b> <span class='pill small warn'>Not placed</span>" + (r.notes ? " <span class='muted tiny'>· " + plural(r.notes, "note") + "</span>" : "") +
+    return "<div class='urow' data-row='" + r.id + "'>" + stillBox + "<div><b>" + esc(r.title) + "</b> <span class='pill small warn'>Not placed</span>" + noteWords +
       "<div class='facts'>" + facts + (sound ? " " + sound : "") + "</div></div><div class='acts'>" + acts + "</div></div>";
   }
   function rearm() {
@@ -630,7 +640,14 @@
       html += "</div>";
     });
     if (d.unknown.length) {
-      html += "<div class='unknown'><div class='sh' style='display: flex; gap: 10px; align-items: baseline'><b style='font-family: var(--mono); font-size: 13px'>Time unknown on " + esc(d.words) + "</b><span class='muted'>" + plural(d.unknown.length, "note") + "</span></div>";
+      // The recordings placed by the day alone (v1.186.1): Set its time and
+      // Take off the clock, since they have no bar to press.
+      var who = {}, order = [];
+      d.unknown.forEach(function (e) { if (!who[e.recording]) { who[e.recording] = e.title; order.push(e.recording); } });
+      var presses = "<span class='tiny' style='margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; align-items: center'>";
+      order.forEach(function (id) { presses += "<span>" + esc(who[id]) + "</span><button type='button' class='tiny' data-set-time='" + id + "' data-title='" + esc(who[id]) + "'>Set its time</button><button type='button' class='tiny ghost' data-off-day='" + id + "'>Take off the clock</button>"; });
+      presses += "</span>";
+      html += "<div class='unknown'><div class='sh' style='display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap'><b style='font-family: var(--mono); font-size: 13px'>Time unknown on " + esc(d.words) + "</b><span class='muted'>" + plural(d.unknown.length, "note") + "</span>" + presses + "</div>";
       d.unknown.forEach(function (e) { html += entry(e); });
       html += "</div>";
     }
@@ -660,6 +677,8 @@
   function wire() {
     host.querySelectorAll("[data-day]").forEach(function (b) { b.addEventListener("click", function () { load(b.dataset.day, null); }); });
     host.querySelectorAll("[data-rail-sound]").forEach(function (b) { b.addEventListener("click", function () { panelPost("/recording/" + b.dataset.railSound + "/clock/by-sound", {}); }); });
+    host.querySelectorAll("[data-set-time]").forEach(function (b) { b.addEventListener("click", function () { placeBox({ id: b.dataset.setTime, title: b.dataset.title, notes: 0, file: null }, null); }); });
+    host.querySelectorAll("[data-off-day]").forEach(function (b) { b.addEventListener("click", function () { post("/recording/" + b.dataset.offDay + "/clock/off", {}).then(function () { load(state.day ? state.day.date : "", state.span); }).catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); }); }); });
     var r = host.querySelector("#chron-track");
     if (r) { wireRuler(r); }
     host.querySelectorAll("[data-rail]").forEach(function (chip) {

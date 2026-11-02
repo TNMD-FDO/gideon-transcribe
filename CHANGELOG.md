@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.186.1, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two faults met on the first evening of v1.186.0, both found by the maintainer on an aircraft camera's video.
+
+- **A camera's date in any form it burns it.** The Recording's clock read only three date forms (month/day/year, ISO, month-day-year with hyphens), so a camera that prints its date as day, month letters and year with no separators had its time read and checked and still stood as not on the clock, and the panel offered to place it by hand. One reader now knows every form a camera is known to burn (with and without separators, either case, a two-digit year only in that last form), used by the clock, the strip's incident days and the pages' words. No re-read: the stamp wins, so such videos take their clocks by themselves after the upgrade. Three of the office's videos stood this way.
+- **A video placed by the day alone can be undone.** It has a day and no hour, so it had no bar to press and sat on no panel: nothing on any page could take it off the clock or give it a time. It now sits on the Not-on-the-clock panel too, last, "Placed by the day alone, no hour, on 2 Nov 2026", with **Take off the clock**, Type a time and the file's time, and no sound line, since it is never matched; the chips and the Date strip count it on its own day; and the **Time unknown** head on the Notes tab's chronology offers **Set its time** and **Take off the clock** for each recording whose notes land there.
+
 ## v1.186.0, 2026-11-02
 
 ```

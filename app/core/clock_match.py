@@ -335,7 +335,14 @@ def rows_of(case) -> list[dict]:
     }
     rows = []
     for one in recordings:
-        if not _clockless(one):
+        # A video placed by the day alone (v1.186.1) has a day and no hour:
+        # it sits here too, with Take off the clock, and is never matched.
+        day_alone = None
+        if incidents.is_video(one):
+            date, start, how = case_chronology.clock_of(one)
+            if date is not None and how == case_chronology.DAY:
+                day_alone = date
+        if day_alone is None and not _clockless(one):
             continue
         words, seconds = incidents.file_time_of(one)
         file_date = incidents.file_date_of(one)
@@ -351,6 +358,9 @@ def rows_of(case) -> list[dict]:
         match = matches.get(one.pk)
         sound = None
         rank = 2 if file else 3
+        if day_alone is not None:
+            match = None
+            rank = 4
         if match is not None and not match.set_aside:
             sound = {"state": match.state, "reason": match.reason}
             if match.state == DONE:
@@ -378,6 +388,9 @@ def rows_of(case) -> list[dict]:
                 "sound": sound,
                 "set_aside": bool(match and match.set_aside),
                 "rank": rank,
+                "placed_by_day": day_alone is not None,
+                "day_words": case_chronology.day_words(day_alone) if day_alone else "",
+                "placed": case_chronology.placed_words(one) if day_alone else "",
             }
         )
     rows.sort(key=lambda row: (row["rank"], row["title"]))
@@ -388,9 +401,19 @@ def unclocked_by_day(case, recordings=None) -> dict:
     """How many clockless videos each day has by its file's date, for the
     day chips and the Date strip's ring. Given the case's recordings already
     loaded, asks the database nothing (the case page's query budget)."""
+    from core import case_chronology
+
     counts: dict = {}
     for one in recordings if recordings is not None else case.recordings.all():
-        if not _clockless(one):
+        if not incidents.is_video(one):
+            continue
+        date, _start, how = case_chronology.clock_of(one)
+        if date is not None and how == case_chronology.DAY:
+            # Placed by the day alone (v1.186.1): no hour, so not on the clock
+            # in the panel's sense, counted on its own day.
+            counts[date] = counts.get(date, 0) + 1
+            continue
+        if date is not None:
             continue
         date = incidents.file_date_of(one)
         if date is not None:

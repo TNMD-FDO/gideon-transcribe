@@ -338,13 +338,12 @@ def stamp_checked(recording) -> bool:
 
 def plain_date(text: str) -> str:
     """A date as the camera burned it, in the form the rest of the page uses
-    (v1.123.0): "11/06/2025" reads "06 Nov 2025"; anything else stays as read."""
-    for form in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
-        try:
-            return dt.datetime.strptime(text, form).strftime("%d %b %Y")
-        except ValueError:
-            continue
-    return text
+    (v1.123.0): "11/06/2025" reads "06 Nov 2025"; anything else stays as read.
+    Every form the one reader knows, from v1.186.1."""
+    from core import prompts
+
+    when = prompts.stamp_date_of(text)
+    return when.strftime("%d %b %Y") if when is not None else text
 
 
 def stamp_words(recording) -> tuple[str, str]:

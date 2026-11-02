@@ -1454,6 +1454,44 @@ def clock_seconds(text: str) -> int | None:
     return hours * 3600 + minutes * 60 + seconds
 
 
+# The forms a camera burns its date in (v1.186.1): month/day/year as body
+# cameras print it, ISO, month-day-year with hyphens, and the aircraft data
+# bar's day, month in letters and year, with or without separators, in either
+# case; a two-digit year only in that last form, and only from 2000 on.
+STAMP_DATE_FORMS = (
+    "%m/%d/%Y",
+    "%Y-%m-%d",
+    "%m-%d-%Y",
+    "%d%b%Y",
+    "%d %b %Y",
+    "%d-%b-%Y",
+    "%d/%b/%Y",
+    "%b %d %Y",
+    "%b %d, %Y",
+    "%d%b%y",
+)
+
+
+def stamp_date_of(text: str):
+    """A printed date as a date, in any form a camera is known to burn it
+    (v1.186.1), or None. One reader for the Recording's clock, the strip's
+    days and the pages' words, so a camera's form is learnt once."""
+    import datetime as dt
+
+    text = (text or "").strip()
+    if not text:
+        return None
+    for form in STAMP_DATE_FORMS:
+        try:
+            when = dt.datetime.strptime(text, form).date()
+        except ValueError:
+            continue
+        if when.year < 2000:
+            continue
+        return when
+    return None
+
+
 def stamp_line(stamp: dict | None) -> str:
     """The camera's clock as the model is told it, or nothing.
 
