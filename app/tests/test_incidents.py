@@ -604,7 +604,7 @@ def test_a_strong_match_places_the_camera_by_sound(
     monkeypatch.setattr(
         sound_match,
         "lag_between",
-        lambda a, b, expected=None: sound_match.Match(41.3, 4.0),
+        lambda a, b, **kw: sound_match.Match(41.3, 4.0),
     )
     assert incidents.ask_for_match(cam_second, cam_first, by=person)
     cam_second.refresh_from_db()
@@ -612,12 +612,18 @@ def test_a_strong_match_places_the_camera_by_sound(
     incidents.run_match(cam_second)
     cam_second.refresh_from_db()
     assert cam_second.match_state == "done" and cam_second.match_lag == 41.3
+    # Found over the whole recording, with no file time to search near
+    # (v1.183.0): Unclear, however strong, and never applied by the app.
+    assert cam_second.match_surety == "unclear" and cam_second.placed == "guess"
+    assert incidents.apply_match(cam_second, by=person)
+    cam_second.refresh_from_db()
     assert cam_second.placed == "sound" and cam_second.starts_at == pytest.approx(41.3)
+    assert incidents.surety_of(cam_second)["word"] == "Unclear"
     # A weak match is kept and shown, not applied.
     monkeypatch.setattr(
         sound_match,
         "lag_between",
-        lambda a, b, expected=None: sound_match.Match(10.0, 1.1),
+        lambda a, b, **kw: sound_match.Match(10.0, 1.1),
     )
     third = video(person, a_case, "third", stamp={})
     incidents.add_cameras(incident, [third], by=person)
@@ -634,6 +640,75 @@ def test_a_strong_match_places_the_camera_by_sound(
     # Off, the match is not offered.
     settings_store.set_to("incidents_sound_match", False)
     assert incidents.ask_for_match(cam_third, cam_first, by=person) is False
+
+
+def test_a_match_near_the_files_own_time_is_clear_likely_or_unclear(
+    person, a_case, tmp_path, monkeypatch
+):
+    """The probe's rule (v1.183.0): with both files carrying a time, the
+    match is looked for within a minute of their difference first (Clear at
+    1.8), then within ten minutes agreeing with it to two seconds (Likely at
+    1.5), else Unclear and left to the person."""
+    tags_a = {"creation_time": "2025-11-06T20:24:00Z"}
+    tags_b = {"creation_time": "2025-11-06T20:25:40Z"}  # 100 s later
+    first = video(person, a_case, "first", stamp=stamp("21:56:19"), tags=tags_a)
+    second = video(person, a_case, "second", stamp={}, tags=tags_b)
+    third = video(person, a_case, "third", stamp={}, tags=tags_b)
+    fourth = video(person, a_case, "fourth", stamp={}, tags=tags_b)
+    for recording in (first, second, third, fourth):
+        Side.objects.create(recording=recording, number=1)
+        (recording.folder / "asr-side1.wav").write_bytes(b"x")
+    incident = incidents.make(a_case, "Stop", [first, second, third, fourth], by=person)
+    cam_first = incident.cameras.get(recording=first)
+    from core import tasks
+
+    monkeypatch.setattr(tasks.match_sound, "defer", lambda **kw: None)
+    asked = []
+
+    def by_window(a, b, expected=None, window=None):
+        asked.append((round(expected), window))
+        if window == incidents.NEAR_WINDOW:
+            return sound_match.Match(expected + 0.4, NEAR)
+        return sound_match.Match(expected + WIDE_OFF, WIDE)
+
+    monkeypatch.setattr(sound_match, "lag_between", by_window)
+    # Clear: strong within a minute.
+    NEAR, WIDE, WIDE_OFF = 2.5, 1.2, 0.0
+    cam = incident.cameras.get(recording=second)
+    incidents.ask_for_match(cam, cam_first, by=person)
+    incidents.run_match(cam)
+    cam.refresh_from_db()
+    assert asked[-1] == (100, incidents.NEAR_WINDOW)
+    assert cam.match_surety == "clear" and cam.placed == "sound"
+    assert cam.starts_at == pytest.approx(cam_first.starts_at + 100.4)
+    assert incidents.surety_of(cam)["word"] == "Clear"
+    # Likely: weak within a minute, but the wider search agrees with the time.
+    NEAR, WIDE, WIDE_OFF = 1.2, 2.0, 1.5
+    cam = incident.cameras.get(recording=third)
+    incidents.ask_for_match(cam, cam_first, by=person)
+    incidents.run_match(cam)
+    cam.refresh_from_db()
+    assert asked[-1] == (100, incidents.WIDE_WINDOW)
+    assert cam.match_surety == "likely" and cam.placed == "sound"
+    assert incidents.surety_of(cam)["word"] == "Likely"
+    # Unclear: the wider search lands far from the time; not applied.
+    NEAR, WIDE, WIDE_OFF = 1.2, 2.6, 284.0
+    cam = incident.cameras.get(recording=fourth)
+    incidents.ask_for_match(cam, cam_first, by=person)
+    incidents.run_match(cam)
+    cam.refresh_from_db()
+    assert cam.match_surety == "unclear" and cam.placed == "guess"
+    assert cam.match_strength == 2.6 and cam.match_lag == pytest.approx(384.0)
+    # The words beside every placed pill.
+    assert incidents.surety_of(cam_first)["word"] == "Clear"
+    cam_first.placed = incidents.HAND
+    assert incidents.surety_of(cam_first)["word"] == "As typed"
+    cam_first.placed = incidents.FILE
+    assert incidents.surety_of(cam_first)["word"] == "Unchecked"
+    cam_first.placed = incidents.CLOCK_UNCHECKED
+    assert incidents.surety_of(cam_first)["word"] == "Likely"
+    cam_first.placed = incidents.NOT_PLACED
+    assert incidents.surety_of(cam_first)["word"] == "Not placed"
 
 
 # The words ---------------------------------------------------------------------

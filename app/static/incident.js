@@ -86,6 +86,13 @@
   // The tile's short pill (chapter 4); the full words are its hover title.
   var SHORT_PILL = { clock: "Clock", clock_unchecked: "Clock?", sound: "Sound", file: "File", hand: "Hand", guess: "Guess" };
   function shortPill(cam) { return SHORT_PILL[cam.placed] || cam.placed_words || ""; }
+  // The surety word beside the placed pill (v1.183.0): how surely the
+  // camera sits where it does, with why on hover.
+  function suretyPill(cam) {
+    var s = cam.surety;
+    if (!s || !s.word || cam.starts_at === null) { return ""; }
+    return "<span class='pill " + escape(s.tone || "") + " small surety' title='" + quoted(s.why || "") + "'>" + escape(s.word) + "</span>";
+  }
 
   function now() {
     if (!playing) { return moment; }
@@ -266,7 +273,7 @@
     tile.draggable = true;
     tile.innerHTML =
       "<div class='inc-tile-head'><span class='dot'></span><b title='" + quoted(cam.title) + "'>" + escape(cam.camera_id) + "</b>" +
-      "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(shortPill(cam)) + "</span>" +
+      "<span class='pill " + escape(cam.placed_tone) + " small' title='" + quoted(cam.placed_words) + "'>" + escape(shortPill(cam)) + "</span>" + suretyPill(cam) +
       "<button type='button' class='tiny ghost snd' data-tile='sound' title='Hear this camera'><svg class='i' aria-hidden='true'><use href='#i-muted'></use></svg></button>" +
       "<button type='button' class='tiny sync-open' data-tile='sync' title='Nudge this camera into step, or set its start'>Sync</button>" +
       "<details class='menu tile-menu'><summary class='tiny' title='Swap out, open, remove'>⋯</summary><ul>" +
@@ -2167,8 +2174,10 @@
     if (m.state === "failed") { return "<div class='small muted'>No match: " + escape(m.reason || "the sounds did not line up") + ".</div>"; }
     if (m.state === "done") {
       var words = "The sound lines up " + (m.lag >= 0 ? "" : "−") + Math.abs(m.lag).toFixed(1) + " s " + (m.lag >= 0 ? "after" : "before") + " " + escape(name) + " starts";
-      if (cam.placed === "sound") { return "<div class='small muted'>" + words + "; placed by it.</div>"; }
-      return "<div class='small'><span class='pill warn small'>Weak match</span> " + words + ", but not clearly. <button type='button' class='tiny' data-act='place' data-how='match' data-camera='" + cam.id + "'>Use it anyway</button></div>";
+      if (cam.placed === "sound") { return "<div class='small muted'>" + words + "; placed by it" + (m.surety === "clear" ? ", within a minute of the file's own time" : m.surety === "likely" ? ", near the file's own time" : "") + ".</div>"; }
+      // Unclear (v1.183.0): found over the whole recording with no known
+      // time to search near, or not clearly near it; never applied by the app.
+      return "<div class='small'><span class='pill warn small'>Unclear match</span> " + words + (m.surety === "unclear" && !cam.file_time ? ", found with no file time to search near" : ", but not clearly") + ". <button type='button' class='tiny' data-act='place' data-how='match' data-camera='" + cam.id + "'>Use it anyway</button></div>";
     }
     return "";
   }
@@ -2616,7 +2625,7 @@
       html += "<div class='inc-sync-card" + (cam.synced ? "" : " unsynced") + "' data-sync-row='" + cam.id + "'>" +
         "<div class='name'><input type='checkbox' name='sync-tick' value='" + cam.id + "'" + (ticked.indexOf(cam.id) !== -1 ? " checked" : "") + " aria-label='Tick " + quoted(cam.camera_id) + "'> " +
         "<b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><span class='muted small grow'>" + escape(cam.title) + "</span>" +
-        "<span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span></div>" +
+        "<span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" + suretyPill(cam) + "</div>" +
         "<div class='facts'>" +
         (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture") + "</span>") +
         (cam.placed_by && cam.synced ? "<span class='muted small'>by " + escape(cam.placed_by) + "</span>" : "") +

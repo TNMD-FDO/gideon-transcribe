@@ -76,6 +76,48 @@ recorded: it says the method works on real sound in a quiet room, and
 nothing yet about a street with wind and traffic, or about a pair out of
 earshot. The counts above are still owed.
 
+## The probe, 2026-11-02
+
+Run read-only on the office's server at the maintainer's word, with the
+scripts kept beside the session's checks (`probe_sound_match.sh`, `2.sh`,
+`3.sh` under the maintainer's local tools): three incidents with 26 cameras
+placed from checked clocks, so every pair's true shift was known; 14 true
+pairs, and 6 pairs of cameras from different incidents, which never overlap.
+The audio was whole (16 kHz, 10 to 126 MB a file) and a pair matched in
+well under a second. Counts and seconds only; nothing of the sound left the
+server.
+
+| Search | True pairs within 2.5 s of the clocks | True strengths | False strengths |
+|---|---|---|---|
+| The whole range (the app's way with no file time) | 1 of 14 | 1.01 to 1.61 | 1.07 to 2.57; four of six at or over 1.5 |
+| Ten minutes either side of the clocks' shift (the app's way when both files carry a time) | 8 of 14 | right ones 1.43 to 3.49; two wrong ones 2.06 and 1.63 | not run |
+| One minute either side | 11 of 14 | right ones 1.95 to 5.94, one at 1.04 | wrong ones 1.07, 1.1, 1.63 |
+
+The errors on the right matches were 0.1 to 0.7 s, with three at about
+2.1 s, against clocks that drift a second or two. A second statistic, the
+peak's prominence over every shift tried (in spreads above the mean),
+separated nothing: the false pairs scored highest on it, up to 26.
+
+What follows: the loudness-envelope correlation is a fine adjustment near
+a known shift and unreliable over an unknown one, and its strength says
+nothing on its own, since it depends on how wide the search was. At the
+1.5 line a whole-range search would have placed four of the six false
+pairs as Matched by sound. So (v1.183.0, `incidents._match_near`): a match
+is looked for within a minute of the files' own shift first and applied as
+Clear at 1.8 or more (ten right, none wrong on these pairs); else within
+ten minutes, applied as Likely when it agrees with that shift to two
+seconds at 1.5 or more; else, and always when the files carry no time,
+Unclear, shown with its lag and never applied by the app. The Surety word
+beside every placed pill (`CONTEXT.md`) is the same scale for the clocks:
+checked on two frames is Clear, read once is Likely.
+
+Still open: whether the match near a known shift stays right on a street
+with wind and traffic (these incidents were the office's own, of unknown
+kind to this note), and whether a better statistic than the peak ratio
+exists for the whole-range case; a spectral method (onsets by band rather
+than loudness alone) is the next thing to try if a surety over an unknown
+shift is ever wanted.
+
 ## Sources
 
 The app's own media facts (`docs/research/media-pipeline-facts.md`: the ASR

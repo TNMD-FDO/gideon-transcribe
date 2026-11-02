@@ -267,8 +267,12 @@ def _camera_json(
             "against": str(camera.match_against_id) if camera.match_against_id else "",
             "lag": camera.match_lag,
             "strength": camera.match_strength,
+            "surety": camera.match_surety,
             "reason": camera.match_reason,
         },
+        # How surely it sits where it does (v1.183.0): a word beside the
+        # placed pill.
+        "surety": incidents.surety_of(camera),
     }
 
 

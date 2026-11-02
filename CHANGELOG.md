@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.183.0, 2026-11-02
+
+```
+Models: unchanged
+Database: migrates (0101, the match's surety on a camera)
+```
+
+The sound match, made safe, with a surety word on every placed camera, from the probe on the office's own cameras (`docs/research/sound-match.md`, 2026-11-02) at the maintainer's word.
+
+- **A match is never applied blind.** The probe found the match accurate near a known shift and unreliable over an unknown one, with its strength saying nothing there: at the old line four of six pairs that never overlapped would have been placed as Matched by sound. Now a match is looked for within a minute of the files' own times first and applied as **Clear** at 1.8 or more; else within ten minutes, applied as **Likely** when it agrees with that time to two seconds at 1.5 or more; a match found anywhere else, including over the whole recording when the files carry no time, is **Unclear**, shown with its lag and Use it anyway, and never applied by the app.
+- **A surety word beside every placed pill**, on the Cameras tab's tiles and the Sync sheet's rows, with why on hover: Clear (from its clock checked on two frames, or a clear sound match), Likely (from its clock read once, or a likely sound match), Unclear (a sound match the person placed anyway), As typed (by hand), Unchecked (from its file), Not placed. The glossary gains **Surety**.
+- **The research note** carries the probe's figures and what is still open.
+
 ## v1.182.0, 2026-11-02
 
 ```

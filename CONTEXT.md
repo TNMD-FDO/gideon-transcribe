@@ -515,8 +515,12 @@ The time of day, with its date, that an Incident's cameras run on, taken from th
 _Avoid_: timeline, offset, master clock
 
 **Placed**:
-How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Synced by hand; or Not synced yet (the app's guess, from v1.60.0: the file's time, else the Incident's start, until Sync on the camera fixes it). Every camera in an Incident is on the Wall; the page's control for a camera's place is **Sync**. Phase 6.
+How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Synced by hand; or Not synced yet (the app's guess, from v1.60.0: the file's time, else the Incident's start, until Sync on the camera fixes it). Every camera in an Incident is on the Wall; the page's control for a camera's place is **Sync**. Phase 6. Since v1.183.0 a **Surety** word stands beside the pill.
 _Avoid_: aligned, calibrated, offset
+
+**Surety**:
+How surely a camera sits where it does, one word beside its Placed pill (v1.183.0, from the sound match probe of 2026-11-02): **Clear** (from its clock checked on two frames; or a sound match found within a minute of the file's own time at 1.8 or more), **Likely** (from its clock read once; or a sound match within ten minutes that agrees with the file's time to two seconds, at 1.5 or more), **Unclear** (a sound match found anywhere else, never applied by the app, left to the person with Use it anyway), **As typed** (synced by hand), **Unchecked** (from its file's time), **Not placed**. A match found over the whole recording with no known time to search near is always Unclear: the probe found its strength says nothing there.
+_Avoid_: confidence, score, certainty, probability
 
 **Wall**:
 The Incident page's grid of cameras playing in step, up to the number the office sets (six shipped), one of them with the sound; the rest of the Incident's cameras wait as parked lanes in the strip to swap in (parked tiles until chapter 4). Phase 6.

@@ -68,10 +68,22 @@ MATCH_RUNNING = "running"
 MATCH_DONE = "done"
 MATCH_FAILED = "failed"
 
-# A match this strong is applied; a weaker one is shown and left to the
-# person. Left to the build by the chapter; the research note records the
-# probe that set it.
+# The sound match's lines, from the probe on the office's own cameras
+# (docs/research/sound-match.md, 2026-11-02). Over an unknown shift the
+# match is unreliable and its strength says nothing, so a match found over
+# the whole range is never applied by itself. Near a known shift (the
+# files' own times) it is accurate: within a minute of it, 1.8 or more is
+# Clear and applied; within ten minutes, agreeing with that time to two
+# seconds at 1.5 or more is Likely and applied; anything else is Unclear,
+# shown with the lag and left to the person.
 STRONG_MATCH = 1.5
+CLEAR_MATCH = 1.8
+NEAR_WINDOW = 60.0
+WIDE_WINDOW = 600.0
+AGREE_SECONDS = 2.0
+SURETY_CLEAR = "clear"
+SURETY_LIKELY = "likely"
+SURETY_UNCLEAR = "unclear"
 
 # How an Incident came to be.
 FROM_OFFER = "offer"
@@ -219,6 +231,9 @@ class IncidentCamera(models.Model):
     match_lag = models.FloatField(null=True, blank=True)
     match_strength = models.FloatField(null=True, blank=True)
     match_reason = models.CharField(max_length=60, blank=True, default="")
+    # How surely the match stands (v1.183.0): clear, likely or unclear, by
+    # how near a known time it was found and how strongly.
+    match_surety = models.CharField(max_length=10, blank=True, default="")
     # Pinned: kept in the Sitting with what it showed whatever else is added
     # (Phase 8 chapter 9). The incident's, and it survives a re-sync.
     pinned = models.BooleanField(default=False)
@@ -1154,7 +1169,7 @@ def run_match(camera: IncidentCamera) -> None:
         _, their_file = file_time_of(against.recording)
         if my_file is not None and their_file is not None:
             expected = _wrapped(my_file - their_file)
-        found = sound_match.lag_between(theirs, mine, expected=expected)
+        found, surety = _match_near(theirs, mine, expected)
     except sound_match.NoMatch as why:
         camera.match_state = MATCH_FAILED
         camera.match_reason = str(why)[:60]
@@ -1169,11 +1184,18 @@ def run_match(camera: IncidentCamera) -> None:
     camera.match_state = MATCH_DONE
     camera.match_lag = found.lag
     camera.match_strength = found.strength
+    camera.match_surety = surety
     camera.match_reason = ""
     camera.save(
-        update_fields=["match_state", "match_lag", "match_strength", "match_reason"]
+        update_fields=[
+            "match_state",
+            "match_lag",
+            "match_strength",
+            "match_surety",
+            "match_reason",
+        ]
     )
-    if found.strength >= STRONG_MATCH:
+    if surety in (SURETY_CLEAR, SURETY_LIKELY):
         # Not over a placement made while the match ran (v1.131.0): a hand
         # placed meanwhile stands, as it does for a clock read again.
         now = (
@@ -1185,6 +1207,70 @@ def run_match(camera: IncidentCamera) -> None:
             apply_match(camera, by=camera.placed_by)
         else:
             log.info("camera %s was placed while its match ran; left", camera.pk)
+
+
+def _match_near(theirs, mine, expected):
+    """The match the way the probe found it trustworthy (v1.183.0): near
+    the files' own shift first, then wider, else over the whole range as
+    Unclear. Returns the match and its surety."""
+    from core import sound_match
+
+    if expected is None:
+        return sound_match.lag_between(theirs, mine), SURETY_UNCLEAR
+    near = None
+    try:
+        near = sound_match.lag_between(
+            theirs, mine, expected=expected, window=NEAR_WINDOW
+        )
+    except sound_match.NoMatch:
+        near = None
+    if near is not None and near.strength >= CLEAR_MATCH:
+        return near, SURETY_CLEAR
+    wide = sound_match.lag_between(theirs, mine, expected=expected, window=WIDE_WINDOW)
+    if abs(wide.lag - expected) <= AGREE_SECONDS and wide.strength >= STRONG_MATCH:
+        return wide, SURETY_LIKELY
+    if near is not None and near.strength >= wide.strength:
+        return near, SURETY_UNCLEAR
+    return wide, SURETY_UNCLEAR
+
+
+SURETY_WORDS = {
+    SURETY_CLEAR: (
+        "Clear",
+        "the sound lines up within a minute of the file's own time",
+        "ok",
+    ),
+    SURETY_LIKELY: ("Likely", "the sound lines up near the file's own time", ""),
+    SURETY_UNCLEAR: ("Unclear", "the sound lines up, but not clearly", "warn"),
+}
+
+
+def surety_of(camera: IncidentCamera) -> dict:
+    """How surely a camera sits where it does (v1.183.0): a word, why, and a
+    tone, from how it was placed and, for a sound match, how the match was
+    found. Shown beside the placed pill everywhere the pill is."""
+    how = camera.placed
+    if how == CLOCK:
+        word, why, tone = "Clear", "from its clock, checked on two frames", "ok"
+    elif how == CLOCK_UNCHECKED:
+        word, why, tone = "Likely", "from its clock, read once", ""
+    elif how == SOUND:
+        word, why, tone = SURETY_WORDS.get(
+            camera.match_surety or SURETY_UNCLEAR, SURETY_WORDS[SURETY_UNCLEAR]
+        )
+        if (camera.match_surety or SURETY_UNCLEAR) == SURETY_UNCLEAR:
+            why = "placed by hand on a match that was not clear"
+    elif how == HAND:
+        word, why, tone = "As typed", "synced by hand", ""
+    elif how == FILE:
+        word, why, tone = (
+            "Unchecked",
+            "from its file's own time, checked by nobody",
+            "warn",
+        )
+    else:
+        word, why, tone = "Not placed", "", "warn"
+    return {"word": word, "why": why, "tone": tone}
 
 
 def _first_side_audio(recording):
