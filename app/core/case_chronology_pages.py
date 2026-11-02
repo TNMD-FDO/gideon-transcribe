@@ -48,6 +48,8 @@ def _span(request) -> tuple[float, float] | None:
 def day(request: HttpRequest, case_id) -> JsonResponse:
     """The Date strip and one day (the day asked for, else the newest with
     notes), with a span when the address names one."""
+    from core import clock_match
+
     _on_or_404()
     case = _their_case(request, case_id)
     days = case_chronology.days_of(case)
@@ -64,8 +66,10 @@ def day(request: HttpRequest, case_id) -> JsonResponse:
             "fold_notes": case_chronology.FOLD_NOTES,
             "bars_most": case_chronology.BARS_MOST,
             # The rail whether or not a day exists (v1.170.1), so the first
-            # placing can happen from the page.
+            # placing can happen from the page; the videos among its rows
+            # say what the Incidents tab's panel says (v1.186.0).
             **case_chronology.rail_of(case),
+            "unclocked": clock_match.rows_of(case),
         }
     )
 
@@ -76,7 +80,7 @@ def strip(request: HttpRequest, case_id) -> JsonResponse:
     with a video on the clock, and one day read for the strip (the day asked
     for, else the one with the most forming), with the forming brackets
     keyed and the faint runs kept."""
-    from core import incident_strip
+    from core import clock_match, incident_strip
 
     _on_or_404()
     case = _their_case(request, case_id)
@@ -92,6 +96,10 @@ def strip(request: HttpRequest, case_id) -> JsonResponse:
             "me": request.user.pk,
             "may_place": True,
             "may_make": incidents.proposed_on(),
+            # The panel for what is not on the clock (v1.186.0).
+            "unclocked": clock_match.rows_of(case),
+            "panel_most": clock_match.PANEL_MOST,
+            "sound_on": incidents.sound_match_on(),
             "most": incidents.most_cameras(),
             "fold_notes": case_chronology.FOLD_NOTES,
             "bars_most": case_chronology.BARS_MOST,
@@ -255,6 +263,35 @@ def unplace(request: HttpRequest, recording_id) -> JsonResponse:
     recording = _their_recording(request, recording_id)
     done = case_chronology.unplace(recording, by=request.user, request=request)
     return JsonResponse({"ok": done})
+
+
+@login_required
+@require_POST
+def place_by_sound(request: HttpRequest, recording_id) -> JsonResponse:
+    """Place it there (v1.186.0): the sound match taken, the clock written
+    as by sound with the match's strength and the video it followed."""
+    from core import clock_match
+
+    _on_or_404()
+    recording = _their_recording(request, recording_id)
+    try:
+        placed = clock_match.place_by_sound(recording, by=request.user, request=request)
+    except ValueError as refused:
+        return JsonResponse({"error": str(refused)}, status=400)
+    if recording.case_id:
+        cases.note_activity(recording.case, by=request.user)
+    return JsonResponse({"ok": True, "placed": placed})
+
+
+@login_required
+@require_POST
+def set_aside_match(request: HttpRequest, recording_id) -> JsonResponse:
+    """Not this (v1.186.0): the sound suggestion put away for this video."""
+    from core import clock_match
+
+    _on_or_404()
+    recording = _their_recording(request, recording_id)
+    return JsonResponse({"ok": clock_match.set_aside(recording)})
 
 
 @login_required

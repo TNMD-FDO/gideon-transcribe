@@ -329,6 +329,16 @@ class Recording(models.Model):
         related_name="+",
     )
     clock_at = models.DateTimeField(null=True, blank=True)
+    # Placed by sound (v1.186.0, ADR 0027 widened): the match's strength and
+    # the placed video its sound followed; empty for every other way.
+    clock_strength = models.FloatField(null=True, blank=True)
+    clock_follows = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     # A Live recording's facts (Phase 3): when it started, its sources, the
     # browser, the pauses, how it ended, and the sidecar upload its pieces

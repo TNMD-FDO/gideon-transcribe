@@ -2155,6 +2155,11 @@ def read_stamp(recording, *, asked_by, again: bool = False) -> dict:
         reason = outcome
     recording.stamp = stamp
     recording.save(update_fields=["stamp"])
+    # The clock match for the panel (v1.186.0): this video asked when no
+    # clock was found, the case's clockless videos when one was.
+    from core import clock_match
+
+    clock_match.after_stamp(recording)
     _record(
         "stamp",
         recording,

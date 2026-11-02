@@ -17,6 +17,22 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.186.0, 2026-11-02
+
+```
+Models: unchanged
+Database: migrates (0102, the clock match and a recording placed by sound)
+```
+
+The panel for what is not on the clock, with placing by sound, the third and last release from the drawing `docs/spec/mockups/phase-10-incidents-by-day.html`, which stands.
+
+- **Not on the clock, one place.** Under the Incidents tab's cards, a panel lists every video of the case with no clock: one row each with its still, what its file says ("File says 6 Nov 2025 20:25:58." or "No time in its file."), what its sound says, and the presses it earns. The five the app can say most about come first, a Clear sound line, then Likely, then a file time, then nothing, with "show all". The strip's rail is gone from the Incidents tab; audio with notes keeps the Notes tab's rail.
+- **Placing by sound.** When a video lands with no clock in its picture, and whenever a video of the case is placed, the media worker compares its sound with the placed videos of its file's day, near the file's own time, the way the probe found trustworthy (v1.183.0); with no time in its file, every placed video over the whole range, which is only ever Unclear. The best match is one line, "Sound lines up with BWC2-1 from 20:26:04", with its surety word and **Place it there**, which writes the recording's clock as **by sound** with the match's strength and the video it followed (ADR 0027 widened), or **Not this**, which sets the suggestion aside. An Unclear match is shown and never offered; the app places nothing by itself. Placing from the file, typing a time and placing by the day stay on every row.
+- **The surety on every bar.** The strip's bars carry the surety word on their label (BWC1-1 · Clear), as the drawing had it, with why on hover.
+- **The chips and the Date strip** count the day's videos not on the clock, by the file's day, and the Date strip wears a ring over such a day.
+- **Match by sound** governs the panel's sound line as it governs the Cameras tab's.
+- **The Notes tab's rail** keeps its chips for recordings with notes and no clock; a video among them says what the panel says of its sound, with Place it there.
+
 ## v1.185.0, 2026-11-02
 
 ```

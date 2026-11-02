@@ -1854,9 +1854,10 @@ def _rows() -> list[Definition]:
             what_it_does=(
                 "Offer to place a camera that has no clock by comparing its "
                 "sound with a placed camera's, on the media worker, with no "
-                "engine call."
+                "engine call: on an incident's Cameras tab, and on the "
+                "Incidents tab's panel for what is not on the clock."
             ),
-            when_changed="The next Cameras tab drawn.",
+            when_changed="The next Cameras tab or Incidents tab drawn.",
         ),
         # The assistant on the Incident (Phase 6 chapter 3) --------------
         Definition(

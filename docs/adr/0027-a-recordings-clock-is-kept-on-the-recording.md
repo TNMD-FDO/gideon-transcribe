@@ -48,3 +48,20 @@ rebuilds": the placement must be made once and read twice.
   recording is one clock per case.
 - The incident page's by-hand placement and the chronology's are the same
   gesture with the same confirm box, so a person learns it once.
+
+## Amendment, 2026-11-02 (v1.186.0): placed by sound
+
+Phase 10 chapter 5's third release adds a fourth way a person places a
+recording, **by sound**: the app compares a clockless video's sound with
+the placed videos of its case on the media worker, the way the probe of
+2026-11-02 found trustworthy (near the file's own time; `docs/research/
+sound-match.md`), shows the best match with its surety word on the
+Incidents tab's panel for what is not on the clock, and the person takes it
+with Place it there. The decision's rules stand: the stamp still wins, the
+placing is still the person's, named and reversible, with the same audit
+row (how "sound"); the app never places by itself, and an Unclear match is
+shown and never offered. Two columns join the clock: `clock_strength`, the
+match's strength, and `clock_follows`, the placed video its sound followed,
+so a reader can see what a by-sound placement rests on; both are empty for
+every other way. One migration (0102), which also adds the `ClockMatch` row
+that keeps each clockless video's best match.

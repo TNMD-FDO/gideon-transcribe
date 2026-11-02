@@ -57,6 +57,11 @@ def days(case) -> list[dict]:
                 when = date + dt.timedelta(days=1)
             marks[when].append(at)
     incidents_days = _incident_days(case)
+    from core import clock_match
+
+    # Not on the clock (v1.186.0): the day's videos whose file says the day
+    # but whose clock nobody has read or placed, counted on the chip.
+    unclocked = clock_match.unclocked_by_day(case, recordings)
     out = []
     for when in sorted(set(bars) | set(marks)):
         todays = bars.get(when, [])
@@ -92,6 +97,7 @@ def days(case) -> list[dict]:
                 # Videos ran together on this day (the chips' and the Date
                 # strip's mark), whether or not in an incident.
                 "together": bool(case_chronology._runs(todays)),
+                "unclocked": unclocked.get(when, 0),
             }
         )
     return out

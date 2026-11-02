@@ -437,6 +437,17 @@ urlpatterns = [
         case_chronology_pages.unplace,
         name="recording-clock-off",
     ),
+    # Placed by sound, and the suggestion set aside (v1.186.0).
+    path(
+        "recording/<uuid:recording_id>/clock/by-sound",
+        case_chronology_pages.place_by_sound,
+        name="recording-clock-by-sound",
+    ),
+    path(
+        "recording/<uuid:recording_id>/clock/not-this",
+        case_chronology_pages.set_aside_match,
+        name="recording-clock-not-this",
+    ),
     path(
         "recording/<uuid:recording_id>/note/to-check",
         case_chronology_pages.to_check,

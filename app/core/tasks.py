@@ -186,6 +186,15 @@ def match_sound(camera_id: str) -> None:
         incidents.run_match(camera)
 
 
+@app.task(queue="media", name="match_clock")
+def match_clock(recording_id: str) -> None:
+    """A clockless video's sound compared with the placed videos of its case
+    (Phase 10 chapter 5, v1.186.0), for the Not-on-the-clock panel."""
+    from core import clock_match
+
+    clock_match.run(recording_id)
+
+
 @app.task(queue="llm", name="propose_incident_events")
 def propose_incident_events(incident_id: str, attempt: int = 1) -> None:
     """Propose events on an Incident (Phase 6 chapter 3)."""
@@ -411,8 +420,12 @@ def keep_the_queue_moving(timestamp: int) -> None:
     while nothing was watching, and a poll that was lost with a worker. Both
     are cheap to check and neither should need a person to notice.
     """
-    from core import pieces, queue, uploads
+    from core import clock_match, pieces, queue, uploads
 
+    # A clock match left queued or running by a worker that died (v1.186.0).
+    stale = clock_match.requeue_stale()
+    if stale:
+        log.info("%d clock match(es) asked for again", stale)
     finished = uploads.finish_the_complete()
     if finished:
         log.info("%d complete upload(s) were taken in without their finish", finished)

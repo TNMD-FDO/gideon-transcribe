@@ -34,7 +34,16 @@ from core import audit, exports, incidents, prompts, settings_store
 from core.chronology import FIGURE_COLOURS, spells
 
 CLOCK, HAND, DAY, FILE = "clock", "hand", "day", "file"
-HOW_WORDS = {CLOCK: "clock", HAND: "by hand", DAY: "by the day", FILE: "from the file"}
+# Placed by sound (v1.186.0): the match a person took on the Not-on-the-clock panel.
+SOUND = incidents.SOUND
+HOW_WORDS = {
+    CLOCK: "clock",
+    HAND: "by hand",
+    DAY: "by the day",
+    FILE: "from the file",
+    SOUND: "by sound",
+}
+PLACED_WAYS = (HAND, DAY, FILE, SOUND)
 # The band's shapes, chosen by the day's recordings (never the person).
 LANES, PACKED, COVERAGE = "lanes", "packed", "coverage"
 # Up to this many overlapping, lanes in colour; more overlapping, the
@@ -77,9 +86,43 @@ def clock_of(recording) -> tuple[dt.date | None, float | None, str]:
         date = stamp_date(recording)
         if date is not None:
             return date, float(zero), CLOCK
-    if recording.clock_date is not None and recording.clock_how in (HAND, DAY, FILE):
+    if recording.clock_date is not None and recording.clock_how in PLACED_WAYS:
         return recording.clock_date, recording.clock_start, recording.clock_how
     return None, None, ""
+
+
+def clock_surety(recording) -> dict:
+    """How surely the recording sits where it does on the case's clock
+    (v1.186.0), the words of Phase 6's cameras: a word, why, and a tone."""
+    _date, _start, how = clock_of(recording)
+    if how == CLOCK:
+        if incidents.stamp_checked(recording):
+            return {
+                "word": "Clear",
+                "why": "from its clock, checked on two frames",
+                "tone": "ok",
+            }
+        return {"word": "Likely", "why": "from its clock, read once", "tone": ""}
+    if how == SOUND:
+        from core import clock_match
+
+        match = clock_match.ClockMatch.objects.filter(recording=recording).first()
+        surety = match.surety if match is not None else incidents.SURETY_UNCLEAR
+        word, why, tone = incidents.SURETY_WORDS.get(
+            surety, incidents.SURETY_WORDS[incidents.SURETY_UNCLEAR]
+        )
+        return {"word": word, "why": why, "tone": tone}
+    if how == HAND:
+        return {"word": "As typed", "why": "placed by hand", "tone": ""}
+    if how == FILE:
+        return {
+            "word": "Unchecked",
+            "why": "from its file's own time, checked by nobody",
+            "tone": "warn",
+        }
+    if how == DAY:
+        return {"word": "By the day", "why": "the day alone, no hour", "tone": ""}
+    return {"word": "Not placed", "why": "", "tone": "warn"}
 
 
 def placed_words(recording) -> str:
@@ -102,14 +145,35 @@ def file_suggestion(recording) -> dict | None:
     return {"words": words, "seconds": seconds}
 
 
+CLOCK_FIELDS = [
+    "clock_date",
+    "clock_start",
+    "clock_how",
+    "clock_by",
+    "clock_at",
+    "clock_strength",
+    "clock_follows",
+]
+
+
 def place(
-    recording, date: dt.date, start: float | None, *, by, request=None, how: str = ""
+    recording,
+    date: dt.date,
+    start: float | None,
+    *,
+    by,
+    request=None,
+    how: str = "",
+    strength: float | None = None,
+    follows=None,
 ):
-    """A person's placement: by hand (a time), by the day alone, or from the
-    file's time. Refused when the stamp already gives the clock."""
+    """A person's placement: by hand (a time), by the day alone, from the
+    file's time, or by sound (v1.186.0: the match taken on the panel, with
+    its strength and the video it followed). Refused when the stamp already
+    gives the clock."""
     if incidents.clock_zero_of(recording) is not None and stamp_date(recording):
         raise ValueError("the camera's clock was read from the picture and stands")
-    if how not in (HAND, DAY, FILE):
+    if how not in PLACED_WAYS:
         how = DAY if start is None else HAND
     if how == DAY:
         start = None
@@ -118,9 +182,12 @@ def place(
     recording.clock_how = how
     recording.clock_by = by
     recording.clock_at = timezone.now()
-    recording.save(
-        update_fields=["clock_date", "clock_start", "clock_how", "clock_by", "clock_at"]
-    )
+    recording.clock_strength = strength if how == SOUND else None
+    recording.clock_follows = follows if how == SOUND else None
+    recording.save(update_fields=CLOCK_FIELDS)
+    from core import clock_match
+
+    clock_match.after_placed(recording)
     audit.write(
         audit.Category.RECORDINGS,
         "recording placed on the clock",
@@ -143,9 +210,12 @@ def unplace(recording, *, by, request=None) -> bool:
     recording.clock_how = ""
     recording.clock_by = None
     recording.clock_at = None
-    recording.save(
-        update_fields=["clock_date", "clock_start", "clock_how", "clock_by", "clock_at"]
-    )
+    recording.clock_strength = None
+    recording.clock_follows = None
+    recording.save(update_fields=CLOCK_FIELDS)
+    from core import clock_match
+
+    clock_match.after_placed(recording)
     audit.write(
         audit.Category.RECORDINGS,
         "recording taken off the clock",
@@ -200,9 +270,13 @@ def _placements(recordings) -> dict:
 def days_of(case, rows: list[dict] | None = None) -> list[dict]:
     """The Date strip: each day that has notes on a placed recording, with
     its counts; a recording that runs past midnight counts on both days."""
+    from core import clock_match
+
     recordings, by_recording = _noted(case, rows)
     placements = _placements(recordings)
     counts: dict = defaultdict(lambda: {"notes": 0, "recordings": set()})
+    # The ring (v1.186.0): a video whose file says this day is not on the clock.
+    unclocked = clock_match.unclocked_by_day(case, recordings)
     # The videos' spans per day (v1.184.0): a day whose videos ran together
     # wears a dot on the Date strip, in an incident or not.
     spans: dict = defaultdict(list)
@@ -232,6 +306,7 @@ def days_of(case, rows: list[dict] | None = None) -> list[dict]:
             "notes": here["notes"],
             "recordings": len(here["recordings"]),
             "together": bool(_runs(spans.get(when, []))),
+            "unclocked": unclocked.get(when, 0),
         }
         for when, here in sorted(counts.items())
     ]
@@ -358,8 +433,10 @@ def day_of(
                 "colour": colour,
                 "placed": placed_words(one),
                 "how": how,
+                # The surety word on the bar's label (v1.186.0).
+                "surety": clock_surety(one),
                 "video": incidents.is_video(one),
-                "movable": how in (HAND, FILE),
+                "movable": how in (HAND, FILE, SOUND),
                 # Where its playback starts on the day's clock (v1.185.0),
                 # before midnight for a recording that crossed it, so a
                 # moment of the day is a moment into the recording for its

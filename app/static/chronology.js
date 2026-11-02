@@ -74,6 +74,7 @@
       state.days = told.days || []; state.day = told.day; state.span = span || null; state.me = told.me; state.loaded = true;
       state.unplaced = told.unplaced || []; state.run = told.run || null;
       state.most = told.most || 20; state.mayMake = told.may_make !== false;
+      state.unclocked = told.unclocked || []; state.panelMost = told.panel_most || 5;
       // The rail on its own (v1.170.1): the recordings to place, day or no day.
       state.railOnly = { rail: told.rail || [], rail_more: told.rail_more || 0, rail_all: told.rail_all || [] };
       state.lit = null; if (!quiet) { state.open = {}; }
@@ -123,7 +124,54 @@
     host.innerHTML = dayChips() + ruler(d) + band(d) + notesLane(d) + incidentsLane(d) + formingLane(d) + rail(d);
     wire();
     cards(d);
+    panel(d);
     rearm();
+  }
+  // The panel for what is not on the clock (Phase 10 chapter 5, v1.186.0):
+  // every video of the case with no clock, under the cards, one row each
+  // with its still, what its file says and what its sound says, ordered by
+  // what the app can say; five rows, then show all. Sound places a video;
+  // the notes form the incident; nothing here is placed by the app itself.
+  function panel(d) {
+    var box = document.querySelector(host.dataset.cards || "#forming-cards");
+    var rows = state.unclocked || [];
+    var old = document.getElementById("unclocked-panel");
+    if (!rows.length || !box) { if (old) { old.remove(); } return; }
+    var most = state.panelMost || 5, all = state.panelAll;
+    var shown = all ? rows : rows.slice(0, most);
+    var html = "<div class='h'><h3>Not on the clock · " + plural(rows.length, "video") + "</h3><span class='small muted'>" +
+      (rows.length > most && !all ? "The " + most + " the app can say most about first; <button type='button' class='link' data-all>show all " + rows.length + "</button>." : "A video with no clock in its picture. Its file's time and its sound are what the app can say; the place is yours.") + "</span></div>";
+    shown.forEach(function (r) { html += panelRow(r); });
+    var el = old || document.createElement("div");
+    el.id = "unclocked-panel"; el.className = "card unclocked-panel";
+    el.innerHTML = html;
+    if (!old) { box.insertAdjacentElement("afterend", el); }
+    function rowOf(id) { return rows.filter(function (r) { return r.id === id; })[0]; }
+    var allBtn = el.querySelector("[data-all]");
+    if (allBtn) { allBtn.addEventListener("click", function () { state.panelAll = true; panel(d); }); }
+    el.querySelectorAll("[data-sound]").forEach(function (b) { b.addEventListener("click", function () { panelPost("/recording/" + b.dataset.sound + "/clock/by-sound", {}); }); });
+    el.querySelectorAll("[data-aside]").forEach(function (b) { b.addEventListener("click", function () { panelPost("/recording/" + b.dataset.aside + "/clock/not-this", {}); }); });
+    el.querySelectorAll("[data-file]").forEach(function (b) { b.addEventListener("click", function () { var r = rowOf(b.dataset.file); panelPost("/recording/" + r.id + "/clock", { date: r.file.date, how: "file" }); }); });
+    el.querySelectorAll("[data-type]").forEach(function (b) { b.addEventListener("click", function () { placeBox(rowOf(b.dataset.type), null); }); });
+    el.querySelectorAll("[data-by-day]").forEach(function (b) { b.addEventListener("click", function () { placeBox(rowOf(b.dataset.byDay), null, true); }); });
+    stills(el);
+  }
+  function panelPost(url, body) {
+    post(url, body).then(function () { load(state.day ? state.day.date : "", null, true); })
+      .catch(function (err) { window.UI.toast(err.message || "That did not work. Try again.", { problem: true, icon: "warning" }); });
+  }
+  function panelRow(r) {
+    var facts = r.file ? "File says " + esc(r.file.words) + "." : "No time in its file.";
+    var s = r.sound, sound = "", acts = "";
+    if (s && (s.state === "queued" || s.state === "running")) { sound = "Matching the sound; about a minute."; }
+    else if (s && s.state === "done" && s.may_place) { sound = "Sound lines up with " + esc(s.against) + " from " + esc(s.at) + (s.near_file ? ", near the file's time" : "") + " <span class='pill small " + esc(s.surety.tone) + "' title='" + esc(s.surety.why) + "'>" + esc(s.surety.word) + "</span>"; }
+    else if (s && s.state === "done") { sound = "Sound lined up nowhere clearly" + (s.near_file ? " near it" : "") + " <span class='pill small warn' title='" + esc(s.surety.why) + "'>Unclear</span>"; }
+    else if (s && s.state === "failed") { sound = "The sound could not be compared" + (s.reason ? ": " + esc(s.reason) : "") + "."; }
+    else if (r.set_aside) { sound = "The sound suggestion was set aside."; }
+    if (s && s.state === "done" && s.may_place) { acts = "<button type='button' class='tiny primary' data-sound='" + r.id + "'>Place it there</button><button type='button' class='tiny ghost' data-aside='" + r.id + "'>Not this</button>"; }
+    else { acts = (r.file ? "<button type='button' class='tiny' data-file='" + r.id + "'>Place from the file</button>" : "") + "<button type='button' class='tiny' data-type='" + r.id + "'>Type a time</button><button type='button' class='tiny' data-by-day='" + r.id + "'>Place by the day</button>"; }
+    return "<div class='urow' data-row='" + r.id + "'><span class='still sm' title='" + esc(r.title) + "'><img alt='' data-still='" + esc(r.still) + "'></span><div><b>" + esc(r.title) + "</b> <span class='pill small warn'>Not placed</span>" + (r.notes ? " <span class='muted tiny'>· " + plural(r.notes, "note") + "</span>" : "") +
+      "<div class='facts'>" + facts + (sound ? " " + sound : "") + "</div></div><div class='acts'>" + acts + "</div></div>";
   }
   function rearm() {
     stripTimer = window.setTimeout(function () { if (document.body.contains(host) && state.day) { load(state.day.date, null, true); } }, 60000);
@@ -132,7 +180,7 @@
     if (!state.days.length) { return ""; }
     var html = "<div class='days'><span class='lbl'>Days</span>";
     state.days.forEach(function (one) {
-      var words = esc(one.words) + " · " + plural(one.videos, "video") + (one.notes ? " · " + plural(one.notes, "note") : "") + (one.forming ? " · " + one.forming + " forming" : "") + (one.same_day ? " · same day" : "");
+      var words = esc(one.words) + " · " + plural(one.videos, "video") + (one.notes ? " · " + plural(one.notes, "note") : "") + (one.forming ? " · " + one.forming + " forming" : "") + (one.same_day ? " · same day" : "") + (one.unclocked ? " · " + one.unclocked + " not on the clock" : "");
       html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + "' title='" + (one.together ? "videos ran together on this day" : "") + "'>" + words + (one.together ? "<i class='together' aria-hidden='true'></i>" : "") + "</button>";
     });
     return html + "</div>";
@@ -423,7 +471,8 @@
       months[name].forEach(function (one) {
         var h = Math.max(3, Math.round(34 * one.notes / most));
         // The together dot (v1.184.0): videos ran together on this day.
-        html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + (one.together ? " together" : "") + "' style='height: " + h + "px' title='" + esc(one.words + " · " + plural(one.notes, "note") + " · " + plural(one.recordings, "recording") + (one.together ? " · videos ran together" : "")) + "'></button>";
+        // The ring (v1.186.0): a video of this day is not on the clock.
+        html += "<button type='button' data-day='" + one.date + "' class='" + (state.day && one.date === state.day.date ? "on" : "") + (one.together ? " together" : "") + (one.unclocked ? " ring" : "") + "' style='height: " + h + "px' title='" + esc(one.words + " · " + plural(one.notes, "note") + " · " + plural(one.recordings, "recording") + (one.together ? " · videos ran together" : "") + (one.unclocked ? " · " + one.unclocked + " not on the clock" : "")) + "'></button>";
       });
       html += "</div><div class='name'>" + esc(name) + " · " + plural(months[name].length, "day") + "</div></div>";
     });
@@ -434,12 +483,20 @@
   function rail(d) {
     // The strip's rail (chapter 5) holds the videos with no clock; the
     // chronology's rail every noted recording.
+    // On the strip (v1.186.0) the videos with no clock are the panel under
+    // the cards, and audio with notes keeps the Notes tab's rail.
+    if (stripMode) { return ""; }
     var rows = d.rail, more = d.rail_more;
-    if (stripMode) { rows = (d.rail_all || d.rail).filter(function (one) { return one.video; }); more = 0; }
     if (!rows.length && !more) { return ""; }
     var html = "<div class='rail' id='chron-rail'><span>Not on the clock yet:</span>";
+    // A video on the rail says what the Incidents tab's panel says of its
+    // sound (v1.186.0), with Place it there when the match may be taken.
+    var sound = {};
+    (state.unclocked || []).forEach(function (r) { if (r.sound && r.sound.state === "done" && r.sound.may_place) { sound[r.id] = r.sound; } });
     rows.forEach(function (one) {
       html += "<button type='button' class='chip' draggable='true' data-rail='" + one.id + "' title='Drag onto the ruler, or press to type its time'><i></i>" + esc(one.title) + " · " + plural(one.notes, "note") + "</button>";
+      var s = sound[one.id];
+      if (s) { html += "<span class='rail-sound tiny muted'>Its sound lines up with " + esc(s.against) + " from " + esc(s.at) + " <span class='pill small " + esc(s.surety.tone) + "' title='" + esc(s.surety.why) + "'>" + esc(s.surety.word) + "</span> <button type='button' class='tiny primary' data-rail-sound='" + one.id + "'>Place it there</button></span>"; }
     });
     if (more) { html += "<span class='tiny'>and " + more + " more with notes</span>"; }
     html += "<button type='button' class='small' data-act='sheet' style='margin-left: auto'>Place recordings</button></div>";
@@ -512,8 +569,11 @@
     // The label sits inside the bar, cut to its width (v1.164.1); a bar too
     // narrow for a name carries none, and the whole title is on hover.
     var pixels = width * (host.clientWidth || 900) / 100;
-    var label = pixels < 56 ? "" : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + plural(b.notes, "note"));
-    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + paint(b.colour) + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
+    // On the strip the label carries the surety word (v1.186.0), the Notes
+    // tab's chronology the note count.
+    var tail = stripMode && b.surety ? b.surety.word : plural(b.notes, "note");
+    var label = pixels < 56 ? "" : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + tail);
+    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + paint(b.colour) + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.surety && b.surety.why ? " · " + b.surety.word + ": " + b.surety.why : "") + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
   }
 
   function legend(d) {
@@ -599,6 +659,7 @@
   // Wiring ---------------------------------------------------------------------
   function wire() {
     host.querySelectorAll("[data-day]").forEach(function (b) { b.addEventListener("click", function () { load(b.dataset.day, null); }); });
+    host.querySelectorAll("[data-rail-sound]").forEach(function (b) { b.addEventListener("click", function () { panelPost("/recording/" + b.dataset.railSound + "/clock/by-sound", {}); }); });
     var r = host.querySelector("#chron-track");
     if (r) { wireRuler(r); }
     host.querySelectorAll("[data-rail]").forEach(function (chip) {
@@ -679,19 +740,21 @@
     wrap.querySelectorAll("[data-close]").forEach(function (closer) { closer.addEventListener("click", function () { wrap.remove(); }); });
     return wrap;
   }
-  function placeBox(one, at) {
+  function placeBox(one, at, alone) {
     if (!one) { return; }
     // With no day to borrow from (v1.170.1) the date is typed; a recording
-    // is rarely made today, so today is never assumed.
-    var day = state.day ? state.day.date : "";
+    // is rarely made today, so today is never assumed. The file's own day,
+    // when it carries one, is the best first guess (v1.186.0).
+    var day = one.file && one.file.date ? one.file.date : (state.day ? state.day.date : "");
     var wrap = layer("<div class='box chron'><h4 style='margin: 0'>Place " + esc(one.title) + (at !== null ? " by hand?" : "") + "</h4>" +
       "<div class='field'><span class='muted'>Date</span><input type='date' name='date' value='" + day + "'></div>" +
       "<div class='field'><span class='muted'>Starts at</span><input type='text' name='start' placeholder='hh:mm' value='" + (at !== null ? hms(at) : "") + "'></div>" +
       "<label class='small' style='display: flex; gap: 6px; align-items: center'><input type='checkbox' name='alone'> The day alone; the time is not known</label>" +
       (one.file ? "<p class='small muted' style='margin: 0'>The file says it began at " + esc(one.file.words) + ", unchecked. <button type='button' class='small ghost' data-file>Use the file's time</button></p>" : "") +
-      "<p class='small muted' style='margin: 0'>Its " + plural(one.notes, "note") + " land from then on. It reads Placed by hand under your name, and anyone on the case may move it or take it off the clock.</p>" +
+      "<p class='small muted' style='margin: 0'>" + (one.notes ? "Its " + plural(one.notes, "note") + " land from then on. " : "") + "It reads Placed by hand under your name, and anyone on the case may move it or take it off the clock.</p>" +
       "<p class='small' data-error style='margin: 0; color: var(--danger)'></p>" +
       "<div class='row' style='justify-content: flex-end; gap: 8px'><button type='button' class='small' data-close>Cancel</button><button type='button' class='small primary' data-place>Place</button></div></div>");
+    if (alone) { wrap.querySelector("[name=alone]").checked = true; }
     var how = "";
     var useFile = wrap.querySelector("[data-file]");
     if (useFile) { useFile.addEventListener("click", function () { wrap.querySelector("[name=start]").value = hms(one.file.seconds); how = "file"; }); }

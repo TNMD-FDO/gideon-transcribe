@@ -220,9 +220,18 @@ Built in v1.185.0:
 - **The picker.** A still column after the tick, on the Make an incident sheet and the Add-first sheet alike, filled as the rows come into view (the rows folded under Choose more wait until shown), eight in flight at a time.
 - **The minute's read** of the strip redraws nothing, and cuts no still again, while the day's reading is unchanged.
 
-### Placing by sound (the third release)
+### Not on the clock, and placing by sound (v1.186.0)
 
-A video with no clock in its picture sits on the rail. Match by sound, which serves the incident page, runs for it on the media worker against the placed videos of its day (its file time first, then the day): a clear match (the matcher's spike, not a plateau) is one line on the rail, "<video> has no clock in its picture. Its sound matches <video> from hh:mm:ss", with **Place it there** and **Not this**. Placing it writes the recording's clock as *by sound* (ADR 0027 widened: the match's strength and the video it followed kept), and the bars and brackets redraw. Sound places a video; the notes form the incident. Held for its own release with its migration.
+Drawn in the same page (Figures A, C and D) and built as drawn. The strip's rail is gone from the Incidents tab: its videos are a **panel under the cards**, "Not on the clock · N videos", and audio with notes keeps the Notes tab's rail, where its notes are.
+
+- **The panel.** Every video of the case with no clock (`CONTEXT.md`, **Not on the clock**), one row each: its still at its start, its title with the Not placed pill and its note count, one line of facts ("File says 6 Nov 2025 20:25:58." or "No time in its file.") followed by what its sound says, and the presses it earns. Ordered by what the app can say, a Clear sound line first, then Likely, then a file time, then nothing; five rows, then "show all N". A row never holds more than one still and two lines.
+- **The match.** `core/clock_match.py`: a clockless video is compared on the media worker (`match_clock`, the media queue) with the placed videos of its case, at most eight, those of its file's day only and the nearest by the file's time first, each search near the file's own time the way the probe found trustworthy (`incidents._match_near`: Clear within a minute at 1.8, Likely within ten minutes agreeing to two seconds at 1.5, else Unclear); with no time in its file, every placed video over the whole range, which is only ever Unclear. The best match (Clear over Likely over Unclear, then the stronger) is kept on one row per video, `ClockMatch`: the video it lines up with, the lag, the strength, the surety, whether the search was near the file's time, and whether the person set it aside. Asked when a video's clock read ends with no clock, and for every clockless video of the case when a clock read finds one, when a video is placed by any way, and when one is taken off the clock; a match left queued or running fifteen minutes is asked again by the minute's sweep. Nothing is placed by the app itself.
+- **The sound line.** "Matching the sound; about a minute." while it runs; "Sound lines up with BWC2-1 from 20:26:04, near the file's time" with the surety pill (Clear or Likely) and **Place it there** and **Not this**; "Sound lined up nowhere clearly near it" with the Unclear pill and no Place it there; "The sound could not be compared: <reason>."; "The sound suggestion was set aside." after Not this, which also stops the asking. Every row without a match to take keeps **Place from the file** (when the file carries a time), **Type a time** (the place box, the file's day as its first guess) and **Place by the day** (the same box with the day alone ticked).
+- **Placed by sound.** Place it there writes the recording's clock as **by sound** (`clock_how` "sound", ADR 0027 widened by its amendment of 2026-11-02): the date and second from the other video's clock plus the lag, past midnight onto the next day, with `clock_strength` and `clock_follows` kept; the audit row "Recording placed on the clock" with how "sound" and never a time; the bars and brackets redraw, and the case's other clockless videos are asked again. Move or take off the clock as with any placing.
+- **The surety on every bar.** `case_chronology.clock_surety`: Clear (from its clock, checked on two frames; or a Clear match), Likely (read once; or a Likely match), As typed (by hand), Unchecked (from the file), By the day, Not placed; the strip's bar labels read "BWC1-1 · Clear", with why on hover; the Notes tab's chronology keeps the note count.
+- **The counts.** The day chips say "· N not on the clock" and the Date strip wears a ring over a day, by the file's day of each clockless video.
+- **The Notes tab's rail**, as it is, for recordings with notes and no clock; a video among them says what the panel says of its sound ("Its sound lines up with BWC2-1 from 20:26:38", the surety pill) with Place it there, when the match is one the app may offer.
+- **Settings.** None added: Match by sound governs the panel's sound line and the asking; Off, the panel keeps its file facts and its presses.
 
 ### Left to the build
 
@@ -232,7 +241,7 @@ The minute's read while the tab is hidden (the browser throttles it, which is fi
 
 | Row | Category | Details kept | Never |
 |---|---|---|---|
-| Recording placed on the clock | Recordings | the recording, the how (hand, day), the case | a time, a date |
+| Recording placed on the clock | Recordings | the recording, the how (hand, day, file, sound from v1.186.0), the case | a time, a date |
 | Recording taken off the clock | Recordings | the recording, the case | a time |
 | Chronology exported (the case's) | Exports | the case, the format, whether one day or every day | a word, a date |
 | Incident made (how: chronology; v1.167.0) | Cases | the case, the incident, the day, the span, the camera count | a word of a note |

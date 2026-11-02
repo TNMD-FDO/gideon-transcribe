@@ -535,8 +535,12 @@ An Incident's list of Events, in time order, the office's Notes on the synced ca
 _Avoid_: timeline (that is the viewer's waveform strip), log, history
 
 **Recording's clock**:
-The time of day a Recording started at, kept on the Recording (v1.164.0, ADR 0027): the date, the second of the day, how it was placed (clock, from the camera's read stamp; by hand, dragged onto the case's chronology's ruler or typed; by the day, a date with no hour), by whom and when. A stamp read later takes over from a hand placement. A note's time of day on the case's chronology is the Recording's clock plus the note's moment. Audit rows Recording placed on the clock and Recording taken off the clock, with the how and never a time.
+The time of day a Recording started at, kept on the Recording (v1.164.0, ADR 0027): the date, the second of the day, how it was placed (clock, from the camera's read stamp; by hand, dragged onto the case's chronology's ruler or typed; by the day, a date with no hour; from the file, the file's own time taken; by sound, from v1.186.0, a sound match a person took on the Not on the clock panel, with the match's strength and the video it followed kept), by whom and when. A stamp read later takes over from a hand placement. A note's time of day on the case's chronology is the Recording's clock plus the note's moment. A Surety word stands on its bar (v1.186.0). Audit rows Recording placed on the clock and Recording taken off the clock, with the how and never a time.
 _Avoid_: offset, sync (an Incident's word), timestamp, start time (say "its clock")
+
+**Not on the clock**:
+A video of a Case whose clock nobody has read or placed, and the panel under the Incidents tab's cards that lists every such video (Phase 10 chapter 5, v1.186.0): one row each with its Still, what its file says, what its sound says against the placed videos of its file's day (a line with its Surety, found on the media worker when the video lands and whenever a video of the case is placed), and the presses it earns: Place it there (a Clear or Likely match only), Not this, Place from the file, Type a time, Place by the day. The day chips and the Date strip count them by the file's day; the Date strip wears a ring. Audio with notes keeps the Notes tab's rail.
+_Avoid_: unsynced, unplaced videos (say "not on the clock"), orphan, pending
 
 **Date strip**:
 The case's chronology's row of days: one small bar per day that has notes, its height the day's note count, under its month, the day in hand lit; days with no notes are not drawn. A press opens the day; the arrow keys step through days. Phase 10 chapter 1.

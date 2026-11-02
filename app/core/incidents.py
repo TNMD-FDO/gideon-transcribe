@@ -401,20 +401,35 @@ def file_time_of(recording) -> tuple[str, float | None]:
     the clock would show it, and offered as a way to place the camera, marked
     unchecked because nobody has checked it against the picture.
     """
-    tags = ((recording.probe or {}).get("format") or {}).get("tags") or {}
-    text = tags.get("creation_time") or ""
-    if not text:
+    local = file_moment_of(recording)
+    if local is None:
         return "", None
-    try:
-        when = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return "", None
-    if when.tzinfo is None:
-        when = when.replace(tzinfo=dt.UTC)
-    local = timezone.localtime(when)
     return local.strftime("%d %b %Y %H:%M:%S"), float(
         local.hour * 3600 + local.minute * 60 + local.second
     )
+
+
+def file_moment_of(recording) -> dt.datetime | None:
+    """The moment the file says it began, in the office's own time; None
+    when the file carries none."""
+    tags = ((recording.probe or {}).get("format") or {}).get("tags") or {}
+    text = tags.get("creation_time") or ""
+    if not text:
+        return None
+    try:
+        when = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=dt.UTC)
+    return timezone.localtime(when)
+
+
+def file_date_of(recording) -> dt.date | None:
+    """The day the file says it began (v1.186.0), for the clock match's
+    candidates and the day chips' count of what is not on the clock."""
+    local = file_moment_of(recording)
+    return local.date() if local is not None else None
 
 
 # The offer -----------------------------------------------------------------------

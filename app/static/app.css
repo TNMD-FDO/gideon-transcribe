@@ -2812,6 +2812,7 @@ button.corrections-pill:disabled { cursor: default; opacity: 0.8; }
 .chron .chip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; background: var(--muted); }
 .chron .rail .chip { cursor: grab; font: inherit; }
 .chron .rail .chip.dragging { opacity: .4; }
+.chron .rail .rail-sound { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .chron .ruler { position: relative; height: 18px; color: var(--muted); font-family: var(--mono); font-size: var(--t-label); user-select: none; }
 .chron .ruler .tick { position: absolute; top: 0; transform: translateX(-50%); }
 /* The drag track under the ruler (v1.164.1): where a drag across a span looks closer, and a chip is dropped to place a recording. */
@@ -3884,6 +3885,18 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .still.none::after { content: "no still"; position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--t-label); color: var(--muted); }
 .stills .more { flex: 0 0 auto; }
 .inc-offer .stills { grid-column: 1 / -1; }
+/* The panel for what is not on the clock (v1.186.0): under the cards, one
+   row per clockless video with its still, what its file says and what its
+   sound says, and the presses it earns. The ring on a day chip and a Date
+   strip bar says a video of that day is not on the clock. */
+.unclocked-panel { display: flex; flex-direction: column; gap: 2px; border-style: dashed; border-color: var(--line); margin-top: 10px; }
+.unclocked-panel .h { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; }
+.unclocked-panel .h h3 { margin: 0; font-size: var(--t-body); }
+.unclocked-panel .urow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--t-small); }
+.unclocked-panel .urow .facts { color: var(--muted); font-size: var(--t-small); margin-top: 2px; }
+.unclocked-panel .urow .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.chron .days button i.ring { display: inline-block; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--accent); box-sizing: border-box; margin-left: 6px; vertical-align: middle; }
+.chron .month .days-bars button.ring::before { content: ""; position: absolute; left: 1px; top: -16px; width: 5px; height: 5px; border-radius: 50%; border: 1px solid var(--accent); box-sizing: border-box; }
 .sheet.chron td.still-cell { padding-top: 3px; padding-bottom: 3px; line-height: 0; }
 .chron .days button i.together { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 0; }
 .chron .month .days-bars button { position: relative; overflow: visible; }
