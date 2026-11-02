@@ -167,6 +167,12 @@ urlpatterns = [
         pages.delete_recording,
         name="delete-recording",
     ),
+    # Every refused upload in a case at once (v1.181.0).
+    path(
+        "case/<uuid:case_id>/refused/remove",
+        pages.remove_refused,
+        name="remove-refused",
+    ),
     # Trying again, and processing again: each a Batch of one Recording.
     path("recording/<uuid:recording_id>/retry", pages.retry, name="retry"),
     path(

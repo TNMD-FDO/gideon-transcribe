@@ -139,16 +139,51 @@ def _request(
         ) from None
 
 
-def is_alive(lane: str = "") -> bool:
+def is_alive(lane: str = "", timeout: float = 5) -> bool:
     """The unauthenticated liveness check, asked before a Batch is made."""
     if lane == FAST and not fast_lane_configured():
         return False
     try:
         request = urllib.request.Request(f"{base_url(lane)}/healthz")
-        with urllib.request.urlopen(request, timeout=5) as answer:
+        with urllib.request.urlopen(request, timeout=timeout) as answer:
             return answer.status == 200
     except Exception:  # noqa: BLE001 - any failure is the same answer
         return False
+
+
+# A page's own question (v1.181.0): Home and the Upload page had asked the
+# service on every load and waited up to five seconds each when it stalled
+# (the load test of 2026-10-30). The answer is kept for thirty seconds and
+# the wait is two; a Batch is still gated by is_alive itself before it is
+# made. Keyed by the function that answers, so a test's stand-in is asked
+# afresh rather than told the last one's answer.
+ALIVE_KEPT_SECONDS = 30
+PAGE_TIMEOUT = 2
+_alive: dict = {}
+
+
+def alive_lately(lane: str = "") -> bool:
+    """is_alive's answer for a page, at most once every thirty seconds."""
+    import time
+
+    now = time.monotonic()
+    who = is_alive
+    held = _alive.get(lane)
+    if held is not None and held[2] is who and now - held[0] < ALIVE_KEPT_SECONDS:
+        return held[1]
+    # The real check takes the page's short wait; a test's stand-in, whatever
+    # its shape, is asked plainly.
+    answer = who(lane, timeout=PAGE_TIMEOUT) if who is _the_check else who()
+    _alive[lane] = (now, answer, who)
+    return answer
+
+
+_the_check = is_alive
+
+
+def forget_alive() -> None:
+    """Every kept answer dropped, so the next page asks afresh."""
+    _alive.clear()
 
 
 # How much of the audio file is read and sent at a time.

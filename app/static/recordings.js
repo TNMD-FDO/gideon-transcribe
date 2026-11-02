@@ -17,7 +17,19 @@
       ? " and its " + button.dataset.clips + " clip" +
         (button.dataset.clips === "1" ? "" : "s")
       : "";
-    UI.confirm({
+    // A refused upload (v1.181.0): nothing of it was transcribed, so the
+    // words say what goes and what does not.
+    var refused = button.dataset.refused === "1";
+    UI.confirm(refused ? {
+      title: "Remove the refused upload " + button.dataset.title + "?",
+      body: [
+        "It was refused, so there is no transcript to lose; the file stays wherever you uploaded it from.",
+        "Left alone, it goes by itself a week after it was refused."
+      ],
+      ok: "Remove it",
+      cancel: "Leave it",
+      danger: true
+    } : {
       title: "Delete " + button.dataset.title + also + "?",
       body: [
         "This removes the recording, its transcript, and everything else about it.",

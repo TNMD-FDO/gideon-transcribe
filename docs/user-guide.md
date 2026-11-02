@@ -26,7 +26,7 @@ Then the three steps. On a wide monitor they are on the page together, files on 
 
 Drop the files on the Upload page, or click **choose files**. Most recordings work: mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr and 3gp among them. Zip files do not; unzip them first.
 
-The page tells you the limits your Admin has set: how many files a batch may hold, how big one file may be, and how long one recording may run. A file over a limit is refused when you try to start, with the reason beside it, and the rest of the batch goes ahead.
+The page tells you the limits your Admin has set: how many files a batch may hold, how big one file may be, and how long one recording may run. A file over a limit is refused when you try to start, with the reason beside it, and the rest of the batch goes ahead. A refused upload stays on your list and the case's Recordings tab for a week, marked **Refused** with its reason and the date it goes by itself, so you can see what happened; press **Remove** on its row, or **Remove all refused** above the case's recordings, to clear it sooner.
 
 ### 2. Settings
 

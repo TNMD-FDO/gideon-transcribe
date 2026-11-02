@@ -78,7 +78,19 @@
   {% endcomment %}
   <div class="panes settings">
     <div class="pane-list">
-  <form method="post" action="{% url 'panel-edit' here %}">
+  {% comment %}
+    The edits bar (v1.181.0, at the maintainer's word): the moment a field
+    differs from what the page loaded with, this floats at the top of the
+    window with the one button, so a long page never hides that nothing is
+    saved yet. The same button stands at the foot as before.
+  {% endcomment %}
+  <div class="editsbar" id="edits-bar" hidden>
+    <b id="edits-count">Changes on this page are not in the tray yet.</b>
+    <span class="muted small">Nothing applies until they are in the tray and the tray is applied.</span>
+    <span class="grow"></span>
+    <button type="submit" form="settings-form" class="primary small">Put changes in the tray</button>
+  </div>
+  <form method="post" action="{% url 'panel-edit' here %}" id="settings-form">
     {% csrf_token %}
 
     {% for row in rows %}
@@ -142,6 +154,25 @@
       <span class="muted small" id="reset-page-note" hidden>Toggles and choices are left as they are; the tray carries the rest.</span>
     </div>
   </form>
+  <script>
+    (function () {
+      // The edits bar (v1.181.0): each field's value as the page loaded it,
+      // and the bar shown while any field differs.
+      var form = document.getElementById("settings-form"), bar = document.getElementById("edits-bar"), count = document.getElementById("edits-count");
+      if (!form || !bar) { return; }
+      var fields = Array.prototype.slice.call(form.querySelectorAll("input[name], select[name], textarea[name]")).filter(function (f) { return f.name !== "csrfmiddlewaretoken"; });
+      function valueOf(f) { return f.type === "checkbox" ? String(f.checked) : f.value; }
+      var loaded = {};
+      fields.forEach(function (f) { loaded[f.name] = valueOf(f); });
+      function settle() {
+        var changed = fields.filter(function (f) { return valueOf(f) !== loaded[f.name]; }).length;
+        bar.hidden = !changed;
+        count.textContent = changed + (changed === 1 ? " change" : " changes") + " on this page " + (changed === 1 ? "is" : "are") + " not in the tray yet.";
+      }
+      fields.forEach(function (f) { f.addEventListener("input", settle); f.addEventListener("change", settle); });
+      document.addEventListener("click", function (ev) { if (ev.target.closest(".reset-to-default, #reset-page")) { window.setTimeout(settle, 0); } });
+    })();
+  </script>
   <script>
     (function () {
       // Reset to default on a number: the default goes into the field for

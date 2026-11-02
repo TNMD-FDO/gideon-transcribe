@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.181.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Four things at the maintainer's word, two of them from the load test of 2026-10-30 (the web tier handled about 100 busy people comfortably; the four web processes, not the server, set the ceiling).
+
+- **The web tier's size reaches the app.** `GUNICORN_WORKERS` and `GUNICORN_THREADS` were read by the app's start script but never passed in by the Compose file, so a value in `.env` was ignored. They are passed now and listed in `.env.example`; four by four stays the default, so nothing changes on the day.
+- **Home no longer waits on a stalled service.** Home and the Upload page asked the transcription service whether it was up on every load and waited up to five seconds each when it stalled. The answer is kept for thirty seconds and the wait is two; a batch is still checked directly before it is made.
+- **Refused uploads go.** A refused upload's row stays a week with its reason, says "goes by itself on" the date, and carries **Remove** on the row; the case's Recordings tab says how many were refused and offers **Remove all refused**. An hourly sweep removes the rest after the week. Nothing transcribed is lost: a refused file never was.
+- **The Panel's Save floats at the top.** The tray's bar (the changes waiting, Apply, Cancel all) sits at the top of the window instead of the foot, one line with the changes folded under their count; and a settings page shows a bar at the top the moment a field differs from what it loaded with, "Changes on this page are not in the tray yet", with Put changes in the tray on it.
+
 ## v1.180.1, 2026-10-30
 
 ```

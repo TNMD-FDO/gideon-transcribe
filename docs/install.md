@@ -652,6 +652,8 @@ The directory objects from Section 2 and the certificate are yours to remove or 
 | `MEDIA_THREADS_PER_JOB` | How many processor threads one piece of media work may use. Media work never uses the card. |
 | `MEDIA_CONCURRENT_JOBS` | How many pieces of media work run at once. These two are how you keep some of the server for everything else. |
 | `MEDIA_WORKER_CPUS` | The most processors the media worker may use, written by the install and the upgrade from the host's own count, forty at most (v1.137.0). |
+| `GUNICORN_WORKERS` | How many web processes answer pages (v1.181.0). Four as shipped answers about 100 busy people comfortably; the processes, not the server, set the ceiling. Raise the app's memory limit in `compose.yaml` with them. |
+| `GUNICORN_THREADS` | How many threads each web process runs (v1.181.0). Four as shipped. |
 | `BUILD_CACHE_GB` | How much build cache this project's own Docker builder keeps between upgrades, in gigabytes; the newest records up to this, so an upgrade that builds rebuilds only what changed. One build of the four images leaves about 50 GB; 60 as shipped. Lower it on a small Docker disk (v1.137.2). |
 | `OLD_CACHE_PRUNED` | Written by the upgrade when the records this project's builds left in the daemon's shared build cache before v1.137.0 have been pruned: the round of the prune that ran (2 at v1.137.3). Leave it. |
 | `RELEASE_TAG` | The Release this server is running. Written by `./transcribe upgrade`, never by hand. Empty on a first install. |

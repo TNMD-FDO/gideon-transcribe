@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -39,7 +41,7 @@ from core import (
     whisperx,
 )
 from core.jobs import JobState, Reason
-from core.recordings import Batch, MediaState, Recording, Refusal
+from core.recordings import REFUSED_KEPT_DAYS, Batch, MediaState, Recording, Refusal
 
 log = logging.getLogger("transcribe.pages")
 
@@ -206,7 +208,15 @@ def _with_their_state(recordings):
         # export use, so the app says a length one way everywhere.
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = state_words(one)
+        one.refused_goes = refused_goes(one)
     return rows
+
+
+def refused_goes(one):
+    """The day a refused upload's row goes by itself (v1.181.0), or None."""
+    if one.media_state != MediaState.REJECTED:
+        return None
+    return (one.created + timedelta(days=REFUSED_KEPT_DAYS)).date()
 
 
 def state_words(one) -> tuple[str, str]:
@@ -356,7 +366,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             "recording_types": cases.recording_types() if to_a_case else [],
             "storage_warning": uploads.storage_warning(request.user),
             "quota_notice": quota_raises.notice(request.user),
-            "service_is_up": whisperx.is_alive(),
+            "service_is_up": whisperx.alive_lately(),
             "transcription_installed": pieces.transcription_installed(),
             # The speaker hint is pyannote's alone (Phase 5 chapter 4).
             "diarizer": settings_store.diarizer(),
@@ -939,6 +949,28 @@ def cancel_batch(request: HttpRequest, batch_id) -> JsonResponse:
         _remove(request, recording, cause="cancel")
 
     return JsonResponse({"cancelled": True})
+
+
+@login_required
+@require_POST
+def remove_refused(request: HttpRequest, case_id) -> HttpResponse:
+    """Remove all refused (v1.181.0): every refused upload in the case this
+    person may throw away, at once; the rest stay with their reasons."""
+    case = cases.Case.objects.filter(pk=case_id, deleted_on__isnull=True).first()
+    if case is None or not case.role_of(request.user):
+        return HttpResponse(status=404)
+    gone = 0
+    for recording in case.recordings.filter(media_state=MediaState.REJECTED):
+        if cases.may_throw_away(recording, request.user):
+            _remove(request, recording, cause="refused")
+            gone += 1
+    messages.success(
+        request,
+        f"{gone} refused upload{'' if gone == 1 else 's'} removed."
+        if gone
+        else "Nothing refused was yours to remove.",
+    )
+    return redirect(f"{reverse('case', args=[case.pk])}?tab=recordings")
 
 
 def _remove(request, recording: Recording, cause: str) -> None:

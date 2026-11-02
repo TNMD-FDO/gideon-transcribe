@@ -409,3 +409,23 @@ def workspaces_to_discard() -> list[User]:
         if due is not None and due <= now:
             waiting.append(user)
     return waiting
+
+
+def sweep_refused() -> int:
+    """Refused uploads older than the week their rows said they would stay
+    (v1.181.0): removed by the sweeper, each with the row every removal
+    writes. Returns how many went."""
+    from datetime import timedelta
+
+    from core.recordings import REFUSED_KEPT_DAYS
+
+    cutoff = timezone.now() - timedelta(days=REFUSED_KEPT_DAYS)
+    gone = 0
+    for recording in Recording.objects.filter(
+        media_state=MediaState.REJECTED, created__lt=cutoff
+    ).select_related("user"):
+        remove_recording(recording, cause="refused", actor=None)
+        gone += 1
+    if gone:
+        log.info("refused uploads swept: %s", gone)
+    return gone

@@ -41,6 +41,12 @@ class MediaState:
     UNFINISHED = (UPLOADING, CHECKING, PREPARING)
 
 
+# A refused upload's row stays this long (v1.181.0, at the maintainer's word),
+# with its reason and Remove on it, so the person sees why; then it goes by
+# itself, swept hourly. Nothing of it was transcribed.
+REFUSED_KEPT_DAYS = 7
+
+
 class Refusal:
     """Why an upload was refused. One identifier per reason, never free text.
 

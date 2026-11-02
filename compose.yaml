@@ -156,6 +156,13 @@ services:
       WHISPERX_TOKEN_FILE: /run/secrets/whisperx_consumer_token
       TZ: "${TZ:-UTC}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      # The web tier's size (v1.181.0): gunicorn's processes and the threads
+      # each runs, read by app/entrypoint.sh. Four by four as shipped; the
+      # load test of 2026-10-30 found the four processes, not the machine,
+      # the ceiling at about 78 requests a second, with about 100 busy
+      # people comfortable. Raise the app's memory limit with them.
+      GUNICORN_WORKERS: "${GUNICORN_WORKERS:-4}"
+      GUNICORN_THREADS: "${GUNICORN_THREADS:-4}"
       # How much of the server the media work may take. Both were in
       # .env.example's shape and in the specification and neither reached a
       # container: the entrypoint read MEDIA_CONCURRENT_JOBS and always found

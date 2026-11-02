@@ -63,7 +63,7 @@
                   <tr class="pick" tabindex="0" data-recording="{{ recording.pk }}"
                       {% if recording.transcript %}data-open="{% url 'viewer' recording.pk %}"{% endif %}>
                     <td>{% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
-                    <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span></td>
+                    <td><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.refused_goes %} <span class="muted small">goes by itself on {{ recording.refused_goes|date:"j M" }}</span>{% endif %}</td>
                     <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                     <td>{% if recording.clips_count %}{{ recording.clips_count }}{% endif %}</td>
                     <td class="muted">{{ recording.batch.created|date:"j M" }}, {{ recording.batch.created|time:"g:i a" }}</td>

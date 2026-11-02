@@ -2044,19 +2044,28 @@ mark.found { background: var(--warn-soft); color: inherit; border-radius: 2px; p
 .switch input:checked ~ .state .on-word { display: inline; }
 .switch input:checked ~ .state .off-word { display: none; }
 
-.savebar {
+/* The Panel's two bars float at the top of the window (v1.181.0): the tray's
+   with Apply, and the settings page's "not in the tray yet" while a field
+   differs from what the page loaded with. */
+.savebar, .editsbar {
   position: sticky;
-  bottom: 0;
+  top: 0;
   background: var(--surface);
-  border-top: 2px solid var(--changed-line);
+  border-bottom: 2px solid var(--changed-line);
   padding: 10px 28px;
+  margin: -20px -28px 14px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+  flex-wrap: wrap;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   z-index: 30;
 }
-.savebar ul { list-style: none; margin: 0; padding: 0; font-size: 0.85em; }
+.savebar ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: 0.85em; }
+.savebar summary { cursor: pointer; }
+.savebar details { min-width: 0; }
+.editsbar { background: var(--changed); }
+.editsbar[hidden] { display: none; }
 
 /* The Audit log's eight columns (v1.175.0, the polish walk): the cells wrap at
    words rather than run off the right at a laptop width, the time stays on one

@@ -1344,7 +1344,7 @@ tusd -behind-proxy -base-path /files/ -upload-dir <App data folder>/uploads \
 - Video without sound is refused. Archives are not unpacked in Phase 1; bulk means selecting many files.
 - The Upload page lists formats that usually work (mp4, mov, m4a, mp3, wav, wma, ogg, webm, mkv, avi, flac, amr, 3gp), but the probe decides.
 - A Recording's title defaults to the original file name without its extension. The title is editable at upload and can be renamed later; the original name stays in the Provenance.
-- A refused file never becomes a Recording; its pieces are removed at once.
+- A refused file never becomes a Recording; its pieces are removed at once. Amended v1.181.0 at the maintainer's word: the build keeps a refused upload's row for a week so the person sees why it was refused, with "goes by itself on" the date and Remove on the row, and Remove all refused on a case's Recordings tab; an hourly sweep removes what is left after the week. The file's pieces still go at once; nothing transcribed is lost, since nothing was.
 
 #### Upload refusals
 

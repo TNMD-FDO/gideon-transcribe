@@ -297,6 +297,10 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # The rows once, from a handful of queries (Phase 9 chapter 1).
     names = assignments.names_for(case)
     rows = _rows_for(case, names)
+    # Whether this person may remove each row (v1.181.0): the refused
+    # upload's Remove on its row shows only to them.
+    for one in rows:
+        one.may_throw_away = cases.may_throw_away(one, request.user)
     # The pills over the Recordings tab (Phase 9 chapter 3): All, Mine,
     # Mine not reviewed, Reviewed, Unassigned, and one person by username.
     may_direct = case.may_direct(request.user)
@@ -407,6 +411,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             # the table, the tick column for those who may assign, the team
             # for the Assign to prompt and the fold's select.
             "may_direct": may_direct,
+            # Refused uploads still listed (v1.181.0).
+            "refused": sum(1 for one in rows if one.media_state == "rejected"),
             "tools_open": tools_open,
             "who": who,
             "state": state,
@@ -792,6 +798,7 @@ def _rows_for(case: Case, names: dict | None = None) -> list:
         )
         one.length = exports.clock(one.duration_seconds or 0)
         one.state_word, one.state_tone = pages.state_words(one)
+        one.refused_goes = pages.refused_goes(one)
         one.summary_tonight_word = summaries_tonight.words(tonight.get(one.pk))
         # The Vision column (Phase 4 chapter 5), for a video.
         transcript = getattr(one, "transcript", None)

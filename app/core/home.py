@@ -322,7 +322,7 @@ def home(request: HttpRequest) -> HttpResponse:
         {
             "page": "home",
             "greeting": pages.greeting(),
-            "service_is_up": whisperx.is_alive(),
+            "service_is_up": whisperx.alive_lately(),
             "transcription_installed": pieces.transcription_installed(),
             "storage_warning": uploads.storage_warning(user),
             "quota_notice": quota_raises.notice(user),

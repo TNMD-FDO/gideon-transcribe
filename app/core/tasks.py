@@ -782,6 +782,17 @@ def sweep_quota_raises(timestamp: int) -> None:
     quota_raises.sweep()
 
 
+@app.periodic(cron="25 * * * *")
+@app.task(queue="default", name="sweep_refused_uploads")
+def sweep_refused_uploads(timestamp: int) -> None:
+    """A refused upload's row (v1.181.0): hourly, one older than the week its
+    row said it would stay is removed, as its row and the Recordings tab
+    said it would be. Nothing transcribed is lost; the file was refused."""
+    from core import lifecycle
+
+    lifecycle.sweep_refused()
+
+
 @app.periodic(cron="20 * * * *")
 @app.task(queue="default", name="purge_forgotten_voices")
 def purge_forgotten_voices(timestamp: int) -> None:

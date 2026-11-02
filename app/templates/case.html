@@ -873,6 +873,15 @@
             type, by title, type and who added them (cases.js); Download the
             list is the rows as a spreadsheet.
           {% endcomment %}
+          {% if refused %}
+            {% comment %}Refused uploads (v1.181.0): said here, on each row, and swept after a week.{% endcomment %}
+            <form method="post" action="{% url 'remove-refused' case.pk %}" class="notice warn row gap8 wrap m0 mb8" id="refused-line"
+                  data-confirm-title="Remove every refused upload in this case?" data-confirm="Nothing of them was transcribed; the files stay wherever they were uploaded from." data-confirm-ok="Remove them">
+              {% csrf_token %}
+              <span class="grow small">{{ refused }} upload{{ refused|pluralize }} in this case {{ refused|pluralize:"was,were" }} refused and {{ refused|pluralize:"is,are" }} still listed so you can see why. Each goes by itself a week after it was refused, or press Remove on its row.</span>
+              <button type="submit" class="small">Remove all refused</button>
+            </form>
+          {% endif %}
           {% if recordings or who or state %}
             <div class="row" style="gap: 8px; margin: 10px 0 8px; flex-wrap: wrap">
               <input class="max18" type="search" id="recording-filter" placeholder="Filter these recordings"
@@ -931,7 +940,7 @@
                   {% if may_direct %}<td class="col-tick"><input type="checkbox" class="tick" value="{{ recording.pk }}" aria-label="Tick {{ recording.title }}"></td>{% endif %}
                   <td class="name"><span class="chev" aria-hidden="true">&#8250;</span> {% if recording.transcript %}<a href="{% url 'viewer' recording.pk %}" class="plain"><b>{{ recording.title }}</b></a>{% else %}<b>{{ recording.title }}</b>{% endif %}</td>
                   {% if any_type %}<td class="muted type">{{ recording.recording_type }}</td>{% endif %}
-                  <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}</td>
+                  <td class="state"><span class="pill {{ recording.state_tone }}">{{ recording.state_word }}</span>{% if recording.queue_line %} <span class="muted small">{{ recording.queue_line }}</span>{% endif %}{% if recording.summary_tonight_word %} <span class="muted small">{{ recording.summary_tonight_word|lower }}</span>{% endif %}{% if recording.refused_goes %} <span class="muted small">goes by itself on {{ recording.refused_goes|date:"j M" }}</span>{% endif %}</td>
                   <td class="mono">{% if recording.duration_seconds %}{{ recording.length }}{% endif %}</td>
                   <td class="muted">{{ recording.speakers_in_words }}</td>
                   {% if assignment_pills %}<td class="assigned col-assigned">{% if recording.assigned_words %}{{ recording.assigned_words }}{% if recording.reviewed_words %} <span class="pill ok small">{{ recording.reviewed_words }}</span>{% endif %}{% else %}<span class="muted">nobody</span>{% endif %}</td>{% endif %}
@@ -947,6 +956,9 @@
                   <td class="acts">
                     {% if recording.transcript %}
                       <a href="{% url 'viewer' recording.pk %}" class="btn small">Open</a>
+                    {% elif recording.refused_goes and recording.may_throw_away %}
+                      {% comment %}A refused upload's Remove on its row (v1.181.0); recordings.js asks first.{% endcomment %}
+                      <button type="button" class="small ghost danger delete" data-refused="1" data-recording="{{ recording.pk }}" data-title="{{ recording.title }}" data-clips="0">Remove</button>
                     {% endif %}
                   </td>
                 </tr>
