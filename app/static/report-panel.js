@@ -27,7 +27,8 @@
       "</div>";
     // The comparison (part 3): against the home this panel belongs to, when
     // the document is the report for it.
-    if (home && home.kind && state[home.kind] === home.id) {
+    // A picture of the map (Phase 12 chapter 5) has no words to compare.
+    if (home && home.kind && state[home.kind] === home.id && state.kind !== "picture") {
       html += "<div class='compare-box' data-comparison='" + escape(state.comparison) + "' data-compare='" + escape(state.compare) +
         "' data-home='" + escape(home.kind) + "' data-home-id='" + escape(home.id) + "' data-title='" + escape(state.title) + "'>" +
         (window.INCIDENT_PAGE ? "<button type='button' class='small' data-open-comparison>Compare with the report</button> <span class='muted small compare-said'></span>" : "") +

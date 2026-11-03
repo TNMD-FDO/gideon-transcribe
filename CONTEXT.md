@@ -595,7 +595,7 @@ One moment a Path file records of its camera, with its time of day: the camera o
 _Avoid_: metadata, telemetry, event (that is a Chronology's), flag (on a page)
 
 **Map**:
-The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras in view, the video a press away in the Preview, a note from the map, and Add path files. Phase 12 chapter 1.
+The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras in view, the video a press away in the Preview, a note from the map, and Add path files. Phase 12 chapter 1. The same map is a Map panel on the incident page following that page's clock, with Larger map in the wall's place, and Save a picture keeps a view of it as a Document (chapter 5).
 _Avoid_: GIS, tracking view, GPS tab, geo
 
 **Basemap**:
@@ -971,7 +971,7 @@ A person's own account, sent from any page with Report a problem, of a problem t
 _Avoid_: bug, ticket, issue (GitHub's word for other offices' reports), feedback, complaint
 
 **Document**:
-A PDF added to an Incident or a Recording as the police report about it, kept in the Case, read page by page at upload (a scan read by OCR and marked so), split into numbered Paragraphs and drawn as page pictures. Listed on the Case's Documents tab and the Report tab of the Incident or Recording it is linked to; cited by Gideon by page and paragraph; hit by Search; read against the record by the Comparison. Never loose in a Case, never in a Clip or a transcript export. Phase 8 chapter 4.
+A PDF added to an Incident or a Recording as the police report about it, kept in the Case, read page by page at upload (a scan read by OCR and marked so), split into numbered Paragraphs and drawn as page pictures. Listed on the Case's Documents tab and the Report tab of the Incident or Recording it is linked to; cited by Gideon by page and paragraph; hit by Search; read against the record by the Comparison. Never loose in a Case, never in a Clip or a transcript export. Phase 8 chapter 4. Since Phase 12 chapter 5 a Document has a kind: the report (a PDF, as above) or a picture of the Map saved from the page (one page, no words, never compared), listed and downloaded like any other.
 _Avoid_: attachment, exhibit, file (that is a Recording's), upload (that is the act)
 
 **Paragraph**:

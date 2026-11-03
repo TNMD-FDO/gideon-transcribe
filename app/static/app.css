@@ -4010,6 +4010,17 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-tab.large .map-list { position: absolute; right: 12px; top: 118px; width: 260px; max-height: calc(100% - 130px); background: color-mix(in srgb, var(--surface) 92%, transparent); z-index: 3; }
 .map-tab.large.folded .map-list { width: auto; max-height: none; padding: 4px 10px; }
 .map-tab.large.folded .map-list .map-row, .map-tab.large.folded .map-list .map-fold { display: none; }
+/* The incident page's map pane (Phase 12 chapter 5): the map and a foot row on the Map panel; Larger map moves it onto the stage in the wall's place. */
+.inc-map-panel { padding: 0; }
+.map-tab.map-inc { gap: 6px; }
+.map-tab.map-inc .map-wrap { grid-template-columns: minmax(0, 1fr); }
+.map-tab.map-inc .map-pane { height: clamp(260px, 40vh, 480px); }
+.map-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--t-small); }
+.map-foot .grow { flex: 1; }
+.inc-stage > .map-tab.map-inc { margin-bottom: 10px; }
+.inc-stage > .map-tab.map-inc .map-pane { height: clamp(360px, calc(100vh - 420px), 820px); }
+.inc-desk.inc-map-large .inc-wall { display: none; }
+.inc-map-away { margin: 8px 0; }
 .map-tab.full .map-wrap { background: var(--bg); }
 .map-tab.full .map-pane { height: calc(100vh - 44px); border-radius: 0; }
 .map-tab.full .map-bar { display: flex; gap: 10px; align-items: center; height: 44px; padding: 0 12px; background: var(--surface); border-top: 1px solid var(--line); }

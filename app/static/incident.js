@@ -2469,7 +2469,7 @@
   function showTab(name) {
     if (layerStack.length) { closeLayers(); }
     Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
-    ["chronology", "memo", "cameras", "report", "details"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
+    ["chronology", "memo", "cameras", "report", "details", "map"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
     if (name === "report") { drawReport(); }
     if (name === "chronology") { currentEventId = null; markCurrentEvent(now()); }
   }
@@ -2912,4 +2912,24 @@
       if (row) { goToHit(parseInt(row.dataset.n, 10)); }
     });
   }
+
+  // The Incident clock, published for the map pane (Phase 12 chapter 5):
+  // map.js on this page reads the moment from here each tick, as the time
+  // of day in seconds, and a press on the map seeks this clock rather than
+  // its own. Nothing else on the page uses it. Without a clock on the
+  // Incident the moment is null and the map keeps its own.
+  window.IncidentClock = {
+    now: function () { return S.incident.has_clock ? S.incident.clock_zero + now() : null; },
+    seek: function (timeOfDaySeconds) { if (S.incident.has_clock) { seek(timeOfDaySeconds - S.incident.clock_zero); } },
+    play: function () { if (!playing) { play(); } },
+    pause: function () { if (playing) { pause(); } },
+    playing: function () { return playing; },
+    focus: function (recordingId) {
+      // The map knows cameras by their recordings; the wall by the incident's own ids.
+      var cam = null;
+      for (var i = 0; i < S.cameras.length; i += 1) { if (S.cameras[i].recording === recordingId) { cam = S.cameras[i]; } }
+      if (cam && players[cam.id]) { setFocus(cam.id); }
+    },
+    date: function () { return S.incident.clock_date || ""; }
+  };
 })();

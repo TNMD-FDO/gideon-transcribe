@@ -37,7 +37,7 @@ from core import (
     settings_store,
 )
 from core.assistant import DONE, FAILED, QUEUED, RUNNING, PromptTemplate
-from core.documents import READY, Document
+from core.documents import PICTURE, READY, Document
 
 log = logging.getLogger("transcribe.comparison")
 
@@ -177,6 +177,8 @@ def possible(document: Document, home) -> tuple[bool, str]:
     words to compare against."""
     if not on():
         return False, "The comparison is off."
+    if document.kind == PICTURE:
+        return False, "A picture of the map has no words to compare."
     if document.state != READY:
         return False, "The document is still being read."
     if isinstance(home, incidents.Incident):

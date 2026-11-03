@@ -123,6 +123,61 @@ def offer(request: HttpRequest, recording_id) -> JsonResponse:
 
 
 @login_required
+@require_POST
+def picture(request: HttpRequest, case_id) -> JsonResponse:
+    """Save a picture of the map (chapter 5): the PNG the browser drew, kept
+    as a Document on the incident or the recording the picture is about."""
+    from core import documents
+    from core.incidents import Incident
+
+    _maps_or_404()
+    case = _their_case(request, case_id)
+    if not case.role_of(request.user):
+        return JsonResponse({"error": "You cannot add to this case."}, status=403)
+    if not documents.on():
+        return JsonResponse(
+            {"error": "Documents are off, so the picture has nowhere to go."},
+            status=400,
+        )
+    upload = request.FILES.get("file")
+    if upload is None:
+        return JsonResponse({"error": "No picture arrived."}, status=400)
+    if upload.size > documents.PICTURE_MOST:
+        return JsonResponse({"error": "That picture is too large to keep."}, status=400)
+    incident = None
+    recording = None
+    if request.POST.get("incident"):
+        incident = Incident.objects.filter(
+            pk=request.POST.get("incident"), case=case
+        ).first()
+    if request.POST.get("recording"):
+        recording = Recording.objects.filter(
+            pk=request.POST.get("recording"), case=case
+        ).first()
+    try:
+        home = documents.home_of(case, incident=incident, recording=recording)
+        document = documents.add_picture(
+            case,
+            home=home,
+            data=upload.read(),
+            filename=upload.name or "map.png",
+            title=request.POST.get("title", ""),
+            by=request.user,
+            request=request,
+        )
+    except documents.Refused as refused:
+        return JsonResponse({"error": str(refused)}, status=400)
+    return JsonResponse(
+        {
+            "ok": True,
+            "url": document.url(),
+            "title": document.title,
+            "words": f"Saved as a Document on {documents.home_words(home)}.",
+        }
+    )
+
+
+@login_required
 def where(request: HttpRequest, recording_id) -> JsonResponse:
     """Where the camera was at a moment (chapter 4): a fix or none, and the
     case's other cameras by distance; never a position."""

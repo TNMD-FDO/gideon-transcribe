@@ -35,7 +35,7 @@
         <a class="btn small" href="{% url 'document-download' case.pk document.pk %}">{% icon "download" %} Download</a>
       </div>
       <p class="lead muted small">
-        {{ document.pages_line }}{% if document.home_name %} &middot; the report for <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
+        {{ document.pages_line }}{% if document.home_name %} &middot; {% if document.is_picture %}kept on{% else %}the report for{% endif %} <a href="{{ document.home_url }}">{{ document.home_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}
       </p>
     </header>
 
@@ -66,7 +66,7 @@
             {% for p in row.paragraphs %}
               <p class="doc-para" data-page="{{ row.number }}" data-n="{{ p.n }}"><span class="doc-n muted small">{{ p.n }}</span> {{ p.text }}</p>
             {% empty %}
-              <p class="muted small">No words were read from this page.</p>
+              <p class="muted small">{% if document.is_picture %}A picture of the map as it was saved: it has no words to read.{% else %}No words were read from this page.{% endif %}</p>
             {% endfor %}
           </section>
         {% endfor %}

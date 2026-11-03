@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.191.0, 2026-11-02
+
+```
+Models: unchanged
+Database: migrates (0104, a Document's kind)
+```
+
+Phase 12 chapter 5: the map pane on the incident page, and Save a picture of the map.
+
+- **Map** on the incident page's panel, beside Cameras, when a camera of the incident has a path file: the same map as the Map tab's, scoped to the incident, following the incident's own clock (Play on the transport moves the markers; a press on a pip or a marker seeks the incident clock and brings that camera to the front of the wall). A foot row carries the count in view, Markers, Trails or Paths, the event kinds, Fit all, Save a picture and **Larger map**, which puts the map in the wall's place on the stage (the sound plays on) and back; the choice is remembered per person.
+- **Save a picture** on the Map tab's transport and on the incident's map pane: the map as drawn, the markers at the clock's moment, a band with the title ("Map at 14:21:50, 2 Nov 2026"), the scale and the street map's attribution, kept as a **Document** on the incident shown (or, on the Map tab, on the camera pressed) so it is listed and exported with the reports. A picture Document has one page and no words: never compared, never put back in the reading line. Documents gains a `kind` (report or picture); every Document so far is a report.
+- The map's host is one template (`map-host.html`) the Case page and the incident page share.
+
 ## v1.190.0, 2026-11-02
 
 ```

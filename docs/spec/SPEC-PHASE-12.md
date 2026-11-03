@@ -23,6 +23,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 2. The path file's clock, and the readings beside the record
 3. The Readings
 4. The names the cameras' files give, and where a line was said
+5. The map pane on the incident page, and Save a picture of the map
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -159,6 +160,20 @@ The speaker picker (Phase 5 chapter 3) gains a fourth group inside a case, **Fro
 
 On the recording page, a line of a recording that has a path file carries **where** beside note and clip: a press asks the file where the camera was when the line was said (`GET recording/<id>/path/where?t=`) and shows the answer under the words: whether the camera had a fix at that moment (none yet, none indoors, none in the file), and the case's other cameras that had one on the same clock by their distance from it, nearest first ("At 14:26:28: 9082 30 m away, BWC3-1 410 m away"); then **On the map**, which opens the Map tab at that moment with the camera selected (chapter 1's address), where the street is named from the basemap. A second press folds it. The answer carries distances and times and never a position; the street is the browser's to read on the Map tab and is not sent. Nothing is kept and no row is written: the file is read, not changed.
 
+## 5. The map pane on the incident page, and Save a picture of the map (the fifth release, v1.191.0)
+
+### The map pane
+
+The incident page (Phase 6 chapter 2) gains a **Map** panel beside Cameras when a camera of the incident has a path file. It is the Map tab's own script on a second host (`map-host.html`, the one template both pages include), scoped to the incident as **On the map** scopes the tab, and it has no clock of its own: the incident page publishes its clock (`window.IncidentClock`: the moment as the time of day, seek, play, pause and the camera to bring to the front), the map reads the moment from it each tick, and a press on a pip or a marker seeks the incident's clock and brings that camera to the front of the wall in the Focus layout, with the sound following unless it is pinned. The panel's foot carries the count in view, the Show choice (Markers, Trails or Paths), the event kinds, Fit all, Save a picture and **Larger map**. Larger map moves the host onto the stage in the wall's place (the videos keep playing, so the sound plays on) and the panel says "The map has the wall's place" with Smaller map; the choice is remembered per person apart from the Map tab's. An incident without a clock shows the map at the cameras' start and says so. The keys stay the page's; Escape clears a selection on the map. The panel is absent while Maps is off or no camera of the incident has a file. Nothing new is kept; the page's own address `?tab=map` opens on the panel.
+
+### Save a picture of the map
+
+**Save a picture** on the Map tab's transport and on the incident's map pane keeps the view as a **Document**: the map as drawn, the markers at the clock's moment drawn onto a copy (they are page elements, not part of the map's canvas), and a band under it with the title ("Map at 14:21:50, 2 Nov 2026 · Stop"), the scale bar and the street map's attribution when one is installed. The browser draws it; the server keeps it (`POST case/<id>/map/picture`) as a Document on the incident shown, or on the Map tab on the camera pressed (its row or its marker); with neither the button says what to press. A picture Document is a `kind` of its own (migration 0104; every Document so far is a report): one page whose picture is the file itself, no words, ready at once, counted against the same ceiling as the reports, listed on the Documents tab and the Report panel and downloaded as the PNG it is, never compared ("A picture of the map has no words to compare") and never put back in the reading line. Its audit row is the Documents' own, "Document added", with the kind. Nothing about the map's content, no position, is in the row or the title: the title is the time of day and the day. The street names on the picture are the basemap's, drawn in the browser as on the page.
+
+### What is not
+
+No picture is taken without a press; the memo and the timeline report list the picture as they list any Document and do not place it in their body. A note on the ground with no camera, and a picture of a span rather than a moment, are left to later.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |
@@ -169,7 +184,7 @@ On the recording page, a line of a recording that has a path file carries **wher
 | Recording placed on the clock, how `path` (chapter 2) | Recordings | the recording, the case, the how | a time, a date |
 | Reading offered to the chronology (chapter 3) | Recordings | the recording, the case, the reading's kind | a position, a time |
 
-The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row.
+The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row; a picture of the map (chapter 5) writes the Documents' own "Document added" with `kind: picture` and never a position.
 
 ## Appendix B. Settings added or changed in Phase 12
 

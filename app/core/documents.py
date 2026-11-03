@@ -34,6 +34,14 @@ READING = "reading"
 READY = "ready"
 FAILED = "failed"
 
+# What a Document is (Phase 12 chapter 5): the police report as a PDF, or a
+# picture of the Map saved from the page as a PNG, one page, no words to
+# read, kept and listed like any other and never compared.
+REPORT = "report"
+PICTURE = "picture"
+# A picture of the map, as the browser draws it: a few megabytes at most.
+PICTURE_MOST = 12 * 1024 * 1024
+
 TITLE_MOST = 200
 # A page with fewer words of its own than this is read from its picture.
 FEW_WORDS = 8
@@ -71,6 +79,8 @@ class Document(models.Model):
         related_name="documents",
     )
     title = models.CharField(max_length=TITLE_MOST)
+    # A report (a PDF) or a picture of the map (a PNG), Phase 12 chapter 5.
+    kind = models.CharField(max_length=10, default=REPORT)
     original_filename = models.CharField(max_length=300)
     size_bytes = models.BigIntegerField(default=0)
     pages = models.IntegerField(default=0)
@@ -102,7 +112,13 @@ class Document(models.Model):
 
     @property
     def original_path(self) -> Path:
+        if self.kind == PICTURE:
+            return self.folder / "original.png"
         return self.folder / "original.pdf"
+
+    @property
+    def is_picture(self) -> bool:
+        return self.kind == PICTURE
 
     def picture_path(self, number: int) -> Path:
         return self.folder / f"page-{number:03d}.png"
@@ -135,6 +151,8 @@ class Document(models.Model):
 
     def pages_line(self) -> str:
         """ "42 pages, read by OCR, 3 poorly read" as the tab says it."""
+        if self.kind == PICTURE:
+            return "A picture of the map"
         if self.state == READING:
             return f"Reading {self.pages} page{'' if self.pages == 1 else 's'}"
         if self.state == FAILED:
@@ -294,6 +312,84 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
     return document
 
 
+def add_picture(
+    case, *, home: dict, data: bytes, filename: str, title: str, by, request=None
+):
+    """Save a picture of the map (Phase 12 chapter 5): one PNG the browser
+    drew, kept as a Document of one page on the incident or recording it is
+    about, ready at once since there are no words to read. Counted against
+    the same ceiling as the reports; never compared."""
+    if not on():
+        raise Refused("Documents are off.")
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise Refused("Only a picture of the map can be saved here.")
+    if len(data) > PICTURE_MOST:
+        raise Refused("That picture is too large to keep.")
+    if count_at(home) >= per_home():
+        raise Refused(
+            f"{home_words(home).capitalize()} already has {per_home()} documents, "
+            "the most the Admin allows."
+        )
+    try:
+        from PIL import Image
+
+        with Image.open(io.BytesIO(data)) as picture:
+            picture.verify()
+        with Image.open(io.BytesIO(data)) as picture:
+            width_px, height_px = picture.size
+    except Exception:  # noqa: BLE001 - any failure reads as an unusable file
+        raise Refused("That picture could not be opened.") from None
+    if width_px < 16 or height_px < 16:
+        raise Refused("That picture is too small to be the map.")
+    title = " ".join(str(title or "").split())[:TITLE_MOST] or "Map"
+    document = Document.objects.create(
+        case=case,
+        kind=PICTURE,
+        title=title,
+        original_filename=str(filename or "map.png")[:300],
+        size_bytes=len(data),
+        pages=1,
+        state=READY,
+        read_at=timezone.now(),
+        read_version=READ_VERSION,
+        added_by=by,
+        incident=home.get("incident"),
+        recording=home.get("recording"),
+    )
+    document.folder.mkdir(parents=True, exist_ok=True)
+    document.original_path.write_bytes(data)
+    # The one page's picture is the file itself; its size is kept in the
+    # page's points as a PDF page's would be, so the page view scales it.
+    shutil.copyfile(document.original_path, document.picture_path(1))
+    DocumentPage.objects.create(
+        document=document,
+        number=1,
+        width=width_px * 72.0 / PICTURE_DPI,
+        height=height_px * 72.0 / PICTURE_DPI,
+        text="",
+        paragraphs=[],
+        ocr=False,
+        poor=False,
+    )
+    audit.write(
+        audit.Category.CASES,
+        "Document added",
+        actor=by,
+        request=request,
+        affected_user=case.owner if case.owner_id != by.pk else None,
+        object_type="document",
+        object_id=document.pk,
+        object_label=document.title,
+        pages=1,
+        kind=PICTURE,
+        home=document.home_kind(),
+    )
+    from core import cases
+
+    cases.note_activity(case, by=by)
+    return document
+
+
 # Reading ------------------------------------------------------------------------------
 
 
@@ -425,6 +521,9 @@ def read(document_id) -> None:
 def _read(document: Document) -> None:
     import pdfplumber
 
+    if document.kind == PICTURE:
+        # A picture has no words to read: it was made ready when it was saved.
+        return
     document.page_rows.all().delete()
     ocr_pages = 0
     poor_pages = 0
@@ -494,9 +593,9 @@ def read_again_the_old() -> int:
     from core import tasks
 
     old = list(
-        Document.objects.filter(state=READY, read_version__lt=READ_VERSION).values_list(
-            "pk", flat=True
-        )
+        Document.objects.filter(
+            state=READY, kind=REPORT, read_version__lt=READ_VERSION
+        ).values_list("pk", flat=True)
     )
     if old:
         Document.objects.filter(pk__in=old).update(state=READING)
@@ -534,6 +633,7 @@ def as_json(document: Document) -> dict:
         "title": document.title,
         "url": document.url(),
         "state": document.state,
+        "kind": document.kind,
         "pages_line": document.pages_line(),
         "pages": document.pages,
     }

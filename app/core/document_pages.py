@@ -327,11 +327,14 @@ def download(request: HttpRequest, case_id, document_id) -> HttpResponse:
     document = _their_document(request, case_id, document_id)
     if not document.original_path.exists():
         raise Http404("no such file")
+    picture = document.kind == documents.PICTURE
     answer = FileResponse(
         open(document.original_path, "rb"),  # noqa: SIM115 - closed by the response
-        content_type="application/pdf",
+        content_type="image/png" if picture else "application/pdf",
     )
-    name = quote(document.original_filename or f"{document.title}.pdf")
+    name = quote(
+        document.original_filename or f"{document.title}.{'png' if picture else 'pdf'}"
+    )
     answer["Content-Disposition"] = f"attachment; filename*=UTF-8''{name}"
     return answer
 

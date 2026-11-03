@@ -1,0 +1,12 @@
+{% comment %}
+  The map's host (Phase 12): one element map.js draws into, with everything
+  it needs on data attributes. The Case page's Map tab includes it plain
+  (chapter 1); the incident page includes it with map_clock="incident" and
+  map_incident set (chapter 5), so the same script follows that page's
+  clock on a Map panel instead of running its own transport.
+{% endcomment %}
+{% load static %}
+<div id="case-map" class="map-tab{% if map_clock %} map-inc{% endif %}" data-case="{{ case.pk }}" data-json="{{ map_json_url }}" data-add="{{ map_add_url }}" data-picture="{% url 'case-map-picture' case.pk %}" data-basemap="{{ map_basemap.url }}" data-attribution="{{ map_basemap.attribution }}" data-tz="{{ map_time_zone }}" data-edit="{% if map_may_add %}1{% endif %}" data-style-light="{% static 'maps/style-light.json' %}" data-style-dark="{% static 'maps/style-dark.json' %}" data-glyphs="{{ map_static }}maps/fonts" data-sprite="{{ map_static }}maps/sprites" data-clock="{{ map_clock|default:'' }}" data-incident="{% if map_incident %}{{ map_incident }}{% else %}{{ request.GET.incident }}{% endif %}" data-recording="{% if not map_clock %}{{ request.GET.recording }}{% endif %}" data-at="{% if not map_clock %}{{ request.GET.at }}{% endif %}" data-day="{% if not map_clock %}{{ request.GET.day }}{% endif %}" data-name="{% if map_name %}{{ map_name }}{% else %}{{ case.name }}{% endif %}">
+  <p class="muted small">Reading the paths...</p>
+  <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>
+</div>

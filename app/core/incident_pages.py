@@ -65,6 +65,14 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
     if role == "collaborator":
         sharing.note_opened(case, request.user)
     state = state_json(incident, request.user)
+    map_url = camera_paths.incident_map_url(incident)
+    # The map pane (Phase 12 chapter 5): the same map as the Map tab's, on a
+    # Map panel following this page's clock, when a camera has a path file.
+    map_pane = {}
+    if map_url:
+        from core.case_pages import _map_context
+
+        map_pane = _map_context(case, request.user)
     return render(
         request,
         "incident.html",
@@ -78,7 +86,9 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "state": state,
             # On the map (Phase 12 chapter 1): the Map tab scoped to this
             # incident, when a camera of it has a path file.
-            "map_url": camera_paths.incident_map_url(incident),
+            "map_url": map_url,
+            "map_pane": bool(map_url),
+            **map_pane,
             # Ask Gideon (Phase 7 chapter 5).
             "gideon_on": bool(incident_chat.on() and engine.is_reachable()),
             "gideon_why": (
@@ -97,7 +107,8 @@ def page(request: HttpRequest, case_id, incident_id) -> HttpResponse:
             "event_words": _cited_words(request, incident),
             # A search hit opens on a tab, at a paragraph (Phase 7 chapter 3).
             "open_tab": request.GET.get("tab", "")
-            if request.GET.get("tab") in ("chronology", "memo", "cameras", "details")
+            if request.GET.get("tab")
+            in ("chronology", "memo", "cameras", "details", "map")
             else "",
             "para": _number(request.GET.get("para", "")),
         },

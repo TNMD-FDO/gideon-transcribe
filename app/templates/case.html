@@ -170,10 +170,12 @@
                       <td class="small">{% if one.home_name %}<a href="{{ one.home_url }}">{{ one.home_name }}</a> <span class="muted">({{ one.home_kind }})</span>{% else %}<span class="muted">nothing yet</span>{% endif %}</td>
                       {% comment %}Against the case (Phase 10 chapter 4, v1.170.0): the comparison read against every recording of the case, one at a time, its findings on one layer under the table.{% endcomment %}
                       <td class="small">
+                        {% if one.is_picture %}<span class="muted">a picture, nothing to compare</span>{% else %}
                         {% if one.case_state == "done" %}<span class="pill small ok">{{ one.case_findings }} finding{{ one.case_findings|pluralize }}</span>{% elif one.case_busy %}<span class="pill small warn">running</span>{% elif one.case_state == "failed" %}<span class="pill small warn">did not finish</span>{% else %}<span class="muted">not compared yet</span>{% endif %}
                         {% if one.case_words %}<div class="muted tiny">{{ one.case_words|truncatechars:120 }}</div>{% endif %}
                         <div class="mt4"><button type="button" class="btn small{% if one.case_state == 'done' %} primary{% endif %}" data-case-compare data-comparison="{% url 'document-comparison' case.pk one.pk %}" data-compare="{% url 'document-compare' case.pk one.pk %}" data-title="{{ one.title }}" title="The report read against every recording of the case that has a transcript, one at a time; every finding cites the paragraph and the moment">{% if one.case_state == "done" %}Comparison{% elif one.case_busy %}Comparison, running{% else %}Compare with the case{% endif %}</button>
                         {% if one.case_comparison_export %}<a class="btn small ghost" href="{{ one.case_comparison_export }}">{% icon "word" %} To Word</a>{% endif %}</div>
+                        {% endif %}
                       </td>
                       <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
                       <td class="nowrap">
@@ -474,10 +476,7 @@
               <label class="btn small" id="map-add-files">{% icon "upload" %} Add path files<input type="file" accept=".vtt,text/vtt" multiple hidden></label>
             {% endif %}
           </div>
-          <div id="case-map" class="map-tab" data-case="{{ case.pk }}" data-json="{{ map_json_url }}" data-add="{{ map_add_url }}" data-basemap="{{ map_basemap.url }}" data-attribution="{{ map_basemap.attribution }}" data-tz="{{ map_time_zone }}" data-edit="{% if map_may_add %}1{% endif %}" data-style-light="{% static 'maps/style-light.json' %}" data-style-dark="{% static 'maps/style-dark.json' %}" data-glyphs="{{ map_static }}maps/fonts" data-sprite="{{ map_static }}maps/sprites" data-incident="{{ request.GET.incident }}" data-recording="{{ request.GET.recording }}" data-at="{{ request.GET.at }}" data-day="{{ request.GET.day }}">
-            <p class="muted small">Reading the paths...</p>
-            <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i></div>
-          </div>
+          {% include "map-host.html" with map_clock="" %}
         {% elif tab == "speakers" %}
           {% comment %}
             The Speakers tab (v1.151.0, the drawing phase-5-speakers-tab-and-voices.html):

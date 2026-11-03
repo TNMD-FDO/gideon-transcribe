@@ -7,6 +7,12 @@
   "use strict";
   var host = document.getElementById("case-map");
   if (!host || !window.maplibregl) { return; }
+  // The incident page's map pane (Phase 12 chapter 5): the same script on a
+  // second host, following that page's clock (window.IncidentClock) instead
+  // of running its own transport, list and strip. A press on the map seeks
+  // the incident's clock and brings the camera to the front of the wall.
+  var INC = host.dataset.clock === "incident";
+  function incClock() { return INC && window.IncidentClock ? window.IncidentClock : null; }
 
   function esc(text) { return String(text == null ? "" : text).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function hms(seconds) { seconds = Math.round(seconds); seconds = ((seconds % 86400) + 86400) % 86400; var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60; return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s; }
@@ -48,6 +54,7 @@
   var askMarker = null;
   EVENT_KINDS.forEach(function (k) { S.events[k] = recall("map-ev-" + k) !== "0" || k === "notes"; });
   if (recall("map-ev-bookmark") === null) { S.events.bookmark = false; }
+  if (INC) { S.large = recall("map-inc-large") === "1"; }
 
   var map = null, mapReady = false, markers = {}, trailIndex = {}, el = {};
 
@@ -96,7 +103,12 @@
   function dayCams() { return S.cams.filter(function (c) { return ofDay(c) && scoped(c); }); }
 
   // The clock --------------------------------------------------------------------
-  function now() { if (!S.playing) { return S.moment; } return S.anchorMoment + ((performance.now() - S.anchorNow) / 1000) * S.speed; }
+  function now() {
+    var ic = incClock();
+    if (ic) { var t = ic.now(); if (t !== null && t !== undefined && !isNaN(t)) { return t; } }
+    if (!S.playing) { return S.moment; }
+    return S.anchorMoment + ((performance.now() - S.anchorNow) / 1000) * S.speed;
+  }
   function span() {
     var cams = dayCams();
     if (!cams.length) { return [0, 60]; }
@@ -116,9 +128,11 @@
   }
   window.setInterval(tickIfMoved, STEP);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) { tick(); } });
-  function play() { S.anchorMoment = now(); S.anchorNow = performance.now(); S.playing = true; drawTransport(); tick(); }
-  function pause() { S.moment = now(); S.playing = false; drawTransport(); tick(); }
+  function play() { var ic = incClock(); if (ic) { ic.play(); tick(); return; } S.anchorMoment = now(); S.anchorNow = performance.now(); S.playing = true; drawTransport(); tick(); }
+  function pause() { var ic = incClock(); if (ic) { ic.pause(); tick(); return; } S.moment = now(); S.playing = false; drawTransport(); tick(); }
   function seek(at, fromPreview) {
+    var ic = incClock();
+    if (ic) { ic.seek(at); tick(); return; }
     var range = span();
     at = Math.max(range[0], Math.min(range[1], at));
     if (S.playing) { S.anchorMoment = at; S.anchorNow = performance.now(); } else { S.moment = at; }
@@ -156,6 +170,7 @@
 
   // The page ---------------------------------------------------------------------
   function layout() {
+    if (INC) { layoutPane(); return; }
     host.classList.toggle("large", S.large);
     host.innerHTML =
       "<div class='map-lead'>" +
@@ -180,6 +195,40 @@
     drawTransport(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar();
     wireAdd();
   }
+  // The incident page's pane: the map and a foot row, nothing of its own
+  // to play with; the page's transport is the clock.
+  function layoutPane() {
+    host.innerHTML =
+      "<div class='map-wrap' id='map-wrap'><div class='map-pane' id='map-pane'></div></div>" +
+      "<div class='map-foot' id='map-transport'></div>";
+    el.transport = host.querySelector("#map-transport"); el.pane = host.querySelector("#map-pane"); el.wrap = host.querySelector("#map-wrap");
+    el.list = null; el.strip = null; el.bar = null;
+    if (!layoutPane.wired) {
+      layoutPane.wired = true;
+      host.addEventListener("click", onPress);
+      host.addEventListener("change", function (e) { var t = e.target; if (!t.dataset || !t.dataset.ev) { return; } S.events[t.dataset.ev] = t.checked; remember("map-ev-" + t.dataset.ev, t.checked ? "1" : "0"); refreshLayers(); });
+      var back = document.getElementById("map-away-back");
+      if (back) { back.addEventListener("click", function () { S.large = false; remember("map-inc-large", "0"); applyLarge(); }); }
+      // The panel is hidden until its tab is pressed, and the person sizes
+      // the work panel by hand: the map takes its new size each time.
+      if (window.ResizeObserver) { new ResizeObserver(function () { if (map) { map.resize(); } }).observe(host); }
+    }
+    drawTransport(); drawMap(); applyLarge();
+  }
+  // Larger map on the incident page: the host moves onto the stage in the
+  // wall's place and back; the panel says where it went.
+  function applyLarge() {
+    if (!INC) { return; }
+    var stage = document.querySelector(".inc-stage"), wall = document.getElementById("wall"), slot = document.getElementById("panel-map"), away = document.getElementById("map-away"), desk = document.querySelector(".inc-desk");
+    if (!stage || !wall || !slot) { return; }
+    if (S.large && host.parentNode !== stage) { stage.insertBefore(host, wall); }
+    if (!S.large && host.parentNode !== slot) { slot.appendChild(host); }
+    if (desk) { desk.classList.toggle("inc-map-large", S.large); }
+    host.classList.toggle("large", S.large);
+    if (away) { away.hidden = !S.large; }
+    drawTransport();
+    window.setTimeout(function () { if (map) { map.resize(); } }, 50);
+  }
   function seg(key, words) { return "<button type='button' data-show='" + key + "' class='" + (S.show === key ? "on" : "") + "'>" + words + "</button>"; }
   function evTick(kind) {
     var words = { camera: "camera on and off", lights: "lights", siren: "siren", mic: "mic", bookmark: "bookmarks", notes: "notes" }[kind];
@@ -201,6 +250,19 @@
   function drawShow() { host.querySelectorAll("#map-show [data-show]").forEach(function (b) { b.classList.toggle("on", b.dataset.show === S.show); }); }
   function drawTransport() {
     var m = now();
+    if (INC) {
+      var cams = dayCams(), ic = incClock();
+      el.transport.innerHTML =
+        "<span class='muted small' id='map-count'>" + (cams.length ? cams.filter(inView).length + " of " + cams.length + " in view" : "no camera on this day") + "</span>" +
+        (ic && ic.now() === null ? "<span class='muted small'>This incident has no clock yet, so the map stands at the cameras' start.</span>" : "") +
+        "<span class='seg' id='map-show'>" + seg("markers", "Markers") + seg("trails", "Trails") + seg("whole", "Paths") + "</span>" +
+        "<span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span>" +
+        "<span class='grow'></span>" +
+        "<button type='button' class='tiny' data-act='fit'>Fit all</button>" +
+        (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a Document on the incident'>Save a picture</button>" : "") +
+        "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
+      return;
+    }
     var scope = S.scope ? "<span class='pill small acc' title='" + esc(S.scope.name) + "'>" + esc(S.scope.name) + "</span> <button type='button' class='tiny ghost' data-act='whole-day'>whole day</button>" : "";
     el.transport.innerHTML =
       scope +
@@ -213,10 +275,12 @@
       "<button type='button' class='small' data-act='fit'>Fit all</button>" +
       "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
       "<button type='button' class='small " + (S.asking ? "on" : "") + "' data-act='near' title='Press, then press a place on the map: which cameras came within " + NEAR + " m of it, and when'>Who was near here</button>" +
+      (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a Document on the incident shown, or on the camera pressed'>Save a picture</button>" : "") +
       "<button type='button' class='small " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
   }
   function drawBar() {
+    if (!el.bar) { return; }
     var m = now();
     el.bar.innerHTML = "<button type='button' class='tiny primary' data-act='play'>" + (S.playing ? "Pause" : "Play") + "</button><span class='map-clock mono'>" + hms(m) + "</span><span class='muted small'>" + S.speed + "×</span><button type='button' class='tiny ghost' data-act='leave-full'>Leave full screen</button>";
   }
@@ -512,6 +576,7 @@
     card.style.top = Math.max(8, Math.min(el.pane.clientHeight - card.offsetHeight - 8, pt.y - 10)) + "px";
   }
   function drawList() {
+    if (INC) { var count = host.querySelector("#map-count"); var dc = dayCams(); if (count) { count.textContent = dc.length ? dc.filter(inView).length + " of " + dc.length + " in view" : "no camera on this day"; } return; }
     if (!el.list) { return; }
     var cams = S.cams.filter(scoped);
     var today = cams.filter(ofDay), other = cams.filter(function (c) { return c.onClock && !ofDay(c); }), off = cams.filter(function (c) { return !c.onClock; });
@@ -679,6 +744,13 @@
 
   // The Preview -------------------------------------------------------------------
   function openPreview(cam) {
+    var ic = incClock();
+    if (ic) {
+      // On the incident page the wall is the player: the camera comes to the
+      // front and the incident's clock runs from here.
+      if (!cam.onClock) { toast("That camera is not on the clock.", true); return; }
+      ic.focus(cam.id); ic.play(); tick(); return;
+    }
     if (!window.Preview || !window.Preview.open) { return; }
     var seconds = cam.onClock ? Math.max(0, now() - cam.zero.second) : (cam.own || 0);
     S.following = cam.onClock ? cam.id : null;
@@ -686,7 +758,7 @@
     drawTransport();
   }
   function followPreview() {
-    if (!S.following || !window.Preview) { return; }
+    if (INC || !S.following || !window.Preview) { return; }
     if (!window.Preview.isOpen()) { S.following = null; if (S.playing) { pause(); } drawTransport(); return; }
     var asked = window.Preview.asked ? window.Preview.asked() : null;
     if (asked && asked.recording && asked.recording !== S.following) { S.following = S.byId[asked.recording] && S.byId[asked.recording].onClock ? asked.recording : null; drawTransport(); if (!S.following) { return; } }
@@ -776,6 +848,7 @@
   function onPress(e) {
     var chip = e.target.closest(".map-days [data-day]");
     if (chip) { S.day = chip.dataset.day; setAddress(); S.selected = null; S.following = null; load(false); return; }
+    if (INC) { var sh = e.target.closest("#map-show [data-show]"); if (sh) { S.show = sh.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); return; } }
     var b = e.target.closest("[data-act]");
     if (b) {
       var cam = b.dataset.cam ? S.byId[b.dataset.cam] : null;
@@ -787,7 +860,8 @@
         case "next-event": stepEvent(1); return;
         case "fit": fitAll(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
-        case "large": S.large = !S.large; remember("map-large", S.large ? "1" : "0"); host.classList.toggle("large", S.large); drawTransport(); drawList(); drawStrip(); window.setTimeout(function () { if (map) { map.resize(); } }, 50); return;
+        case "large": S.large = !S.large; if (INC) { remember("map-inc-large", S.large ? "1" : "0"); applyLarge(); return; } remember("map-large", S.large ? "1" : "0"); host.classList.toggle("large", S.large); drawTransport(); drawList(); drawStrip(); window.setTimeout(function () { if (map) { map.resize(); } }, 50); return;
+        case "picture": savePicture(); return;
         case "leave-full": if (document.exitFullscreen) { document.exitFullscreen(); } return;
         case "fold": host.classList.toggle("folded"); drawList(); return;
         case "play-here": if (cam) { select(cam); openPreview(cam); } return;
@@ -815,7 +889,7 @@
     var row = e.target.closest(".map-row[data-cam]");
     if (row && !e.target.closest("button, label, input, a")) { var c = S.byId[row.dataset.cam]; select(c); flyTo(c); }
   }
-  function select(cam) { S.selected = null; closeCard(); light(cam); refreshLayers(); }
+  function select(cam) { S.selected = null; S.pressed = cam ? cam.id : null; closeCard(); light(cam); refreshLayers(); }
   // The Incidents tab's own form, posted from here: the incident is made
   // there and the page lands on it.
   function makeIncident(ids) {
@@ -827,20 +901,93 @@
   }
   document.addEventListener("keydown", function (e) {
     if ((e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) { return; }
+    // On the incident page the keys are that page's; only Escape clears a selection here.
+    if (INC && e.key !== "Escape") { return; }
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
     else if (e.key === "Escape" && (S.selected || S.asking || askMarker)) { clearSelection(); }
   });
 
+  // Save a picture (Phase 12 chapter 5) --------------------------------------------
+  // The map's canvas as drawn, the markers drawn onto a copy (they are page
+  // elements, not part of the canvas), a band under it with the title, the
+  // scale and the map's attribution, then one PNG kept as a Document on the
+  // incident shown, or on the camera pressed.
+  function pictureHome() {
+    if (S.scope) { return { incident: S.scope.id, words: S.scope.name }; }
+    var cam = S.selected ? S.selected.cam : (S.pressed ? S.byId[S.pressed] : (S.lit ? S.byId[S.lit] : null));
+    if (cam) { return { recording: cam.id, words: cam.title }; }
+    return null;
+  }
+  function pictureTitle(m) { return "Map at " + hms(m) + (S.day ? ", " + dayWords(S.day) : ""); }
+  function savePicture() {
+    if (!map || !mapReady) { toast("The map is not drawn yet.", true); return; }
+    var home = pictureHome();
+    if (!home) { toast("Press a camera's row or marker first: the picture is kept as a Document on it, or on the incident when the map is opened from one.", true); return; }
+    var m = now();
+    map.once("render", function () {
+      try {
+        var src = map.getCanvas();
+        var ratio = src.width / Math.max(1, src.clientWidth);
+        var band = Math.round(34 * ratio);
+        var out = document.createElement("canvas"); out.width = src.width; out.height = src.height + band;
+        var ctx = out.getContext("2d");
+        var font = getComputedStyle(document.body).fontFamily || "sans-serif";
+        ctx.fillStyle = token("--surface"); ctx.fillRect(0, 0, out.width, out.height);
+        ctx.drawImage(src, 0, 0);
+        S.cams.forEach(function (cam) {
+          var marker = markers[cam.id]; if (!marker) { return; }
+          var node = marker.getElement(); if (node.classList.contains("before")) { return; }
+          var pt = map.project(marker.getLngLat());
+          var x = pt.x * ratio, y = pt.y * ratio, r = 11 * ratio, ended = node.classList.contains("ended");
+          ctx.globalAlpha = node.classList.contains("nofix") ? 0.45 : 1;
+          ctx.fillStyle = ended ? token("--surface") : colourOf(cam); ctx.strokeStyle = ended ? colourOf(cam) : token("--surface"); ctx.lineWidth = 2 * ratio;
+          ctx.beginPath();
+          if (cam.source === "car") { ctx.rect(x - r, y - r, 2 * r, 2 * r); } else { ctx.arc(x, y, r, 0, Math.PI * 2); }
+          ctx.fill(); ctx.stroke();
+          // The camera's name beside its marker, with a halo so it reads on any ground.
+          var label = String(cam.unit || cam.title).slice(0, 28);
+          ctx.font = "700 " + Math.round(11 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+          ctx.lineWidth = 3 * ratio; ctx.strokeStyle = token("--surface"); ctx.strokeText(label, x + r + 4 * ratio, y);
+          ctx.fillStyle = token("--text"); ctx.fillText(label, x + r + 4 * ratio, y);
+          ctx.globalAlpha = 1;
+        });
+        var y0 = src.height, mid = y0 + band / 2;
+        ctx.fillStyle = token("--surface"); ctx.fillRect(0, y0, out.width, band);
+        ctx.strokeStyle = token("--line"); ctx.lineWidth = ratio; ctx.beginPath(); ctx.moveTo(0, y0 + 0.5); ctx.lineTo(out.width, y0 + 0.5); ctx.stroke();
+        ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(12 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(pictureTitle(m) + " · " + home.words, 10 * ratio, mid);
+        var sc = el.pane.querySelector(".maplibregl-ctrl-scale");
+        if (sc && sc.offsetWidth) {
+          var w = sc.offsetWidth * ratio, sx = out.width / 2 - w / 2;
+          ctx.strokeStyle = token("--text"); ctx.lineWidth = 2 * ratio; ctx.beginPath(); ctx.moveTo(sx, mid - 4 * ratio); ctx.lineTo(sx, mid + 4 * ratio); ctx.lineTo(sx + w, mid + 4 * ratio); ctx.lineTo(sx + w, mid - 4 * ratio); ctx.stroke();
+          ctx.font = Math.round(10 * ratio) + "px " + font; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText(sc.textContent, sx + w / 2, mid - 5 * ratio);
+        }
+        if (host.dataset.basemap) { ctx.fillStyle = token("--muted"); ctx.font = Math.round(10 * ratio) + "px " + font; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(host.dataset.attribution || "", out.width - 10 * ratio, mid); }
+        out.toBlob(function (blob) {
+          if (!blob) { toast("The picture could not be drawn.", true); return; }
+          var form = new FormData();
+          form.append("file", blob, "map.png"); form.append("title", pictureTitle(m) + ", " + home.words);
+          if (home.incident) { form.append("incident", home.incident); }
+          if (home.recording) { form.append("recording", home.recording); }
+          postForm(host.dataset.picture, form).then(function (told) { toast(told.words || "Saved."); }).catch(function (err) { toast(err.message, true); });
+        }, "image/png");
+      } catch (e) { toast("The picture could not be drawn.", true); }
+    });
+    map.triggerRepaint();
+  }
+
   // The address --------------------------------------------------------------------
   function askedMoment() {
+    if (INC) { return null; }
     var rec = host.dataset.recording, at = parseFloat(host.dataset.at);
     if (rec && S.byId[rec] && S.byId[rec].onClock && !isNaN(at)) { var cam = S.byId[rec]; if (cam.date === S.day) { window.setTimeout(function () { select(cam); flyTo(cam); }, 300); return cam.zero.second + at; } }
     if (S.scope) { var low = Infinity; S.scope.cameras.forEach(function (id) { var c = S.byId[id]; if (c && c.onClock) { low = Math.min(low, c.zero.second); } }); if (low < Infinity) { return low; } }
     return null;
   }
   function setAddress() {
+    if (INC) { return; }
     var p = new URLSearchParams(location.search);
     p.set("tab", "map");
     if (S.day) { p.set("day", S.day); } else { p.delete("day"); }

@@ -100,6 +100,7 @@
         <button type="button" class="tab" data-panel="chronology" title="Chronology">{% icon "text" %} <span class="w">Chronology</span></button>
         {% if state.memo.on %}<button type="button" class="tab" data-panel="memo" title="Memo">{% icon "summary" %} <span class="w">Memo</span></button>{% endif %}
         <button type="button" class="tab" data-panel="cameras" title="Cameras">{% icon "camera" %} <span class="w">Cameras</span></button>
+        {% if map_pane %}<button type="button" class="tab" data-panel="map" title="The cameras' paths on the map, following this clock">{% icon "map" %} <span class="w">Map</span></button>{% endif %}
         <button type="button" class="tab" data-panel="report" id="tab-report" title="Report" hidden>{% icon "document" %} <span class="w">Report</span> <span class="count" id="report-count"></span></button>
         <button type="button" class="tab" data-panel="details" title="Details">{% icon "info" %} <span class="w">Details</span></button>
         {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
@@ -188,6 +189,19 @@
         <div class="panel" id="panel-cameras" hidden></div>
         <div class="panel" id="panel-report" hidden data-home="incident" data-home-id="{{ incident.pk }}"></div>
         <div class="panel" id="panel-details" hidden></div>
+        {% if map_pane %}
+          {% comment %}
+            The map pane (Phase 12 chapter 5): the Map tab's own script on a
+            second host, scoped to this incident and following this page's
+            clock through window.IncidentClock; Larger map moves the host
+            onto the stage in the wall's place, and the panel says so.
+          {% endcomment %}
+          <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
+          <div class="panel inc-map-panel" id="panel-map" hidden>
+            <p class="muted small inc-map-away" id="map-away" hidden>The map has the wall's place. <button type="button" class="tiny ghost" id="map-away-back">Smaller map</button></p>
+            {% include "map-host.html" with map_clock="incident" map_incident=incident.pk map_name=incident.name %}
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -263,6 +277,7 @@
   <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'expectation.js' %}"></script>
   <script src="{% static 'incident.js' %}"></script>
+  {% if map_pane %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
   <script src="{% static 'chat-ui.js' %}"></script>
   <script src="{% static 'gideon.js' %}"></script>
 {% endblock %}
