@@ -534,6 +534,7 @@
       inCase: {% if recording.case_id %}"{{ recording.case_id }}"{% else %}null{% endif %},
       caseChatUrl: {% if case_chat_url %}"{{ case_chat_url }}"{% else %}null{% endif %},
       isVideo: {% if is_video %}true{% else %}false{% endif %},
+      hasPath: {% if has_path %}true{% else %}false{% endif %},
       assistant: {% if assistant.assistant and transcript %}{ suggestions: {% if assistant.suggestions %}true{% else %}false{% endif %}, moments: {% if assistant.moments %}true{% else %}false{% endif %} }{% else %}null{% endif %}
     };
   </script>

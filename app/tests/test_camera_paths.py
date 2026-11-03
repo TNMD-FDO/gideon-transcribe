@@ -862,3 +862,60 @@ def test_the_map_script_lists_readings_and_answers_who_was_near_here():
     assert "svg class='spd'" in script and "em class='off'" in script
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
     assert ".map-readings" in css and ".map-ask" in css and "svg.spd" in css
+
+
+# The wearer on the Speakers page, and where a line was said (chapter 4) -------------
+
+
+def test_the_path_files_names_are_offered_in_the_speaker_picker(client, person, a_case):
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:20:03", "BWC2-1"))
+    added(body, body_file(), by=person)
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    wearers = camera_paths.wearers_of(a_case)
+    assert wearers == [
+        {"name": "Pat Doe", "facts": "wore BWC2-1, from its path file"},
+        {"name": "Sam Roe", "facts": "drove unit 9082, from its path file"},
+    ]
+    source = (HERE / "core" / "speakers_page.py").read_text(encoding="utf-8")
+    assert "camera_paths.wearers_of(recording.case)" in source
+    assert '"wearers": wearers' in source
+    settings_store.set_to("maps", False)
+    assert camera_paths.wearers_of(a_case) == []
+    script = (HERE / "static" / "picker.js").read_text(encoding="utf-8")
+    assert "From the cameras' files" in script and "data.wearers" in script
+
+
+def test_where_a_line_was_said_names_the_other_cameras_by_distance(
+    client, person, a_case
+):
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_x.mp4")
+    case_chronology.place(body, dt.date(2025, 11, 6), 51603.0, by=person)
+    added(body, body_file(seconds=300, still=True), by=person)
+    # The car drives north at 0.0002 degrees a second; the body camera stands.
+    told = camera_paths.where_at(car, 0.0)
+    assert told["has_path"] and told["fix"] and told["when"] == "14:20:03"
+    assert told["near"][0]["title"] == "BWC2-1" and told["near"][0]["metres"] == 0
+    told = camera_paths.where_at(car, 100.0)
+    assert 2100 < told["near"][0]["metres"] < 2300
+    assert told["map_url"].endswith(f"?tab=map&recording={car.pk}&at=100.0")
+    assert "lat" not in json.dumps(told) and str(LAT) not in json.dumps(told)
+    gapped = video(person, a_case, "BWC3-1")
+    added(gapped, body_file(gap=(30, 50)), by=person)
+    told = camera_paths.where_at(gapped, 40.0)
+    assert told["fix"] is False and told["when"] == "0:40 in" and told["near"] == []
+    signed_in(client, person)
+    answer = client.get(reverse("camera-path-where", args=[car.pk]) + "?t=100")
+    assert answer.status_code == 200 and answer.json()["near"][0]["title"] == "BWC2-1"
+    nothing = video(person, a_case, "Call")
+    assert client.get(reverse("camera-path-where", args=[nothing.pk])).json() == {
+        "has_path": False
+    }
+    page = client.get(reverse("viewer", args=[car.pk])).content.decode()
+    assert "hasPath: true" in page
+    page = client.get(reverse("viewer", args=[nothing.pk])).content.decode()
+    assert "hasPath: false" in page
+    script = (HERE / "static" / "viewer.js").read_text(encoding="utf-8")
+    assert "function whereOn(index)" in script and '"/path/where?t="' in script

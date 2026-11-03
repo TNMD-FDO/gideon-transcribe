@@ -1517,6 +1517,98 @@ def incident_map_url(incident, on_map: set | None = None) -> str:
     return f"{reverse('case', args=[incident.case_id])}?tab=map&incident={incident.pk}"
 
 
+# Chapter 4: the wearer on the Speakers page, and where a line was said.
+
+
+def wearers_of(case) -> list[dict]:
+    """The names the case's path files give their wearers and drivers, one
+    row per name, with the cameras it wore or drove, for the speaker picker:
+    "Pat Doe, wore BWC2-1, from its path file". Never a position."""
+    if not on():
+        return []
+    by_name: dict[str, dict] = {}
+    for path in for_case(case):
+        name = " ".join(path.wearer.split())
+        if not name:
+            continue
+        camera = str((path.recording.stamp or {}).get("camera") or "").strip()
+        camera = camera or path.recording.title
+        row = by_name.setdefault(
+            name.casefold(), {"name": name, "cameras": [], "units": []}
+        )
+        if path.source == CAR:
+            if path.unit and path.unit not in row["units"]:
+                row["units"].append(path.unit)
+        elif camera not in row["cameras"]:
+            row["cameras"].append(camera)
+    out = []
+    for row in by_name.values():
+        words = []
+        if row["cameras"]:
+            words.append("wore " + ", ".join(row["cameras"]))
+        if row["units"]:
+            words.append("drove unit " + ", ".join(row["units"]))
+        out.append(
+            {"name": row["name"], "facts": "; ".join(words) + ", from its path file"}
+        )
+    out.sort(key=lambda one: one["name"].casefold())
+    return out
+
+
+def where_at(recording, t: float) -> dict:
+    """Where this camera was at t seconds in, told without a position: whether
+    it had a fix, and which of the case's other cameras with a path were how
+    far from it at that moment, by their clocks. The street is the map's to
+    say (the browser reads it from the basemap on the Map tab)."""
+    from core import incidents
+
+    path = of(recording)
+    if path is None or not on():
+        return {"has_path": False}
+    t = max(0.0, float(t))
+    zero = zero_of(recording, path)
+    here = position_at(path, t)
+    out = {
+        "has_path": True,
+        "fix": here is not None,
+        "before_first": bool(path.fixes) and t < path.fixes[0][0],
+        "no_position": not path.fixes,
+        "when": (
+            incidents.hms(zero["second"] + t)
+            if zero and zero.get("second") is not None
+            else incidents.elapsed(t) + " in"
+        ),
+        "near": [],
+        "map_url": (
+            map_url(recording.case_id, recording.pk, t) if recording.case_id else ""
+        ),
+    }
+    if here is None or not zero or zero.get("second") is None or not recording.case_id:
+        return out
+    moment = zero["second"] + t
+    for other in for_case(recording.case):
+        if other.recording_id == recording.pk or not other.fixes:
+            continue
+        their_zero = zero_of(other.recording, other)
+        if not their_zero or their_zero.get("second") is None:
+            continue
+        if their_zero["date"] != zero["date"]:
+            continue
+        there = position_at(other, moment - their_zero["second"])
+        if there is None:
+            continue
+        out["near"].append(
+            {
+                "recording": str(other.recording_id),
+                "title": other.recording.title,
+                "unit": other.unit,
+                "metres": int(round(metres_between(here, there))),
+            }
+        )
+    out["near"].sort(key=lambda one: one["metres"])
+    return out
+
+
 def words(path: CameraPath | None) -> str:
     """The recording's line about its path file, for the Details and the
     Status page: "812 fixes over 38 minutes, in-car, clock from its file"."""

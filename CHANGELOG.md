@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.190.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 4: the names the cameras' files give, and where a line was said.
+
+- **From the cameras' files**, a group in the speaker picker inside a case: the wearer of each body camera and the driver of each unit, as their path files name them ("Pat Doe, wore BWC2-1, from its path file"), offered as names to take for a speaker. The app matches no voice: the person chooses, as with any name; a name taken becomes a Person of the case as any name does.
+- **where** on a line of the recording page, when the recording has a path file: whether the camera had a fix when the line was said, and the case's other cameras by distance at that moment ("At 14:26:28: 9082 30 m away, BWC3-1 410 m away"), with **On the map** opening the Map tab at that moment with the camera selected, where the street is named. Never a position in the answer.
+
 ## v1.189.0, 2026-11-02
 
 ```

@@ -123,6 +123,21 @@ def offer(request: HttpRequest, recording_id) -> JsonResponse:
 
 
 @login_required
+def where(request: HttpRequest, recording_id) -> JsonResponse:
+    """Where the camera was at a moment (chapter 4): a fix or none, and the
+    case's other cameras by distance; never a position."""
+    _maps_or_404()
+    recording = _recording_for(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    try:
+        t = float(request.GET.get("t", "0"))
+    except ValueError:
+        return JsonResponse({"error": "The moment was not read."}, status=400)
+    return JsonResponse(camera_paths.where_at(recording, t))
+
+
+@login_required
 @require_POST
 def paths_add(request: HttpRequest, case_id) -> JsonResponse:
     """Several files at once: `files` repeated; `chosen` repeated beside

@@ -335,6 +335,12 @@ def type_hint(recording) -> dict | None:
     }
 
 
+def _has_path(recording) -> bool:
+    from core import camera_paths
+
+    return camera_paths.on() and camera_paths.of(recording) is not None
+
+
 def _page_context(request: HttpRequest, recording: Recording) -> dict:
     """What the viewer's page and its windows are drawn from."""
     from core import exports
@@ -441,6 +447,9 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # While the copy is still being written there is no file to judge
         # by, so the overlay's word comes from the probe: "Preparing
         # video" for a recording with a picture, and not "audio".
+        # Where a line was said (Phase 12 chapter 4): the row's "where" press,
+        # for a recording with a path file while Maps are on.
+        "has_path": _has_path(recording),
         "is_video": (
             bool(playback and playback.suffix == ".mp4")
             or (playback is None and _expects_video(recording))

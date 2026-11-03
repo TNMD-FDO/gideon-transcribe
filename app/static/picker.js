@@ -224,6 +224,16 @@
         return row({ name: one.name, colour: "", role: one.role, facts: facts, hear: hear }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
       });
       parts.push("<div class='grp'><div class='gh'>In this case, not yet on this call</div>" + (people.join("") || "<div class='small muted'>Everyone in the case is on this call already.</div>") + "</div>");
+      // The names the cameras' own files give (Phase 12 chapter 4): the
+      // wearer of a body camera, the driver of a unit; a name to take, never
+      // a voice the app matched.
+      var wearers = (data.wearers || []).map(function (one) {
+        key += 1;
+        return row({ name: one.name, colour: "", facts: one.facts }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
+      });
+      if (wearers.length) {
+        parts.push("<div class='grp'><div class='gh'>From the cameras' files</div>" + wearers.join("") + "</div>");
+      }
     }
     if (options.newSpeaker) {
       parts.push("<div class='grp'><div class='gh'>Or</div><div class='opt' data-new='speaker'><kbd></kbd><span class='dot'></span><span class='nm'>A new speaker on this call</span><span class='facts'>the next free label, to be named later</span><span class='hear'></span></div></div>");

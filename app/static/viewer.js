@@ -286,6 +286,17 @@
       noteButton.innerHTML = icon("note") + " note";
       actions.appendChild(noteButton);
 
+      // Where the camera was when this was said (Phase 12 chapter 4), from
+      // its path file: a fix or none, and the other cameras by distance.
+      if (window.VIEWER.hasPath) {
+        var whereButton = document.createElement("button");
+        whereButton.type = "button";
+        whereButton.className = "ghost tiny where-row";
+        whereButton.title = "Where the camera was when this was said, and who was near";
+        whereButton.innerHTML = icon("map") + " where";
+        actions.appendChild(whereButton);
+      }
+
       if (window.VIEWER.clips) {
         var clipButton = document.createElement("button");
         clipButton.type = "button";
@@ -1251,6 +1262,8 @@
       if (event.target.closest("[data-note-act='remove']")) { removeNote(index); return; }
       if (event.target.closest(".note-row") || event.target.closest(".note-line")) { noteOn(index); return; }
       if (event.target.closest(".speaker-row")) { pickSpeakerFor(index); return; }
+      if (event.target.closest(".where-row")) { whereOn(index); return; }
+      if (event.target.closest(".where-line")) { if (!event.target.closest("a")) { event.stopPropagation(); } return; }
       if (row.querySelector("textarea")) { return; }
       window.VIEWER.seek(segments[index].start);
     });
@@ -1533,6 +1546,44 @@
         });
       });
     });
+  }
+
+  // Where a line was said (Phase 12 chapter 4): asked of the path file at
+  // the line's start; shown under the words; a second press folds it.
+  function whereOn(index) {
+    var segment = segments[index];
+    var row = column ? column.children[index] : null;
+    if (!segment || !row) { return; }
+    var shown = row.querySelector(".where-line");
+    if (shown) { shown.remove(); return; }
+    var line = document.createElement("div");
+    line.className = "where-line";
+    line.textContent = "Asking the camera's file...";
+    row.querySelector(".words").appendChild(line);
+    fetch("/recording/" + window.VIEWER.recording + "/path/where?t=" + encodeURIComponent(segment.start.toFixed(1)), { credentials: "same-origin" })
+      .then(function (answer) { return answer.json(); })
+      .then(function (told) {
+        var words;
+        if (!told.has_path) { words = "This recording has no path file."; }
+        else if (told.no_position) { words = "The camera's file carries no position."; }
+        else if (told.before_first) { words = "At " + told.when + " the camera had no fix yet."; }
+        else if (!told.fix) { words = "At " + told.when + " the camera had no fix (indoors, or out of sight of the sky)."; }
+        else if (!told.near.length) { words = "At " + told.when + " the camera had a fix; no other camera of the case had one at that moment."; }
+        else {
+          words = "At " + told.when + ": " + told.near.map(function (one) {
+            return (one.unit || one.title) + " " + (one.metres < 1000 ? one.metres + " m" : (one.metres / 1000).toFixed(1) + " km") + " away";
+          }).join(", ") + ".";
+        }
+        line.textContent = words + " ";
+        if (told.map_url && told.has_path && !told.no_position) {
+          var go = document.createElement("a");
+          go.href = told.map_url;
+          go.textContent = "On the map";
+          go.title = "The Map tab at this moment, with this camera selected; the street is named there";
+          line.appendChild(go);
+        }
+      })
+      .catch(function () { line.textContent = "The camera's file could not be asked."; });
   }
 
   function noteOn(index) {

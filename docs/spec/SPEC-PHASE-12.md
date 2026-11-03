@@ -22,6 +22,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 1. The cameras on a map
 2. The path file's clock, and the readings beside the record
 3. The Readings
+4. The names the cameras' files give, and where a line was said
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -147,6 +148,16 @@ On a reading in the list and on an event's card: **Offer to the chronology** mak
 ### What is not
 
 No reading is offered by the app itself: Offer is the person's press, as Accept is. No position is in an offer, a proposal, a note or a row. The incident's own chronology gets the reading through the proposal's acceptance alone.
+
+## 4. The names the cameras' files give, and where a line was said (the fourth release, v1.190.0)
+
+### The wearer in the speaker picker
+
+The speaker picker (Phase 5 chapter 3) gains a fourth group inside a case, **From the cameras' files**: one row per name the case's path files give, the wearer of each body camera ("Pat Doe, wore BWC2-1, from its path file") and the driver of each in-car unit ("Sam Roe, drove unit 9082, from its path file"), keyed like the People rows and chosen the same way: the speaker in hand takes the name, and a name new to the case becomes a Person as any name does. Names already on the call are left out. The app matches no voice to a wearer: the chapter 1 plan's "the voice nearest the microphone" was set aside, since nothing the app keeps says which voice that is, and a guess here would be a guess about a person. The group is absent while Maps is off or no file names anyone. Nothing new is kept; the voice book (Phase 5 chapter 2) keys prints to Persons as before, so a wearer named becomes a print's name through the same road.
+
+### Where a line was said
+
+On the recording page, a line of a recording that has a path file carries **where** beside note and clip: a press asks the file where the camera was when the line was said (`GET recording/<id>/path/where?t=`) and shows the answer under the words: whether the camera had a fix at that moment (none yet, none indoors, none in the file), and the case's other cameras that had one on the same clock by their distance from it, nearest first ("At 14:26:28: 9082 30 m away, BWC3-1 410 m away"); then **On the map**, which opens the Map tab at that moment with the camera selected (chapter 1's address), where the street is named from the basemap. A second press folds it. The answer carries distances and times and never a position; the street is the browser's to read on the Map tab and is not sent. Nothing is kept and no row is written: the file is read, not changed.
 
 ## Appendix A. Audit rows added in Phase 12
 

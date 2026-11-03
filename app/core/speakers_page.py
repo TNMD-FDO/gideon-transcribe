@@ -449,10 +449,23 @@ def picker(recording, transcript, speakers: list[dict]) -> dict:
                     "sample": heard_elsewhere(recording, person.name),
                 }
             )
+    # The names the case's path files give (Phase 12 chapter 4): the wearer
+    # of each body camera and the driver of each unit, offered as names, never
+    # matched to a voice by the app.
+    wearers = []
+    if recording.case_id:
+        from core import camera_paths
+
+        wearers = [
+            one
+            for one in camera_paths.wearers_of(recording.case)
+            if one["name"].strip().casefold() not in here
+        ]
     return {
         "in_case": bool(recording.case_id),
         "on_call": on_call,
         "people": listed,
+        "wearers": wearers,
         "roles": people.roles(),
     }
 

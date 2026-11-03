@@ -1417,6 +1417,8 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
    correction box is; the Notes tab's rows. */
 .seg .note-line { margin: 4px 0 0; color: var(--muted); font-style: italic; white-space: pre-wrap; font-size: 0.93em; }
 .seg .note-line b { font-weight: 600; font-style: normal; }
+.seg .where-line { margin: 4px 0 0; color: var(--muted); font-size: var(--t-label); }
+.seg .where-line a { margin-left: 4px; }
 .seg .note-line.lit { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .seg.here .note-line { color: inherit; opacity: 0.85; }
 .noting { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
