@@ -592,6 +592,60 @@ def place_from_path(path: CameraPath, *, by, request=None) -> bool:
     return True
 
 
+def offer_to_chronology(
+    recording, *, t: float, words: str, until: float | None, by, request=None
+):
+    """A reading offered from the Map tab (Phase 12 chapter 3): a Proposed
+    event on the recording at the reading's moment, source `path`, in the
+    offerer's name, for Accept or Dismiss on the Proposed events tab as any
+    proposal. Refused while that tab is off, and offered once."""
+    from core import incidents, proposals
+
+    if not proposals.tab_offered():
+        raise Refused(
+            "The Proposed events tab is off in this office, so an offer would "
+            "have nowhere to land."
+        )
+    words = " ".join(str(words or "").split())[:200]
+    if not words:
+        raise Refused("The reading has no words.")
+    t = max(0.0, float(t))
+    kept = proposals.Proposal.objects.filter(
+        recording=recording, source="path", text=words, at__gte=t - 0.5, at__lte=t + 0.5
+    ).first()
+    if kept is not None:
+        if kept.state == proposals.DISMISSED:
+            raise Refused("That reading was offered before and dismissed.")
+        raise Refused("That reading is already on the Proposed events tab.")
+    camera = incidents.incident_of(recording)
+    proposal = proposals.Proposal.objects.create(
+        case=recording.case,
+        recording=recording,
+        incident=camera.incident if camera is not None else None,
+        at=t,
+        until=None if until is None else max(t, float(until)),
+        text=words,
+        why="Read from the camera's own file, not from the picture.",
+        rests_on="",
+        source="path",
+        proposed_by=by,
+    )
+    from core import cases
+
+    audit.write(
+        audit.Category.RECORDINGS,
+        "Reading offered to the chronology",
+        actor=by,
+        request=request,
+        affected_user=cases.affected_by(recording, by),
+        object_type="recording",
+        object_id=recording.pk,
+        object_label=recording.title,
+        reading=words.split(" ")[0].lower(),
+    )
+    return proposal
+
+
 def read_again_the_old() -> int:
     """The minute task's step: a path read by an older parser is read again
     from its file; one row per path, queued once."""
@@ -873,6 +927,10 @@ def events_of(path: CameraPath) -> list[dict]:
             words = on_words
             if key == "mic" and path.source == BODY and t >= 30:
                 words = "Activated"
+            # A muted spell ends when the mic comes back (chapter 3).
+            muted = open_since.pop("mic:off", None)
+            if key == "mic" and muted is not None:
+                events[muted]["until"] = t
             events.append(
                 {"t": t, "kind": key, "value": 1, "words": words, "until": None}
             )
@@ -884,6 +942,8 @@ def events_of(path: CameraPath) -> list[dict]:
                 events.append(
                     {"t": t, "kind": key, "value": 0, "words": off_words, "until": None}
                 )
+                if key == "mic":
+                    open_since["mic:off"] = len(events) - 1
     for index in open_since.values():
         events[index]["until"] = length
     for start, end in still_spells(path):
@@ -962,7 +1022,7 @@ def readings_words(path: CameraPath, zero: dict | None) -> list[str]:
             else:
                 out.append(f"mic on {words}")
         elif one["kind"] == "mic":
-            out.append(f"muted {_spell_words(one['t'], None, zero)}")
+            out.append(f"muted {_spell_words(one['t'], one['until'], zero)}")
         elif one["kind"] in ("lights", "siren", "aux", "low battery") and one["value"]:
             out.append(
                 f"{one['words'].lower()} {_spell_words(one['t'], one['until'], zero)}"
@@ -1293,7 +1353,17 @@ def map_of(case, *, day: str = "", viewer) -> dict:
             case, [paths[one.pk] for one in videos if one.pk in paths], zeros
         ),
         "new_incident_url": reverse("new-incident", args=[case.pk]),
+        # Offer to the chronology (chapter 3): withheld, with the reason,
+        # while the Proposed events tab is off.
+        "may_offer": _may_offer(),
+        "offer_why": "" if _may_offer() else "The Proposed events tab is off.",
     }
+
+
+def _may_offer() -> bool:
+    from core import proposals
+
+    return proposals.tab_offered()
 
 
 def _day_words(date: str) -> str:

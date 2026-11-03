@@ -775,3 +775,90 @@ def test_the_readings_join_the_memo_the_comparison_and_the_report(person, a_case
     assert "The cameras' own files" in report
     assert str(LAT) not in block and "N10" not in "".join(lines)
     _ = timeline_report
+
+
+# The Readings list, Offer to the chronology and Who was near here (chapter 3) -------
+
+
+def test_a_muted_spell_knows_when_the_mic_came_back():
+    cues = []
+    for t in range(200):
+        on = not (80 <= t < 140)
+        cues.append((t, t + 1, body_reading(t, mic=int(on and t >= 10))))
+    parsed = camera_paths.parse(vtt(cues).decode())
+    kept = {k: getattr(parsed, k) for k in ("fixes", "marks", "gaps", "length")}
+    path = camera_paths.CameraPath(**kept)
+    path.source = parsed.source
+    events = {(e["kind"], e["value"], e["t"]): e for e in camera_paths.events_of(path)}
+    assert events[("mic", 0, 80.0)]["until"] == 140.0
+    assert events[("mic", 1, 140.0)]["words"] == "Activated"
+    words = camera_paths.readings_words(path, None)
+    assert "muted 1:20 in to 2:20 in" in words
+
+
+def test_a_reading_offered_from_the_map_waits_on_the_proposed_events_tab(
+    client, person, a_case, monkeypatch
+):
+    from core import proposals
+
+    monkeypatch.setattr(proposals, "tab_offered", lambda: True)
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = Incident.objects.create(case=a_case, name="Stop", created_by=person)
+    IncidentCamera.objects.create(incident=incident, recording=car)
+    signed_in(client, person)
+    url = reverse("camera-path-offer", args=[car.pk])
+    told = client.post(
+        url,
+        json.dumps({"t": 20.0, "until": 140.0, "words": "Lights on"}),
+        content_type="application/json",
+    )
+    assert told.status_code == 200 and "Proposed events tab" in told.json()["words"]
+    proposal = proposals.Proposal.objects.get(recording=car)
+    assert proposal.source == "path" and proposal.text == "Lights on"
+    assert proposal.at == 20.0 and proposal.until == 140.0
+    assert proposal.incident_id == incident.pk and proposal.proposed_by_id == person.pk
+    assert proposal.state == proposals.WAITING
+    assert proposals.source_words("path") == "From the camera's file"
+    assert "camera's own file" in proposals.origin_words("path")
+    assert not proposals.is_assistants(proposal.origin())
+    row = Row.objects.get(event="Reading offered to the chronology")
+    assert row.details["reading"] == "lights" and str(LAT) not in json.dumps(
+        row.details
+    )
+    # Offered once; the tab lists it; accepting writes the note as any proposal.
+    again = client.post(
+        url,
+        json.dumps({"t": 20.0, "until": 140.0, "words": "Lights on"}),
+        content_type="application/json",
+    )
+    assert again.status_code == 400 and "already" in again.json()["error"]
+    assert any(
+        one["source_words"] == "From the camera's file"
+        for one in proposals.day_rows(a_case)
+    )
+    proposals.accept(proposal, by=person)
+    proposal.refresh_from_db()
+    assert proposal.state == proposals.ACCEPTED and proposal.note_moment_id
+    # Withheld, with the reason, while the tab is off.
+    monkeypatch.setattr(proposals, "tab_offered", lambda: False)
+    body = json.dumps({"t": 78.0, "words": "Brakes"})
+    off = client.post(url, body, content_type="application/json")
+    assert off.status_code == 400 and "off" in off.json()["error"]
+    told = camera_paths.map_of(a_case, viewer=person)
+    assert told["may_offer"] is False and told["offer_why"]
+
+
+def test_the_map_script_lists_readings_and_answers_who_was_near_here():
+    script = (HERE / "static" / "map.js").read_text(encoding="utf-8")
+    assert "function readingsOf(cam)" in script and "data-act='readings'" in script
+    assert "data-act='offer'" in script and '"/path/offer"' in script
+    assert "function nearHere(lngLat)" in script and "function metres(a, b)" in script
+    # Answered from the fixes in hand: no request carries a position.
+    near = script[
+        script.index("function nearHere") : script.index("function nearHere") + 1800
+    ]
+    assert "fetch(" not in near and "postJson(" not in near
+    assert "svg class='spd'" in script and "em class='off'" in script
+    css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".map-readings" in css and ".map-ask" in css and "svg.spd" in css

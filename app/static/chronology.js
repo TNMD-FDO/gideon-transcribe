@@ -423,7 +423,7 @@
       "<div class='words'>" + esc(e.text) + "</div>" +
       (e.why ? "<div class='why small'>Why it matters: " + esc(e.why) + "</div>" : "") +
       "<div class='line'>" + (e.said ? "“" + esc(e.said) + "”" : "at a moment, nothing said") + " · " + esc(e.title) + "</div>" +
-      "<div class='meta'><span class='pill small " + (e.source === "watch" ? "inc" : "warn") + "'>" + esc(e.source_words) + "</span><span class='chip'><i style='background: " + paint(e.colour) + "'></i>" + esc(e.title) + "</span>" +
+      "<div class='meta'><span class='pill small " + (e.source === "watch" || e.source === "path" ? "inc" : "warn") + "'>" + esc(e.source_words) + "</span><span class='chip'><i style='background: " + paint(e.colour) + "'></i>" + esc(e.title) + "</span>" +
       (e.for_incident ? "<span class='pill small inc' title='Proposed by a run on this incident'>for " + esc(e.for_incident) + "</span>" : "") +
       (e.map ? "<a class='small ghost' href='" + esc(e.map) + "' title='Where the camera was at this moment, on the Map tab'>On the map</a>" : "") +
       (e.incident ? (e.incident.event ? "<span class='pill small inc' title='Its camera is on the incident&#39;s clock; accepted, the note is an event of it'>on a camera of " + esc(e.incident.name) + "</span>" : "<span class='pill small inc' title='Its camera is in the incident but not on its clock yet'>in " + esc(e.incident.name) + ", not synced yet</span>") : "") +

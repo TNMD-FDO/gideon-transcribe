@@ -590,6 +590,10 @@ _Avoid_: point, waypoint, ping, location (that is a place, not a reading), coord
 The text file a body-worn or in-car camera's export puts beside the video, with the video's name and the ending .vtt, holding one reading a second: the position, the microphone and battery flags, the wearer, the unit, the department, and for an in-car unit its own clock, speed and switches. Added from the Map tab, where a folder's worth finds their videos by name; kept with the Recording as the camera's own record. Phase 12 chapter 1.
 _Avoid_: GPS file, metadata file, subtitle file, sidecar, caption file
 
+**Reading**:
+One moment a Path file records of its camera, with its time of day: the camera on and off, the officer activating it, the mic muted and back, the lights, the siren, the brakes, the crash sensor, a bookmark, a low battery, the top speed, a spell stood still, a stretch with no fix. Listed per camera on the Map tab (Phase 12 chapter 3), drawn on the lanes, told to Gideon, the memo, the comparison and the timeline report, and offered to the chronology as a Proposed event with the source "From the camera's file".
+_Avoid_: metadata, telemetry, event (that is a Chronology's), flag (on a page)
+
 **Map**:
 The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras in view, the video a press away in the Preview, a note from the map, and Add path files. Phase 12 chapter 1.
 _Avoid_: GIS, tracking view, GPS tab, geo

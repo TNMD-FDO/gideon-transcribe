@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.189.0, 2026-11-02
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 3: the Readings.
+
+- **The Readings list.** Each camera's row on the Map tab has **readings**: every moment its file records, with its time of day (camera on and off, activated, muted and back, lights, siren, brakes, crash sensor, bookmark, low battery, the top speed, stood still, no fix); a press goes there, lights the camera and opens the event's card where one is drawn.
+- **Offer to the chronology**, on a reading and on an event's card: a Proposed event on the recording at that moment, "From the camera's file", in your name, for Accept or Dismiss on the Proposed events tab as any proposal; offered once; withheld with the reason while that tab is off. One audit row, never a position.
+- **Who was near here** on the transport: press it, then a place on the map, and a card says which cameras came within 50 m of that place on the day and when, each a press to go there. Answered in the browser from the paths it already holds; nothing is asked of the server.
+- A muted spell now knows when the mic came back (on the lanes, in the readings and in what Gideon is told), and an in-car unit's speed is drawn as a trace along its lane.
+
 ## v1.188.0, 2026-11-02
 
 ```

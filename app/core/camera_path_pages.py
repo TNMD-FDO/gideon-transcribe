@@ -86,6 +86,44 @@ def remove(request: HttpRequest, recording_id) -> JsonResponse:
 
 @login_required
 @require_POST
+def offer(request: HttpRequest, recording_id) -> JsonResponse:
+    """A reading offered to the chronology (chapter 3): JSON t, words, until."""
+    import json
+
+    _maps_or_404()
+    recording = _recording_for(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    try:
+        body = json.loads(request.body or b"{}")
+        t = float(body.get("t", 0.0))
+        until = body.get("until")
+        until = None if until in (None, "") else float(until)
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return JsonResponse({"error": "The reading's moment was not read."}, status=400)
+    try:
+        camera_paths.offer_to_chronology(
+            recording,
+            t=t,
+            words=str(body.get("words", "")),
+            until=until,
+            by=request.user,
+            request=request,
+        )
+    except camera_paths.Refused as refused:
+        return JsonResponse({"error": str(refused)}, status=400)
+    return JsonResponse(
+        {
+            "ok": True,
+            "words": (
+                "Offered: it waits on the Proposed events tab, for Accept or Dismiss."
+            ),
+        }
+    )
+
+
+@login_required
+@require_POST
 def paths_add(request: HttpRequest, case_id) -> JsonResponse:
     """Several files at once: `files` repeated; `chosen` repeated beside
     them, the recording id a person picked for a file (or ""); `replace`

@@ -3957,6 +3957,16 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-row .streams span { padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; margin-right: 3px; }
 .map-row .own-bar { width: 100%; margin-top: 4px; }
 .map-fold summary { color: var(--muted); font-size: var(--t-small); padding: 6px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+.map-readings { list-style: none; margin: 0 0 4px; padding: 0 0 4px 22px; font-size: var(--t-label); }
+.map-readings li { display: flex; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+.map-readings li:hover { background: var(--accent-soft); }
+.map-readings li .w { flex: 1; }
+.map-readings li .mono { color: var(--muted); white-space: nowrap; }
+.map-near { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.map-ask { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 30%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); }
+.map-strip .map-lane .track svg.spd { position: absolute; left: 0; top: 0; width: 100%; height: 18px; pointer-events: none; }
+.map-strip .map-lane .track svg.spd polyline { fill: none; stroke: var(--text); stroke-opacity: 0.55; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.map-strip .map-lane .track em.off { width: auto; height: 3px; top: 15px; background: var(--muted); border-radius: 2px; cursor: default; }
 .map-offer { border-top: 1px solid var(--line); padding: 8px 4px 4px; display: flex; flex-direction: column; gap: 4px; }
 .map-offer .acts { display: flex; gap: 4px; }
 .map-menu { position: absolute; right: 0; top: 100%; z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 4px; }

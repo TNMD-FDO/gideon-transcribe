@@ -21,6 +21,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 
 1. The cameras on a map
 2. The path file's clock, and the readings beside the record
+3. The Readings
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -125,6 +126,28 @@ The memo's facts sheet and the comparison with the report are given each camera'
 
 `./transcribe folders`, `install`, `upgrade` and `basemap` asked whether each data folder existed without sudo, on a folder the operator cannot read, and so reported having made every folder on every run; the check asks with sudo now.
 
+## 3. The Readings (the third release, v1.189.0)
+
+### Words
+
+**Reading**, as `CONTEXT.md` defines it: one moment a Path file records of its camera. The pages say "readings" and "the camera's file", never metadata, telemetry or flags.
+
+### The Readings list
+
+Each camera's row on the Map tab carries **readings**, which opens under the row the list of every moment its file records, in time order, each with its time of day on the case's clock (minutes into the recording for a camera off the clock), and for a spell (lights, siren, muted, stood still, no fix) its end. A press on a reading moves the clock there and lights the camera; where the reading is an event the map draws (and its kind is ticked), it selects it as a press on the pip would. The list is the chapter 1 events: camera on and off, the officer activating a body camera, the mic muted and back (a muted spell knows when the mic came back, from this release), the lights, the siren, the brakes, the crash sensor, a bookmark, a low battery, the top speed reached, each spell stood still, each stretch with no fix. An in-car unit's speed is drawn as a trace along its lane, scaled to its top speed.
+
+### Offer to the chronology
+
+On a reading in the list and on an event's card: **Offer to the chronology** makes a Proposed event on the recording (Phase 10 chapter 4) at the reading's moment, with the reading's words as its sentence, "Read from the camera's own file, not from the picture" as its why, the incident the camera is in where there is one, source `path` ("From the camera's file"), in the offerer's name. It waits on the Proposed events tab, and on the incident's Proposed events layer, for Accept or Dismiss as any proposal; accepted, it is a Note on the recording as any accepted proposal is, with the origin "from a proposed event (the camera's own file)". A reading is offered once: a second offer of the same words at the same moment is refused with the reason, and a dismissed one is not offered again. The button is withheld, with the reason, while the Proposed events tab is off in the office (the assistant's judgement off and no watch phrase listed), since the offer would have nowhere to land. `POST recording/<id>/path/offer` with JSON `t`, `until`, `words`; one audit row, "Reading offered to the chronology", with the reading's kind and never a position.
+
+### Who was near here
+
+**Who was near here** on the transport: pressed, the next press on the map asks the question of that place, marked with a ring. The answer is a card: every camera of the day that came within 50 m of the place, in the order they arrived, each with the spells it was there (a spell ends when a minute passes with no fix within reach), each a press to go there with the camera lit; or "No camera came within 50 m of here on this day." It is answered in the browser from the paths the page already holds: no request carries a position, and the server is not asked. Escape or Close clears it.
+
+### What is not
+
+No reading is offered by the app itself: Offer is the person's press, as Accept is. No position is in an offer, a proposal, a note or a row. The incident's own chronology gets the reading through the proposal's acceptance alone.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |
@@ -133,6 +156,7 @@ The memo's facts sheet and the comparison with the report are given each camera'
 | Path file replaced | Recordings | as above | as above |
 | Path file removed | Recordings | the recording, the case | a position |
 | Recording placed on the clock, how `path` (chapter 2) | Recordings | the recording, the case, the how | a time, a date |
+| Reading offered to the chronology (chapter 3) | Recordings | the recording, the case, the reading's kind | a position, a time |
 
 The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row.
 

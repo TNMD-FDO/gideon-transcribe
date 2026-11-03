@@ -62,7 +62,7 @@ class Proposal(models.Model):
     text = models.CharField(max_length=500)
     why = models.CharField(max_length=300, blank=True, default="")
     rests_on = models.CharField(max_length=500, blank=True, default="")
-    # assistant, watch, looked, report: the chronology's own source words.
+    # assistant, watch, looked, report, path: the chronology's own source words.
     source = models.CharField(max_length=10)
     state = models.CharField(max_length=10, default=WAITING)
     proposed_by = models.ForeignKey(
@@ -119,6 +119,8 @@ def origin_words(source: str, *, page: int | None = None, n: int | None = None) 
         return f"{FROM_PROPOSAL} (a watch phrase)"
     if source == "looked":
         return f"{FROM_PROPOSAL} (looked for)"
+    if source == "path":
+        return f"{FROM_PROPOSAL} (the camera's own file)"
     return FROM_PROPOSAL
 
 
@@ -880,6 +882,8 @@ def source_words(source: str) -> str:
         "watch": "Watch phrase",
         "looked": "Looked for",
         "report": "From the report",
+        # A reading offered from the Map tab (Phase 12 chapter 3).
+        "path": "From the camera's file",
     }.get(source, "Proposed by the assistant")
 
 

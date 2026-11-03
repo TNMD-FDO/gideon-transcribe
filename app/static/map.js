@@ -41,8 +41,11 @@
     moment: 0, playing: false, speed: 4, anchorMoment: 0, anchorNow: 0,
     following: null, selected: null, lit: null, inView: {},
     show: recall("map-show") || "trails", large: recall("map-large") === "1",
-    events: {}, incident: host.dataset.incident || "", scope: null
+    events: {}, incident: host.dataset.incident || "", scope: null,
+    readingsOpen: {}, asking: false
   };
+  var NEAR = 50;         // metres: "near here", as the server's together() counts it
+  var askMarker = null;
   EVENT_KINDS.forEach(function (k) { S.events[k] = recall("map-ev-" + k) !== "0" || k === "notes"; });
   if (recall("map-ev-bookmark") === null) { S.events.bookmark = false; }
 
@@ -209,6 +212,7 @@
       (S.following ? "<span class='pill small acc'>following " + esc((S.byId[S.following] || {}).unit || (S.byId[S.following] || {}).title || "") + "</span>" : "") +
       "<button type='button' class='small' data-act='fit'>Fit all</button>" +
       "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
+      "<button type='button' class='small " + (S.asking ? "on" : "") + "' data-act='near' title='Press, then press a place on the map: which cameras came within " + NEAR + " m of it, and when'>Who was near here</button>" +
       "<button type='button' class='small " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
   }
@@ -255,7 +259,8 @@
       var mine = map;
       map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); });
       map.on("moveend", function () { drawList(); });
-      map.on("click", "map-events", function (e) { var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
+      map.on("click", "map-events", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
+      map.on("click", function (e) { if (S.asking) { nearHere(e.lngLat); } });
       map.on("mouseenter", "map-events", function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "map-events", function () { map.getCanvas().style.cursor = ""; });
       document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); window.setTimeout(function () { map.resize(); }, 50); });
@@ -428,7 +433,8 @@
     var spanWords = cam.onClock ? hm(cam.zero.second) + " to " + hm(cam.zero.second + (cam.length || 0)) : elapsed(cam.length || 0) + " long";
     var streams = cam.streams.length ? "<div class='streams'><span>stream 1</span>" + cam.streams.map(function (s, i) { return "<span>stream " + (i + 2) + "</span>"; }).join("") + "</div>" : "";
     var noFix = !cam.fixes.length ? "<span class='pill small'>no position</span>" : "";
-    var acts = "<button type='button' class='tiny' data-act='play-here' data-cam='" + cam.id + "'>Play here</button>" +
+    var acts = "<button type='button' class='tiny ghost " + (S.readingsOpen[cam.id] ? "on" : "") + "' data-act='readings' data-cam='" + cam.id + "' title='Every reading of its file, with its time'>readings</button>" +
+      "<button type='button' class='tiny' data-act='play-here' data-cam='" + cam.id + "'>Play here</button>" +
       (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='more' data-cam='" + cam.id + "' title='Replace or remove the path file'>⋯</button>" : "");
     return "<div class='map-row " + (dim ? "dim " : "") + (S.lit === cam.id ? "lit" : "") + "' data-cam='" + cam.id + "' tabindex='0'>" +
       "<span class='dot " + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></span>" +
@@ -436,7 +442,74 @@
       "<div class='facts'>" + suretyPill(cam) + "<span class='mono'>" + spanWords + "</span><span>" + (cam.source === "car" ? "in-car" : "body") + "</span>" + noFix +
       (!cam.onClock ? "<button type='button' class='tiny' data-act='own' data-cam='" + cam.id + "'>" + (cam.own !== undefined ? "Hide it" : "Show on its own") + "</button>" : "") + "</div>" + streams +
       (cam.own !== undefined ? "<input type='range' class='own-bar' data-cam='" + cam.id + "' min='0' max='" + Math.round(cam.length || 0) + "' value='" + Math.round(cam.own) + "'>" : "") +
-      "</div><div class='acts'>" + acts + "</div></div>";
+      "</div><div class='acts'>" + acts + "</div></div>" + (S.readingsOpen[cam.id] ? readingsOf(cam) : "");
+  }
+  // The Readings list (chapter 3): every moment the file records, with its
+  // time of day, a press to go there, and Offer to the chronology.
+  function readingsOf(cam) {
+    var z = cam.onClock ? cam.zero.second : null;
+    var when = function (t) { return z === null ? elapsed(t) + " in" : hms(z + t); };
+    var items = (cam.events || []).map(function (ev, i) { return { ev: ev, i: i }; }).sort(function (a, b) { return a.ev.t - b.ev.t; });
+    var html = "<ul class='map-readings' data-cam='" + cam.id + "'>";
+    items.forEach(function (one) {
+      var ev = one.ev, span = (ev.until !== null && ev.until !== undefined && ev.until > ev.t) ? " to " + when(ev.until) : "";
+      html += "<li data-key='ev:" + cam.id + ":" + one.i + "' data-t='" + ev.t + "'><span class='mono'>" + when(ev.t) + span + "</span><span class='w'>" + esc(ev.words) + "</span>" + offerButton(cam, ev) + "</li>";
+    });
+    if (!items.length) { html += "<li class='muted'>No readings in its file.</li>"; }
+    return html + "</ul>";
+  }
+  function offerButton(cam, ev) {
+    if (ev.kind === "camera") { return ""; }
+    var until = (ev.until === null || ev.until === undefined) ? "" : ev.until;
+    if (!S.told.may_offer) { return "<span class='muted small' title='" + esc(S.told.offer_why || "") + "'>offer withheld</span>"; }
+    return "<button type='button' class='tiny ghost' data-act='offer' data-cam='" + cam.id + "' data-t='" + ev.t + "' data-until='" + until + "' data-words='" + esc(ev.words) + "' title='A proposed event on the recording at this moment; it waits on the Proposed events tab for Accept or Dismiss'>Offer to the chronology</button>";
+  }
+  function offer(cam, t, until, words, button) {
+    postJson("/recording/" + cam.id + "/path/offer", { t: t, until: until === "" ? null : until, words: words }).then(function (told) {
+      toast(told.words);
+      if (button) { button.textContent = "Offered"; button.disabled = true; }
+    }).catch(function (e) { toast(e.message, true); });
+  }
+  // Who was near here (chapter 3): answered from the fixes the page holds;
+  // nothing is asked of the server, and no position leaves the browser.
+  function metres(a, b) {
+    var r = 6371000, p1 = a.lat * Math.PI / 180, p2 = b.lat * Math.PI / 180, dp = (b.lat - a.lat) * Math.PI / 180, dl = (b.lon - a.lon) * Math.PI / 180;
+    var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    return 2 * r * Math.asin(Math.sqrt(h));
+  }
+  function nearHere(lngLat) {
+    S.asking = false; drawTransport();
+    var here = { lat: lngLat.lat, lon: lngLat.lng }, found = [];
+    dayCams().forEach(function (cam) {
+      var spells = [], start = null, last = null;
+      cam.fixes.forEach(function (f) {
+        if (metres(here, { lat: f[1], lon: f[2] }) > NEAR) { return; }
+        if (start === null || f[0] - last > 60) { if (start !== null) { spells.push([start, last]); } start = f[0]; }
+        last = f[0];
+      });
+      if (start !== null) { spells.push([start, last]); }
+      if (spells.length) { found.push({ cam: cam, spells: spells }); }
+    });
+    found.sort(function (a, b) { return (a.cam.zero.second + a.spells[0][0]) - (b.cam.zero.second + b.spells[0][0]); });
+    closeCard();
+    if (askMarker) { askMarker.remove(); }
+    var node = document.createElement("div"); node.className = "map-ask";
+    askMarker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat(lngLat).addTo(map);
+    var card = document.createElement("div");
+    card.className = "map-evcard";
+    var rows = found.map(function (one) {
+      var z = one.cam.zero.second;
+      return "<li><button type='button' class='tiny' data-act='go' data-cam='" + one.cam.id + "' data-t='" + one.spells[0][0] + "'>" + esc(one.cam.unit || one.cam.title) + "</button> " +
+        one.spells.slice(0, 3).map(function (s) { return "<span class='mono'>" + hms(z + s[0]) + (s[1] - s[0] >= 5 ? " to " + hms(z + s[1]) : "") + "</span>"; }).join(", ") +
+        (one.spells.length > 3 ? " and " + (one.spells.length - 3) + " more" : "") + "</li>";
+    }).join("");
+    card.innerHTML = "<b>Who was near here</b><span class='muted small'>within " + NEAR + " m, on " + esc(dayWords(S.day)) + "</span>" +
+      (rows ? "<ul class='map-near'>" + rows + "</ul>" : "<div class='muted'>No camera came within " + NEAR + " m of here on this day.</div>") +
+      "<div class='acts'><button type='button' class='tiny ghost' data-act='clear'>Close</button></div>";
+    el.pane.appendChild(card);
+    var pt = map.project(lngLat);
+    card.style.left = Math.max(8, Math.min(el.pane.clientWidth - card.offsetWidth - 8, pt.x + 14)) + "px";
+    card.style.top = Math.max(8, Math.min(el.pane.clientHeight - card.offsetHeight - 8, pt.y - 10)) + "px";
   }
   function drawList() {
     if (!el.list) { return; }
@@ -485,11 +558,19 @@
       } else {
         html += "<i class='gp' style='left: " + x(z) + "%; width: " + Math.max(0.3, x(z + cam.length) - x(z)) + "%; background: " + paint(cam.colour) + "' title='no position in its file'></i>";
       }
+      // The speed trace (chapter 3): an in-car unit's speed along its lane.
+      var speeds = (cam.marks || []).filter(function (m) { return m[1] === "speed"; });
+      if (speeds.length > 1) {
+        var top = Math.max.apply(null, speeds.map(function (m) { return m[2]; })) || 1;
+        var pts = speeds.map(function (m) { return x(z + m[0]).toFixed(2) + "," + (17 - (m[2] / top) * 15).toFixed(1); }).join(" ");
+        html += "<svg class='spd' viewBox='0 0 100 18' preserveAspectRatio='none' aria-hidden='true'><title>speed, up to " + Math.round(top) + " " + esc((cam.speed_unit || "mph").toLowerCase()) + "</title><polyline points='" + pts + "'></polyline></svg>";
+      }
       (cam.clips || []).forEach(function (c) { html += "<i class='clip' style='left: " + x(z + c.start) + "%; width: " + Math.max(0.3, x(z + c.end) - x(z + c.start)) + "%' title='" + esc(c.title) + "' data-preview-recording='" + cam.id + "' data-preview-at='" + c.start + "'></i>"; });
       (cam.events || []).forEach(function (ev, i) {
         var kind = ev.kind; if (["camera", "lights", "siren", "mic", "bookmark"].indexOf(kind) < 0 || !S.events[kind]) { return; }
         var key = "ev:" + cam.id + ":" + i;
         if (kind === "lights" && ev.value && ev.until) { html += "<em class='on' style='left: " + x(z + ev.t) + "%; width: " + Math.max(0.2, x(z + ev.until) - x(z + ev.t)) + "%'></em>"; }
+        if (kind === "mic" && !ev.value && ev.until) { html += "<em class='off' style='left: " + x(z + ev.t) + "%; width: " + Math.max(0.2, x(z + ev.until) - x(z + ev.t)) + "%' title='muted " + hms(z + ev.t) + " to " + hms(z + ev.until) + "'></em>"; }
         html += "<em class='mk " + kind + (ev.value ? " is-on" : "") + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + ev.t) + "%' data-key='" + key + "' title='" + esc(ev.words) + " " + hms(z + ev.t) + "'></em>";
       });
       if (S.events.notes) { (cam.notes || []).forEach(function (n, i) { var key = "note:" + cam.id + ":" + i; html += "<em class='mk note" + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + n.t) + "%' data-key='" + key + "' title='" + esc(n.words).slice(0, 80) + "'></em>"; }); }
@@ -543,7 +624,11 @@
     seek(one.moment);
     refreshLayers(); drawStrip(); drawCard(one);
   }
-  function clearSelection() { S.selected = null; light(null); closeCard(); refreshLayers(); drawStrip(); }
+  function clearSelection() {
+    S.selected = null; light(null); closeCard(); refreshLayers(); drawStrip();
+    if (askMarker) { askMarker.remove(); askMarker = null; }
+    if (S.asking) { S.asking = false; drawTransport(); if (map) { map.getCanvas().style.cursor = ""; } }
+  }
   function stepEvent(dir) {
     var m = now(), list = allShown(), pick = null;
     for (var i = 0; i < list.length; i++) { if (dir > 0 && list[i].moment > m + 0.5) { pick = list[i]; break; } if (dir < 0 && list[i].moment < m - 0.5) { pick = list[i]; } }
@@ -577,6 +662,7 @@
       (one.kind !== "note" && host.dataset.edit ? "<button type='button' class='tiny' data-act='note-event'>Add a note</button>" : "") +
       (one.kind === "note" ? "<a class='btn tiny' href='" + esc(cam.viewer_url) + "?t=" + one.t.toFixed(1) + "&note=1'>Edit</a><a class='btn tiny ghost' href='?tab=notes'>On the Notes tab</a>" : "") +
       (one.kind !== "note" && host.dataset.edit ? "<button type='button' class='tiny' data-act='clip-here' data-cam='" + cam.id + "'>Clip from here</button>" : "") +
+      (one.kind !== "note" && one.kind !== "camera" ? offerButton(cam, { kind: one.kind, t: one.t, until: one.until, words: one.words }) : "") +
       (prev ? "<button type='button' class='tiny ghost' data-act='select' data-key='" + prev.key + "'>‹ " + hm(prev.moment) + " " + esc(prev.words).slice(0, 18) + "</button>" : "") +
       (next ? "<button type='button' class='tiny ghost' data-act='select' data-key='" + next.key + "'>" + hm(next.moment) + " " + esc(next.words).slice(0, 18) + " ›</button>" : "") +
       "<button type='button' class='tiny ghost' data-act='clear'>Close</button></div>";
@@ -713,7 +799,18 @@
         case "note-event": if (S.selected) { noteOn(S.selected.cam, S.selected.t, S.selected.words.toLowerCase() + " event"); } return;
         case "clip-here": if (cam) { location.href = cam.viewer_url + "?t=" + Math.max(0, now() - cam.zero.second).toFixed(1) + "&clip=1"; } return;
         case "make-incident": makeIncident(b.dataset.recordings.split(" ")); return;
+        case "readings": if (cam) { S.readingsOpen[cam.id] = !S.readingsOpen[cam.id]; drawList(); } return;
+        case "offer": if (cam) { offer(cam, parseFloat(b.dataset.t), b.dataset.until === "" ? "" : parseFloat(b.dataset.until), b.dataset.words, b); } return;
+        case "near": S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map."); } return;
+        case "go": if (cam) { select(cam); seek(cam.zero.second + parseFloat(b.dataset.t)); flyTo(cam); } return;
       }
+    }
+    var reading = e.target.closest(".map-readings li[data-key]");
+    if (reading && !e.target.closest("button")) {
+      var rc = S.byId[reading.closest(".map-readings").dataset.cam];
+      var shown = allShown().some(function (one) { return one.key === reading.dataset.key; });
+      if (shown) { selectKey(reading.dataset.key); } else if (rc && rc.onClock) { select(rc); seek(rc.zero.second + parseFloat(reading.dataset.t)); } else if (rc) { rc.own = parseFloat(reading.dataset.t); drawList(); tick(); }
+      return;
     }
     var row = e.target.closest(".map-row[data-cam]");
     if (row && !e.target.closest("button, label, input, a")) { var c = S.byId[row.dataset.cam]; select(c); flyTo(c); }
@@ -733,7 +830,7 @@
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
-    else if (e.key === "Escape" && S.selected) { clearSelection(); }
+    else if (e.key === "Escape" && (S.selected || S.asking || askMarker)) { clearSelection(); }
   });
 
   // The address --------------------------------------------------------------------
