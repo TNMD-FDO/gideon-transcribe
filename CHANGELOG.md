@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.196.1, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two fixes to the Map tab from the office's own case of three days and seventy cameras.
+
+- The note and event pips of cameras from another day were drawn on the map, where their markers never are, and a press on one found nothing to open. Pips are now drawn for the day's ticked cameras alone, the same cameras the lanes and the event stepping use.
+- A name whose marker was out of view used to sit at the pane's edge with a line to nowhere; seventy of them made a wall. A riding name is drawn only while its marker is in view; a name you have pinned stays, with its line to the edge.
+
 ## v1.196.0, 2026-11-04
 
 ```

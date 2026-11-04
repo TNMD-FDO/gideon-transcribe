@@ -430,6 +430,10 @@ def test_the_leaders_and_the_speed_beside_a_vehicle():
         and "function switchStream(" in script
     )
     assert "function pinnedCount()" in script and ".map-chooser" in css
+    # v1.196.1: pips for the day's ticked cameras alone, and no riding name
+    # for a marker out of view.
+    assert script.count("shownCams().forEach(function (cam) {") >= 2
+    assert "if (away && !tag.pinned)" in script
     assert ".map-tag.pinned .pinmark" in css and ".map-tile .grip" in css
 
 

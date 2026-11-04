@@ -375,8 +375,10 @@
   }
   function eventsCollection() {
     var features = [];
-    S.cams.forEach(function (cam) {
-      if (!cam.fixes.length || !shown(cam)) { return; }
+    // The day's ticked cameras only (v1.196.1): a pip of another day's camera
+    // was drawn where its marker never is, and a press on it found nothing.
+    shownCams().forEach(function (cam) {
+      if (!cam.fixes.length) { return; }
       (cam.events || []).forEach(function (ev, i) {
         var kind = ev.kind === "mic" ? "mic" : ev.kind;
         if (!S.events[kind === "camera" ? "camera" : kind]) { return; }
@@ -627,6 +629,10 @@
         return;
       }
       tag = tagOf(cam);
+      // A riding name of a marker out of view is not drawn (v1.196.1): with
+      // seventy cameras the pane's edge became a wall of names with lines
+      // to nowhere. A pinned one stays, its line to the edge.
+      if (away && !tag.pinned) { if (tag.node.parentNode) { tag.node.remove(); } return; }
       if (!tag.node.parentNode) { box.appendChild(tag.node); }
       tag.node.classList.toggle("on", lit === cam.id);
       tag.node.classList.toggle("pinned", !!tag.pinned);
