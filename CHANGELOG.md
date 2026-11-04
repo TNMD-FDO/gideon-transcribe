@@ -17,6 +17,15 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.199.1, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- The lead's "suggested" count said nothing while Incidents proposed was off, though the strip drew every suggestion as a column; it now counts them either way, and the setting governs the presses alone, as it governed the cards.
+
 ## v1.199.0, 2026-11-04
 
 ```

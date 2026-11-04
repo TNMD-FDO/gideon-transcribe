@@ -169,14 +169,15 @@ def counts(case, strip_days: list[dict], unclocked_rows: list | None = None) -> 
     incident, and the videos not on the clock."""
     from core import camera_paths, clock_match
 
+    # Counted whether or not Incidents proposed is on (v1.199.1): the strip
+    # draws every suggestion either way, and the setting governs the presses.
     keys: set = set()
-    if incidents.proposed_on():
-        for day in strip_days:
-            keys |= set(day.get("suggested_keys", []))
-            for one in camera_paths.strip_suggestions(case, day["date"]):
-                keys.add(one["key"])
-        for offer in incidents.offers(case):
-            keys.add(offer["key"])
+    for day in strip_days:
+        keys |= set(day.get("suggested_keys", []))
+        for one in camera_paths.strip_suggestions(case, day["date"]):
+            keys.add(one["key"])
+    for offer in incidents.offers(case):
+        keys.add(offer["key"])
     taken = incidents.taken_ids(case)
     in_none = sum(
         1

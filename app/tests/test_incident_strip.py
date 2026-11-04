@@ -184,7 +184,9 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
     assert told["may_make"] is False
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "No incident yet" in page and "nothing suggested" in page
+    # The suggestion is still counted (v1.199.1): the setting governs the
+    # presses, not the drawing.
+    assert "No incident yet" in page and "1 suggested" in page
     assert 'id="incident-strip"' in page
 
 

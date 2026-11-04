@@ -281,7 +281,7 @@ Asked 2026-11-04 ("we need to redesign the incidents tab considering everything 
 
 ### The lead
 
-Counts as pills, in place of the sentences: "N incidents" (or "No incident yet"), "N suggested" (or "nothing suggested"), "N videos in none", and "N not on the clock" as a link to the panel, when any; New incident at the right. The definitions sit on hover and in the guide. `incident_strip.counts` reads them: the suggestions are the distinct keys over every day (the forming runs with notes and the same day from `days()`, the paths from `camera_paths.strip_suggestions`, the clocks' offers), zero while Incidents proposed is off.
+Counts as pills, in place of the sentences: "N incidents" (or "No incident yet"), "N suggested" (or "nothing suggested"), "N videos in none", and "N not on the clock" as a link to the panel, when any; New incident at the right. The definitions sit on hover and in the guide. `incident_strip.counts` reads them: the suggestions are the distinct keys over every day (the forming runs with notes and the same day from `days()`, the paths from `camera_paths.strip_suggestions`, the clocks' offers), whether or not Incidents proposed is on (v1.199.1: the strip draws every suggestion either way; the setting governs the presses, as it governed the cards).
 
 ### The strip
 
