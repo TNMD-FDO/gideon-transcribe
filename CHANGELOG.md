@@ -17,6 +17,22 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.200.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 8, the first release: the Incidents tab as a builder (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, agreed 2026-11-04 with its fourteen choices).
+
+- **The person builds the incident.** The app suggests nothing on the tab any more: no offer, no suggestion, no same day, no New incident button. Every lane on the strip has a tick; tick a camera and it lights, the others dim, its path appears on the map at the foot of the tab and it joins **Your incident** in the Reader, with a name offered, a still and a plain line per camera, the count against the cap, Make the incident and Clear the ticks. The incident records who built it, when, and that it came from the strip, and the Reader's list of incidents built says so.
+- **Eight cameras at most.** Most cameras in an incident is now 2 to 8 and 8 by default; at eight the free ticks wait with the reason on hover. A vehicle's streams are one camera.
+- **Plain words for where a camera's time comes from**, in place of Clear and Likely on this tab: the clock burned into its picture checked on two frames, typed by a named person on a date, its own clock from its path file, placed by sound and accepted by whom.
+- **Not on the clock** is the strip's last row, with Put on the clock opening its panel.
+- **The map at the foot** of the Incidents tab draws only the ticked cameras, fitted to them.
+- **The Map tab's trail** no longer keeps its length when the clock is scrubbed back before a camera's first fix.
+
 ## v1.199.1, 2026-11-04
 
 ```

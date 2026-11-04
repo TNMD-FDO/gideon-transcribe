@@ -503,7 +503,9 @@ def test_the_case_page_asks_a_handful_and_never_stats(owner, client, monkeypatch
     count, answer = queries_for(
         client, reverse("case", args=[case.pk]) + "?tab=incidents"
     )
-    assert touched == []
+    # The map at the foot of the Incidents tab (Phase 12 chapter 8) asks the
+    # basemap's state once, one stat of one fixed path; nothing per recording.
+    assert [one for one in touched if not one.endswith("basemap.pmtiles")] == []
     page = answer.content.decode()
     # The incident is read in the strip's Reader (Phase 12 chapter 7); the
     # page's lead counts it, and the lead's counts ask a handful more.

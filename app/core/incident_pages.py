@@ -839,11 +839,11 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
     if not chosen:
         messages.error(request, "Tick at least one video for the incident.")
         return redirect("case", case.pk)
-    how = (
-        incidents.FROM_OFFER
-        if request.POST.get("how") == "offer"
-        else incidents.BY_HAND
-    )
+    how = {
+        "offer": incidents.FROM_OFFER,
+        "strip": incidents.FROM_STRIP,
+        "map": incidents.FROM_MAP,
+    }.get(request.POST.get("how", ""), incidents.BY_HAND)
     name = request.POST.get("name", "").strip() or _suggested_name(chosen)
     incident = incidents.make(
         case, name, chosen, by=request.user, how=how, request=request

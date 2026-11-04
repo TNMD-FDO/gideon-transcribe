@@ -463,7 +463,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "paths_door": bool(maps_on and role),
             **(
                 _map_context(case, request.user)
-                if tab == "map" or (tab == "details" and maps_on)
+                if tab == "map" or (tab in ("details", "incidents") and maps_on)
                 else {}
             ),
         },

@@ -768,11 +768,11 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     strip = static("chronology.js")
     # The day as the page (Phase 12 chapter 7): lanes, columns and a reader
     # in place of the Suggested row and the cards.
-    assert "function columns(d)" in strip and "function suggestions(d)" in strip
+    assert "function columns(d)" in strip and "function readerBuilder(d)" in strip
     assert "function readerDraw(d)" in strip and "formingLane(" not in strip
     assert "suggestedLane" not in strip and "cardHtml" not in strip
-    assert '"from their notes"' in strip and "On the map" in strip
-    assert "&show=" in strip and "&circle=" not in strip and "data-decline=" in strip
+    assert "On the map" in strip and '"from their notes"' not in strip
+    assert "&show=" in strip and "&circle=" not in strip and "data-tick='" in strip
     page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
     assert "data-map=\"{% url 'case' case.pk %}?tab=map\"" in page
     css = static("app.css")
@@ -781,5 +781,7 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert ".chron .legend { margin-top" in css
     # The strip is the day chips, the ruler, the named lanes and a foot; the
     # same day is read in the day's reading, never a column.
-    assert "dayChips() + ruler(d) + lanes(d) + stripFoot(d)" in strip
-    assert 's.kind !== "day"' in strip
+    assert "dayChips() + ruler(d) + lanes(d) + unclockedRow() + stripFoot(d)" in strip
+    # The builder (chapter 8): ticks, Your incident, no suggestions.
+    assert "function tickSpan(d)" in strip and "suggestions(" not in strip
+    assert "incident-ticks" in strip and "var PICK = host.dataset.pick" in script

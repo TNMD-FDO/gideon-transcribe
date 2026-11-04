@@ -1815,9 +1815,9 @@ def _rows() -> list[Definition]:
             group="The wall",
             name="Most cameras in an incident",
             kind=NUMBER,
-            default=20,
+            default=8,
             least=2,
-            most=40,
+            most=8,
             needs="incidents",
             what_it_does="New incident and the offer refuse more than this.",
             when_changed=(

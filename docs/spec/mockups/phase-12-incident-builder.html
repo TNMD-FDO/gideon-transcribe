@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab as a builder</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #b5881b; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #e4c062; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #e4c062; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1160px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 84ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .btn.off { opacity: .5; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .tabs { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs small { color: var(--muted); font-size: 11px; }
+  .lead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
+  .counts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+  .tk { display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--surface); position: relative; flex: none; }
+  .tk.on { background: var(--accent); border-color: var(--accent); }
+  .tk.on::after { content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 3px; height: 7px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface); display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 3px 10px; font-size: 12px; position: relative; }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 16px; white-space: nowrap; overflow: hidden; color: var(--text); font-size: 11px; }
+  .strip .head small { color: var(--muted); font-size: 10px; }
+  .strip .head i { width: 8px; height: 8px; border-radius: 50%; flex: none; } .strip .head i.sq { border-radius: 2px; }
+  .strip .row-on .head { background: var(--accent-soft); border-radius: 3px; }
+  .strip .ruler { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--muted); position: relative; }
+  .strip .track { position: relative; height: 16px; }
+  .strip .track i { position: absolute; top: 4px; height: 8px; border-radius: 4px; }
+  .strip .track i.lane { top: 3px; height: 10px; background: var(--surface-2); border-radius: 5px; }
+  .strip .track i.dim { opacity: .35; }
+  .strip .track em { position: absolute; top: 2px; width: 4px; height: 12px; border-radius: 1px; background: var(--warn); }
+  .strip .legend { grid-column: 1 / -1; color: var(--muted); font-size: 11px; padding-top: 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+  .strip .full { grid-column: 1 / -1; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); } .c6 { background: var(--c6); }
+  .cols { position: relative; }
+  .col { position: absolute; top: 0; bottom: 0; border-radius: 4px; pointer-events: none; }
+  .col.inc { background: var(--inc); opacity: .13; border-left: 2px solid var(--inc); border-right: 2px solid var(--inc); }
+  .col.build { border: 2px solid var(--accent); background: var(--accent); opacity: .18; }
+  .coltag { position: absolute; top: -16px; left: -2px; font: 600 10px/16px var(--font); color: var(--inc); white-space: nowrap; background: var(--surface); padding: 0 4px; border-radius: 3px; }
+  .coltag.b { color: var(--accent); }
+  .play { position: absolute; top: -18px; bottom: 0; width: 0; border-left: 2px solid var(--text); pointer-events: none; }
+  .play b { position: absolute; top: -2px; left: -22px; font: 600 10px var(--mono); color: var(--text); background: var(--surface); padding: 0 3px; border-radius: 3px; }
+  .handle { position: absolute; top: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); transform: translate(-50%, -2px); }
+  /* the reader / builder */
+  .reader { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .reader.build { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .reader h3 { font-size: 13px; }
+  .reader .rd-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-top: 4px; }
+  .reader .field { display: flex; flex-direction: column; gap: 3px; }
+  .reader .field span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .reader .input { border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; background: var(--surface); }
+  .reader .cam { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); }
+  .reader .cam small { display: block; color: var(--muted); font-size: 11px; }
+  .reader .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+  .reader .inc-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line); }
+  .reader .inc-row small { display: block; color: var(--muted); font-size: 11px; }
+  .stills { display: flex; gap: 4px; flex-wrap: wrap; }
+  .still { width: 58px; height: 36px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; flex: none; }
+  .still::after { content: attr(data-n); position: absolute; left: 3px; bottom: 2px; font-size: 9px; color: var(--muted); }
+  /* the map */
+  .mapbox { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--ground); height: 220px; position: relative; overflow: hidden; }
+  .mapbox svg { width: 100%; height: 100%; display: block; }
+  .mapbox .corner { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+  .mapbox .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+  .ro { fill: var(--road); stroke: var(--road-edge); } .blk { fill: var(--surface-2); opacity: .55; }
+  .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; } .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; } .lbl.big { font-size: 11px; }
+  .tag { font: 600 10px var(--font); fill: var(--text); } .tagbox { fill: var(--surface); stroke: var(--line); }
+  .circ { fill: var(--accent); fill-opacity: .08; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .words { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 13px; }
+  .words .was { color: var(--muted); text-decoration: line-through; }
+  .wall { display: grid; gap: 6px; }
+  .tile { background: var(--surface-2); border-radius: 4px; aspect-ratio: 16 / 9; position: relative; overflow: hidden; }
+  .tile b { position: absolute; left: 6px; top: 4px; font: 600 10px var(--font); color: var(--text); background: var(--surface); padding: 0 5px; border-radius: 3px; }
+  .tile.big { grid-column: 1 / -1; aspect-ratio: 21 / 9; }
+  .tile.film { aspect-ratio: 16 / 9; }
+  .views { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .view { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .view .vh { display: flex; justify-content: space-between; align-items: baseline; }
+  .view .vh b { font-size: 12px; }
+  .desk { display: grid; grid-template-columns: minmax(0, 1fr) 10px 190px; gap: 0 4px; align-items: start; }
+  .desk.folded { grid-template-columns: minmax(0, 1fr) 10px 28px; }
+  .stage { display: flex; flex-direction: column; gap: 6px; }
+  .work { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 11px; padding: 6px 8px; min-height: 180px; }
+  .work .tb { display: flex; gap: 8px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 6px; }
+  .handle { background: var(--surface-2); border-radius: 3px; min-height: 180px; }
+  .rail { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); min-height: 180px; writing-mode: vertical-rl; font-size: 10px; color: var(--muted); padding: 6px 4px; }
+  .tile.t8 { aspect-ratio: auto; height: 62px; }
+  .tile .hd { position: absolute; left: 0; right: 0; top: 0; height: 12px; background: var(--surface); border-bottom: 1px solid var(--line); font: 600 8px/12px var(--font); padding: 0 4px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .said { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 10px; padding: 3px 8px; color: var(--muted); }
+  .lanes8 { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 4px 8px; display: grid; gap: 2px; font-size: 9px; color: var(--muted); }
+  .lanes8 i { display: block; height: 4px; border-radius: 2px; background: var(--surface-2); }
+  .bar8 { display: flex; gap: 6px; align-items: center; font-size: 10px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+  .measure { font-size: 13px; }
+  .measure td:first-child { min-width: 16rem; } .measure td:nth-child(n+2) { font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 7 rethought · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>The Incidents tab as a builder: the person picks the cameras, the map follows</h1>
+    <p class="lede">The ask of 2026-11-04, after v1.199.0 went on the server: the tab is still all over the place, the surety words ("Clear") mean nothing to a user, and the app has enough tools now to help a person build an incident themselves. Keep the layout (the strip on the left, the Reader on the right); move to click-to-select; add a map at the foot of the tab that takes in a camera the moment it is picked; put the accountability for an incident on the person who builds it, and step away from the app's suggestions. Five figures, the words that change, and five choices. The fictional office throughout.</p>
+    <p class="flag small" style="margin-top:10px"><b>Not seen.</b> The screenshot in the ask did not reach this side; the drawing works from the tab as v1.199.0 built it and from the words of the ask.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The tab at rest: nothing picked, the map waiting</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events</span><span>Notes <small>14</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>2</small></span><span>Map <small>26</small></span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+      <div class="lead"><div class="counts"><span class="pill acc">6 Nov 2025 ●</span><span class="pill">7 Nov 2025</span><span class="muted small">· 7 cameras on the clock · 2 incidents · 3 not on the clock</span></div><span class="muted small">Pick cameras on the strip to build an incident</span></div>
+      <div class="two">
+        <div class="strip">
+          <div class="ruler" style="grid-column:2"><span>20:20</span><span>20:25</span><span>20:30</span><span>20:35</span><span>20:40</span><span>20:45</span></div>
+          <div class="full cols" style="display:grid; grid-template-columns:170px minmax(0,1fr); gap:3px 10px">
+            <div class="head"><span class="tk"></span><i class="c1"></i>Ofc. Pell <small>BWC1-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:18%;width:52%"></i><em style="left:30%"></em><em style="left:41%"></em></div>
+            <div class="head"><span class="tk"></span><i class="c2"></i>Ofc. Amari <small>BWC2-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:20%;width:50%"></i><em style="left:33%"></em></div>
+            <div class="head"><span class="tk"></span><i class="c4 sq"></i>Unit 9082 <small>in-car</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:16%;width:56%"></i></div>
+            <div class="head"><span class="tk"></span><i class="c3"></i>Ofc. Dunn <small>BWC3-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:22%;width:40%"></i><em style="left:50%"></em></div>
+            <div class="head"><span class="tk"></span><i class="c5"></i>Ofc. Ruiz <small>BWC5-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c5" style="left:24%;width:36%"></i></div>
+            <div class="head"><span class="tk"></span><i class="c6"></i>Kit Vale <small>BWC6-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6" style="left:60%;width:38%"></i></div>
+            <div class="head"><span class="tk"></span><i style="background:var(--muted)"></i>Jo Marsh <small>BWC7-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i style="left:61%;width:37%;background:var(--muted)"></i><em style="left:80%"></em></div>
+            <div class="col inc" style="left:calc(180px + (100% - 180px) * .20); width:calc((100% - 180px) * .50)"><span class="coltag">Harbour car park</span></div>
+          </div>
+          <div class="head muted" style="margin-top:6px">Not on the clock</div><div class="track" style="margin-top:6px"><span class="muted" style="position:absolute;left:0;top:0;font-size:11px">Cell-9 · AirOne · BWC8-1 <span class="btn tiny" style="margin-left:6px">Put on the clock…</span></span></div>
+          <div class="legend">Tick a camera to pick it; press its name to read it. A shaded column is an incident already built.</div>
+        </div>
+        <div class="reader">
+          <h3>6 Nov 2025</h3>
+          <div class="muted">7 cameras on the clock · 2 incidents built · 3 not on the clock</div>
+          <div class="rd-head">Incidents built</div>
+          <div class="inc-row"><div><b>Harbour car park</b><small>3 cameras · 20:25 to 20:38 · 8 events · built by Dana Reyes, 4 Oct</small></div><span class="btn tiny">Open</span></div>
+          <div class="inc-row"><div><b>Walk incident, 6 Nov</b><small>2 cameras · 20:25 to 20:38 · built by Dana Reyes, 4 Nov</small></div><span class="btn tiny">Open</span></div>
+          <div class="rd-head">To build one</div>
+          <div class="muted">Tick the cameras on the strip. Each one you tick appears on the map below, and this box becomes your incident: name it, check its span, and make it. Nothing is made for you.</div>
+        </div>
+      </div>
+      <div class="mapbox"><svg viewBox="0 0 900 220"><rect width="900" height="220" fill="var(--ground)"/><rect x="0" y="96" width="900" height="18" class="ro"/><rect x="420" y="0" width="18" height="220" class="ro"/><text class="lbl big" x="300" y="109">HARBOUR STREET</text></svg><div class="empty">Pick a camera on the strip and its path appears here.</div><div class="corner"><span class="btn tiny off">Within a circle</span><span class="btn tiny">Open the Map tab</span></div></div>
+      <div class="caption">
+        <p><b>What stays from v1.199.0.</b> The strip with its named lanes, the notes as marks, the incidents built as shaded columns, the day chips, the Reader on the right, Not on the clock as the strip's last row (the second release's piece, brought in here).</p>
+        <p><b>What goes.</b> Every suggestion: no dashed columns, no numbered rows, no clocks' offer, no same day, no "Suggested" count in the lead; the settings that governed them keep their meaning elsewhere. The New incident button goes too: the strip is the New incident.</p>
+        <p><b>What comes.</b> A tick on every lane; a map at the foot of the tab that draws only what is ticked; the Reader as the place the incident is built.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Building: three cameras ticked, the Reader is the incident, the map has them</h2></div>
+    <div class="frame">
+      <div class="lead"><div class="counts"><span class="pill acc">6 Nov 2025 ●</span><span class="pill">7 Nov 2025</span><span class="muted small">· 7 cameras on the clock · 2 incidents · 3 not on the clock</span></div><span class="pill acc">Building: 3 cameras, 20:25 to 20:38</span></div>
+      <div class="two">
+        <div class="strip">
+          <div class="ruler" style="grid-column:2"><span>20:20</span><span>20:25</span><span>20:30</span><span>20:35</span><span>20:40</span><span>20:45</span><span class="handle" style="left:20%"></span><span class="handle" style="left:62%"></span></div>
+          <div class="full cols" style="display:grid; grid-template-columns:170px minmax(0,1fr); gap:3px 10px">
+            <div class="head row-on"><span class="tk on"></span><i class="c1"></i>Ofc. Pell <small>BWC1-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:18%;width:52%"></i><em style="left:30%"></em><em style="left:41%"></em></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c2"></i>Ofc. Amari <small>BWC2-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:20%;width:50%"></i><em style="left:33%"></em></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c4 sq"></i>Unit 9082 <small>in-car</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:16%;width:56%"></i></div>
+            <div class="head"><span class="tk"></span><i class="c3"></i>Ofc. Dunn <small>BWC3-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3 dim" style="left:22%;width:40%"></i><em style="left:50%"></em></div>
+            <div class="head"><span class="tk"></span><i class="c5"></i>Ofc. Ruiz <small>BWC5-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c5 dim" style="left:24%;width:36%"></i></div>
+            <div class="head"><span class="tk"></span><i class="c6"></i>Kit Vale <small>BWC6-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6 dim" style="left:60%;width:38%"></i></div>
+            <div class="head"><span class="tk"></span><i style="background:var(--muted)"></i>Jo Marsh <small>BWC7-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="dim" style="left:61%;width:37%;background:var(--muted)"></i><em style="left:80%"></em></div>
+            <div class="col build" style="left:calc(180px + (100% - 180px) * .20); width:calc((100% - 180px) * .42)"><span class="coltag b">your incident · 20:25 to 20:38</span></div>
+            <div class="play" style="left:calc(180px + (100% - 180px) * .36)"><b>20:28:10</b></div>
+          </div>
+          <div class="head muted" style="margin-top:6px">Not on the clock</div><div class="track" style="margin-top:6px"><span class="muted" style="position:absolute;left:0;top:0;font-size:11px">Cell-9 · AirOne · BWC8-1 <span class="btn tiny" style="margin-left:6px">Put on the clock…</span></span></div>
+          <div class="legend">Your incident's span is the ticked cameras' first start to last end; drag its two handles on the ruler to narrow it. Drag the line to move the moment the map and the stills show.</div>
+        </div>
+        <div class="reader build">
+          <h3>Your incident</h3>
+          <div class="field"><span>Name</span><div class="input">Harbour Street stop, 20:25</div></div>
+          <div class="rd-head">3 cameras, 20:25 to 20:38 · at 20:28:10</div>
+          <div class="cam"><span class="still" data-n="20:28"></span><div><b>Ofc. Pell</b><small>BWC1-1 · 20:25 to 20:53 · the clock in its picture</small></div><span class="btn tiny ghost">untick</span></div>
+          <div class="cam"><span class="still" data-n="20:28"></span><div><b>Ofc. Amari</b><small>BWC2-1 · 20:25 to 20:53 · the clock in its picture</small></div><span class="btn tiny ghost">untick</span></div>
+          <div class="cam"><span class="still" data-n="20:28"></span><div><b>Unit 9082</b><small>in-car, 3 streams · 20:23 to 20:55 · its own clock, from its path file</small></div><span class="btn tiny ghost">untick</span></div>
+          <div class="rd-head">Tools</div>
+          <div class="acts"><span class="btn tiny">Tick everyone running at 20:28:10</span><span class="btn tiny">Tick the cameras within 50 m on the map</span></div>
+          <div class="muted">Both only tick; you can untick any of them.</div>
+          <div class="acts" style="margin-top:6px"><span class="btn primary">Make the incident</span><span class="btn ghost">Clear the ticks</span></div>
+          <div class="muted">Made in your name, from the cameras you ticked, with the span you set. It opens on its own page.</div>
+        </div>
+      </div>
+      <div class="mapbox"><svg viewBox="0 0 900 220"><rect width="900" height="220" fill="var(--ground)"/><rect x="60" y="20" width="150" height="60" rx="3" class="blk"/><rect x="250" y="20" width="150" height="60" rx="3" class="blk"/><rect x="60" y="130" width="150" height="60" rx="3" class="blk"/><rect x="480" y="130" width="300" height="60" rx="3" class="blk"/><rect x="0" y="96" width="900" height="18" class="ro"/><rect x="420" y="0" width="18" height="220" class="ro"/><rect x="0" y="196" width="900" height="16" class="ro"/><text class="lbl big" x="300" y="109">HARBOUR STREET</text><text class="lbl big" x="700" y="208">QUAY ROAD</text><polyline class="pf p4" points="40,204 420,204 460,204 460,130 475,105"/><polyline class="pf p1" points="80,105 400,105 430,108 436,150"/><polyline class="pf p2" points="860,30 600,105 480,105 450,140"/><rect x="455" y="128" width="12" height="12" rx="3" class="f4 hd"/><circle cx="400" cy="105" r="6" class="f1 hd"/><circle cx="500" cy="105" r="6" class="f2 hd"/><rect x="372" y="78" width="54" height="15" rx="7" class="tagbox"/><text class="tag" x="380" y="89">Ofc. Pell</text><rect x="505" y="78" width="60" height="15" rx="7" class="tagbox"/><text class="tag" x="513" y="89">Ofc. Amari</text><rect x="470" y="140" width="62" height="15" rx="7" class="tagbox"/><text class="tag" x="478" y="151">Unit 9082</text></svg><div class="corner"><span class="btn tiny">Within a circle</span><span class="btn tiny">Open the Map tab</span></div></div>
+      <div class="caption">
+        <p><b>Ticking is building.</b> A tick on a lane adds the camera: its row lights, its bar stays bright while the others dim, its path and marker appear on the map below, its still joins the Reader. The Reader becomes <b>Your incident</b>: a name (offered from the street under the markers when the map knows one, else the case and the time), the cameras with one plain line each, two tools, and Make the incident. Unticking takes it out everywhere at once.</p>
+        <p><b>The span is the person's.</b> It starts as the ticked cameras' first start to last end and is drawn as one bright column; two handles on the ruler narrow it. The vertical line is the moment: dragging it moves the markers on the map and recuts the stills, so the person can see where everyone was at 20:28:10 before deciding. Play from here opens the Preview at that moment.</p>
+        <p><b>The tools only tick.</b> "Tick everyone running at this moment" and "Tick the cameras within 50 m on the map" (the circle, drawn on the small map) are the app's two helpers, and both just tick boxes the person can untick. No list of the app's own ideas sits on the page.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Made: it opens on its own page, and the Reader's list says who built it</h2></div>
+    <div class="frame">
+      <div class="two">
+        <div class="reader">
+          <h3>6 Nov 2025</h3>
+          <div class="muted">7 cameras on the clock · 3 incidents built · 3 not on the clock</div>
+          <div class="rd-head">Incidents built</div>
+          <div class="inc-row"><div><b>Harbour Street stop, 20:25</b><small>3 cameras · 20:25 to 20:38 · built by Dana Reyes, 4 Nov, from the strip</small></div><span class="btn tiny">Open</span></div>
+          <div class="inc-row"><div><b>Harbour car park</b><small>3 cameras · 20:25 to 20:38 · 8 events · built by Dana Reyes, 4 Oct, from the picker</small></div><span class="btn tiny">Open</span></div>
+          <div class="inc-row"><div><b>Walk incident, 6 Nov</b><small>2 cameras · 20:25 to 20:38 · built by Dana Reyes, 4 Nov, from the map's circle</small></div><span class="btn tiny">Open</span></div>
+        </div>
+        <div class="frame" style="font-size:13px">
+          <b>On the incident's page, in its head</b>
+          <div class="muted small">Built by Dana Reyes on 4 Nov 2026 from 3 cameras ticked on the Incidents tab, 20:25:10 to 20:38:40. <span class="btn tiny">Who and when</span></div>
+          <div class="muted small" style="margin-top:8px"><b>Accountability, in what the app already keeps.</b> An incident records who made it, when, and by which door (<span class="mono">how</span>: by hand, the picker, the span, the map's circle, the strip); the audit row "Incident made" carries the same. The new door is "from the strip", and every incident's head and list row say it in words. No new store.</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>Nothing made for you.</b> The clocks' offer, the paths' suggestion, the forming run and the same day all go. What the app still does by itself is place a camera on the clock when its picture or its path file says where it belongs, because without that there is nothing to tick; a person can still move or take any of those off.</p>
+        <p><b>Adding later.</b> A camera that lands after the incident was built is ticked the same way: tick it on the strip, and the Reader offers "Add to <i>Harbour Street stop</i>" when its span overlaps a built incident's column, beside Make the incident. Still a press by the person.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Plain words for where a camera's time comes from</h2></div>
+    <div class="frame">
+      <div class="words">
+        <div><b>Today</b></div><div><b>Drawn</b></div>
+        <div class="was">BWC1-1 · Clear</div><div>Ofc. Pell · on the bar nothing; on hover "On the clock from the time burned into its picture, checked on two frames."</div>
+        <div class="was">Likely</div><div>"On the clock from the time burned into its picture, read once; a second frame could not confirm it."</div>
+        <div class="was">As typed</div><div>"Placed by Dana Reyes, who typed 20:25:10 on 4 Nov."</div>
+        <div class="was">Unchecked</div><div>"Placed from the time its file carries, which nobody has checked."</div>
+        <div class="was">By the day</div><div>"Placed on 6 Nov with no hour; its bar cannot be drawn."</div>
+        <div class="was">By sound · Clear</div><div>"Placed where its sound lines up with Ofc. Amari's, a strong match; Dana Reyes accepted it on 4 Nov."</div>
+        <div class="was">from its path file</div><div>"On the clock from its own clock, in its path file."</div>
+        <div class="was">Not placed</div><div>"Not on the clock: nobody has read or placed its time." with Put on the clock…</div>
+      </div>
+      <div class="caption">
+        <p><b>Where they show.</b> On the bar's hover, in the Reader's camera reading and in Your incident's camera lines (the short form: "the clock in its picture", "its own clock, from its path file", "typed by Dana Reyes", "placed by sound, accepted by Dana Reyes"), and on the Not on the clock row. The one-word pills (Clear, Likely, Unchecked) go from the Incidents tab; the Notes tab's chronology keeps them until it is looked at in its own turn.</p>
+        <p><b>Why words.</b> The surety was built for the app's own suggestions, to rank what it offered. With the person building, what they need is where the time came from and who vouched for it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>Narrower, and the Map tab's part</h2></div>
+    <div class="frame">
+      <div class="caption" style="margin-top:0">
+        <p><b>Under 1024.</b> The strip, then the Reader, then the map, one under the other; the map folds to a bar "Map · 3 cameras · open" so the Reader's Make the incident stays near the ticks. On a phone the ticks are the row's whole left edge.</p>
+        <p><b>The Map tab keeps its own door.</b> Within a circle and Make an incident from the circle stay as built; the small map here is the Map tab's drawing mounted small, read-only but for the circle, with Open the Map tab carrying the ticks across (<span class="mono">?show=</span>) so the person can look closer and come back.</p>
+        <p><b>The Notes tab, the recording page, Search.</b> Unchanged. On the map and Play here still open where they open today.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- F -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure F</span><h2>Eight at most, and the choice made easier while the person still makes it</h2></div>
+    <div class="frame">
+      <div class="lead"><div class="counts"><span class="pill acc">6 Nov 2025 ●</span><span class="muted small">· 11 cameras on the clock · 2 incidents · 3 not on the clock</span></div><span class="pill acc">Building: 8 of 8 cameras, 20:25 to 20:38</span></div>
+      <div class="two">
+        <div class="strip" style="grid-template-columns:170px 62px minmax(0,1fr)">
+          <div class="ruler" style="grid-column:3"><span>20:20</span><span>20:25</span><span>20:30</span><span>20:35</span><span>20:40</span><span>20:45</span><span class="handle" style="left:20%"></span><span class="handle" style="left:62%"></span></div>
+          <div class="full cols" style="display:grid; grid-template-columns:170px 62px minmax(0,1fr); gap:3px 10px">
+            <div class="head row-on"><span class="tk on"></span><i class="c1"></i>Ofc. Pell <small>13 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:18%;width:52%"></i><em style="left:30%"></em></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c2"></i>Ofc. Amari <small>13 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:20%;width:50%"></i><em style="left:33%"></em></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c4 sq"></i>Unit 9082 <small>in-car · 13 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:16%;width:56%"></i></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c3"></i>Ofc. Dunn <small>11 min · in Harbour car park</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:22%;width:40%"></i><em style="left:50%"></em></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c5"></i>Ofc. Ruiz <small>10 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c5" style="left:24%;width:36%"></i></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c6"></i>Ofc. Nakai <small>9 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6" style="left:26%;width:30%"></i></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c1"></i>Ofc. Osei <small>8 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:28%;width:26%"></i></div>
+            <div class="head row-on"><span class="tk on"></span><i class="c2"></i>Ofc. Lind <small>6 min</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:30%;width:20%"></i></div>
+            <div class="head" style="opacity:.55"><span class="tk" style="border-style:dashed"></span><i class="c3"></i>Ofc. Brook <small>4 min · near Ofc. Pell</small></div><span class="still" style="width:58px;height:14px"></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3 dim" style="left:34%;width:14%"></i></div>
+            <div class="head" style="opacity:.45"><span class="tk" style="border-style:dashed"></span><i class="c6"></i>Kit Vale <small>no overlap</small></div><span></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6 dim" style="left:60%;width:38%"></i></div>
+            <div class="head" style="opacity:.45"><span class="tk" style="border-style:dashed"></span><i style="background:var(--muted)"></i>Jo Marsh <small>no overlap</small></div><span></span><div class="track"><i class="lane" style="left:0;right:0"></i><i class="dim" style="left:61%;width:37%;background:var(--muted)"></i></div>
+            <div class="col build" style="left:calc(242px + (100% - 242px) * .20); width:calc((100% - 242px) * .42)"><span class="coltag b">your incident · 20:25 to 20:38</span></div>
+            <div class="play" style="left:calc(242px + (100% - 242px) * .36)"><b>20:28:10</b></div>
+          </div>
+          <div class="legend">8 is the most an incident holds; untick one to swap. The lanes are in order of how long each overlaps your span; the small pictures are each camera at 20:28:10. A ring on a box means that camera was within 50 m of one you ticked.</div>
+        </div>
+        <div class="reader build">
+          <h3>Your incident <span class="pill acc">8 of 8</span></h3>
+          <div class="field"><span>Name</span><div class="input">Harbour Street stop, 20:25</div></div>
+          <div class="muted">8 cameras, 20:25 to 20:38 · at 20:28:10. Ofc. Dunn is already in Harbour car park; it will be in both.</div>
+          <div class="rd-head">Ways in, when you set the span first</div>
+          <div class="muted">"11 cameras ran in this span; 8 is the most. The eight longest in it are at the top." <span class="btn tiny off">Tick all 11</span></div>
+          <div class="rd-head">Reading cost</div>
+          <div class="muted">13 minutes on 8 cameras · 9% of one reading · fine as it is.</div>
+          <div class="acts" style="margin-top:6px"><span class="btn primary">Make the incident</span><span class="btn ghost">Clear the ticks</span></div>
+        </div>
+      </div>
+      <div class="mapbox" style="height:150px"><svg viewBox="0 0 900 150"><rect width="900" height="150" fill="var(--ground)"/><rect x="0" y="66" width="900" height="16" class="ro"/><rect x="420" y="0" width="16" height="150" class="ro"/><polyline class="pf p1" points="80,74 400,74 436,110"/><polyline class="pf p2" points="860,20 600,74 470,74"/><polyline class="pf p4" points="40,140 460,140 460,100"/><circle cx="400" cy="74" r="6" class="f1 hd"/><circle cx="500" cy="74" r="6" class="f2 hd"/><rect x="455" y="96" width="12" height="12" rx="3" class="f4 hd"/><circle cx="640" cy="74" r="6" fill="var(--surface-2)" stroke="var(--muted)" stroke-width="2"/><rect x="604" y="46" width="84" height="15" rx="7" class="tagbox"/><text class="tag" x="612" y="57">Ofc. Brook · tick</text></svg><div class="corner"><span class="btn tiny">Within a circle</span><span class="btn tiny">Open the Map tab</span></div></div>
+      <div class="caption">
+        <p><b>The budget.</b> "8 of 8" in the Reader's head and the lead; the ticks that are left turn dashed and say why on hover. A vehicle's three streams are one lane and one tick, so the eight are cameras, not files.</p>
+        <p><b>The order does the sorting, the person does the choosing.</b> From the first tick the lanes sort by how long each overlaps the span, longest first, with the minutes on the head; lanes with no overlap sink and fade. The likely eight are the top eight rows, and each is still a press.</p>
+        <p><b>The filmstrip.</b> The moment line cuts a small picture at the end of every shown lane, so a drag along the ruler shows the same scene from every camera that had it; six cameras on one car park are easy to tell from one that was elsewhere. Cut on request for the shown lanes only, never kept.</p>
+        <p><b>Near, taken, and from the map.</b> A ring on a box means within 50 m of a ticked camera at the moment, from the paths; "in Harbour car park" on a head says the camera is in a built incident already, and the Reader says it will be in both. On the small map a marker's press ticks its camera, and the circle ticks what passed inside up to the budget, longest inside first ("8 of 11 ticked").</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- G -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure G</span><h2>The Map tab's door under the cap: the circle, the eight, and a hand-off to the strip</h2></div>
+    <div class="frame">
+      <div class="two" style="grid-template-columns: minmax(0, 1fr) 300px">
+        <div class="mapbox" style="height:300px"><svg viewBox="0 0 700 300"><rect width="700" height="300" fill="var(--ground)"/><rect x="60" y="40" width="130" height="80" rx="3" class="blk"/><rect x="230" y="40" width="150" height="80" rx="3" class="blk"/><rect x="60" y="160" width="130" height="80" rx="3" class="blk"/><rect x="230" y="160" width="150" height="80" rx="3" class="blk"/><rect x="420" y="160" width="260" height="80" rx="3" class="blk"/><rect x="0" y="126" width="700" height="22" class="ro"/><rect x="0" y="246" width="700" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/><text class="lbl big" x="250" y="141">HARBOUR STREET</text><text class="lbl big" x="560" y="261">QUAY ROAD</text><polyline class="pf p4" points="40,257 200,257 440,257 440,180 460,145"/><polyline class="pf p1" points="80,137 380,137 400,140 405,180"/><polyline class="pf p2" points="680,60 560,137 470,137 420,180"/><polyline class="pf p3" points="212,10 212,137 330,137 440,150"/><polyline class="pf p5" points="690,290 560,257 500,257 450,210"/><circle cx="430" cy="165" r="95" class="circ"/><circle cx="430" cy="165" r="3" fill="var(--accent)"/><circle cx="525" cy="165" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/><rect x="431" y="171" width="14" height="14" rx="3" class="f4 hd"/><circle cx="380" cy="137" r="7" class="f1 hd"/><circle cx="470" cy="137" r="7" class="f2 hd"/><circle cx="330" cy="137" r="7" class="f3 hd"/><circle cx="455" cy="200" r="7" class="f5 hd"/><circle cx="400" cy="200" r="7" class="f1 hd"/><circle cx="490" cy="215" r="7" class="f2 hd"/><circle cx="360" cy="190" r="7" class="f3 hd"/><circle cx="500" cy="120" r="7" fill="var(--surface-2)" stroke="var(--muted)" stroke-width="2"/><circle cx="350" cy="110" r="7" fill="var(--surface-2)" stroke="var(--muted)" stroke-width="2"/><circle cx="470" cy="240" r="7" fill="var(--surface-2)" stroke="var(--muted)" stroke-width="2"/><text class="lbl" x="230" y="24">11 passed inside: the 8 longest filled, 3 hollow</text></svg><div class="corner"><span class="btn tiny" style="border-color:var(--accent);color:var(--accent)">Within a circle</span><span class="muted small" style="background:var(--surface);padding:0 6px;border-radius:4px">150 m</span></div></div>
+        <div class="reader">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span><b style="color:var(--accent)">11 cameras</b> passed inside</span><span class="pill acc">8 of 8 ticked</span></div>
+          <div class="muted">8 is the most an incident holds. The eight that were inside longest are ticked; untick one to swap another in.</div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto"><span class="tk on"></span><i class="c1" style="width:10px;height:10px;border-radius:50%"></i><span>Ofc. Pell <small>inside 20:25 to 20:38 · 13 min</small></span><span class="muted">▸</span></div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto"><span class="tk on"></span><i class="c2" style="width:10px;height:10px;border-radius:50%"></i><span>Ofc. Amari <small>inside 20:25 to 20:38 · 13 min</small></span><span class="muted">▸</span></div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto"><span class="tk on"></span><i class="c4" style="width:10px;height:10px;border-radius:2px"></i><span>Unit 9082 <small>vehicle · inside 20:26 to 20:38 · 12 min</small></span><span class="muted">▸</span></div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto"><span class="tk on"></span><i class="c3" style="width:10px;height:10px;border-radius:50%"></i><span>Ofc. Dunn <small>inside 20:27 to 20:38 · 11 min</small></span><span class="muted">▸</span></div>
+          <div class="muted small" style="padding:2px 0">… Ofc. Ruiz, Ofc. Nakai, Ofc. Osei, Ofc. Lind ticked</div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto;opacity:.6"><span class="tk" style="border-style:dashed"></span><i class="c3" style="width:10px;height:10px;border-radius:50%"></i><span>Ofc. Brook <small>inside 20:31 to 20:35 · 4 min</small></span><span class="muted">▸</span></div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto;opacity:.6"><span class="tk" style="border-style:dashed"></span><i class="c6" style="width:10px;height:10px;border-radius:50%"></i><span>Kit Vale <small>inside 20:36 to 20:38 · 2 min</small></span><span class="muted">▸</span></div>
+          <div class="cam" style="grid-template-columns:14px 10px minmax(0,1fr) auto;opacity:.6"><span class="tk" style="border-style:dashed"></span><i style="background:var(--muted);width:10px;height:10px;border-radius:50%"></i><span>Jo Marsh <small>inside 20:37 to 20:38 · 1 min</small></span><span class="muted">▸</span></div>
+          <div class="acts" style="margin-top:6px"><span class="btn primary" style="width:100%;justify-content:center">Make an incident from these 8</span></div>
+          <div class="acts"><span class="btn" style="width:100%;justify-content:center">Build it on the Incidents tab instead</span></div>
+          <div class="muted">The second carries the eight ticks to the strip, where the span handles, the filmstrip and the moment line are.</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The circle's answer is the same list with the same ticks.</b> Today the circle lists who passed inside and Make an incident from the circle takes them all. Under the cap the list gets the budget: the cameras ordered by how long each was inside, the eight longest ticked, the rest unticked with dashed boxes and the reason, "8 of 8 ticked" at the head, and the markers drawn filled for the ticked and hollow for the rest. A press on a marker toggles its tick, within the budget. Make an incident takes the ticked eight through the New incident box as today (the box keeps the same ticks and the same budget).</p>
+        <p><b>Two doors, one builder.</b> The Map tab stays the quick door for "everyone at this spot": one circle, one press. The Incidents tab is the careful door, with the span, the moment and the pictures. "Build it on the Incidents tab instead" carries the ticks across (<span class="mono">?tab=incidents&amp;tick=</span>), and the strip opens with those lanes ticked and the Reader as Your incident; "Open the Map tab" on the strip's small map carries them back. Neither door makes anything without the press.</p>
+        <p><b>The vehicle is one.</b> A unit's streams are one camera in the circle's list as on the strip: one tick, one of the eight; the incident takes all its streams.</p>
+        <p><b>Eight is a setting the Admin already has.</b> "Most cameras in an incident" governs the picker today; the strip, the circle and the box all read it, so an office that sets six gets six everywhere.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- H -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure H</span><h2>The incident page shows all eight at once, in every view</h2></div>
+    <div class="frame">
+      <div class="views">
+        <div class="view"><div class="vh"><b>Focus</b><span class="muted">1 large, 7 playing under it</span></div>
+          <div class="wall" style="grid-template-columns:repeat(7,1fr)"><div class="tile big"><b>Ofc. Pell</b></div><div class="tile film"><b>Amari</b></div><div class="tile film"><b>9082</b></div><div class="tile film"><b>Dunn</b></div><div class="tile film"><b>Ruiz</b></div><div class="tile film"><b>Nakai</b></div><div class="tile film"><b>Osei</b></div><div class="tile film"><b>Lind</b></div></div>
+          <div class="muted">The seven in the strip play, small, in step; a press brings one to the front. No tile is parked.</div></div>
+        <div class="view"><div class="vh"><b>Side by side</b><span class="muted">3 across for 5 to 8</span></div>
+          <div class="wall" style="grid-template-columns:repeat(3,1fr)"><div class="tile"><b>Pell</b></div><div class="tile"><b>Amari</b></div><div class="tile"><b>9082</b></div><div class="tile"><b>Dunn</b></div><div class="tile"><b>Ruiz</b></div><div class="tile"><b>Nakai</b></div><div class="tile"><b>Osei</b></div><div class="tile"><b>Lind</b></div></div></div>
+        <div class="view"><div class="vh"><b>Grid, 4 across</b><span class="muted">two rows of four</span></div>
+          <div class="wall" style="grid-template-columns:repeat(4,1fr)"><div class="tile"><b>Pell</b></div><div class="tile"><b>Amari</b></div><div class="tile"><b>9082</b></div><div class="tile"><b>Dunn</b></div><div class="tile"><b>Ruiz</b></div><div class="tile"><b>Nakai</b></div><div class="tile"><b>Osei</b></div><div class="tile"><b>Lind</b></div></div></div>
+        <div class="view"><div class="vh"><b>Grid, 3 across</b><span class="muted">three rows, the last of two</span></div>
+          <div class="wall" style="grid-template-columns:repeat(3,1fr)"><div class="tile"><b>Pell</b></div><div class="tile"><b>Amari</b></div><div class="tile"><b>9082</b></div><div class="tile"><b>Dunn</b></div><div class="tile"><b>Ruiz</b></div><div class="tile"><b>Nakai</b></div><div class="tile"><b>Osei</b></div><div class="tile"><b>Lind</b></div></div></div>
+        <div class="view"><div class="vh"><b>Grid, 2 across</b><span class="muted">four rows; the page scrolls</span></div>
+          <div class="wall" style="grid-template-columns:repeat(2,1fr)"><div class="tile"><b>Pell</b></div><div class="tile"><b>Amari</b></div><div class="tile"><b>9082</b></div><div class="tile"><b>Dunn</b></div><div class="tile"><b>Ruiz</b></div><div class="tile"><b>Nakai</b></div><div class="tile"><b>Osei</b></div><div class="tile"><b>Lind</b></div></div></div>
+        <div class="view"><div class="vh"><b>The wall's setting</b><span class="muted">Panel · Incidents</span></div>
+          <div class="small"><b>Cameras on the wall</b> <span class="pill">8</span> <span class="muted">was 6</span></div>
+          <div class="muted">Its default becomes the cap, and it can never be set below Most cameras in an incident without a plain line: "Set below 8, some cameras of a full incident wait as parked tiles; a workstation decodes this many videos at once." So an office keeps the valve for weak machines, and by default every camera of an incident plays.</div></div>
+      </div>
+      <div class="caption">
+        <p><b>What changes.</b> Today the wall plays six and parks the rest as tiles to swap in; with eight the cap, all eight play in whichever view is chosen. The views keep their shapes: Focus gets seven playing film tiles under the large one, Side by side goes to three across from five cameras, the grids fill as drawn. A vehicle's streams are its tiles, so an incident with a unit may show more than eight pictures; the page says "8 cameras, 10 pictures".</p>
+        <p><b>What stays.</b> The parked tiles stay in the code for an office that sets the wall lower; the strip under the wall still shows every camera; Follow, the clock and the work panel are untouched. The One reading measure counts cameras, not pictures, as today.</p>
+        <p><b>The cost, said plainly.</b> Eight videos decoding at once is the heaviest thing a workstation does in this app; the setting's line says so, and the Admin's Status page could show the wall's size beside the cap. Built in the first release with the cap, since the cap and the wall are one promise: what you build, you see.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- I -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure I</span><h2>What eight tiles do to the whole incident page, and what the page does about it</h2></div>
+    <div class="frame">
+      <table class="t measure">
+        <tr><th>At 1366 wide, the work panel open (460 px)</th><th>Stage</th><th>One tile's picture</th><th>The wall's height</th></tr>
+        <tr><td>Today: 6 on the wall, Grid 3 across</td><td>~700 px</td><td>~220 × 124 px</td><td>2 rows, ~390 px</td></tr>
+        <tr><td>Eight, Grid 4 across, tiles as today (head, picture, two lines of words)</td><td>~700 px</td><td>~165 × 93 px</td><td>2 rows, ~330 px, the pictures the size of a playing card</td></tr>
+        <tr><td>Eight, Grid 3 across</td><td>~700 px</td><td>~220 × 124 px</td><td>3 rows, ~590 px, the strip below the fold</td></tr>
+        <tr><td>Eight, Focus, the film strip of seven at 170 px each</td><td>~700 px</td><td>large ~700 × 394 px; film 170 × 96 px</td><td>the strip is 1,240 px wide: three of seven off screen</td></tr>
+        <tr><td><b>Eight, Grid 4 across, the work panel folded to its rail</b></td><td>~1,130 px</td><td>~270 × 152 px</td><td>2 rows, ~380 px, the strip in view</td></tr>
+      </table>
+      <div class="caption" style="margin-top:12px">
+        <p><b>So no, the wall alone was not the whole answer.</b> Eight tiles in the stage beside a 460 px work panel are eight playing cards, and in Focus three of the seven small ones are off the edge. The page has to give the wall room when it holds more than six, and take back what the small tiles cannot use.</p>
+      </div>
+      <div class="two" style="grid-template-columns: 1fr 1fr; margin-top:10px">
+        <div class="frame" style="padding:10px">
+          <b class="small">Grid, 4 across · the work panel folded (the page's choice at 7 or more)</b>
+          <div class="desk folded">
+            <div class="stage">
+              <div class="wall" style="grid-template-columns:repeat(4,1fr)"><div class="tile t8"><span class="hd">Ofc. Pell · 20:28:10</span></div><div class="tile t8"><span class="hd">Ofc. Amari</span></div><div class="tile t8"><span class="hd">Unit 9082</span></div><div class="tile t8"><span class="hd">Ofc. Dunn</span></div><div class="tile t8"><span class="hd">Ofc. Ruiz</span></div><div class="tile t8"><span class="hd">Ofc. Nakai</span></div><div class="tile t8"><span class="hd">Ofc. Osei</span></div><div class="tile t8"><span class="hd">Ofc. Lind</span></div></div>
+              <div class="said">Ofc. Pell, 20:28:10 · "Step out of the vehicle for me." · the words of the focus camera, one line, following the clock</div>
+              <div class="lanes8"><i style="width:70%"></i><i style="width:66%"></i><i style="width:74%"></i><i style="width:52%"></i><i style="width:48%"></i><i style="width:40%"></i><i style="width:36%"></i><i style="width:30%"></i><span>the strip: eight lanes, the playhead, the events</span></div>
+              <div class="bar8"><span>▶</span><span>20:28:10</span><span>Follow</span><span>Layout: Grid 4</span><span style="margin-left:auto">Work panel ›</span></div>
+            </div>
+            <div class="handle"></div>
+            <div class="rail">Chronology · Memo · Cameras · Map</div>
+          </div>
+        </div>
+        <div class="frame" style="padding:10px">
+          <b class="small">Focus · the film strip fitted to the stage, the work panel open</b>
+          <div class="desk">
+            <div class="stage">
+              <div class="wall" style="grid-template-columns:1fr"><div class="tile big" style="aspect-ratio:16/7"><b>Ofc. Pell · 20:28:10</b></div></div>
+              <div class="wall" style="grid-template-columns:repeat(7,1fr); gap:3px"><div class="tile t8" style="height:34px"><span class="hd">Amari</span></div><div class="tile t8" style="height:34px"><span class="hd">9082</span></div><div class="tile t8" style="height:34px"><span class="hd">Dunn</span></div><div class="tile t8" style="height:34px"><span class="hd">Ruiz</span></div><div class="tile t8" style="height:34px"><span class="hd">Nakai</span></div><div class="tile t8" style="height:34px"><span class="hd">Osei</span></div><div class="tile t8" style="height:34px"><span class="hd">Lind</span></div></div>
+              <div class="said">Ofc. Pell · "Step out of the vehicle for me."</div>
+              <div class="lanes8"><i style="width:70%"></i><i style="width:66%"></i><i style="width:74%"></i><i style="width:52%"></i><span>the strip</span></div>
+              <div class="bar8"><span>▶</span><span>20:28:10</span><span>Follow</span><span>Layout: Focus</span></div>
+            </div>
+            <div class="handle"></div>
+            <div class="work"><div class="tb"><span>Chronology</span><span>Memo</span><span>Cameras</span><span>Map</span></div><div>20:25:17 First contact, officer asks for licence<br>20:25:50 Walk: my words on this one<br>20:26:25 Passenger side: second officer<br>20:27:14 All units at the corner</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The work panel folds to a rail at seven or more.</b> When the wall holds more than six cameras the page opens with the work panel folded to its tab rail (Chronology · Memo · Cameras · Map, each a press that opens the panel over the right edge, as the Map tab's list does in Larger map). The stage grows from about 700 to about 1,130 px, and Grid 4 gives eight pictures of 270 by 152 px with the strip still in view. The person can pin the panel open; the choice is remembered per person, as the layout is.</p>
+        <p><b>The small tiles give up what they cannot use.</b> At seven or more the tiles drop their two lines of words and their sync row, and their head becomes the film head (name and time, one line); the words follow the focus camera in the said band under the wall, which is already there. A press on a tile makes it the focus; its lines come back in the band.</p>
+        <p><b>Focus fits its film strip.</b> The seven small tiles share the stage width (each about 100 px with the panel open, 160 px folded) instead of scrolling off the edge; below 90 px they scroll, two at a time, with the parked rule gone.</p>
+        <p><b>What the layouts mean now.</b> Grid 4 is the eight-camera view; Grid 3 holds eight in three rows for a taller screen; Side by side stays for two to four; Grid 2 is for a narrow window and scrolls. The layout setting's default stays Focus; the page suggests nothing, but Layout on the bar says "Grid 4 shows all 8" beside the chooser while an incident is full.</p>
+        <p><b>Under 1024 and on a phone.</b> As today: the work panel under the wall; Grid 2 at most; eight tiles in four rows, scrolling, the bar fixed at the foot.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Settled by the ask, and five to decide</h2></div>
+    <div class="frame">
+      <p class="small"><b>Settled by the maintainer's word (2026-11-04).</b> The layout stays (strip left, Reader right). Click to select on the strip. A map at the foot that takes in a camera as it is ticked. The person builds the incident; the app's suggestions go. The surety words go from this tab. An incident holds eight cameras at most (the Admin's "Most cameras in an incident", read everywhere). And a rule for the build: <b>every word on the tab is clean</b>. No label is drawn over another, none is clipped mid-letter: a name that does not fit is cut with an ellipsis and shown whole on hover, a column's tag yields to a neighbour by stepping down a row, the filmstrip and the ticks have their own columns, and the strip is walked at 1366, at 1024 and on a phone before the release with the office's own sizes (70 cameras, three days) in mind.</p>
+      <table class="t">
+        <tr><th>#</th><th>The choice</th><th>Drawn and recommended</th><th>The other way</th></tr>
+        <tr><td>1</td><td>The two tools in Your incident</td><td>Kept: "Tick everyone running at this moment" and "Tick the cameras within 50 m on the map"; both only tick</td><td>No tools at all; every tick by hand</td></tr>
+        <tr><td>2</td><td>The map at the foot</td><td>Always there; empty with a line until something is ticked</td><td>Appears only while building, so the tab is shorter at rest</td></tr>
+        <tr><td>3</td><td>The span</td><td>From the ticks, then narrowed by two handles on the ruler</td><td>From the ticks alone (the incident's clock opens at the first camera's start, as today)</td></tr>
+        <tr><td>4</td><td>What the person must give</td><td>The name alone (offered, editable); who and when are recorded</td><td>A name and a one-line reason, kept as the incident's first chronology event</td></tr>
+        <tr><td>5</td><td>The surety words elsewhere</td><td>Gone from the Incidents tab only; the Notes tab's chronology and the recordings list keep theirs for now</td><td>Gone everywhere in one release</td></tr>
+        <tr><td>6</td><td>The cap of eight</td><td>A visible budget ("3 of 8"); at eight the other ticks go dashed with the reason; a vehicle's streams are one camera</td><td>The eighth tick refuses with a toast</td></tr>
+        <tr><td>7</td><td>The lanes' order while building</td><td>By overlap with the span, longest first, minutes on the head; no overlap sinks and fades</td><td>The order never changes (by start time)</td></tr>
+        <tr><td>8</td><td>The filmstrip at the moment</td><td>Yes: a small picture per shown lane, cut on request as the line moves</td><td>Stills in the Reader only, as today</td></tr>
+        <tr><td>9</td><td>Near marks from the paths</td><td>A ring on the box of a camera within 50 m of a ticked one at the moment</td><td>Nothing from the paths on the strip; the map alone shows nearness</td></tr>
+        <tr><td>10</td><td>The Map tab's circle under the cap</td><td>The list ticks the eight longest inside, the rest dashed; markers filled or hollow; a marker's press toggles; Build it on the Incidents tab carries the ticks across</td><td>The circle refuses when more than eight passed inside ("narrow the circle")</td></tr>
+        <tr><td>11</td><td>The wall</td><td>Cameras on the wall defaults to the cap and every camera of an incident plays in every view; a lower setting still parks, with a plain line</td><td>The wall stays at six and two of eight wait as parked tiles</td></tr>
+        <tr><td>12</td><td>The work panel at seven or more cameras</td><td>Opens folded to its tab rail, the stage takes the width; a press opens a panel over the edge; pinning is remembered per person</td><td>The panel stays open at 460 px and the eight pictures are playing cards</td></tr>
+        <tr><td>13</td><td>The small tiles' words</td><td>At seven or more the tiles drop their lines and sync row; the said band under the wall carries the focus camera's words</td><td>Every tile keeps its two lines, at the cost of a third of its height</td></tr>
+        <tr><td>14</td><td>Focus with seven small tiles</td><td>The film strip fits the stage width, scrolling only below 90 px a tile</td><td>170 px tiles that scroll off the edge, as today</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:10px">Built as three releases: the ticks, the budget, the builder, the span handles and the words first (the map pane mounted from the incident page's code); then the moment line driving the map, the lanes' order and the filmstrip; then the near marks, the map's ticks and the two tools.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -381,15 +381,14 @@
           <div class="row" style="align-items: center; margin: 14px 0 8px">
             <div class="lead grow m0 inc-counts" id="incident-counts">
               {% if incident_counts %}
-                <span class="pill small {% if incident_counts.incidents %}acc{% endif %}" title="An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }}{% else %}No incident yet{% endif %}</span>
-                <span class="pill small" title="Videos the app thinks go together: by their clocks, by their paths, by the notes under them, or the same day. Nothing is made without a press.">{% if incident_counts.suggested %}{{ incident_counts.suggested }} suggested{% else %}nothing suggested{% endif %}</span>
-                <span class="pill small" title="Videos of the case that are in no incident.">{{ incident_counts.in_none }} video{{ incident_counts.in_none|pluralize }} in none</span>
-                {% if incident_counts.unclocked %}<a class="pill small warn" href="#unclocked-host" title="Videos whose clock nobody has read or placed; each row under the strip offers a time or a sound match.">{{ incident_counts.unclocked }} not on the clock</a>{% endif %}
+                <span class="pill small" title="Videos of the case with a time on the case's clock, over every day.">{{ incident_counts.on_clock }} camera{{ incident_counts.on_clock|pluralize }} on the clock</span>
+                <span class="pill small {% if incident_counts.incidents %}acc{% endif %}" title="An incident is the cameras you ticked, laid on one clock so they play in step, up to {{ incident_counts.most }}. Each opens on a page of its own.">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }} built{% else %}No incident built yet{% endif %}</span>
+                {% if incident_counts.unclocked %}<a class="pill small warn" href="#unclocked-host" title="Videos whose clock nobody has read or placed; Put on the clock under the strip offers a time or a sound match.">{{ incident_counts.unclocked }} not on the clock</a>{% endif %}
               {% else %}
-                <span class="pill small">{% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}</span>
+                <span class="pill small">{% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident built yet{% endif %}</span>
               {% endif %}
             </div>
-            <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
+            <span class="muted small" id="building-words">Tick cameras on the strip to build an incident.</span>
           </div>
           {% comment %}
             The strip (Phase 10 chapter 5, v1.180.0; the drawing
@@ -408,10 +407,22 @@
             its panel under them.
           {% endcomment %}
           <div class="strip-wrap">
-            <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-reader="#strip-reader" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
+            <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-case-name="{{ case.name }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-new="{% url 'new-incident' case.pk %}" data-reader="#strip-reader" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
             <aside id="strip-reader" class="chron reader" aria-live="polite"></aside>
           </div>
-          <div id="unclocked-host"></div>
+          <div id="unclocked-host" hidden></div>
+          {% comment %}
+            The map at the foot of the tab (Phase 12 chapter 8): the Map tab's
+            drawing mounted small, showing only the cameras ticked on the
+            strip, which tells it the ticks and the day by an event.
+          {% endcomment %}
+          {% if map_json_url %}
+            <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
+            <div class="strip-map" id="strip-map">
+              {% include "map-host.html" with map_clock="" map_pick="1" %}
+              <p class="map-pick-empty muted small" id="map-pick-empty">Pick a camera on the strip and its path appears here.</p>
+            </div>
+          {% endif %}
         {% elif tab == "map" %}
           {% comment %}
             The Map tab (Phase 12 chapter 1; the drawing
@@ -1043,7 +1054,7 @@
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}
   <script src="{% static 'preview.js' %}"></script>
   {% comment %}The Map tab (Phase 12 chapter 1): the vendored map library, the pmtiles reader, then the tab's own script, after the Preview it opens.{% endcomment %}
-  {% if tab == "map" %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
+  {% if tab == "map" or map_json_url %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
   {% if tab == "notes" %}{% if notes.total or recordings %}<script src="{% static 'waveform.js' %}"></script><script src="{% static 'notes-page.js' %}"></script>{% endif %}{% endif %}
   {% if case_chat_available %}
     <script src="{% static 'paragraph-card.js' %}"></script>

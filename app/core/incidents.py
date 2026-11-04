@@ -90,6 +90,17 @@ FROM_OFFER = "offer"
 BY_HAND = "hand"
 # From the case's chronology (Phase 10 chapter 2, v1.167.0).
 FROM_CHRONOLOGY = "chronology"
+# Built on the Incidents tab's strip, and from the Map tab's circle (Phase
+# 12 chapter 8, v1.200.0).
+FROM_STRIP = "strip"
+FROM_MAP = "map"
+HOW_WORDS = {
+    BY_HAND: "by hand",
+    FROM_OFFER: "from the offer",
+    FROM_CHRONOLOGY: "from the chronology",
+    FROM_STRIP: "from the strip",
+    FROM_MAP: "from the map's circle",
+}
 
 DAY = 86400.0
 

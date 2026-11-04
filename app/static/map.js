@@ -13,6 +13,11 @@
   // the incident's clock and brings the camera to the front of the wall.
   var INC = host.dataset.clock === "incident";
   function incClock() { return INC && window.IncidentClock ? window.IncidentClock : null; }
+  // The Incidents tab's map (Phase 12 chapter 8, v1.200.0): the same script
+  // in pick mode, drawing only the cameras ticked on the strip, which tells
+  // it the ticks and the day by an "incident-ticks" event; no list, no
+  // transport, no strip of its own, and nothing remembered.
+  var PICK = host.dataset.pick === "1";
 
   function esc(text) { return String(text == null ? "" : text).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function hms(seconds) { seconds = Math.round(seconds); seconds = ((seconds % 86400) + 86400) % 86400; var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60; return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s; }
@@ -61,8 +66,31 @@
   var TILE_PLAYS_TO = 4; // the speed up to which a tile plays its video; above it, a frame a second
   var NEAR = 50;         // metres: the circle's first radius, as the server's together() counts "near"
   var CASE = host.dataset.case || "";
-  try { (JSON.parse(recall("map-hidden-" + CASE) || "[]") || []).forEach(function (id) { S.hidden[id] = true; }); } catch (e) { /* nothing hidden */ }
-  function rememberHidden() { remember("map-hidden-" + CASE, JSON.stringify(Object.keys(S.hidden))); }
+  if (!PICK) { try { (JSON.parse(recall("map-hidden-" + CASE) || "[]") || []).forEach(function (id) { S.hidden[id] = true; }); } catch (e) { /* nothing hidden */ } }
+  function rememberHidden() { if (PICK) { return; } remember("map-hidden-" + CASE, JSON.stringify(Object.keys(S.hidden))); }
+  // Pick mode: the strip's ticks become the map's ticks; nothing else shows.
+  S.pick = [];
+  function applyPick() {
+    if (!PICK || !S.loaded) { return; }
+    var wanted = {}; S.pick.forEach(function (id) { wanted[id] = true; });
+    S.hidden = {};
+    S.cams.forEach(function (c) { if (!wanted[c.id]) { S.hidden[c.id] = true; } });
+    var empty = document.getElementById("map-pick-empty");
+    if (empty) { empty.hidden = S.pick.some(function (id) { return S.byId[id]; }); }
+    // The clock sits at the first ticked camera's start, so every ticked
+    // marker is on the map and not "before".
+    var starts = S.cams.filter(function (c) { return wanted[c.id] && c.onClock; }).map(function (c) { return c.zero.second; });
+    if (starts.length) { S.playing = false; seek(Math.min.apply(null, starts) + 1); }
+    if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } drawList(); drawStrip(); refreshLayers(); tick(); fitAll(); }
+  }
+  if (PICK) {
+    window.addEventListener("incident-ticks", function (e) {
+      var told = e.detail || {};
+      S.pick = told.ids || [];
+      if (told.day && told.day !== S.day) { S.day = told.day; load(false); return; }
+      applyPick();
+    });
+  }
   // Ticked means drawn. The incident page's pane has no list to untick from,
   // so it draws every camera of its incident.
   function shown(cam) { return INC || !S.hidden[cam.id]; }
@@ -84,6 +112,8 @@
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       S.told = told; S.day = told.day || ""; S.loaded = true;
       prepare();
+      // Pick mode: only the strip's ticked cameras are drawn, from the first reading.
+      if (PICK) { var picked = {}; S.pick.forEach(function (id) { picked[id] = true; }); S.hidden = {}; S.cams.forEach(function (c) { if (!picked[c.id]) { S.hidden[c.id] = true; } }); }
       // The address may name a camera or an incident on another day than
       // the one the server chose: decided once, before the first drawing.
       if (!S.dayChosen) { S.dayChosen = true; var wanted = wantedDay(); if (wanted) { S.day = wanted; } }
@@ -190,7 +220,8 @@
   // The page ---------------------------------------------------------------------
   function layout() {
     if (INC) { layoutPane(); return; }
-    host.classList.toggle("large", S.large);
+    host.classList.toggle("large", S.large && !PICK);
+    host.classList.toggle("map-pick", PICK);
     S.tiles = {}; S.sound = null; S.tags = {};
     host.innerHTML =
       "<div class='map-lead'>" +
@@ -350,7 +381,7 @@
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
       var mine = map;
-      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); });
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); if (PICK) { applyPick(); } });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
       map.on("click", "map-events-hit", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
@@ -502,9 +533,9 @@
         if (map && mapReady && trailIndex[cam.id] !== -4) { trailIndex[cam.id] = -4; var s4 = map.getSource("map-trail-" + cam.n); if (s4) { s4.setData({ type: "FeatureCollection", features: [] }); } }
         return;
       }
-      if (local === null || (!ofDay(cam) && cam.onClock) || !scoped(cam)) { node.classList.add("before"); return; }
+      if (local === null || (!ofDay(cam) && cam.onClock) || !scoped(cam)) { node.classList.add("before"); clearTrail(cam); return; }
       var p = positionAt(cam, local);
-      if (!p) { node.classList.add("before"); return; }
+      if (!p) { node.classList.add("before"); clearTrail(cam); return; }
       node.classList.remove("before");
       node.classList.toggle("nofix", !!p.nofix);
       node.classList.toggle("ended", !!p.ended);
@@ -724,6 +755,15 @@
     var r = { x: under.offsetLeft, y: under.offsetTop + under.offsetHeight + 4 };
     box.style.left = Math.max(0, Math.min(el.pane.clientWidth - box.offsetWidth - 4, r.x)) + "px";
     box.style.top = Math.max(0, Math.min(el.pane.clientHeight - box.offsetHeight - 4, r.y)) + "px";
+  }
+  // Scrubbed back before a camera's first fix (v1.200.0): its trail used to
+  // stay at the length it had reached, since the tick returned before the
+  // trail branch; now the trail is cleared with the marker.
+  function clearTrail(cam) {
+    if (!map || !mapReady || S.show !== "trails" || trailIndex[cam.id] === -1) { return; }
+    trailIndex[cam.id] = -1;
+    var src = map.getSource("map-trail-" + cam.n);
+    if (src) { src.setData({ type: "FeatureCollection", features: [] }); }
   }
   function trailSegments(cam, index, p) {
     var out = [], run = [];

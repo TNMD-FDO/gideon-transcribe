@@ -162,7 +162,7 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     # The lead as counts (Phase 12 chapter 7): the forming run and the
     # clocks' offer share one key, so one suggestion.
-    assert "No incident yet" in page and "1 suggested" in page
+    assert "No incident built yet" in page and "cameras on the clock" in page
     assert 'id="incident-strip"' in page and 'data-mode="strip"' in page
     assert f"/case/{a_case.pk}/incidents/strip.json" in page
     assert 'id="strip-reader"' in page and 'id="unclocked-host"' in page
@@ -170,8 +170,10 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     # The clocks' offer is read in the day's reading, by its key.
     key = incidents.offer_key([one.pk, two.pk, three.pk])
     told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
-    assert told["day"]["offers"] == [] or told["day"]["offers"][0]["key"] == key
-    assert told["counts"]["suggested"] == 1 and told["counts"]["incidents"] == 0
+    # The builder (Phase 12 chapter 8): the strip suggests nothing.
+    assert told["day"]["offers"] == [] and key
+    assert told["counts"]["incidents"] == 0 and told["counts"]["most"] == 8
+    assert told["counts"]["on_clock"] == 3
     assert told["incidents_all"] == []
     assert told["day"]["bars"][0]["name"] and "on_map" in told["day"]["bars"][0]
     # No table of every video under the incidents (v1.180.1): the recordings
@@ -186,8 +188,7 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     # The suggestion is still counted (v1.199.1): the setting governs the
     # presses, not the drawing.
-    assert "No incident yet" in page and "1 suggested" in page
-    assert 'id="incident-strip"' in page
+    assert "No incident built yet" in page and 'id="incident-strip"' in page
 
 
 def test_not_these_from_the_strip_answers_json(owner, a_case, three_cameras, client):

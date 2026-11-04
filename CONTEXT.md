@@ -558,12 +558,17 @@ _Avoid_: incident strip, incident bar, timeline of incidents
 The band's third shape on the case's chronology, when more than six recordings overlap: one shaded strip whose height at each moment is how many recordings were running then, labelled at its peaks; hover for the count, press for the list of recordings running then. Under it, bars for the eight most noted recordings only, the rest folded. Phase 10 chapter 1.
 _Avoid_: density, histogram, heat
 
+**Your incident**:
+The Reader of the Incidents tab while any camera is ticked on the strip (Phase 12 chapter 8, v1.200.0): the ticked cameras with a still and a plain line each, a name offered and editable, the count against the most an incident holds, Make the incident and Clear the ticks. The ticked cameras are also one bright column on the strip and the only cameras on the map at the foot. Nothing is made without Make the incident, and the incident records who built it, when, and that it came from the strip.
+_Avoid_: draft, selection, basket, cart, pending incident
+
 **Suggested**:
+Gone from the Incidents tab in v1.200.0 (Phase 12 chapter 8): the app suggests nothing there; the person ticks. The word stays for the history of v1.197.0 to v1.199.1 below.
 On the Incidents tab (Phase 12 chapter 7, v1.199.0), videos the app thinks go together, whatever found it: their clocks (the offer of Phase 6), their paths (within reach of one another for minutes, Phase 12), the notes under them (a Forming run), or the Same day. One shape everywhere: a numbered dashed column on the strip, the same number in the Reader, the officers' names, one line of why, and the same presses: Make an incident (or Add to the incident it ran during), On the map, and Not this, which puts the suggestion away for the case by its key. Nothing is made without a press.
 _Avoid_: proposed incident, candidate, offer (as a page word), forming card
 
 **Reader**:
-The box beside the Incidents tab's strip (Phase 12 chapter 7, v1.199.0) that reads whatever is pressed on the strip: with nothing pressed, the day (its counts and the case's incidents with Open); a Suggested column, a shaded incident column, or a lane's camera. One place to read, in place of cards and a table.
+The box beside the Incidents tab's strip (Phase 12 chapter 7, v1.199.0) that reads whatever is pressed on the strip: with nothing pressed, the day (its counts and the case's incidents with Open and who built each); a shaded incident column, or a lane's camera. From v1.200.0 it is Your incident while any camera is ticked. One place to read, in place of cards and a table.
 _Avoid_: side panel, inspector, details pane, drawer
 
 **Forming**:

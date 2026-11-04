@@ -264,21 +264,17 @@ def test_the_offer_and_the_case_page_carry_the_bar(client, incident, person, a_c
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
     body = page.content.decode()
     assert 'id="strip-reader"' in body and "sitting-mini" not in body
-    strip = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
-    offer = [
-        one
-        for one in strip["day"]["offers"]
-        if one["kind"] == "add" and one["ids"] == [str(third.pk)]
-    ][0]
-    assert offer["incident"]["name"] == "Again"
+    # The strip suggests nothing (v1.200.0); Your incident asks the sitting
+    # for the cameras ticked.
+    ids = [str(third.pk)]
     asked = client.get(
-        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(offer["ids"])
+        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(ids)
     ).json()
     assert asked["sitting"]["on"]
     # Off when the assistant is off.
     settings_store.set_to("assistant_available", False)
     asked = client.get(
-        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(offer["ids"])
+        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(ids)
     ).json()
     assert not asked["sitting"]["on"]
     settings_store.set_to("assistant_available", True)

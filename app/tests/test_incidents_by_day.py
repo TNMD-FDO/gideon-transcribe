@@ -114,7 +114,7 @@ def test_one_loose_video_beside_a_forming_one_and_the_picker_lists_it(
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     # The lead as counts (Phase 12 chapter 7): the forming run and the same
     # day are two suggestions.
-    assert "No incident yet" in page and "2 suggested" in page
+    assert "No incident built yet" in page
     strip = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
     assert strip["day"]["same_day"]["cameras"] == 1
     assert strip["days"][0]["together"] is True

@@ -308,6 +308,53 @@ The offers' cards rendered by the page, the forming and same-day cards, the Sugg
 
 The small read-only map in the Reader on a suggestion or an incident (the Map tab's drawing mounted small, Open the map), and Not on the clock as the strip's last row with Place… opening its panel as a sheet.
 
+## 8. The Incidents tab as a builder (the first release, v1.200.0)
+
+### About
+
+Asked 2026-11-04, the day v1.199.0 went on the server: the tab was still all over the place, the surety words ("Clear") meant nothing to a user, and the app had enough tools to help a person build an incident themselves. Keep the layout; move to click-to-select; a map at the foot that takes in a camera as it is picked; the accountability on the person who builds; the app's suggestions gone. Then: eight cameras at most; how to make the choice easier while the person still makes it; how the Map tab's door acts under the cap; the incident page showing all eight at once; and what that does to the page's layout. Drawn in `docs/spec/mockups/phase-12-incident-builder.html` (Figures A to I, fourteen choices), which stands with every choice as recommended. Chapter 7's Reader stays; its suggestions go.
+
+### Principles
+
+1. **The person builds the incident.** Nothing is made for them and nothing is suggested to them: no clocks' offer, no paths' suggestion, no forming run, no same day on this tab. What the app still does by itself is place a camera on the clock when its picture or its path file says where it belongs, because without that there is nothing to tick.
+2. **Ticking is building.** A tick on a lane adds the camera everywhere at once: the row lights, the others dim, its path appears on the map at the foot, its still and its line join Your incident in the Reader. Unticking takes it out everywhere.
+3. **Eight at most**, the Admin's "Most cameras in an incident", read everywhere, now 2 to 8 and 8 by default. A vehicle's streams are one camera.
+4. **Plain words, not surety words.** Where a camera's time comes from is a sentence a user can act on, and who vouched for it; the one-word pills leave the Incidents tab.
+5. **Every word on the tab is clean.** No label over another, none clipped mid-letter; the strip walked at 1366, at 1024 and on a phone before the release.
+
+### Words
+
+`CONTEXT.md`: **Your incident** (the Reader while cameras are ticked); **Reader** amended; **Suggested** marked as gone from the tab in v1.200.0. An incident's `how` gains `strip` ("from the strip") and `map` ("from the map's circle"), with `HOW_WORDS` for every door.
+
+### The lead
+
+Counts as pills: "N cameras on the clock" over every day, "N incidents built" (or "No incident built yet"), "N not on the clock" as a link; at the right, "Tick cameras on the strip to build an incident", which becomes "Building: N cameras, hh:mm to hh:mm" while any are ticked. New incident's button goes: the strip is the New incident. `incident_strip.counts` reads `on_clock`, `incidents`, `unclocked` and `most`.
+
+### The strip
+
+- **Ticks.** Every lane's head carries a tick box; the ticked rows light and the others dim while any is ticked; at the cap the free boxes are disabled with the reason on hover. The ticked lanes come first, then by start. The ticks live for the tab's life, not beyond.
+- **Your incident's column.** The ticked cameras' first start to last end, one bright column over the lanes with "your incident · hh:mm to hh:mm" on top. The built incidents stay as shaded columns with their names.
+- **Not on the clock** is the strip's last row: the clockless videos named, and **Put on the clock…** opens the panel of chapter 5 under the strip, which is otherwise hidden.
+- **The words.** A lane's hover and the Reader's camera reading carry `placed_sentence` (`case_chronology`): the clock burned into its picture, checked on two frames or read once; placed by a named person who typed a time on a date; from the file's unchecked time; the day alone; where its sound lines up with a named camera, a strong match, accepted by whom and when; its own clock from its path file; the minute in its file name, the least sure way; or not on the clock. `placed_short` is the line in Your incident ("the clock in its picture", "typed by Dana Reyes", "its own clock, from its path file", "placed by sound, accepted by Dana Reyes"). No surety pill is drawn on the tab.
+
+### The Reader
+
+- **The day** (nothing ticked, nothing pressed): the counts, **Incidents built on this day** with Open and On the map and each one's line "built by <who>, <date>, <door>" (`incident_strip.all_incidents` gains `built`), the other days' folded, and "To build one" in a sentence.
+- **Your incident** (any tick): "N of 8", a name offered as the case's name and the span's start (editable; the street under the markers when the map names one is left to the next release), one row per camera with its still, its span and its short words, and untick; at the cap, "8 is the most an incident holds; untick one to swap another in"; the sitting's bar; **Make the incident** and **Clear the ticks**. Make the incident posts the ticks to New incident's own door with `how=strip`, and the page lands on the incident. A camera's reading offers **Tick for your incident** and Untick beside Play here.
+- **An incident** and **a camera** read as in chapter 7, the camera with its sentence in place of the pill.
+
+### The map at the foot
+
+The Map tab's drawing mounted under the strip in pick mode (`map-host.html` with `map_pick`, `map.js` with `PICK`): no lead, list, transport or strip of its own, nothing remembered; it draws only the cameras the strip has ticked, hears the ticks and the day on an `incident-ticks` event the strip sends after every draw, fits the map to them, and says "Pick a camera on the strip and its path appears here" while none is ticked. The Incidents tab gets the map's context and scripts while Maps is on.
+
+### Also in this release
+
+The Map tab's trail, with Trails on, used to keep its length when the clock was scrubbed back before a camera's first fix, since the tick returned before the trail branch; it now clears with the marker (`clearTrail`).
+
+### Left to the next releases
+
+From the drawing, in order: the span's two handles on the ruler and the moment line driving the map and the stills (Figures B and F); the lanes reordered by overlap while building, the filmstrip at the moment and the near marks (Figure F); the Map tab's circle under the cap and "Build it on the Incidents tab" (Figure G); the wall at eight in every view with "Cameras on the wall" defaulting to the cap, the work panel folding to its rail at seven or more, the small tiles' words in the said band, the film strip fitted (Figures H and I); the two tools in Your incident. The chronology's own surety pills and the recordings list keep their words until looked at in their own turn.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |

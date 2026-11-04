@@ -156,6 +156,8 @@ def all_incidents(case) -> list[dict]:
                 "tone": row["tone"],
                 "events": row["events"],
                 "memo": row["memo"],
+                # Who built it, when, and by which door (Phase 12 chapter 8).
+                "built": _built_words(incident),
                 "date": when.isoformat() if when else "",
                 "map_url": camera_paths.incident_map_url(incident, on_map),
             }
@@ -163,34 +165,29 @@ def all_incidents(case) -> list[dict]:
     return out
 
 
-def counts(case, strip_days: list[dict], unclocked_rows: list | None = None) -> dict:
-    """The lead's counts (Phase 12 chapter 7): the incidents, the suggestions
-    over every day (one key each, whatever found it), the videos in no
-    incident, and the videos not on the clock."""
-    from core import camera_paths, clock_match
+def _built_words(incident) -> str:
+    """Who built the incident, when, and by which door."""
+    from django.utils import timezone
 
-    # Counted whether or not Incidents proposed is on (v1.199.1): the strip
-    # draws every suggestion either way, and the setting governs the presses.
-    keys: set = set()
-    for day in strip_days:
-        keys |= set(day.get("suggested_keys", []))
-        for one in camera_paths.strip_suggestions(case, day["date"]):
-            keys.add(one["key"])
-    for offer in incidents.offers(case):
-        keys.add(offer["key"])
-    taken = incidents.taken_ids(case)
-    in_none = sum(
-        1
-        for one in incidents.videos_of(case.recordings.all())
-        if incidents.is_video(one) and str(one.pk) not in taken
-    )
+    who = incident.created_by.shown_name if incident.created_by else "someone"
+    made = timezone.localtime(incident.created)
+    door = incidents.HOW_WORDS.get(incident.how, "by hand")
+    return f"built by {who}, {made.day} {made:%b %Y}, {door}"
+
+
+def counts(case, strip_days: list[dict], unclocked_rows: list | None = None) -> dict:
+    """The lead's counts (Phase 12 chapter 8): the cameras on the clock over
+    every day, the incidents built, the videos not on the clock, and the
+    most an incident holds. The app suggests nothing (v1.200.0)."""
+    from core import clock_match
+
     if unclocked_rows is None:
         unclocked_rows = clock_match.rows_of(case)
     return {
+        "on_clock": sum(day["recordings"] for day in strip_days),
         "incidents": case.incidents.count(),
-        "suggested": len(keys),
-        "in_none": in_none,
         "unclocked": len(unclocked_rows),
+        "most": incidents.most_cameras(),
     }
 
 

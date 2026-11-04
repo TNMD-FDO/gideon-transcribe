@@ -3878,6 +3878,32 @@ nav.rail { view-transition-name: rail; }
 .reader .rd-fold summary { font-size: var(--t-small); color: var(--muted); cursor: pointer; }
 .reader .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
 .reader .stills { margin: 2px 0; }
+/* The builder (Phase 12 chapter 8, v1.200.0): ticks on the lanes, Your
+   incident in the Reader, the map at the foot following the ticks. */
+.chron .lane-row { grid-template-columns: 168px minmax(0, 1fr); }
+.chron .lane-row .lane-name input.tk { width: 13px; height: 13px; margin: 0; flex: none; accent-color: var(--accent); }
+.chron .lane-row .lane-name input.tk:disabled { opacity: 0.4; cursor: not-allowed; }
+.chron .lanes.building .lane-row:not(.on) .bar i { opacity: 0.35; }
+.chron .lanes.building .lane-row:not(.on) .lane-name { color: var(--muted); }
+.chron .lane-row.on .lane-name { background: var(--accent-soft); color: var(--text); }
+.chron .col.build { border: 2px solid var(--accent); background: var(--accent); opacity: 0.16; }
+.chron .col.build .tag { background: var(--accent); color: var(--accent-ink); }
+.chron .unclocked-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0 2px; border-top: 1px dashed var(--line); margin-top: 6px; font-size: var(--t-small); color: var(--muted); }
+.chron .unclocked-row b { color: var(--text); }
+.reader.build { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.reader .field { display: flex; flex-direction: column; gap: 3px; }
+.reader .field span { font-size: var(--t-label); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.reader .field input { font: inherit; font-size: var(--t-small); padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); width: 100%; box-sizing: border-box; }
+.reader .cam-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); font-size: var(--t-small); }
+.reader .cam-row small { display: block; color: var(--muted); font-size: var(--t-label); }
+.reader .cam-row .still { width: 58px; height: 36px; }
+.reader .cap-note { color: var(--warn); font-size: var(--t-label); }
+.strip-map { position: relative; margin-top: 12px; }
+.strip-map .map-tab.map-pick .map-lead, .strip-map .map-tab.map-pick .map-list, .strip-map .map-tab.map-pick .map-strip, .strip-map .map-tab.map-pick .map-bar { display: none; }
+.strip-map .map-tab.map-pick .map-wrap { display: block; }
+.strip-map .map-tab.map-pick .map-pane { height: clamp(220px, 32vh, 360px); }
+.strip-map .map-pick-empty { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; padding: 4px 10px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); pointer-events: none; }
+.strip-map .map-pick-empty[hidden] { display: none; }
 .forming-card { border: 1px dashed var(--accent); display: flex; flex-direction: column; gap: 6px; }
 .forming-card .h { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
 .forming-card .h b { font-size: var(--t-body); }

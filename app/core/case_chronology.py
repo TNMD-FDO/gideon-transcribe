@@ -460,6 +460,11 @@ def day_of(
                 "name": _lane_name(one, names.get(key)),
                 "unit": (names.get(key) or {}).get("unit", ""),
                 "on_map": one.pk in on_map,
+                # Plain words for where its time comes from (Phase 12 chapter
+                # 8): a sentence for the Reader and the bar's hover, a short
+                # form for Your incident's camera lines.
+                "why": placed_sentence(one) if strip else "",
+                "why_short": placed_short(one) if strip else "",
                 "from": round(running[0], 1),
                 "to": round(running[1], 1),
                 "notes": count,
@@ -546,9 +551,9 @@ def day_of(
     for row in entries:
         _place_in_incidents(row, on_day)
     groups = spells(entries)
-    # The clocks' offers on the day (Phase 12 chapter 7), in the suggestions'
-    # shape, so the strip's reader draws every kind of suggestion alike.
-    offers = _offers_on_day(case, bars) if strip else []
+    # The strip suggests nothing (Phase 12 chapter 8, v1.200.0): the clocks'
+    # offers are no longer read into the day; the key stays empty.
+    offers: list[dict] = []
     return {
         "offers": offers,
         "date": date.isoformat(),
@@ -804,6 +809,87 @@ def _hints(
 
 
 # An incident from a span (Phase 10 chapter 2, v1.167.0) ----------------------
+
+
+def _who(recording) -> str:
+    person = recording.clock_by
+    return person.shown_name if person is not None else "someone"
+
+
+def _when(recording) -> str:
+    from django.utils import timezone
+
+    if recording.clock_at is None:
+        return ""
+    when = timezone.localtime(recording.clock_at)
+    return f"{when.day} {when:%b}"
+
+
+def placed_sentence(recording) -> str:
+    """Where a camera's time comes from, in a sentence a user can act on
+    (Phase 12 chapter 8, in place of the surety words on the Incidents tab):
+    which clock, who vouched for it, and when."""
+    _date, _start, how = clock_of(recording)
+    when = _when(recording)
+    on = f" on {when}" if when else ""
+    if how == CLOCK:
+        if incidents.stamp_checked(recording):
+            return (
+                "On the clock from the time burned into its picture, checked on "
+                "two frames."
+            )
+        return (
+            "On the clock from the time burned into its picture, read once; a "
+            "second frame could not confirm it."
+        )
+    if how == HAND:
+        start = recording.clock_start
+        typed = f" {hms(start)}" if start is not None else " a time"
+        return f"Placed by {_who(recording)}, who typed{typed}{on}."
+    if how == FILE:
+        return "Placed from the time its file carries, which nobody has checked."
+    if how == DAY:
+        return (
+            f"Placed on {day_words(recording.clock_date)} with no hour; its bar "
+            "cannot be drawn."
+        )
+    if how == SOUND:
+        other = recording.clock_follows
+        name = exports.title_of(other) if other is not None else "another camera"
+        strong = (recording.clock_strength or 0) >= incidents.CLEAR_MATCH
+        return (
+            f"Placed where its sound lines up with {name}'s"
+            + (", a strong match" if strong else "")
+            + f"; {_who(recording)} accepted it{on}."
+        )
+    if how == PATH:
+        return "On the clock from its own clock, in its path file."
+    if how == NAME:
+        return (
+            "On the clock from the minute in its file name, read as UTC; the least "
+            "sure way."
+        )
+    return "Not on the clock: nobody has read or placed its time."
+
+
+def placed_short(recording) -> str:
+    """The short form of placed_sentence, for a camera's line in Your incident."""
+    _date, _start, how = clock_of(recording)
+    if how == CLOCK:
+        return "the clock in its picture"
+    if how == HAND:
+        return f"typed by {_who(recording)}"
+    if how == FILE:
+        return "its file's time, unchecked"
+    if how == DAY:
+        return "the day alone"
+    if how == SOUND:
+        return f"placed by sound, accepted by {_who(recording)}"
+    if how == PATH:
+        return "its own clock, from its path file"
+    if how == NAME:
+        return "the minute in its file name"
+    return "not on the clock"
 
 
 def _lane_name(recording, given: dict | None) -> str:
