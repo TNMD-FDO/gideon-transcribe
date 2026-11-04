@@ -17,6 +17,15 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.195.1, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+A fix to Add path files: with two hundred files chosen, the page looked idle while the first twenty went up, and a press on a tab in that moment threw the rest away (the office saw "nothing happens"). The layer now opens the moment the files are chosen, with the count going up and a bar, says to keep the page open, offers Stop after this batch, and the browser asks before the page is left while files are still going up. A take-in that stops or fails says so at the top of its table, with how many files were not sent.
+
 ## v1.195.0, 2026-11-04
 
 ```

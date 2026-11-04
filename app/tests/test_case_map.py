@@ -723,6 +723,10 @@ def test_the_heads_script_posts_in_batches_and_the_map_lists_the_waiting():
     door = static("path-files.js")
     assert "BATCH = 20" in door and "window.PathFiles" in door
     assert "Waiting for their video" in door and "layer-go" in door
+    # v1.195.1: the layer opens at once with the count, and leaving is guarded.
+    assert "Keep this page open until it finishes" in door
+    assert '"beforeunload"' in door and "data-act='stop'" in door
+    assert "of the files were not sent" in door
     script = static("map.js")
     assert "window.MapTab = { reload:" in script
     assert (
