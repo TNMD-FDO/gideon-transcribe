@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.192.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6, the first of three releases: the Map tab refined (the drawing `docs/spec/mockups/phase-12-map-refine.html`).
+
+- **Ticks.** Every camera of the day has a tick box on its row: ticked is drawn, unticked loses its marker, trail, path, events and lane and stays in the list dimmed. The header's box, **all** and **none** tick every camera or none; a press on a name shows that camera alone, Shift adds one. Remembered per person per case in the browser. **Fit all** is now **Fit shown**.
+- **Names first.** A row is the tick, the colour and the officer's name as the path file gives it (a vehicle is its driver's name with "vehicle", and its speed while it moves); the lanes under the map say the same names in the same order. The ▸ opens the row to the unit, the kind, the surety word, the span, the streams, where the camera is now (the street and the nearest other camera, updated with the clock) and the actions (Play here, Fly to, Readings, Open the recording, Replace file, Remove). The "..." menu is gone into it.
+- **Trails off entirely.** **faint paths under** is a tick of its own beside Show, remembered per person: unticked, Markers only draws the markers alone.
+- **The leaders.** When markers overlap at the zoom in hand, a thin line leads from each out to a tag with its colour and name, fanned round the knot; pressing the tag is pressing the marker. A moving vehicle carries its speed beside its marker.
+- **Within a circle** replaces Who was near here: press it, then a place on the map, and a circle appears with a handle to widen it and a centre to move it; the list regroups to the cameras that passed inside with their spans, the lanes band the spells inside, **Tick these** keeps only them. Answered in the browser; nothing is kept.
+
 ## v1.191.0, 2026-11-02
 
 ```

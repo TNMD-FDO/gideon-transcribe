@@ -24,6 +24,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 3. The Readings
 4. The names the cameras' files give, and where a line was said
 5. The map pane on the incident page, and Save a picture of the map
+6. The Map tab refined: ticks, names first, tiles, the circle, and path files that wait
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -174,6 +175,45 @@ The incident page (Phase 6 chapter 2) gains a **Map** panel beside Cameras when 
 
 No picture is taken without a press; the memo and the timeline report list the picture as they list any Document and do not place it in their body. A note on the ground with no camera, and a picture of a span rather than a moment, are left to later.
 
+## 6. The Map tab refined: ticks, names first, tiles, the circle, and path files that wait (three releases, from v1.192.0)
+
+### About
+
+On 2026-11-04 the maintainer asked for the Map tab to be made more useful: a person should see only the cameras they choose (one, several or all); the trails should go off entirely; the list beside the map should be minimal, the officer's name first and matching the lanes under it, the rest behind a disclosure; when many cameras stand in one spot a line should lead from each to its name, and a press on the name should open a small video that moves with the camera, draggable and staying where dropped, four or more at once, with a vehicle's speed; path files uploaded before their videos, two hundred or more at a time, must not clog the chat or anything else; a circle a person can widen on the map should show which cameras passed inside it; and Add path files should move to the case's head, left of Add recordings. Added the same day: a note on one recording at the moment its video is on, and a note that applies to all the recordings at that moment; a pinned video's line follows the officer. Drawn in `docs/spec/mockups/phase-12-map-refine.html` (figures A to G, thirteen choices), which the maintainer agreed stands. Three releases: the list and the map (v1.192.0), the tiles and the notes (v1.193.0), the waiting files and the head's door (v1.194.0).
+
+### Principles
+
+1. **A tick is a view, not a truth.** What a person ticks changes what the page draws and nothing else: the chat, the memo, the comparison and the exports keep reading every camera with a Path. Ticks are remembered per person per case in the browser alone.
+2. **The name is the person's.** The wearer as the file gives it comes first on the row, the lane and the tag; the unit is a fact behind the disclosure. A file with no name falls back to the unit.
+3. **Nothing about the map's content leaves the browser** that did not before: the circle's centre, the leaders, a tile's place are the page's; the only server calls remain the video streams and the notes a person writes.
+4. **A path file waiting for its video is kept, not read** (third release): no Path, no readings, no marker, no lane, nothing in any prompt. It becomes a Path only when its video arrives.
+
+### 6.1 The list and the map (the first release, v1.192.0)
+
+**Ticks.** Every camera of the day has a tick box on its row; the header's box ticks all or none (indeterminate when some are ticked) and "all" and "none" beside it do the same; a press on a row's name shows that camera alone, Shift adds it. Unticked cameras keep their row, dimmed, and lose their marker, trail, whole path, events and lane; **Fit shown** (Fit all renamed) frames the ticked ones; ‹ event and event › step the ticked cameras' events alone; the clock's span stays the day's. The unticked set is remembered in the browser under `map-hidden-<case>`, so a camera new to the case is shown by default. The incident page's pane has no list and draws every camera of its incident.
+
+**Names first.** The row is the tick, the colour dot, the name the path file gives its wearer (a vehicle is its driver's name with "vehicle" after it; a file with no name shows the unit) and, for a vehicle, its speed while it moves; a ▸ opens the row to the rest: the unit, the kind, the surety pill with its why, the span on the clock, a vehicle's streams, **where it is now** (the street under the marker when a basemap is drawn, and the nearest other ticked camera with its distance, updated with the clock; never a coordinate), and the actions (Play here, Fly to, Readings, Open the recording, Replace file, Remove). One row opens at a time. The lane heads under say the same names in the same order, with the unit on hover. The "..." menu and the always-shown facts of chapter 1 are gone into the opened row.
+
+**Trails off.** Show stays Markers only, Trails, Whole paths; **faint paths under** is a tick of its own, on by default, remembered per person: unticked, Markers only draws nothing but the markers and Trails nothing but the trails. Whole paths is unaffected.
+
+**The leaders.** After every tick and every pan, the markers drawn are grouped by screen distance (within 30 px); a group of two or more gets a thin line from each marker to a tag with its colour and name, the tags placed round the knot's centre by each marker's bearing so the lines do not cross, clamped inside the pane. A lone marker keeps its small label. Pressing a tag is pressing the marker (Play here; a tile in the second release); a tag whose camera is followed, pressed or lit has a blue edge.
+
+**The speed.** A vehicle moving over 3 in the file's unit carries its speed on a dark tag beside its marker, in its lane's head (as before) and at the end of its row.
+
+**Within a circle.** Who was near here (chapter 3) grown a handle. Pressed, the next press on the map places a circle of 50 m there with a draggable centre and a draggable handle on its east edge; dragging the handle widens or narrows it (10 m to 5 km, the radius read beside the handle and on the transport), dragging the centre moves it. The list regroups to the cameras whose fixes fell inside at any time of the day, each with the span it was inside (first entry to last exit, a break of over a minute starting a new spell), in order of arrival, then "Never inside"; each lane marks its inside spells in a faint blue band; **Tick these** ticks only the cameras that passed inside. One circle at a time; "clear the circle", or Escape with nothing selected, removes it. It is answered in the browser from the fixes the page holds; nothing is kept, no row is written, no request carries a position. The chapter 3 card is replaced by the list's answer.
+
+### 6.2 Tiles and the notes (the second release, v1.193.0, to come)
+
+A **Tile** is a small window on the map playing one camera's video at the clock's moment, muted, with the camera's colour, name and a vehicle's speed in its bar. It opens from a tag or a row ("Open a tile") beside its marker and rides with the marker, tethered by a dashed line; dragged, it pins where it was dropped and stays through pans, zooms and the clock's running, the tether redrawn every tick to wherever the marker is, running to the pane's edge in the marker's direction when it leaves the view ("out of view" in the bar). Up to six at once, one with sound; "close all" on the transport; Pause pauses them all. At 1× each tile plays; at 4× it plays silently at four times; at 16× and 60× it shows the frame at the clock's moment, refreshed each second, and says so. The ✎ in a tile's bar writes a note on that recording at the moment its video is on through the recording's note-at-a-moment route, `note_from` saying it came from the map. **Note on all shown** on the transport writes one note on every ticked camera at the clock's moment of each: ordinary moment notes, each with the usual audit row, carrying one shared mark in `note_from` so the Notes tab lists the group once ("on 5 cameras"), the chronology shows one entry, and editing or removing one asks whether to do the same on all. Under 700 wide, one tile at a time.
+
+### 6.3 Path files that wait, and the head's door (the third release, v1.194.0, to come)
+
+**Add path files** moves to the case's head, left of Add recordings, on every tab, and leaves the Map tab's transport; the per-row Add, Replace and Remove stay. A path file whose name matches no video in the case is no longer a leftover to settle: it is kept on the case as a **waiting file** (its bytes, its name, its kind and cue count from a first look at the header, who added it and when), a small table of its own (a migration), with no Path. It is on no map, in no lane, in no chat block, no memo, no comparison, no Speakers page offer, and has no readings; the Map tab's fold "Waiting for their video: N path files" lists them with Find by name and Remove (and Remove all waiting), and the Details tab counts them. When a recording lands in the case (uploaded, moved in or renamed) the app looks for a waiting file with its name by the same stem rule and pairs it: the file becomes the recording's Path with the usual "Path file added" row and a toast; the unit and length checks still apply, a disagreement flagged on the recording's row rather than paired blindly. A waiting file whose video never comes stays until removed or the case is deleted. The take-in layer reads "Added to their videos", "Waiting for their video", "Flagged", "Refused"; the page posts a large choice in batches of twenty. This amends ADR 0029: a Path is still made only on a Recording; the file may wait on the Case.
+
+### What is not
+
+No new kind of note: a note on all shown is copies with one mark. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |
@@ -184,7 +224,7 @@ No picture is taken without a press; the memo and the timeline report list the p
 | Recording placed on the clock, how `path` (chapter 2) | Recordings | the recording, the case, the how | a time, a date |
 | Reading offered to the chronology (chapter 3) | Recordings | the recording, the case, the reading's kind | a position, a time |
 
-The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row; a picture of the map (chapter 5) writes the Documents' own "Document added" with `kind: picture` and never a position.
+The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row; a picture of the map (chapter 5) writes the Documents' own "Document added" with `kind: picture` and never a position. Chapter 6's first release writes nothing new: ticks, the circle and the leaders live in the browser.
 
 ## Appendix B. Settings added or changed in Phase 12
 
@@ -195,6 +235,7 @@ The basemap's route writes no row; the map's reading writes the case page's own 
 ## Sources
 
 - The maintainer's asks and answers of 2026-11-02, recorded on `docs/spec/mockups/phase-12-map.html` (figures A to L, the fifteen choices and the joins chosen).
+- The maintainer's asks of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-refine.html` (figures A to G, thirteen choices), agreed the same day.
 - The dry run on the office's own path files, counts only, in `docs/research/path-file.md`.
 - The street map's pins, hashes and the extract command in `docs/research/basemap.md`.
 - Phase 6 chapters 1 and 2, Phase 8 chapter 2, Phase 10 chapters 1 and 5, Phase 7 chapter 5, ADR 0011, ADR 0027.

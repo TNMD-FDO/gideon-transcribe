@@ -46,12 +46,25 @@
     told: null, cams: [], byId: {}, day: "", loaded: false,
     moment: 0, playing: false, speed: 4, anchorMoment: 0, anchorNow: 0,
     following: null, selected: null, lit: null, inView: {},
-    show: recall("map-show") || "trails", large: recall("map-large") === "1",
+    show: recall("map-show") || "trails", faint: recall("map-faint") !== "0", large: recall("map-large") === "1",
     events: {}, incident: host.dataset.incident || "", scope: null,
-    readingsOpen: {}, asking: false
+    readingsOpen: {}, asking: false,
+    // Chapter 6: the cameras a person has unticked (hidden from the map, the
+    // strip and the events; still listed), the one row opened, the circle.
+    hidden: {}, open: null, circle: null, hits: null
   };
-  var NEAR = 50;         // metres: "near here", as the server's together() counts it
-  var askMarker = null;
+  var NEAR = 50;         // metres: the circle's first radius, as the server's together() counts "near"
+  var CASE = host.dataset.case || "";
+  try { (JSON.parse(recall("map-hidden-" + CASE) || "[]") || []).forEach(function (id) { S.hidden[id] = true; }); } catch (e) { /* nothing hidden */ }
+  function rememberHidden() { remember("map-hidden-" + CASE, JSON.stringify(Object.keys(S.hidden))); }
+  // Ticked means drawn. The incident page's pane has no list to untick from,
+  // so it draws every camera of its incident.
+  function shown(cam) { return INC || !S.hidden[cam.id]; }
+  function shownCams() { return dayCams().filter(shown); }
+  // The name first (chapter 6): the wearer as the file gives it, else the unit.
+  function nameOf(cam) { return cam.wearer || cam.unit || cam.title; }
+  function nameHtml(cam) { return esc(nameOf(cam)) + (cam.source === "car" && cam.wearer ? " <small class='muted'>vehicle</small>" : ""); }
+  var circleMarkers = null;
   EVENT_KINDS.forEach(function (k) { S.events[k] = recall("map-ev-" + k) !== "0" || k === "notes"; });
   if (recall("map-ev-bookmark") === null) { S.events.bookmark = false; }
   if (INC) { S.large = recall("map-inc-large") === "1"; }
@@ -177,6 +190,7 @@
         "<div class='map-lead-left'>" + dayChips() +
           "<div class='map-show'><span class='muted small'>Show</span><span class='seg' id='map-show'>" +
             seg("markers", "Markers only") + seg("trails", "Trails") + seg("whole", "Whole paths") + "</span>" +
+          "<span class='map-ev'><label title='The whole path drawn faint under the markers and trails'><input type='checkbox' id='map-faint'" + (S.faint ? " checked" : "") + "> faint paths under</label></span>" +
           "<span class='muted small'>Events</span><span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span></div>" +
         "</div>" +
         "<div class='transport' id='map-transport'></div>" +
@@ -189,7 +203,9 @@
     el.list = host.querySelector("#map-list"); el.strip = host.querySelector("#map-strip"); el.bar = host.querySelector("#map-bar"); el.wrap = host.querySelector("#map-wrap");
     host.querySelector("#map-show").addEventListener("click", function (e) { var b = e.target.closest("[data-show]"); if (!b) { return; } S.show = b.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); });
     host.querySelector("#map-events").addEventListener("change", function (e) { var t = e.target; if (!t.dataset.ev) { return; } S.events[t.dataset.ev] = t.checked; remember("map-ev-" + t.dataset.ev, t.checked ? "1" : "0"); refreshLayers(); drawStrip(); });
+    host.querySelector("#map-faint").addEventListener("change", function (e) { S.faint = e.target.checked; remember("map-faint", S.faint ? "1" : "0"); refreshLayers(); });
     host.addEventListener("click", onPress);
+    host.addEventListener("change", onChange);
     var asked = askedMoment();
     S.moment = asked !== null ? asked : span()[0] + 60;
     drawTransport(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar();
@@ -272,9 +288,10 @@
       "<select class='small' id='map-speed' title='Speed'>" + [1, 4, 16, 60].map(function (v) { return "<option value='" + v + "'" + (v === S.speed ? " selected" : "") + ">Speed " + v + "×</option>"; }).join("") + "</select>" +
       "<span class='map-clock-wrap'><span class='map-clock mono' id='map-clock'>" + hms(m) + "</span><span class='map-zone'>" + esc(host.dataset.tz || "") + (S.day ? " · " + esc(dayWords(S.day)) : "") + "</span></span>" +
       (S.following ? "<span class='pill small acc'>following " + esc((S.byId[S.following] || {}).unit || (S.byId[S.following] || {}).title || "") + "</span>" : "") +
-      "<button type='button' class='small' data-act='fit'>Fit all</button>" +
+      "<button type='button' class='small' data-act='fit'>Fit shown</button>" +
       "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
-      "<button type='button' class='small " + (S.asking ? "on" : "") + "' data-act='near' title='Press, then press a place on the map: which cameras came within " + NEAR + " m of it, and when'>Who was near here</button>" +
+      "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>Within a circle</button>" +
+      (S.circle ? "<span class='pill small acc' id='map-radius'>" + Math.round(S.circle.radius) + " m</span><button type='button' class='tiny ghost' data-act='clear-circle'>clear the circle</button>" : "") +
       (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a Document on the incident shown, or on the camera pressed'>Save a picture</button>" : "") +
       "<button type='button' class='small " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
@@ -321,10 +338,11 @@
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
       var mine = map;
-      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); });
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } });
       map.on("moveend", function () { drawList(); });
+      map.on("move", function () { drawLeaders(); });
       map.on("click", "map-events", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
-      map.on("click", function (e) { if (S.asking) { nearHere(e.lngLat); } });
+      map.on("click", function (e) { if (S.asking) { placeCircle(e.lngLat); } });
       map.on("mouseenter", "map-events", function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "map-events", function () { map.getCanvas().style.cursor = ""; });
       document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); window.setTimeout(function () { map.resize(); }, 50); });
@@ -346,7 +364,7 @@
   function eventsCollection() {
     var features = [];
     S.cams.forEach(function (cam) {
-      if (!cam.fixes.length) { return; }
+      if (!cam.fixes.length || !shown(cam)) { return; }
       (cam.events || []).forEach(function (ev, i) {
         var kind = ev.kind === "mic" ? "mic" : ev.kind;
         if (!S.events[kind === "camera" ? "camera" : kind]) { return; }
@@ -368,8 +386,11 @@
   function addLayers() {
     if (!map) { return; }
     map.addSource("map-paths", { type: "geojson", data: pathsCollection() });
-    map.addLayer({ id: "map-paths", type: "line", source: "map-paths", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": ["get", "colour"], "line-width": ["case", ["boolean", ["feature-state", "lit"], false], 5, 2.5], "line-opacity": S.show === "whole" ? 0.9 : 0.35 } });
+    var pathsLayer = { id: "map-paths", type: "line", source: "map-paths", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": ["get", "colour"], "line-width": ["case", ["boolean", ["feature-state", "lit"], false], 5, 2.5], "line-opacity": pathsOpacity() } };
+    // addLayer refuses a null filter where setFilter takes one as "none".
+    if (hiddenFilter()) { pathsLayer.filter = hiddenFilter(); }
+    map.addLayer(pathsLayer);
     S.cams.forEach(function (cam) {
       if (!cam.fixes.length) { return; }
       map.addSource("map-trail-" + cam.n, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -396,9 +417,13 @@
       map.setPaintProperty("map-events", "circle-stroke-color", ["case", ["==", ["get", "key"], sel], token("--accent"), token("--surface")]);
       map.setPaintProperty("map-events", "circle-stroke-width", ["case", ["==", ["get", "key"], sel], 3, 1.5]);
     }
-    if (map.getLayer("map-paths")) { map.setPaintProperty("map-paths", "line-opacity", S.show === "whole" ? 0.9 : S.show === "markers" && recall("map-faint") === "0" ? 0 : 0.35); }
+    if (map.getLayer("map-paths")) { map.setPaintProperty("map-paths", "line-opacity", pathsOpacity()); map.setFilter("map-paths", hiddenFilter()); }
     Object.keys(trailIndex).forEach(function (id) { trailIndex[id] = -2; });
   }
+  // Whole paths read strong; under markers or trails the whole path lies
+  // faint, or not at all when "faint paths under" is unticked (chapter 6).
+  function pathsOpacity() { return S.show === "whole" ? 0.9 : (S.faint ? 0.35 : 0); }
+  function hiddenFilter() { var ids = Object.keys(S.hidden); if (INC || !ids.length) { return null; } return ["!", ["in", ["get", "id"], ["literal", ids]]]; }
   function drawMarkers() {
     Object.keys(markers).forEach(function (id) { markers[id].remove(); });
     markers = {};
@@ -407,8 +432,8 @@
       var node = document.createElement("div");
       node.className = "map-head " + (cam.source === "car" ? "car" : "body");
       node.style.setProperty("--cam", colourOf(cam));
-      node.innerHTML = "<b>" + esc(cam.unit || cam.title) + "</b><i class='badge' aria-hidden='true'></i>";
-      node.title = cam.title + (cam.wearer ? " · " + cam.wearer : "");
+      node.innerHTML = "<b>" + esc(cam.unit || cam.title) + "</b><i class='badge' aria-hidden='true'></i>" + (cam.source === "car" ? "<span class='spd mono' hidden></span>" : "");
+      node.title = nameOf(cam) + (cam.wearer ? " · " + cam.title : "");
       node.addEventListener("click", function (e) { e.stopPropagation(); select(cam); openPreview(cam); });
       var marker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat([cam.fixes[0][2], cam.fixes[0][1]]).addTo(map);
       markers[cam.id] = marker;
@@ -417,7 +442,8 @@
   function recolourMarkers() { S.cams.forEach(function (cam) { var m = markers[cam.id]; if (m) { m.getElement().style.setProperty("--cam", colourOf(cam)); } }); }
   function fitAll() {
     if (!map) { return; }
-    var cams = dayCams().filter(function (c) { return c.bounds; });
+    var cams = shownCams().filter(function (c) { return c.bounds; });
+    if (!cams.length) { cams = dayCams().filter(function (c) { return c.bounds; }); }
     if (!cams.length) { cams = S.cams.filter(function (c) { return c.bounds; }); }
     if (!cams.length) { return; }
     var s = Infinity, w = Infinity, n = -Infinity, e = -Infinity;
@@ -451,6 +477,12 @@
       if (!marker) { return; }
       var node = marker.getElement();
       var local = cam.onClock ? m - cam.zero.second : (cam.own !== undefined ? cam.own : null);
+      if (!shown(cam)) {
+        // Unticked (chapter 6): no marker, no trail; the whole path is filtered off the paths layer.
+        node.classList.add("before");
+        if (map && mapReady && trailIndex[cam.id] !== -4) { trailIndex[cam.id] = -4; var s4 = map.getSource("map-trail-" + cam.n); if (s4) { s4.setData({ type: "FeatureCollection", features: [] }); } }
+        return;
+      }
       if (local === null || (!ofDay(cam) && cam.onClock) || !scoped(cam)) { node.classList.add("before"); return; }
       var p = positionAt(cam, local);
       if (!p) { node.classList.add("before"); return; }
@@ -462,8 +494,16 @@
       node.classList.toggle("lights", !!flags.lights);
       node.classList.toggle("siren", !!flags.siren);
       node.classList.toggle("muted-mic", cam.source === "body" && flags.mic === 0);
+      // A vehicle's speed (chapter 6): beside its marker while it moves, in
+      // the lane's head and at the end of its row.
+      var speedWords = flags.speed !== undefined ? Math.round(flags.speed) + " " + (cam.speed_unit || "mph").toLowerCase() : "";
+      var moving = cam.source === "car" && flags.speed !== undefined && flags.speed > 3 && !p.ended;
+      var tag = node.querySelector(".spd"); if (tag) { tag.hidden = !moving; if (moving) { tag.textContent = speedWords; } }
       var head = host.querySelector(".map-lane[data-cam='" + cam.id + "'] .spd");
-      if (head) { head.textContent = flags.speed !== undefined ? Math.round(flags.speed) + " " + (cam.speed_unit || "mph").toLowerCase() : ""; }
+      if (head) { head.textContent = speedWords; }
+      var rowSpeed = host.querySelector(".map-row[data-cam='" + cam.id + "'] .spd");
+      if (rowSpeed) { rowSpeed.textContent = moving ? speedWords : ""; }
+      if (S.open === cam.id) { var where = host.querySelector(".map-where[data-cam='" + cam.id + "']"); if (where) { where.innerHTML = whereWords(cam, local, p); } }
       if (S.show === "trails" && map && mapReady) {
         var index = lastIndex(cam, local);
         if (trailIndex[cam.id] !== index) {
@@ -478,6 +518,70 @@
       }
     });
     movePlayhead(m);
+    drawLeaders();
+  }
+  // Where a camera is now (chapter 6), for its opened row: the street under
+  // it when a basemap is drawn, and the nearest other camera shown, by
+  // distance. Never a coordinate.
+  function whereWords(cam, local, p) {
+    if (!p) { return "<span class='muted'>not started yet</span>"; }
+    if (p.nofix) { return "<span class='muted'>no fix now</span>"; }
+    if (p.ended) { return "<span class='muted'>ended here</span>"; }
+    var m = now(), street = streetAt(cam, local), nearest = null, best = Infinity;
+    shownCams().forEach(function (other) {
+      if (other.id === cam.id || !other.onClock) { return; }
+      var q = positionAt(other, m - other.zero.second); if (!q || q.nofix || q.ended) { return; }
+      var d = metres(p, q); if (d < best) { best = d; nearest = other; }
+    });
+    var parts = [];
+    if (street) { parts.push("on " + esc(street)); }
+    if (nearest) { parts.push((best < 1000 ? Math.round(best) + " m" : (best / 1000).toFixed(1) + " km") + " from " + esc(nameOf(nearest))); }
+    return parts.length ? parts.join(" · ") : "<span class='muted'>here at " + hms(m) + "</span>";
+  }
+  // The leaders (chapter 6): when markers would overlap at this zoom, each
+  // gets a thin line out to a tag with its name, fanned round the knot so no
+  // tag covers another. A lone marker keeps its own small label.
+  var LEADER_NEAR = 30;  // px between marker centres that reads as a knot
+  function drawLeaders() {
+    if (!map || !mapReady || !el.pane) { return; }
+    var layer = el.pane.querySelector(".map-leaders");
+    if (!layer) { layer = document.createElement("div"); layer.className = "map-leaders"; layer.innerHTML = "<svg aria-hidden='true'></svg><div class='tags'></div>"; el.pane.appendChild(layer); }
+    var w = el.pane.clientWidth, h = el.pane.clientHeight, pts = [];
+    S.cams.forEach(function (cam) {
+      var mk = markers[cam.id]; if (!mk) { return; }
+      var node = mk.getElement(); if (node.classList.contains("before")) { return; }
+      var p = map.project(mk.getLngLat());
+      if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) { return; }
+      pts.push({ cam: cam, x: p.x, y: p.y, group: -1 });
+    });
+    var groups = [];
+    pts.forEach(function (a, i) {
+      if (a.group >= 0) { return; }
+      var g = [a]; a.group = groups.length;
+      for (var j = i + 1; j < pts.length; j++) {
+        var b = pts[j];
+        if (b.group < 0 && g.some(function (k) { return Math.hypot(k.x - b.x, k.y - b.y) < LEADER_NEAR; })) { b.group = a.group; g.push(b); }
+      }
+      groups.push(g);
+    });
+    var lines = "", tags = "", lit = S.following || S.pressed || S.lit;
+    groups.forEach(function (g) {
+      if (g.length < 2) { return; }
+      var cx = 0, cy = 0; g.forEach(function (k) { cx += k.x; cy += k.y; }); cx /= g.length; cy /= g.length;
+      // Each marker takes the tag nearest its own bearing from the knot's centre, so the lines do not cross.
+      g.forEach(function (k) { k.ang = Math.atan2(k.y - cy, k.x - cx); });
+      g.sort(function (p1, p2) { return p1.ang - p2.ang; });
+      var r = 46 + 7 * g.length, start = -Math.PI / 2 - Math.PI / g.length;
+      g.forEach(function (k, i) {
+        var ang = start + (i / g.length) * 2 * Math.PI;
+        var tx = Math.max(52, Math.min(w - 52, cx + Math.cos(ang) * r)), ty = Math.max(12, Math.min(h - 12, cy + Math.sin(ang) * r));
+        lines += "<line x1='" + k.x.toFixed(1) + "' y1='" + k.y.toFixed(1) + "' x2='" + tx.toFixed(1) + "' y2='" + ty.toFixed(1) + "'></line>";
+        tags += "<button type='button' class='map-tag" + (lit === k.cam.id ? " on" : "") + "' data-act='tag' data-cam='" + k.cam.id + "' style='left: " + tx.toFixed(1) + "px; top: " + ty.toFixed(1) + "px'><i class='" + (k.cam.source === "car" ? "sq" : "") + "' style='background: " + colourOf(k.cam) + "'></i>" + nameHtml(k.cam) + "</button>";
+      });
+    });
+    var svg = layer.querySelector("svg"), box = layer.querySelector(".tags");
+    if (svg.innerHTML !== lines) { svg.innerHTML = lines; }
+    if (box.innerHTML !== tags) { box.innerHTML = tags; }
   }
   function trailSegments(cam, index, p) {
     var out = [], run = [];
@@ -493,20 +597,34 @@
 
   // The list ----------------------------------------------------------------------
   function suretyPill(cam) { var s = cam.surety; if (!s || !s.word) { return ""; } return "<span class='pill " + esc(s.tone || "") + " small surety' title='" + esc(s.why || "") + "'>" + esc(s.word) + "</span>"; }
+  // A row (chapter 6): the tick, the colour, the name, and the rest behind
+  // its disclosure. A vehicle's speed sits at the row's end while it moves.
   function rowOf(cam, dim) {
-    var spanWords = cam.onClock ? hm(cam.zero.second) + " to " + hm(cam.zero.second + (cam.length || 0)) : elapsed(cam.length || 0) + " long";
-    var streams = cam.streams.length ? "<div class='streams'><span>stream 1</span>" + cam.streams.map(function (s, i) { return "<span>stream " + (i + 2) + "</span>"; }).join("") + "</div>" : "";
-    var noFix = !cam.fixes.length ? "<span class='pill small'>no position</span>" : "";
-    var acts = "<button type='button' class='tiny ghost " + (S.readingsOpen[cam.id] ? "on" : "") + "' data-act='readings' data-cam='" + cam.id + "' title='Every reading of its file, with its time'>readings</button>" +
-      "<button type='button' class='tiny' data-act='play-here' data-cam='" + cam.id + "'>Play here</button>" +
-      (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='more' data-cam='" + cam.id + "' title='Replace or remove the path file'>⋯</button>" : "");
-    return "<div class='map-row " + (dim ? "dim " : "") + (S.lit === cam.id ? "lit" : "") + "' data-cam='" + cam.id + "' tabindex='0'>" +
+    var open = S.open === cam.id, inside = S.hits && S.hits[cam.id];
+    var insideWords = inside ? " <small class='muted mono'>" + hm(cam.zero.second + inside[0][0]) + " to " + hm(cam.zero.second + inside[inside.length - 1][1]) + "</small>" : "";
+    var noFix = !cam.fixes.length ? " <small class='muted'>no position</small>" : "";
+    return "<div class='map-row " + (dim ? "dim " : "") + (S.lit === cam.id ? "lit " : "") + (open ? "open" : "") + "' data-cam='" + cam.id + "'>" +
+      "<input type='checkbox' class='tk' data-tick='" + cam.id + "'" + (shown(cam) ? " checked" : "") + " title='Ticked: drawn on the map and the strip'>" +
       "<span class='dot " + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></span>" +
-      "<div><b>" + esc(cam.unit || cam.title) + "</b> <span class='muted small'>" + esc(cam.wearer || cam.title) + "</span>" +
-      "<div class='facts'>" + suretyPill(cam) + "<span class='mono'>" + spanWords + "</span><span>" + (cam.source === "car" ? "in-car" : "body") + "</span>" + noFix +
-      (!cam.onClock ? "<button type='button' class='tiny' data-act='own' data-cam='" + cam.id + "'>" + (cam.own !== undefined ? "Hide it" : "Show on its own") + "</button>" : "") + "</div>" + streams +
-      (cam.own !== undefined ? "<input type='range' class='own-bar' data-cam='" + cam.id + "' min='0' max='" + Math.round(cam.length || 0) + "' value='" + Math.round(cam.own) + "'>" : "") +
-      "</div><div class='acts'>" + acts + "</div></div>" + (S.readingsOpen[cam.id] ? readingsOf(cam) : "");
+      "<span class='nm' title='Press: show this camera alone. Shift: add it.'>" + nameHtml(cam) + insideWords + noFix + "</span>" +
+      "<span class='tail'><span class='spd mono small muted'></span><button type='button' class='tiny ghost more' data-act='open' data-cam='" + cam.id + "' title='" + (open ? "Fold" : "The camera, its clock and its actions") + "'>" + (open ? "▾" : "▸") + "</button></span>" +
+      "</div>" + (open ? openOf(cam) : "");
+  }
+  function openOf(cam) {
+    var spanWords = cam.onClock ? hm(cam.zero.second) + " to " + hm(cam.zero.second + (cam.length || 0)) : elapsed(cam.length || 0) + " long";
+    var streams = cam.streams.length ? "<span class='streams'><span>stream 1</span>" + cam.streams.map(function (s, i) { return "<span>stream " + (i + 2) + "</span>"; }).join("") + "</span>" : "";
+    var facts = "<div class='facts'><b>" + esc(cam.unit || cam.title) + "</b><span>" + (cam.source === "car" ? "in-car" : "body camera") + "</span>" + suretyPill(cam) + "<span class='mono'>" + spanWords + "</span>" + streams +
+      (!cam.onClock ? "<button type='button' class='tiny' data-act='own' data-cam='" + cam.id + "'>" + (cam.own !== undefined ? "Hide it" : "Show on its own") + "</button>" : "") + "</div>" +
+      (cam.own !== undefined ? "<input type='range' class='own-bar' data-cam='" + cam.id + "' min='0' max='" + Math.round(cam.length || 0) + "' value='" + Math.round(cam.own) + "'>" : "");
+    var where = cam.onClock && cam.fixes.length ? "<div class='facts map-where' data-cam='" + cam.id + "'>" + whereWords(cam, now() - cam.zero.second, positionAt(cam, now() - cam.zero.second)) + "</div>" : "";
+    var acts = "<div class='acts'>" +
+      "<button type='button' class='tiny primary' data-act='play-here' data-cam='" + cam.id + "'>Play here</button>" +
+      (cam.bounds ? "<button type='button' class='tiny' data-act='fly' data-cam='" + cam.id + "'>Fly to</button>" : "") +
+      "<button type='button' class='tiny " + (S.readingsOpen[cam.id] ? "on" : "") + "' data-act='readings' data-cam='" + cam.id + "' title='Every reading of its file, with its time'>Readings</button>" +
+      "<a class='btn tiny ghost' href='" + esc(cam.viewer_url) + "'>Open the recording</a>" +
+      (host.dataset.edit ? "<label class='btn tiny ghost'>Replace file<input type='file' accept='.vtt,text/vtt' hidden data-replace-one='" + cam.id + "'></label><button type='button' class='tiny ghost danger' data-act='remove' data-cam='" + cam.id + "'>Remove</button>" : "") +
+      "</div>";
+    return "<div class='map-open' data-cam='" + cam.id + "'>" + facts + where + acts + (S.readingsOpen[cam.id] ? readingsOf(cam) : "") + "</div>";
   }
   // The Readings list (chapter 3): every moment the file records, with its
   // time of day, a press to go there, and Offer to the chronology.
@@ -534,56 +652,96 @@
       if (button) { button.textContent = "Offered"; button.disabled = true; }
     }).catch(function (e) { toast(e.message, true); });
   }
-  // Who was near here (chapter 3): answered from the fixes the page holds;
-  // nothing is asked of the server, and no position leaves the browser.
+  // Within a circle (chapter 6; Who was near here of chapter 3 grown a
+  // handle): answered from the fixes the page holds; nothing is asked of the
+  // server, nothing is kept, and no position leaves the browser.
   function metres(a, b) {
     var r = 6371000, p1 = a.lat * Math.PI / 180, p2 = b.lat * Math.PI / 180, dp = (b.lat - a.lat) * Math.PI / 180, dl = (b.lon - a.lon) * Math.PI / 180;
     var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
     return 2 * r * Math.asin(Math.sqrt(h));
   }
-  function nearHere(lngLat) {
-    S.asking = false; drawTransport();
-    var here = { lat: lngLat.lat, lon: lngLat.lng }, found = [];
+  function eastOf(c, metresAway) { return { lat: c.lat, lon: c.lon + metresAway / (111320 * Math.cos(c.lat * Math.PI / 180)) }; }
+  function circlePolygon(c) {
+    var ring = [], dLat = c.radius / 111320, dLon = c.radius / (111320 * Math.cos(c.lat * Math.PI / 180));
+    for (var i = 0; i <= 64; i++) { var a = (i / 64) * 2 * Math.PI; ring.push([c.lon + Math.cos(a) * dLon, c.lat + Math.sin(a) * dLat]); }
+    return { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [ring] } }] };
+  }
+  function placeCircle(lngLat) {
+    S.asking = false; if (map) { map.getCanvas().style.cursor = ""; }
+    S.circle = { lat: lngLat.lat, lon: lngLat.lng, radius: NEAR };
+    drawCircle(); circleHits(); drawTransport(); drawList(); drawStrip();
+  }
+  function drawCircle() {
+    if (!map || !mapReady || !S.circle) { return; }
+    var data = circlePolygon(S.circle);
+    if (!map.getSource("map-circle")) {
+      map.addSource("map-circle", { type: "geojson", data: data });
+      map.addLayer({ id: "map-circle-fill", type: "fill", source: "map-circle", paint: { "fill-color": token("--accent"), "fill-opacity": 0.08 } });
+      map.addLayer({ id: "map-circle-line", type: "line", source: "map-circle", paint: { "line-color": token("--accent"), "line-width": 1.5, "line-dasharray": [3, 2] } });
+    } else { map.getSource("map-circle").setData(data); }
+    if (!circleMarkers) {
+      var centre = document.createElement("div"); centre.className = "map-circle-centre"; centre.title = "Drag to move the circle";
+      var handle = document.createElement("div"); handle.className = "map-circle-handle"; handle.title = "Drag to widen or narrow the circle";
+      handle.innerHTML = "<b></b>";
+      circleMarkers = {
+        centre: new maplibregl.Marker({ element: centre, anchor: "center", draggable: true }).setLngLat([S.circle.lon, S.circle.lat]).addTo(map),
+        handle: new maplibregl.Marker({ element: handle, anchor: "center", draggable: true }).setLngLat([eastOf(S.circle, S.circle.radius).lon, S.circle.lat]).addTo(map)
+      };
+      circleMarkers.handle.on("drag", function () { var h = circleMarkers.handle.getLngLat(); S.circle.radius = Math.max(10, Math.min(5000, metres(S.circle, { lat: h.lat, lon: h.lng }))); map.getSource("map-circle").setData(circlePolygon(S.circle)); radiusWords(); });
+      circleMarkers.centre.on("drag", function () { var c = circleMarkers.centre.getLngLat(); S.circle.lat = c.lat; S.circle.lon = c.lng; circleMarkers.handle.setLngLat([eastOf(S.circle, S.circle.radius).lon, S.circle.lat]); map.getSource("map-circle").setData(circlePolygon(S.circle)); });
+      var settle = function () { circleHits(); drawTransport(); drawList(); drawStrip(); };
+      circleMarkers.handle.on("dragend", settle); circleMarkers.centre.on("dragend", settle);
+    }
+    radiusWords();
+  }
+  function radiusWords() {
+    var words = Math.round(S.circle.radius) + " m";
+    if (circleMarkers) { circleMarkers.handle.getElement().querySelector("b").textContent = words; }
+    var pill = host.querySelector("#map-radius"); if (pill) { pill.textContent = words; }
+  }
+  // Each camera's spells inside the circle, by its fixes: an entry and an
+  // exit, a break of over a minute starting a new spell.
+  function circleHits() {
+    S.hits = {};
+    if (!S.circle) { S.hits = null; return; }
     dayCams().forEach(function (cam) {
       var spells = [], start = null, last = null;
       cam.fixes.forEach(function (f) {
-        if (metres(here, { lat: f[1], lon: f[2] }) > NEAR) { return; }
+        if (metres(S.circle, { lat: f[1], lon: f[2] }) > S.circle.radius) { return; }
         if (start === null || f[0] - last > 60) { if (start !== null) { spells.push([start, last]); } start = f[0]; }
         last = f[0];
       });
       if (start !== null) { spells.push([start, last]); }
-      if (spells.length) { found.push({ cam: cam, spells: spells }); }
+      if (spells.length) { S.hits[cam.id] = spells; }
     });
-    found.sort(function (a, b) { return (a.cam.zero.second + a.spells[0][0]) - (b.cam.zero.second + b.spells[0][0]); });
-    closeCard();
-    if (askMarker) { askMarker.remove(); }
-    var node = document.createElement("div"); node.className = "map-ask";
-    askMarker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat(lngLat).addTo(map);
-    var card = document.createElement("div");
-    card.className = "map-evcard";
-    var rows = found.map(function (one) {
-      var z = one.cam.zero.second;
-      return "<li><button type='button' class='tiny' data-act='go' data-cam='" + one.cam.id + "' data-t='" + one.spells[0][0] + "'>" + esc(one.cam.unit || one.cam.title) + "</button> " +
-        one.spells.slice(0, 3).map(function (s) { return "<span class='mono'>" + hms(z + s[0]) + (s[1] - s[0] >= 5 ? " to " + hms(z + s[1]) : "") + "</span>"; }).join(", ") +
-        (one.spells.length > 3 ? " and " + (one.spells.length - 3) + " more" : "") + "</li>";
-    }).join("");
-    card.innerHTML = "<b>Who was near here</b><span class='muted small'>within " + NEAR + " m, on " + esc(dayWords(S.day)) + "</span>" +
-      (rows ? "<ul class='map-near'>" + rows + "</ul>" : "<div class='muted'>No camera came within " + NEAR + " m of here on this day.</div>") +
-      "<div class='acts'><button type='button' class='tiny ghost' data-act='clear'>Close</button></div>";
-    el.pane.appendChild(card);
-    var pt = map.project(lngLat);
-    card.style.left = Math.max(8, Math.min(el.pane.clientWidth - card.offsetWidth - 8, pt.x + 14)) + "px";
-    card.style.top = Math.max(8, Math.min(el.pane.clientHeight - card.offsetHeight - 8, pt.y - 10)) + "px";
+  }
+  function clearCircle() {
+    S.circle = null; S.hits = null; S.asking = false;
+    if (circleMarkers) { circleMarkers.centre.remove(); circleMarkers.handle.remove(); circleMarkers = null; }
+    if (map && mapReady) { ["map-circle-line", "map-circle-fill"].forEach(function (id) { if (map.getLayer(id)) { map.removeLayer(id); } }); if (map.getSource("map-circle")) { map.removeSource("map-circle"); } map.getCanvas().style.cursor = ""; }
+    drawTransport(); drawList(); drawStrip();
   }
   function drawList() {
     if (INC) { var count = host.querySelector("#map-count"); var dc = dayCams(); if (count) { count.textContent = dc.length ? dc.filter(inView).length + " of " + dc.length + " in view" : "no camera on this day"; } return; }
     if (!el.list) { return; }
     var cams = S.cams.filter(scoped);
     var today = cams.filter(ofDay), other = cams.filter(function (c) { return c.onClock && !ofDay(c); }), off = cams.filter(function (c) { return !c.onClock; });
-    var seen = today.filter(inView), unseen = today.filter(function (c) { return !inView(c); });
-    var html = "<div class='h'><span>" + (today.length ? seen.length + " of " + today.length + " in view" : "no camera on this day") + "</span>" + (host.classList.contains("large") ? "<button type='button' class='tiny ghost' data-act='fold'>" + (host.classList.contains("folded") ? "‹ show" : "fold ›") + "</button>" : "") + "</div>";
-    seen.forEach(function (c) { html += rowOf(c, false); });
-    if (unseen.length) { html += "<details class='map-fold' " + (S.foldOpen ? "open" : "") + "><summary>" + plural(unseen.length, "more camera") + " out of view</summary>" + unseen.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
+    var ticked = today.filter(shown), seen = ticked.filter(inView);
+    var fold = host.classList.contains("large") ? "<button type='button' class='tiny ghost' data-act='fold'>" + (host.classList.contains("folded") ? "‹ show" : "fold ›") + "</button>" : "";
+    var html;
+    if (S.circle && S.hits) {
+      // The circle's answer (chapter 6): who passed inside, with their spans, then the rest.
+      var inside = today.filter(function (c) { return S.hits[c.id]; }), never = today.filter(function (c) { return !S.hits[c.id]; });
+      inside.sort(function (a, b) { return (a.zero.second + S.hits[a.id][0][0]) - (b.zero.second + S.hits[b.id][0][0]); });
+      html = "<div class='h'><span><b class='acc'>" + plural(inside.length, "camera") + "</b> passed inside the circle</span><span class='acts'>" + (inside.length ? "<button type='button' class='tiny' data-act='tick-inside' title='Tick these cameras alone'>Tick these</button>" : "") + fold + "</span></div>";
+      inside.forEach(function (c) { html += rowOf(c, !shown(c)); });
+      if (never.length) { html += "<details class='map-fold' open><summary>Never inside: " + plural(never.length, "camera") + "</summary>" + never.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
+    } else {
+      var all = ticked.length === today.length;
+      html = "<div class='h'><label title='Tick or untick every camera of the day'><input type='checkbox' id='map-tick-all'" + (all ? " checked" : "") + (ticked.length && !all ? " data-half='1'" : "") + "> " + (today.length ? ticked.length + " of " + today.length + " shown" + (ticked.length ? " · " + seen.length + " in view" : "") : "no camera on this day") + "</label>" +
+        "<span class='acts'><button type='button' class='tiny ghost' data-act='tick-all'>all</button><button type='button' class='tiny ghost' data-act='tick-none'>none</button>" + fold + "</span></div>";
+      today.forEach(function (c) { html += rowOf(c, !shown(c)); });
+    }
     if (off.length) { html += "<details class='map-fold' open><summary>Not on the clock: " + plural(off.length, "camera") + "</summary>" + off.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
     if (other.length) { html += "<details class='map-fold'><summary>Other days: " + plural(other.length, "camera") + "</summary>" + other.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
     var without = S.told.videos_without_path || [];
@@ -596,19 +754,32 @@
       html += "<div class='map-offer'><span class='pill small offer'>Offer</span> <span class='small'>" + esc(one.line) + "</span><div class='acts'><button type='button' class='tiny primary' data-act='make-incident' data-recordings='" + esc(one.recordings.join(" ")) + "'>Make an incident</button><a class='btn tiny ghost' href='?tab=incidents'>On the Incidents tab</a></div></div>";
     });
     el.list.innerHTML = html;
+    var half = el.list.querySelector("#map-tick-all[data-half]"); if (half) { half.indeterminate = true; }
     el.list.querySelectorAll("details.map-fold").forEach(function (d) { d.addEventListener("toggle", function () { S.foldOpen = d.open; }); });
     el.list.querySelectorAll(".map-row[data-cam]").forEach(function (r) {
       r.addEventListener("mouseenter", function () { light(S.byId[r.dataset.cam]); });
       r.addEventListener("mouseleave", function () { if (!S.selected) { light(null); } });
     });
     el.list.querySelectorAll(".own-bar").forEach(function (bar) { bar.addEventListener("input", function () { var cam = S.byId[bar.dataset.cam]; cam.own = parseFloat(bar.value); tick(); }); });
-    el.list.querySelectorAll("[data-add-one]").forEach(function (input) { input.addEventListener("change", function () { if (input.files[0]) { addOne(input.dataset.addOne, input.files[0], false); } }); });
   }
+  // The list's inputs (chapter 6): a tick, the tick-all box, a file chosen
+  // for a row. The rows are redrawn often, so the host listens once.
+  function onChange(e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.tick) { setHidden(S.byId[t.dataset.tick], !t.checked); return; }
+    if (t.id === "map-tick-all") { tickAll(t.checked); return; }
+    if (t.dataset && t.dataset.addOne) { if (t.files[0]) { addOne(t.dataset.addOne, t.files[0], false); } return; }
+    if (t.dataset && t.dataset.replaceOne) { if (t.files[0]) { addOne(t.dataset.replaceOne, t.files[0], true); } return; }
+  }
+  function setHidden(cam, hide) { if (!cam) { return; } if (hide) { S.hidden[cam.id] = true; } else { delete S.hidden[cam.id]; } afterTicks(); }
+  function tickAll(on) { S.hidden = {}; if (!on) { dayCams().forEach(function (c) { S.hidden[c.id] = true; }); } afterTicks(); }
+  function only(cam, add) { if (!add) { dayCams().forEach(function (c) { if (c.id !== cam.id) { S.hidden[c.id] = true; } }); } delete S.hidden[cam.id]; afterTicks(); }
+  function afterTicks() { rememberHidden(); drawList(); drawStrip(); refreshLayers(); tick(); }
 
   // The strip ---------------------------------------------------------------------
   function drawStrip() {
     if (!el.strip) { return; }
-    var range = span(), cams = dayCams();
+    var range = span(), cams = shownCams();
     function x(sec) { return Math.max(0, Math.min(100, ((sec - range[0]) / (range[1] - range[0])) * 100)); }
     var html = "<div class='ruler'><div class='head'></div><div class='ticks'>";
     var step = (range[1] - range[0]) > 3 * 3600 ? 1800 : (range[1] - range[0]) > 3600 ? 900 : 300;
@@ -616,7 +787,8 @@
     html += "</div></div>";
     cams.forEach(function (cam) {
       var z = cam.zero.second;
-      html += "<div class='map-lane lane' data-cam='" + cam.id + "'><div class='head'><i class='" + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></i><span class='nm'>" + esc(cam.unit || cam.title) + "</span><span class='spd mono'></span></div><div class='track'>";
+      html += "<div class='map-lane lane' data-cam='" + cam.id + "'><div class='head'><i class='" + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></i><span class='nm' title='" + esc(cam.unit || cam.title) + "'>" + nameHtml(cam) + "</span><span class='spd mono'></span></div><div class='track'>";
+      if (S.hits && S.hits[cam.id]) { S.hits[cam.id].forEach(function (s) { html += "<i class='in' style='left: " + x(z + s[0]) + "%; width: " + Math.max(0.3, x(z + s[1]) - x(z + s[0])) + "%' title='inside the circle " + hms(z + s[0]) + " to " + hms(z + s[1]) + "'></i>"; }); }
       if (cam.fixes.length) {
         cam.segments.forEach(function (seg) { var a = z + seg[0][0], b = z + seg[seg.length - 1][0]; html += "<i style='left: " + x(a) + "%; width: " + Math.max(0.3, x(b) - x(a)) + "%; background: " + paint(cam.colour) + "'></i>"; });
         (cam.gaps || []).forEach(function (g) { html += "<i class='gp' style='left: " + x(z + g[0]) + "%; width: " + Math.max(0.3, x(z + g[1]) - x(z + g[0])) + "%; background: " + paint(cam.colour) + "' title='no fix " + hm(z + g[0]) + " to " + hm(z + g[1]) + "'></i>"; });
@@ -641,7 +813,7 @@
       if (S.events.notes) { (cam.notes || []).forEach(function (n, i) { var key = "note:" + cam.id + ":" + i; html += "<em class='mk note" + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + n.t) + "%' data-key='" + key + "' title='" + esc(n.words).slice(0, 80) + "'></em>"; }); }
       html += "</div></div>";
     });
-    if (!cams.length) { html += "<p class='muted small' style='grid-column: 1 / -1; margin: 6px 0 0'>No camera on the clock on this day.</p>"; }
+    if (!cams.length) { html += "<p class='muted small' style='grid-column: 1 / -1; margin: 6px 0 0'>" + (dayCams().length ? "No camera is ticked: tick one in the list." : "No camera on the clock on this day.") + "</p>"; }
     html += "<div class='playhead' id='map-playhead'><b>" + hm(now()) + "</b></div>";
     el.strip.innerHTML = html;
     el.strip.style.setProperty("--head", host.classList.contains("large") ? "110px" : "");
@@ -675,7 +847,7 @@
   // Events and notes ----------------------------------------------------------------
   function allShown() {
     var out = [];
-    dayCams().forEach(function (cam) {
+    shownCams().forEach(function (cam) {
       (cam.events || []).forEach(function (ev, i) { if (["camera", "lights", "siren", "mic", "bookmark"].indexOf(ev.kind) >= 0 && S.events[ev.kind]) { out.push({ key: "ev:" + cam.id + ":" + i, cam: cam, t: ev.t, moment: cam.zero.second + ev.t, words: ev.words, until: ev.until, kind: ev.kind }); } });
       if (S.events.notes) { (cam.notes || []).forEach(function (n, i) { out.push({ key: "note:" + cam.id + ":" + i, cam: cam, t: n.t, moment: cam.zero.second + n.t, words: n.words, note: n, kind: "note" }); }); }
     });
@@ -691,7 +863,6 @@
   }
   function clearSelection() {
     S.selected = null; light(null); closeCard(); refreshLayers(); drawStrip();
-    if (askMarker) { askMarker.remove(); askMarker = null; }
     if (S.asking) { S.asking = false; drawTransport(); if (map) { map.getCanvas().style.cursor = ""; } }
   }
   function stepEvent(dir) {
@@ -719,7 +890,7 @@
     var list = allShown().filter(function (e) { return e.cam.id === cam.id; });
     var index = list.map(function (e) { return e.key; }).indexOf(one.key);
     var prev = index > 0 ? list[index - 1] : null, next = index >= 0 && index < list.length - 1 ? list[index + 1] : null;
-    var head = one.kind === "note" ? "Note · " + esc(cam.unit || cam.title) : esc(one.words) + " · " + esc(cam.unit || cam.title);
+    var head = one.kind === "note" ? "Note · " + esc(nameOf(cam)) : esc(one.words) + " · " + esc(nameOf(cam));
     var body = one.kind === "note" ? "<div class='words'>" + esc(one.words) + "</div><span class='muted small'>" + esc(one.note.by) + (one.note.on ? " · " + esc(one.note.on) : "") + (one.note.from ? " · " + esc(one.note.from) : "") + "</span>" :
       "<span class='mono'>" + hms(one.moment) + "</span>" + (street ? " on " + esc(street) : "") + (one.until ? ", until " + hms(z + one.until) : "");
     card.innerHTML = "<b>" + head + "</b>" + body +
@@ -736,9 +907,9 @@
   }
   function noteOn(cam, at, origin) {
     if (!window.UI || !window.UI.prompt) { return; }
-    window.UI.prompt({ title: "Note on " + (cam.unit || cam.title) + " at " + (cam.onClock ? hms(cam.zero.second + at) : elapsed(at)), body: origin ? "From the map, at " + origin + ". Kept on the recording at this moment, shown on the Notes tab." : "Kept on the recording at this moment, shown on the Notes tab.", ok: "Save the note", placeholder: "The note" }).then(function (words) {
+    window.UI.prompt({ title: "Note on " + nameOf(cam) + " at " + (cam.onClock ? hms(cam.zero.second + at) : elapsed(at)), body: origin ? "From the map, at " + origin + ". Kept on the recording at this moment, shown on the Notes tab." : "Kept on the recording at this moment, shown on the Notes tab.", ok: "Save the note", placeholder: "The note" }).then(function (words) {
       if (!words) { return; }
-      return postJson(host.dataset.noteUrl ? host.dataset.noteUrl : "/recording/" + cam.id + "/note-at", { at: at, note: words }).then(function () { toast("Note kept on " + (cam.unit || cam.title) + "."); load(true); });
+      return postJson(host.dataset.noteUrl ? host.dataset.noteUrl : "/recording/" + cam.id + "/note-at", { at: at, note: words }).then(function () { toast("Note kept on " + nameOf(cam) + "."); load(true); });
     }).catch(function (e) { toast(e.message, true); });
   }
 
@@ -829,19 +1000,10 @@
   }
   function removeOne(cam) {
     if (!window.UI) { return; }
-    window.UI.confirm({ title: "Remove the path file from " + (cam.unit || cam.title) + "?", body: "The video stays; only its path goes.", ok: "Remove" }).then(function (yes) {
+    window.UI.confirm({ title: "Remove the path file from " + nameOf(cam) + "?", body: "The video stays; only its path goes.", ok: "Remove" }).then(function (yes) {
       if (!yes) { return; }
       return postJson("/recording/" + cam.id + "/path/remove", {}).then(function () { toast("Path file removed."); load(true); });
     }).catch(function (e) { toast(e.message, true); });
-  }
-  function more(cam, from) {
-    var menu = document.createElement("div");
-    menu.className = "map-menu";
-    menu.innerHTML = "<label class='btn tiny'>Replace the path file<input type='file' accept='.vtt,text/vtt' hidden></label><button type='button' class='tiny danger' data-act='remove-path'>Remove the path file</button><a class='btn tiny ghost' href='" + esc(cam.viewer_url) + "'>Open the recording</a>";
-    from.parentNode.appendChild(menu);
-    menu.querySelector("input").addEventListener("change", function (e) { if (e.target.files[0]) { addOne(cam.id, e.target.files[0], true); } menu.remove(); });
-    menu.querySelector("[data-act='remove-path']").addEventListener("click", function () { menu.remove(); removeOne(cam); });
-    window.setTimeout(function () { document.addEventListener("click", function once() { menu.remove(); document.removeEventListener("click", once); }); }, 0);
   }
 
   // Presses -----------------------------------------------------------------------
@@ -859,6 +1021,15 @@
         case "prev-event": stepEvent(-1); return;
         case "next-event": stepEvent(1); return;
         case "fit": fitAll(); return;
+        case "fly": if (cam) { flyTo(cam); } return;
+        case "open": if (cam) { S.open = S.open === cam.id ? null : cam.id; drawList(); } return;
+        case "tag": if (cam) { select(cam); openPreview(cam); } return;
+        case "tick-all": tickAll(true); return;
+        case "tick-none": tickAll(false); return;
+        case "tick-inside": if (S.hits) { S.hidden = {}; dayCams().forEach(function (c) { if (!S.hits[c.id]) { S.hidden[c.id] = true; } }); afterTicks(); } return;
+        case "remove": if (cam) { removeOne(cam); } return;
+        case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
+        case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
         case "large": S.large = !S.large; if (INC) { remember("map-inc-large", S.large ? "1" : "0"); applyLarge(); return; } remember("map-large", S.large ? "1" : "0"); host.classList.toggle("large", S.large); drawTransport(); drawList(); drawStrip(); window.setTimeout(function () { if (map) { map.resize(); } }, 50); return;
         case "picture": savePicture(); return;
@@ -866,7 +1037,6 @@
         case "fold": host.classList.toggle("folded"); drawList(); return;
         case "play-here": if (cam) { select(cam); openPreview(cam); } return;
         case "own": if (cam) { if (cam.own !== undefined) { delete cam.own; var mk = markers[cam.id]; if (mk) { mk.getElement().classList.add("before"); } } else { cam.own = 0; } drawList(); tick(); if (cam.own !== undefined) { flyTo(cam); } } return;
-        case "more": if (cam) { e.stopPropagation(); more(cam, b); } return;
         case "select": selectKey(b.dataset.key); return;
         case "clear": clearSelection(); return;
         case "note": { var target = S.selected ? S.selected.cam : (S.lit ? S.byId[S.lit] : null); if (!target) { toast("Choose a camera first: press its row or its marker.", true); return; } if (!target.onClock) { toast("That camera is not on the clock.", true); return; } noteOn(target, Math.max(0, now() - target.zero.second), ""); return; }
@@ -875,7 +1045,6 @@
         case "make-incident": makeIncident(b.dataset.recordings.split(" ")); return;
         case "readings": if (cam) { S.readingsOpen[cam.id] = !S.readingsOpen[cam.id]; drawList(); } return;
         case "offer": if (cam) { offer(cam, parseFloat(b.dataset.t), b.dataset.until === "" ? "" : parseFloat(b.dataset.until), b.dataset.words, b); } return;
-        case "near": S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map."); } return;
         case "go": if (cam) { select(cam); seek(cam.zero.second + parseFloat(b.dataset.t)); flyTo(cam); } return;
       }
     }
@@ -886,8 +1055,10 @@
       if (shown) { selectKey(reading.dataset.key); } else if (rc && rc.onClock) { select(rc); seek(rc.zero.second + parseFloat(reading.dataset.t)); } else if (rc) { rc.own = parseFloat(reading.dataset.t); drawList(); tick(); }
       return;
     }
+    // A press on the name shows that camera alone (Shift adds it), as a press
+    // on one row of a list does; the row's own buttons do the rest.
     var row = e.target.closest(".map-row[data-cam]");
-    if (row && !e.target.closest("button, label, input, a")) { var c = S.byId[row.dataset.cam]; select(c); flyTo(c); }
+    if (row && !e.target.closest("button, label, input, a")) { var c = S.byId[row.dataset.cam]; select(c); if (ofDay(c)) { only(c, e.shiftKey); } }
   }
   function select(cam) { S.selected = null; S.pressed = cam ? cam.id : null; closeCard(); light(cam); refreshLayers(); }
   // The Incidents tab's own form, posted from here: the incident is made
@@ -906,7 +1077,7 @@
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
-    else if (e.key === "Escape" && (S.selected || S.asking || askMarker)) { clearSelection(); }
+    else if (e.key === "Escape") { if (S.selected || S.asking) { clearSelection(); } else if (S.circle) { clearCircle(); } }
   });
 
   // Save a picture (Phase 12 chapter 5) --------------------------------------------
@@ -947,7 +1118,7 @@
           if (cam.source === "car") { ctx.rect(x - r, y - r, 2 * r, 2 * r); } else { ctx.arc(x, y, r, 0, Math.PI * 2); }
           ctx.fill(); ctx.stroke();
           // The camera's name beside its marker, with a halo so it reads on any ground.
-          var label = String(cam.unit || cam.title).slice(0, 28);
+          var label = String(nameOf(cam)).slice(0, 28);
           ctx.font = "700 " + Math.round(11 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
           ctx.lineWidth = 3 * ratio; ctx.strokeStyle = token("--surface"); ctx.strokeText(label, x + r + 4 * ratio, y);
           ctx.fillStyle = token("--text"); ctx.fillText(label, x + r + 4 * ratio, y);

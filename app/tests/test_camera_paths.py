@@ -849,19 +849,21 @@ def test_a_reading_offered_from_the_map_waits_on_the_proposed_events_tab(
     assert told["may_offer"] is False and told["offer_why"]
 
 
-def test_the_map_script_lists_readings_and_answers_who_was_near_here():
+def test_the_map_script_lists_readings_and_answers_within_a_circle():
+    # Who was near here (chapter 3) grew a handle in chapter 6: the circle.
     script = (HERE / "static" / "map.js").read_text(encoding="utf-8")
     assert "function readingsOf(cam)" in script and "data-act='readings'" in script
     assert "data-act='offer'" in script and '"/path/offer"' in script
-    assert "function nearHere(lngLat)" in script and "function metres(a, b)" in script
+    assert "function placeCircle(lngLat)" in script
+    assert "function metres(a, b)" in script and "function circleHits()" in script
     # Answered from the fixes in hand: no request carries a position.
     near = script[
-        script.index("function nearHere") : script.index("function nearHere") + 1800
+        script.index("function placeCircle") : script.index("function clearCircle")
     ]
     assert "fetch(" not in near and "postJson(" not in near
     assert "svg class='spd'" in script and "em class='off'" in script
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
-    assert ".map-readings" in css and ".map-ask" in css and "svg.spd" in css
+    assert ".map-readings" in css and ".map-circle-handle" in css and "svg.spd" in css
 
 
 # The wearer on the Speakers page, and where a line was said (chapter 4) -------------

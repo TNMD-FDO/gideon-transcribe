@@ -367,3 +367,74 @@ def test_a_picture_of_the_map_is_kept_as_a_document_on_the_incident(
     document.read_version = 0
     document.save(update_fields=["read_version"])
     assert documents.read_again_the_old() == 0
+
+
+# The Map tab refined (chapter 6, v1.192.0) ------------------------------------------
+# Ticks, the names first, the row opened, trails off entirely, the leaders,
+# the speed beside a vehicle, Within a circle.
+
+
+def test_the_list_ticks_cameras_and_remembers_them_per_person_per_case():
+    script = static("map.js")
+    assert "data-tick='" in script and 'id="map-tick-all"' in script.replace("'", '"')
+    assert 'remember("map-hidden-" + CASE' in script
+    assert "function shown(cam) { return INC || !S.hidden[cam.id]; }" in script
+    # The strip, the events and Fit shown follow the ticks; the clock's span does not.
+    assert "var range = span(), cams = shownCams();" in script
+    assert "shownCams().forEach(function (cam) {" in script
+    assert "Fit shown" in script
+    assert "data-act='tick-all'" in script and "data-act='tick-none'" in script
+    # A press on the name shows that camera alone; Shift adds it.
+    assert "only(c, e.shiftKey)" in script
+
+
+def test_the_rows_say_the_name_first_and_open_to_the_rest():
+    script = static("map.js")
+    assert "return cam.wearer || cam.unit || cam.title; }" in script
+    assert "function openOf(cam)" in script and "data-act='open'" in script
+    assert "class='map-open'" in script
+    # The lane heads say the same names as the rows.
+    assert "\"'>\" + nameHtml(cam) + \"</span><span class='spd mono'>" in script
+    # The ⋯ menu went with the row's facts into the opened part.
+    assert "function more(" not in script and "data-replace-one='" in script
+    assert "function whereWords(cam, local, p)" in script
+    css = static("app.css")
+    assert ".map-open {" in css and ".map-row .tk" in css
+
+
+def test_trails_can_go_off_entirely():
+    script = static("map.js")
+    assert 'faint: recall("map-faint") !== "0"' in script
+    assert 'id="map-faint"' in script.replace("'", '"')
+    assert 'return S.show === "whole" ? 0.9 : (S.faint ? 0.35 : 0);' in script
+    assert "function hiddenFilter()" in script
+
+
+def test_the_leaders_and_the_speed_beside_a_vehicle():
+    script = static("map.js")
+    assert "function drawLeaders()" in script and "LEADER_NEAR" in script
+    assert "class='map-tag" in script and "data-act='tag'" in script
+    assert 'map.on("move", function () { drawLeaders(); });' in script
+    assert "flags.speed > 3" in script
+    assert "<span class='spd mono' hidden></span>" in script
+    css = static("app.css")
+    assert ".map-leaders" in css and ".map-tag" in css and ".map-head .spd" in css
+
+
+def test_within_a_circle_is_answered_in_the_browser_and_kept_nowhere():
+    script = static("map.js")
+    assert "data-act='circle'" in script and "Within a circle" in script
+    assert "draggable: true" in script and "function radiusWords()" in script
+    assert "data-act='tick-inside'" in script and "passed inside the circle" in script
+    assert "class='in'" in script  # the lanes' inside bands
+    start = script.index("function placeCircle")
+    circle = script[start : script.index("function clearCircle")]
+    assert "remember(" not in circle and "fetch(" not in circle
+    css = static("app.css")
+    assert ".map-circle-centre" in css and "i.in" in css
+
+
+def test_the_map_tab_words_of_chapter_six_are_in_the_glossary():
+    words = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+    assert "**Tile**" in words
+    assert "Within a circle" in words

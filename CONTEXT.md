@@ -595,8 +595,12 @@ One moment a Path file records of its camera, with its time of day: the camera o
 _Avoid_: metadata, telemetry, event (that is a Chronology's), flag (on a page)
 
 **Map**:
-The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras in view, the video a press away in the Preview, a note from the map, and Add path files. Phase 12 chapter 1. The same map is a Map panel on the incident page following that page's clock, with Larger map in the wall's place, and Save a picture keeps a view of it as a Document (chapter 5).
+The Case page's tab that draws every camera's Path on a street map (or on plain ground when no Basemap is installed), on one clock, one day at a time: Play, the strip with a lane per camera, the markers moving, the events to press (camera on and off, lights, siren, mic, bookmarks, notes), the list of cameras with a tick for each (ticked is drawn; the names first, the rest behind the row's disclosure), the video a press away in the Preview, a note from the map, Within a circle (a circle to widen on the map, answering which cameras passed inside it and when), and Add path files. Phase 12 chapters 1 and 6. The same map is a Map panel on the incident page following that page's clock, with Larger map in the wall's place, and Save a picture keeps a view of it as a Document (chapter 5).
 _Avoid_: GIS, tracking view, GPS tab, geo
+
+**Tile**:
+A small window on the Map, playing one camera's video at the clock's moment, muted unless chosen: its bar the camera's colour and name (and a vehicle's speed), opened from the camera's name tag or row, riding with the camera's marker until dragged, then pinned where it was dropped with a line following the marker as the camera moves; several at once, closed one by one or all together. Not the Preview, which plays one recording with its caption and note box. Phase 12 chapter 6.
+_Avoid_: pop-out, mini-player, thumbnail, picture-in-picture, PiP
 
 **Basemap**:
 The street map behind the Paths: one file of OpenStreetMap-based tiles for the office's own region, cut once on a workstation and placed on the server with `./transcribe basemap`, served to signed-in browsers by the office's own server and never fetched from outside. Without it the Map tab draws its Paths on plain ground and says so. Phase 12 chapter 1.

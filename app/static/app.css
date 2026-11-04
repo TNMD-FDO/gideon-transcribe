@@ -3948,16 +3948,42 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-head.lights .badge { display: block; } .map-head.siren .badge { display: block; background: var(--danger); }
 .map-list { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; background: var(--surface); display: flex; flex-direction: column; gap: 2px; font-size: var(--t-small); max-height: clamp(360px, 56vh, 640px); overflow: auto; }
 .map-list .h { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); padding: 0 0 6px; }
-.map-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 4px; border-top: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+/* The rows (chapter 6): the tick, the colour, the name, the speed and the disclosure; the rest in .map-open under an opened row. */
+.map-row { display: grid; grid-template-columns: 14px 10px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 4px 4px; border-top: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
 .map-row.lit { background: var(--accent-soft); }
-.map-row.dim { opacity: 0.6; }
+.map-row.open { background: var(--accent-soft); border-radius: 4px 4px 0 0; }
+.map-row.dim { opacity: 0.55; }
+.map-row .tk { margin: 0; width: 14px; height: 14px; cursor: pointer; }
 .map-row .dot { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .map-row .dot.sq { border-radius: 2px; }
-.map-row .facts { color: var(--muted); font-size: var(--t-label); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
-.map-row .acts { display: flex; gap: 4px; }
-.map-row .streams { font-size: var(--t-label); color: var(--muted); margin-top: 2px; }
-.map-row .streams span { padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; margin-right: 3px; }
-.map-row .own-bar { width: 100%; margin-top: 4px; }
+.map-row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-row .tail { display: inline-flex; gap: 4px; align-items: center; }
+.map-row .more { min-height: 20px; padding: 0 6px; color: var(--muted); }
+.map-open { padding: 2px 4px 8px 31px; background: var(--accent-soft); border-radius: 0 0 4px 4px; display: flex; flex-direction: column; gap: 5px; }
+.map-open .facts, .map-row .facts { color: var(--muted); font-size: var(--t-label); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.map-open .facts b { color: var(--text); }
+.map-open .acts { display: flex; gap: 4px; flex-wrap: wrap; }
+.map-open .streams span { padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; margin-right: 3px; }
+.map-open .own-bar { width: 100%; margin-top: 2px; }
+.map-list .h label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.map-list .h .acts { display: inline-flex; gap: 2px; }
+.map-list .h .acc { color: var(--accent); }
+/* The leaders (chapter 6): lines from a knot of markers out to their name tags. */
+.map-leaders { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.map-leaders svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-leaders line { stroke: var(--text); stroke-width: 1; opacity: 0.55; }
+.map-tag { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: inline-flex; gap: 5px; align-items: center; min-height: 20px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); font-size: var(--t-label); font-weight: 600; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: pointer; }
+.map-tag i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.map-tag i.sq { border-radius: 2px; }
+.map-tag.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.map-tag small { font-weight: 400; }
+/* A vehicle's speed beside its marker while it moves (chapter 6). */
+.map-head .spd { position: absolute; left: calc(100% + 5px); top: 50%; transform: translateY(-50%); background: color-mix(in srgb, var(--text) 85%, transparent); color: var(--surface); font-size: var(--t-label); font-weight: 600; line-height: 1.2; padding: 1px 5px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
+/* Within a circle (chapter 6): the centre to drag, the handle to widen, the radius on it. */
+.map-circle-centre { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); cursor: move; }
+.map-circle-handle { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: ew-resize; position: relative; }
+.map-circle-handle b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); font: 600 var(--t-label) var(--mono); color: var(--accent); white-space: nowrap; }
+.map-strip .map-lane .track i.in { top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: 0.2; }
 .map-fold summary { color: var(--muted); font-size: var(--t-small); padding: 6px 4px; border-top: 1px solid var(--line); cursor: pointer; }
 .map-readings { list-style: none; margin: 0 0 4px; padding: 0 0 4px 22px; font-size: var(--t-label); }
 .map-readings li { display: flex; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
@@ -3965,14 +3991,11 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-readings li .w { flex: 1; }
 .map-readings li .mono { color: var(--muted); white-space: nowrap; }
 .map-near { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.map-ask { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 30%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); }
 .map-strip .map-lane .track svg.spd { position: absolute; left: 0; top: 0; width: 100%; height: 18px; pointer-events: none; }
 .map-strip .map-lane .track svg.spd polyline { fill: none; stroke: var(--text); stroke-opacity: 0.55; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .map-strip .map-lane .track em.off { width: auto; height: 3px; top: 15px; background: var(--muted); border-radius: 2px; cursor: default; }
 .map-offer { border-top: 1px solid var(--line); padding: 8px 4px 4px; display: flex; flex-direction: column; gap: 4px; }
 .map-offer .acts { display: flex; gap: 4px; }
-.map-menu { position: absolute; right: 0; top: 100%; z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 4px; }
-.map-row .acts { position: relative; }
 .map-strip { display: grid; grid-template-columns: var(--head, 150px) minmax(0, 1fr); gap: 4px 10px; position: relative; margin: 0; font-size: var(--t-small); }
 .map-strip .ruler { display: contents; }
 .map-strip .ruler .ticks { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); }
@@ -4037,6 +4060,5 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 }
 @media (max-width: 699px) {
   .map-strip { grid-template-columns: 90px minmax(0, 1fr); }
-  .map-row { grid-template-columns: 14px minmax(0, 1fr); }
-  .map-row .acts { grid-column: 2; justify-content: flex-start; }
+  .map-open { padding-left: 8px; }
 }

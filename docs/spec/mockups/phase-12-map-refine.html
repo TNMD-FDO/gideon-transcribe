@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Map tab, refined</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --sys: #6b7480; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --water: #d6e6f2; --park: #dfeadb; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --water: #1b2a38; --park: #1f2a22; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"], .dark {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --sys: #98a4b1; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --water: #1b2a38; --park: #1f2a22; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } b { font-weight: 600; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .lead { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .lead p { margin: 0; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ul, ol { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); font-size: 13px; flex-wrap: wrap; }
+  .tabs span { padding: 6px 10px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs span.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tabs span i { font-style: normal; color: var(--muted); margin-left: 4px; font-size: 11px; }
+  .case-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding-bottom: 6px; }
+  .case-head h3 { font-size: 20px; }
+  .case-head .acts { display: flex; gap: 8px; }
+
+  /* the tab */
+  .maptab { display: grid; grid-template-columns: minmax(0, 1fr) 250px; grid-template-areas: "lead lead" "map list" "strip strip"; gap: 12px; }
+  .maptab .lead { grid-area: lead; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); }
+  .maptab .pane { grid-area: map; min-height: 380px; }
+  .maptab .list { grid-area: list; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; display: flex; flex-direction: column; gap: 0; background: var(--surface); font-size: 13px; align-self: start; }
+  .maptab .strip { grid-area: strip; }
+  .transport { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .transport .clock { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .transport .zone { font-size: 11px; color: var(--muted); display: block; }
+  .transport select { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+  .days span { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .days span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .days .lbl { background: none; padding: 0; margin-right: 4px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 12px; }
+  .seg span { padding: 4px 9px; color: var(--muted); border-right: 1px solid var(--line); }
+  .seg span:last-child { border-right: 0; }
+  .seg span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .evfilter { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+  .evfilter label { display: inline-flex; gap: 4px; align-items: center; }
+  .tk { display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--surface); position: relative; flex: none; }
+  .tk.on { background: var(--accent); border-color: var(--accent); }
+  .tk.on::after { content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 3px; height: 7px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .tk.half { background: var(--accent-soft); border-color: var(--accent); }
+  .tk.half::after { content: ""; position: absolute; left: 2px; right: 2px; top: 5px; height: 2px; background: var(--accent); }
+
+  /* the map's own furniture */
+  .pane svg { display: block; width: 100%; height: auto; }
+  .pane .corner { position: absolute; font-size: 10px; color: var(--muted); background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 6px; border-radius: 3px; }
+  .pane .attr { right: 6px; bottom: 6px; }
+  .pane .scale { left: 8px; bottom: 8px; font-family: var(--mono); border-bottom: 2px solid var(--text); border-left: 2px solid var(--text); border-right: 2px solid var(--text); padding: 0 4px 1px; background: none; }
+  .pane .north { right: 8px; top: 8px; font-weight: 700; font-size: 12px; background: none; }
+  .pane .zoom { right: 8px; top: 30px; display: flex; flex-direction: column; gap: 2px; background: none; padding: 0; }
+  .pane .zoom b { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-size: 14px; }
+  .pane .card { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; width: 240px; z-index: 3; }
+  .pane .card b { display: block; margin-bottom: 4px; }
+  .pane .card p { margin: 2px 0; }
+  .pane .card .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; }
+  .blk { fill: var(--surface-2); opacity: .55; }
+  .wat { fill: var(--water); } .prk { fill: var(--park); }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; }
+  .lbl.big { font-size: 11px; }
+  .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .35; }
+  .pt { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .pf.lit, .pt.lit { stroke-width: 5; }
+  .gap { stroke-dasharray: 2 5; opacity: .5; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .hd.dim { opacity: .45; }
+  .hd.off { opacity: .18; }
+  .hl { font: 600 9px var(--font); fill: var(--surface); paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2; }
+  .badge { fill: var(--warn); stroke: var(--surface); stroke-width: 1; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .ldr.teth { stroke: var(--accent); stroke-dasharray: 3 3; opacity: .8; stroke-width: 1.2; }
+  .tag { font: 600 10px var(--font); fill: var(--text); }
+  .tagbg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .tagbg.lit { stroke: var(--accent); stroke-width: 1.5; }
+  .spdtag { font: 600 9px var(--mono); fill: var(--surface); }
+  .spdbg { fill: var(--text); rx: 3; opacity: .85; }
+  .circ { fill: var(--accent); fill-opacity: .08; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .circ-h { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+  .circ-r { font: 600 10px var(--mono); fill: var(--accent); }
+
+  /* the list */
+  .list .h { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); padding: 0 0 6px; gap: 6px; }
+  .list .h .acts { display: flex; gap: 4px; }
+  .row { display: grid; grid-template-columns: 14px 10px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 5px 4px; border-top: 1px solid var(--line); border-radius: 4px; font-size: 13px; }
+  .row.lit { background: var(--accent-soft); }
+  .row.dim { opacity: .55; }
+  .row .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .row .dot.sq { border-radius: 2px; }
+  .row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .nm small { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .row .more { color: var(--muted); font-size: 11px; }
+  .row .spd { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .open { padding: 2px 4px 8px 31px; border-radius: 0 0 4px 4px; background: var(--accent-soft); font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .open .facts { color: var(--muted); font-size: 11px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .open .acts { display: flex; gap: 4px; flex-wrap: wrap; }
+  .open .streams span { padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; margin-right: 3px; font-size: 10px; color: var(--muted); }
+  .fold { font-size: 12px; color: var(--muted); padding: 6px 4px; border-top: 1px solid var(--line); }
+  .fold b { color: var(--accent); font-weight: 600; }
+
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px 8px; background: var(--surface); display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 4px 10px; position: relative; font-size: 12px; }
+  .strip.narrow { grid-template-columns: 90px minmax(0, 1fr); }
+  .strip .ruler { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: 10px; color: var(--muted); }
+  .strip .ruler span { position: absolute; top: 0; transform: translateX(-50%); }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 18px; font-size: 12px; white-space: nowrap; overflow: hidden; }
+  .strip .head i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .strip .head i.sq { border-radius: 2px; }
+  .strip .head .spd { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-left: auto; }
+  .strip .track { position: relative; height: 18px; }
+  .strip .track i { position: absolute; top: 4px; height: 10px; border-radius: 5px; display: block; }
+  .strip .track i.gp { height: 4px; top: 7px; border-radius: 2px; opacity: .35; }
+  .strip .track em { position: absolute; top: 1px; width: 2px; height: 16px; background: var(--warn); border-radius: 1px; }
+  .strip .track em.siren { background: var(--bad); } .strip .track em.mic { background: var(--muted); } .strip .track em.bm { background: var(--accent); height: 8px; top: 0; }
+  .strip .track em.on { width: auto; height: 3px; top: 0; background: var(--warn); border-radius: 2px; }
+  .strip .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); z-index: 2; }
+  .strip .ph b { position: absolute; top: -2px; left: -18px; font: 600 10px var(--mono); color: var(--accent-ink); background: var(--accent); padding: 0 4px; border-radius: 3px; }
+  .strip .faint { opacity: .45; }
+  .strip .in { position: absolute; top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: .22; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); }
+
+  /* the tiles */
+  .tile { position: absolute; width: 168px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; z-index: 3; font-size: 11px; }
+  .tile.pinned { border-color: var(--accent); }
+  .tile .bar { display: flex; align-items: center; gap: 5px; padding: 3px 6px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .tile .bar i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .tile .bar i.sq { border-radius: 2px; }
+  .tile .bar .spd { font-family: var(--mono); font-weight: 400; color: var(--muted); margin-left: auto; font-size: 10px; }
+  .tile .bar .x { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .tile .bar .pn { color: var(--muted); font-weight: 400; }
+  .tile.pinned .bar .pn { color: var(--accent); }
+  .tile .video { height: 94px; background: linear-gradient(135deg, #2a3038, #10151b); position: relative; }
+  .tile .video b { position: absolute; left: 6px; bottom: 4px; color: #fff; font: 600 10px var(--mono); background: rgba(0,0,0,.5); padding: 0 4px; border-radius: 3px; }
+  .tile .video .mute { position: absolute; right: 6px; bottom: 4px; color: #fff; font-size: 10px; background: rgba(0,0,0,.5); padding: 0 4px; border-radius: 3px; }
+  .layer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 620px; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 5px 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .toast { display: inline-block; background: var(--text); color: var(--bg); padding: 6px 12px; border-radius: var(--radius); font-size: 12px; }
+  .phone { width: 300px; border: 1px solid var(--line); border-radius: 18px; padding: 10px 8px 0; background: var(--bg); display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .phone .pane { min-height: 220px; }
+  .slim { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .slim .clock { font-family: var(--mono); font-size: 16px; }
+  .find { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px; font-size: 12px; color: var(--muted); background: var(--surface); }
+  .drawer { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); display: flex; flex-direction: column; font-size: 13px; }
+  .drawer .q, .drawer .a { padding: 8px 12px; }
+  .drawer .q { background: var(--surface-2); }
+  .drawer .a p { margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>The Map tab, refined: pick the cameras you want, names first, a video beside each marker, and path files that wait for their video</h1>
+    <p class="lede">The asks of 2026-11-04: show only the cameras a person ticks (one, several or all); let the trails go off entirely; make the list beside the map minimal, the officer's name first and matching the lanes under, the rest behind a disclosure; when many cameras stand in one spot, lead a line from each marker out to its name, and let a press on the name open a small video that moves with the camera, draggable, four or more at once, with a vehicle's speed shown; keep path files uploaded before their videos (two hundred or more at a time) from clogging the chat or anything else; a circle a person can widen on the map to find the cameras that passed inside it; and move Add path files to the case's head, left of Add recordings. Added the same day: a video dragged on the map stays where it is dropped; a note on one recording at the moment its video is on; and a note that applies to all the recordings at that moment. The fictional office of the local demo throughout; no real place or name is drawn.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The tab at 1366 wide: ticks, names, no trails, and the head's new door</h2></div>
+    <div class="frame">
+      <div class="case-head">
+        <div><span class="eyebrow">Cases</span><h3>Harbour Street stop</h3></div>
+        <div class="acts"><span class="btn">⬆ Add path files</span><span class="btn primary">Add recordings</span></div>
+      </div>
+      <div class="tabs"><span>Recordings <i>7</i></span><span>Search</span><span>Proposed <i>4</i></span><span>Notes <i>12</i></span><span>Documents <i>3</i></span><span>Incidents <i>1</i></span><span class="on">Map <i>5</i></span><span>Clips <i>3</i></span><span>Speakers</span><span>Details</span></div>
+      <div class="maptab">
+        <div class="lead">
+          <div>
+            <p><b>7 cameras, 5 with a path file · 6 Nov 2025.</b> <span class="muted">Showing 3 of 5: the ticked ones.</span></p>
+            <div class="days" style="margin-top:4px"><span class="lbl">Days</span><span class="on">6 Nov 2025 · 5 cameras</span><span>7 Nov · 1 camera</span></div>
+          </div>
+          <div class="transport">
+            <span class="btn primary">▶ Play</span><span class="btn">−10 s</span><span class="btn">+10 s</span>
+            <select><option>Speed 1×</option><option selected>Speed 4×</option><option>16×</option><option>60×</option></select>
+            <span><span class="clock">20:31:08</span><span class="zone">Central · 6 Nov 2025</span></span>
+            <span class="seg"><span class="on">Markers only</span><span>Trails</span><span>Whole paths</span></span>
+            <span class="evfilter"><label><span class="tk"></span> faint paths under</label></span>
+            <span class="btn">Fit shown</span><span class="btn">Within a circle</span><span class="btn">Larger map</span>
+          </div>
+        </div>
+
+        <div class="pane">
+          <svg viewBox="0 0 760 400" aria-label="a drawn map">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="0" y="300" width="760" height="100" class="wat"/>
+            <rect x="520" y="40" width="160" height="110" rx="6" class="prk"/>
+            <rect x="60" y="60" width="130" height="80" rx="3" class="blk"/><rect x="230" y="60" width="150" height="80" rx="3" class="blk"/><rect x="420" y="60" width="70" height="80" rx="3" class="blk"/>
+            <rect x="60" y="180" width="130" height="80" rx="3" class="blk"/><rect x="230" y="180" width="150" height="80" rx="3" class="blk"/><rect x="420" y="180" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="146" width="760" height="22" class="ro"/><rect x="0" y="266" width="760" height="22" class="ro"/>
+            <rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/><rect x="500" y="0" width="14" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="161">HARBOUR STREET</text><text class="lbl big" x="560" y="281">QUAY ROAD</text>
+            <text class="lbl" transform="translate(214 30) rotate(90)">MILL LANE</text><text class="lbl" transform="translate(404 30) rotate(90)">ROPEWALK</text>
+            <text class="lbl" x="575" y="100">The Green</text><text class="lbl" x="30" y="350">Harbour</text>
+            <!-- no trails, no faint paths: markers alone, the unticked cameras gone -->
+            <!-- the vehicle, moving: a speed tag beside it -->
+            <rect x="291" y="268" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="300" y="281" text-anchor="middle">D4</text><circle cx="309" cy="269" r="4" class="badge"/>
+            <rect x="314" y="262" width="46" height="13" class="spdbg"/><text class="spdtag" x="337" y="272" text-anchor="middle">38 mph</text>
+            <!-- two body cameras close at the corner: leader lines out to the names -->
+            <circle cx="397" cy="157" r="10" class="f1 hd"/><text class="hl" x="397" y="161" text-anchor="middle">1</text>
+            <circle cx="406" cy="163" r="10" class="f2 hd"/><text class="hl" x="406" y="167" text-anchor="middle">2</text>
+            <polyline class="ldr" points="397,147 372,112"/><rect x="318" y="98" width="86" height="18" class="tagbg"/><circle cx="328" cy="107" r="4" class="f1"/><text class="tag" x="336" y="111">Ofc. Pell</text>
+            <polyline class="ldr" points="414,170 448,206"/><rect x="448" y="198" width="92" height="18" class="tagbg"/><circle cx="458" cy="207" r="4" class="f2"/><text class="tag" x="466" y="211">Ofc. Amari</text>
+          </svg>
+          <span class="corner north">N</span>
+          <span class="corner zoom"><b>+</b><b>−</b></span>
+          <span class="corner scale">200 ft</span>
+          <span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+
+        <div class="list">
+          <div class="h"><span><span class="tk half"></span> 3 of 5 shown</span><span class="acts"><span class="btn tiny ghost">all</span><span class="btn tiny ghost">none</span></span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span class="nm">Ofc. Pell</span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span class="nm">Ofc. Amari</span><span class="more">▸</span></div>
+          <div class="row dim"><span class="tk"></span><span class="dot c3"></span><span class="nm">Ofc. Dunne</span><span class="more">▸</span></div>
+          <div class="row dim"><span class="tk"></span><span class="dot c5"></span><span class="nm">Sgt. Okafor</span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span class="nm">Ofc. Pell <small>vehicle</small></span><span class="spd">38 mph</span></div>
+          <div class="fold">No path file: <b>Cell-5</b>, <b>Interview room</b></div>
+          <div class="fold">Other days: 1 camera on 7 Nov</div>
+          <div class="fold">Waiting for their video: <b>203 path files</b></div>
+        </div>
+
+        <div class="strip">
+          <div></div>
+          <div class="ruler"><span style="left:0%">20:00</span><span style="left:25%">20:15</span><span style="left:50%">20:30</span><span style="left:75%">20:45</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>Ofc. Pell</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><em class="mic" style="left:41.5%"></em><div class="ph" style="left:51.9%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>Ofc. Amari</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><em class="mic" style="left:44%"></em><em class="mic" style="left:66%"></em><em class="mic" style="left:73%"></em></div>
+          <div class="head"><i class="c4 sq"></i>Ofc. Pell <span class="muted">&nbsp;vehicle</span><span class="spd">38 mph</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><em class="on" style="left:36.9%;width:16%"></em><em class="siren" style="left:36.9%"></em><em class="bm" style="left:50%"></em></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Ticks.</b> Every camera of the day has a tick box; the map, the strip and the chat's "following" see only the ticked ones. The header's box ticks all or none (a half mark when some are ticked); a press on a name alone ticks only that camera (the way a click on one row in a list does), Shift adds. The choice is remembered per person per case. Unticked rows stay in the list, dimmed, so nothing is lost.</p>
+      <p><b>Names first.</b> The row is the colour dot and the name the path file gives its wearer; a vehicle is its driver's name with "vehicle" after it, a square dot, and its speed while it moves. The lane heads under say the same names in the same order, so the two read as one. A file with no name falls back to the unit (BWC3-1) as now. The unit, the kind, the surety pill, the span and the actions have gone behind the ▸ (Figure B).</p>
+      <p><b>Trails off.</b> The Show control reads Markers only, Trails, Whole paths, and "faint paths under" is a tick of its own, off here: nothing is drawn but the markers. Today Markers only still leaves the faint whole path under each marker; that becomes the tick's business. Both are remembered per person.</p>
+      <p><b>The crowd and the speed.</b> When two or more markers would overlap, each gets a short line out to its name on a small tag, fanned so the tags do not collide (Figure C has five). A vehicle moving over 3 mph carries its speed on a dark tag beside its marker, in the file's unit.</p>
+      <p><b>The head's door.</b> Add path files now stands in the case's head to the left of Add recordings, on every tab, and leaves the Map tab's transport. A path file is the case's input, not the map's: it feeds the chronology, the chat, the memo and the Speakers page as well. Fit all became Fit shown.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>A row opened: everything the row used to say, behind its ▸</h2></div>
+    <div class="two">
+      <div class="frame">
+        <div class="list" style="border:0;padding:0">
+          <div class="h"><span><span class="tk half"></span> 3 of 5 shown</span><span class="acts"><span class="btn tiny ghost">all</span><span class="btn tiny ghost">none</span></span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span class="nm">Ofc. Pell</span><span class="more">▸</span></div>
+          <div class="row lit" style="border-radius:4px 4px 0 0"><span class="tk on"></span><span class="dot c2"></span><span class="nm">Ofc. Amari <small>here at 20:31:08</small></span><span class="more">▾</span></div>
+          <div class="open">
+            <div class="facts"><b>BWC2-1</b><span>body camera</span><span class="pill ok" title="from the clock read in its picture">Clear</span><span class="mono">20:26 to 20:53</span></div>
+            <div class="facts"><span>Harbour Street at Ropewalk · 4 m from Ofc. Pell</span></div>
+            <div class="acts"><span class="btn tiny primary">▶ Open a tile</span><span class="btn tiny">Play here</span><span class="btn tiny">Fly to</span><span class="btn tiny">Readings</span><span class="btn tiny ghost">Replace file</span><span class="btn tiny ghost danger">Remove</span></div>
+          </div>
+          <div class="row dim"><span class="tk"></span><span class="dot c3"></span><span class="nm">Ofc. Dunne</span><span class="more">▸</span></div>
+          <div class="row dim"><span class="tk"></span><span class="dot c5"></span><span class="nm">Sgt. Okafor</span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span class="nm">Ofc. Pell <small>vehicle</small></span><span class="spd">38 mph</span></div>
+          <div class="open" style="background:none;padding-top:0">
+            <div class="facts"><b>Dash-4</b><span>in-car</span><span class="pill ok" title="from its path file, the first and last readings agree">Clear</span><span class="mono">20:18 to 20:51</span><span class="streams"><span>front</span><span>cabin</span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <h3>What the ▸ holds</h3>
+        <ul class="small">
+          <li><b>The facts:</b> the unit as the file gives it, the kind, the surety pill with its why on hover, the span on the clock, a vehicle's streams.</li>
+          <li><b>Where it is now:</b> the street under the marker when a basemap is installed, and the nearest other camera with its distance (the readings' Who was near, read at the clock's moment). Never a coordinate.</li>
+          <li><b>The actions:</b> Open a tile (Figure C), Play here (the Preview as today), Fly to, Readings (the list from release 3), Replace file, Remove. Add a path file sits on a row without one.</li>
+          <li>One row opens at a time; opening another closes the first. Hovering a row still lights its path and marker; the opened row says where the camera is, updating with the clock.</li>
+        </ul>
+        <p class="small muted">The vehicle's row shows its streams as pills in the open part; its marker and lane are still one (the twin rule of release 1). Its speed sits at the row's end whether open or not, where the ▸ would be.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Five cameras at one corner: the names led out, and four tiles playing in step</h2></div>
+    <div class="frame">
+      <div class="maptab" style="grid-template-columns: minmax(0, 1fr)">
+        <div class="lead"><p><b>7 cameras, 5 with a path file · 6 Nov 2025.</b> <span class="muted">Showing 5 of 5.</span></p><div class="transport"><span class="btn">⏸ Pause</span><span class="btn">−10 s</span><span class="btn">+10 s</span><select><option selected>Speed 1×</option><option>4×</option></select><span><span class="clock">20:33:40</span><span class="zone">Central</span></span><span class="pill acc">4 tiles</span><span class="btn tiny ghost">close all</span><span class="btn">✎ Note on all shown</span><span class="seg"><span>Markers only</span><span class="on">Trails</span><span>Whole paths</span></span></div></div>
+        <div class="pane" style="min-height:440px">
+          <svg viewBox="0 0 760 440" aria-label="a drawn map, zoomed to a corner">
+            <rect width="760" height="440" fill="var(--ground)"/>
+            <rect x="60" y="30" width="250" height="140" rx="4" class="blk"/><rect x="60" y="270" width="250" height="140" rx="4" class="blk"/><rect x="430" y="30" width="300" height="140" rx="4" class="blk"/><rect x="430" y="270" width="300" height="140" rx="4" class="blk"/>
+            <rect x="0" y="190" width="760" height="60" class="ro"/><rect x="330" y="0" width="80" height="440" class="ro"/>
+            <text class="lbl big" x="90" y="225">HARBOUR STREET</text><text class="lbl" transform="translate(377 30) rotate(90)">ROPEWALK</text>
+            <text class="lbl" x="150" y="100">No 14</text><text class="lbl" x="560" y="100">Corner shop</text>
+            <!-- trails to the clock -->
+            <polyline class="pt p1" points="0,215 120,215 300,215 352,218"/>
+            <polyline class="pt p2" points="760,120 700,160 560,215 440,215 372,222"/>
+            <polyline class="pt p3" points="370,0 370,100 370,160 362,205"/>
+            <polyline class="pt p5" points="760,330 640,290 500,240 400,225 378,212"/>
+            <polyline class="pt p4" points="0,240 200,240 320,236 345,232"/>
+            <!-- the knot of five -->
+            <rect x="336" y="223" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="345" y="236" text-anchor="middle">D4</text>
+            <circle cx="352" cy="218" r="10" class="f1 hd"/><text class="hl" x="352" y="222" text-anchor="middle">1</text>
+            <circle cx="372" cy="222" r="10" class="f2 hd"/><text class="hl" x="372" y="226" text-anchor="middle">2</text>
+            <circle cx="362" cy="205" r="10" class="f3 hd"/><text class="hl" x="362" y="209" text-anchor="middle">3</text>
+            <circle cx="378" cy="212" r="10" class="f5 hd"/><text class="hl" x="378" y="216" text-anchor="middle">6</text>
+            <rect x="358" y="236" width="40" height="13" class="spdbg"/><text class="spdtag" x="378" y="246" text-anchor="middle">0 mph</text>
+            <!-- leaders fanned out to the names -->
+            <polyline class="ldr" points="345,218 300,150"/><rect x="226" y="136" width="86" height="18" class="tagbg lit"/><circle cx="236" cy="145" r="4" class="f1"/><text class="tag" x="244" y="149">Ofc. Pell</text>
+            <polyline class="ldr" points="362,195 362,130"/><rect x="320" y="110" width="92" height="18" class="tagbg"/><circle cx="330" cy="119" r="4" class="f3"/><text class="tag" x="338" y="123">Ofc. Dunne</text>
+            <polyline class="ldr" points="384,205 430,150"/><rect x="428" y="134" width="96" height="18" class="tagbg lit"/><circle cx="438" cy="143" r="4" class="f5"/><text class="tag" x="446" y="147">Sgt. Okafor</text>
+            <polyline class="ldr" points="380,228 440,290"/><rect x="440" y="282" width="92" height="18" class="tagbg lit"/><circle cx="450" cy="291" r="4" class="f2"/><text class="tag" x="458" y="295">Ofc. Amari</text>
+            <polyline class="ldr" points="340,240 290,295"/><rect x="180" y="286" width="118" height="18" class="tagbg lit"/><rect x="190" y="291" width="8" height="8" rx="2" class="f4"/><text class="tag" x="202" y="299">Ofc. Pell · vehicle</text>
+            <!-- tethers from the tiles to their markers -->
+            <polyline class="ldr teth" points="352,208 250,70"/>
+            <polyline class="ldr teth" points="386,210 560,60"/>
+            <polyline class="ldr teth" points="376,232 600,340"/><circle cx="376" cy="232" r="3" fill="var(--accent)"/><text class="tag" x="520" y="318" style="fill:var(--accent);font-size:9px">tether follows marker 2 as it moves</text>
+            <polyline class="ldr teth" points="340,242 170,350"/>
+          </svg>
+          <!-- four tiles: three riding with their markers, one dragged and pinned -->
+          <div class="tile" style="left:8%;top:2%"><div class="bar"><i class="c1"></i>Ofc. Pell<span class="pn" style="margin-left:auto" title="a note on this recording at this moment">✎</span><span class="pn" title="rides with the marker">⌖</span><span class="x">×</span></div><div class="video"><b>20:33:40</b><span class="mute">🔇</span></div></div>
+          <div class="tile" style="left:63%;top:2%"><div class="bar"><i class="c5"></i>Sgt. Okafor<span class="pn" style="margin-left:auto">✎</span><span class="pn">⌖</span><span class="x">×</span></div><div class="video"><b>20:33:40</b><span class="mute">🔊</span></div></div>
+          <div class="tile pinned" style="left:70%;top:60%"><div class="bar"><i class="c2"></i>Ofc. Amari<span class="pn" style="margin-left:auto;color:var(--text)" title="a note on this recording at this moment">✎</span><span class="pn" title="pinned where you dropped it">📌</span><span class="x">×</span></div><div class="video"><b>20:33:40</b><span class="mute">🔇</span></div></div>
+          <div class="tile" style="left:4%;top:62%"><div class="bar"><i class="c4 sq"></i>Ofc. Pell · vehicle<span class="spd">0 mph</span><span class="pn">✎</span><span class="x">×</span></div><div class="video"><b>20:33:40</b><span class="mute">🔇</span></div></div>
+          <span class="corner north">N</span><span class="corner scale">50 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+      </div>
+      <div class="two" style="margin-top:4px">
+        <div class="layer">
+          <b>Note on Ofc. Amari (BWC2-1) at 20:33:40</b>
+          <p class="small muted" style="margin:0">From the map, from the camera's tile. Kept on the recording at this moment, shown on the Notes tab and in the chronology.</p>
+          <div class="find" style="min-height:52px;align-items:flex-start;padding:6px 8px">Amari reaches the corner; Dunne already inside No 14</div>
+          <div class="transport"><span class="btn primary">Save the note</span><span class="btn ghost">Cancel</span></div>
+        </div>
+        <div class="layer">
+          <b>Note on all 5 cameras shown at 20:33:40</b>
+          <p class="small muted" style="margin:0">One note, kept on each of Ofc. Pell, Ofc. Amari, Ofc. Dunne, Sgt. Okafor and Ofc. Pell's vehicle at this moment of theirs. The Notes tab shows it once, "on 5 cameras"; the chronology shows one entry.</p>
+          <div class="find" style="min-height:52px;align-items:flex-start;padding:6px 8px">All units at Harbour Street and Ropewalk; sergeant on scene</div>
+          <div class="transport"><span class="btn primary">Save on all 5</span><span class="btn ghost">Cancel</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The leaders.</b> Five markers stand within a few metres at the corner. Each gets a thin line from its marker out to a tag with its colour and name; the tags are placed round the knot so none covers another or a marker, and they move with the clock. Pressing a tag (or the name in the list) opens that camera's tile; a tag whose tile is open has a blue edge. Leaders appear only when markers would overlap at the map's zoom; a lone marker keeps its small label as today.</p>
+      <p><b>Tiles.</b> A tile is a small window playing one camera's video at the clock's moment, muted; its bar is the camera's colour, name and, for a vehicle, its speed. Up to six at once (four drawn). A tile opens beside its marker and <i>rides</i> with it as the camera moves, tethered by a dashed line; drag it anywhere and it <i>pins</i> there (the pin turns blue) and stays put through pans, zooms and the clock's running, until it is closed or dragged again. The tether is redrawn every tick from the tile to wherever the officer's marker is now, so the line always points at the officer as they move; when the marker leaves the view the line runs to the pane's edge in their direction, and the tile's bar reads "out of view". One tile at a time may have its sound on (the speaker icon). The clock drives every tile; Pause pauses them all; "close all" on the transport.</p>
+      <p><b>Notes from a tile.</b> The ✎ in a tile's bar writes a note on that recording at the moment its video is on, through the recording's own note-at-a-moment door (the one the Preview and the event cards already use), marked as coming from the map, so the Notes tab's hover and the exports say so. <b>Note on all shown</b>, on the transport, writes one note on every ticked camera at the clock's moment of each: five copies carrying one shared mark, so the Notes tab lists it once as "on 5 cameras", the chronology shows one entry, and editing or removing it from any copy asks whether to do the same on all. Nothing new is kept; each copy is an ordinary moment note with the usual audit row.</p>
+      <p><b>Speeds.</b> Playing at 1× every tile plays video; at 4× they play silently at four times; at 16× and 60× a browser cannot play that fast, so each tile shows the frame at the clock's moment, refreshed each second, and says so in its bar. Six videos decoding at once is the heaviest thing the page does; the tile's picture is small, and the chapter sets the cap at six for that reason.</p>
+      <p><b>What a tile is not.</b> It is not the Preview (the floating window with its caption and note box, still Play here): no caption, no note, no lead-in, in step with the clock, several at once. The glossary gets a word for it (choice 3).</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Within a circle: widen it, and the list says who passed inside</h2></div>
+    <div class="frame">
+      <div class="maptab">
+        <div class="lead"><p><b>7 cameras, 5 with a path file · 6 Nov 2025.</b> <span class="muted">Showing 5 of 5.</span></p><div class="transport"><span class="btn primary">▶ Play</span><span><span class="clock">20:31:08</span><span class="zone">Central</span></span><span class="btn on">Within a circle</span><span class="pill acc">150 m</span><span class="btn tiny ghost">clear the circle</span></div></div>
+        <div class="pane">
+          <svg viewBox="0 0 760 400" aria-label="a drawn map with a circle">
+            <rect width="760" height="400" fill="var(--ground)"/>
+            <rect x="0" y="300" width="760" height="100" class="wat"/><rect x="520" y="40" width="160" height="110" rx="6" class="prk"/>
+            <rect x="60" y="60" width="130" height="80" rx="3" class="blk"/><rect x="230" y="60" width="150" height="80" rx="3" class="blk"/><rect x="420" y="60" width="70" height="80" rx="3" class="blk"/><rect x="60" y="180" width="130" height="80" rx="3" class="blk"/><rect x="230" y="180" width="150" height="80" rx="3" class="blk"/><rect x="420" y="180" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="146" width="760" height="22" class="ro"/><rect x="0" y="266" width="760" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="161">HARBOUR STREET</text><text class="lbl big" x="560" y="281">QUAY ROAD</text>
+            <polyline class="pf p4" points="40,277 200,277 300,277 400,277 440,277 440,200 445,180 460,165"/><polyline class="pf p1" points="80,157 210,157 300,157 380,157 400,160 405,200 420,210"/><polyline class="pf p2" points="700,80 650,120 560,157 470,157 430,165 420,200 420,230"/><polyline class="pf p3" points="212,30 212,100 212,157 260,157 330,157 400,160 440,170"/><polyline class="pf p5" points="740,330 640,300 560,277 500,277 470,250 450,210"/>
+            <!-- the circle, its centre and its handle -->
+            <circle cx="430" cy="185" r="95" class="circ"/>
+            <circle cx="430" cy="185" r="3" fill="var(--accent)"/>
+            <circle cx="525" cy="185" r="6" class="circ-h"/>
+            <text class="circ-r" x="534" y="178">150 m · drag</text>
+            <!-- markers -->
+            <rect x="431" y="191" width="18" height="18" rx="3" class="f4 hd"/><text class="hl" x="440" y="204" text-anchor="middle">D4</text>
+            <circle cx="380" cy="157" r="10" class="f1 hd"/><text class="hl" x="380" y="161" text-anchor="middle">1</text>
+            <circle cx="470" cy="157" r="10" class="f2 hd"/><text class="hl" x="470" y="161" text-anchor="middle">2</text>
+            <circle cx="300" cy="157" r="10" class="f3 hd dim"/><text class="hl" x="300" y="161" text-anchor="middle">3</text>
+            <circle cx="560" cy="277" r="10" class="f5 hd"/><text class="hl" x="560" y="281" text-anchor="middle">6</text>
+          </svg>
+          <span class="corner north">N</span><span class="corner scale">200 ft</span><span class="corner attr">© OpenStreetMap contributors · Protomaps</span>
+        </div>
+        <div class="list">
+          <div class="h"><span><b style="color:var(--accent)">4 passed inside</b> the circle</span><span class="acts"><span class="btn tiny">Tick these</span></span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span class="nm">Ofc. Pell <small>20:30 to 20:53</small></span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span class="nm">Ofc. Amari <small>20:28 to 20:53</small></span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c3"></span><span class="nm">Ofc. Dunne <small>20:41 to 20:53</small></span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span class="nm">Ofc. Pell <small>vehicle · 20:30 to 20:51</small></span><span class="more">▸</span></div>
+          <div class="fold">Never inside: <b>Sgt. Okafor</b></div>
+        </div>
+        <div class="strip">
+          <div></div><div class="ruler"><span style="left:0%">20:00</span><span style="left:50%">20:30</span><span style="left:100%">21:00</span></div>
+          <div class="head"><i class="c1"></i>Ofc. Pell</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><span class="in" style="left:50%;width:38%" title="inside the circle 20:30 to 20:53"></span><div class="ph" style="left:51.9%"><b>20:31</b></div></div>
+          <div class="head"><i class="c2"></i>Ofc. Amari</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><span class="in" style="left:46.6%;width:41.4%"></span></div>
+          <div class="head"><i class="c3"></i>Ofc. Dunne</div><div class="track"><i class="c3" style="left:48%;width:40%"></i><span class="in" style="left:68%;width:20%"></span></div>
+          <div class="head"><i class="c4 sq"></i>Ofc. Pell <span class="muted">&nbsp;vehicle</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><span class="in" style="left:50%;width:35%"></span></div>
+          <div class="head faint"><i class="c5"></i>Sgt. Okafor</div><div class="track faint"><i class="c5" style="left:35%;width:50%"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Drawing the circle.</b> Press Within a circle, then press a place on the map: a circle of 50 m appears there with a handle on its edge. Drag the handle to widen or narrow it (the radius reads beside it, in metres as the readings use), drag the centre to move it. Only one circle at a time; "clear the circle" or Escape removes it. It is Who was near here (release 3) grown a handle: the same question, a place and a distance, answered from the fixes in the browser.</p>
+      <p><b>The answer.</b> The list regroups: the cameras whose path crossed the circle at any time of the day, each with the span it was inside (its first entry to its last exit), the rest under "Never inside". Each lane marks the inside spells in a faint blue band, so a person sees at once who was there together and when. Tick these ticks only the cameras that passed inside and clears the rest; a press on a row's span seeks the clock to its first entry.</p>
+      <p><b>What it is not.</b> Not a saved thing: the circle lives on the page and goes with it. Nothing about it is kept, written to an audit row or sent to the chat; a circle worth keeping is a note or an incident, both a press away as before. The circle's centre is a position and so never leaves the browser.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>Two hundred path files before their videos: taken in, kept waiting, read by nothing</h2></div>
+    <div class="two">
+      <div class="frame">
+        <h3 class="small muted">After Add path files in the head, with 212 files chosen</h3>
+        <div class="layer">
+          <b>212 path files taken in</b>
+          <table class="t">
+            <tr><th>What</th><th>How many</th><th></th></tr>
+            <tr><td>Added to their videos</td><td class="mono">9</td><td class="small muted">on the map now</td></tr>
+            <tr><td>Waiting for their video</td><td class="mono">201</td><td class="small muted">kept on the case; paired when the video arrives</td></tr>
+            <tr><td>Flagged</td><td class="mono">1</td><td class="small"><b>BWC3-1</b>: the unit in the file disagrees with the camera stamp · <span class="btn tiny">Add anyway</span></td></tr>
+            <tr><td>Refused</td><td class="mono">1</td><td class="small">notes.vtt: not a path file (no readings in it) · <span class="btn tiny ghost">Remove</span></td></tr>
+          </table>
+          <p class="small muted" style="margin:0">A file whose name matches a video already carrying a path file is listed with Replace, as before. Nothing waiting is read by the map, the chat, the memo or the Speakers page.</p>
+          <div class="transport"><span class="btn primary">Done</span><span class="btn ghost">On the Map tab</span></div>
+        </div>
+      </div>
+      <div class="frame">
+        <h3 class="small muted">The Map tab's fold, opened</h3>
+        <div class="list" style="border:0;padding:0">
+          <div class="fold" style="border-top:0;color:var(--text)"><b>Waiting for their video: 201 path files</b> <span class="muted">· kept on the case, not on the map</span></div>
+          <div class="transport" style="padding:4px 4px 6px"><span class="find">🔍 Find by file name</span><span class="btn tiny ghost danger">Remove all waiting</span></div>
+          <div class="row" style="grid-template-columns: minmax(0,1fr) auto auto"><span class="nm mono small">BWC7-2_202511062031_0001.vtt</span><span class="muted tiny">body · 1,412 cues</span><span class="btn tiny ghost">Remove</span></div>
+          <div class="row" style="grid-template-columns: minmax(0,1fr) auto auto"><span class="nm mono small">BWC7-3_202511062031_0001.vtt</span><span class="muted tiny">body · 1,398 cues</span><span class="btn tiny ghost">Remove</span></div>
+          <div class="row" style="grid-template-columns: minmax(0,1fr) auto auto"><span class="nm mono small">Dash-9_202511062018_0001-1.vtt</span><span class="muted tiny">in-car · 3,528 cues</span><span class="btn tiny ghost">Remove</span></div>
+          <div class="row" style="grid-template-columns: minmax(0,1fr) auto auto"><span class="nm mono small">Dash-9_202511062018_0001-2.vtt</span><span class="muted tiny">in-car · 3,528 cues</span><span class="btn tiny ghost">Remove</span></div>
+          <div class="fold">197 more · <b>show</b></div>
+        </div>
+        <h3 class="small muted" style="margin-top:10px">Later, when the video lands in the case</h3>
+        <span class="toast">BWC7-2 added · its waiting path file was paired: 812 fixes</span>
+        <p class="small muted" style="margin:6px 0 0">The Details tab's About this case counts them too: "5 cameras on the map, 2 without a path file, 201 path files waiting for their video."</p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Kept, not read.</b> A path file that matches no video in the case is no longer a leftover to settle by hand; it is kept on the case as a <i>waiting</i> file: its bytes, its name, its kind and cue count from a first look, who added it and when. It has no Path yet, so it is on no map, in no lane, in no chat block, no memo, no comparison, no Speakers page offer, and no readings. Only the fold on the Map tab and the Details count know it exists.</p>
+      <p><b>Pairing.</b> When a recording arrives in the case (uploaded, moved in, or named again) the app looks for a waiting file with its name, by the same stem rule the check list uses, and pairs it: the file becomes the recording's Path with the usual "Path file added" audit row, and a toast says so. The unit and length checks still apply; a disagreement is flagged in the recording's row rather than paired blindly. A waiting file whose video never comes stays until someone removes it or the case is deleted.</p>
+      <p><b>The one design change.</b> Release 1 settled that a Path belongs to its Recording (ADR 0029) and that an unmatched file is answered then and there. Waiting files need a small table of their own on the case (a migration) and an amendment to that ADR: the file may wait on the case; the Path is still made only on a Recording. Nothing waiting is ever parsed into readings, so nothing erroneous reaches the chat.</p>
+    </div>
+  </section>
+
+  <!-- F -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure F</span><h2>The narrow shape at 390: ticks and names fit; one tile at a time</h2></div>
+    <div class="two">
+      <div class="phone">
+        <div class="slim"><span class="btn tiny primary">⏸</span><span class="clock">20:33:40</span><span class="muted">1×</span><span class="pill acc" style="margin-left:auto">1 tile</span></div>
+        <div class="pane">
+          <svg viewBox="0 0 284 220">
+            <rect width="284" height="220" fill="var(--ground)"/>
+            <rect x="0" y="100" width="284" height="30" class="ro"/><rect x="130" y="0" width="30" height="220" class="ro"/>
+            <polyline class="pt p1" points="0,112 100,112 138,114"/><polyline class="pt p2" points="284,60 220,90 170,112 152,116"/>
+            <circle cx="138" cy="114" r="8" class="f1 hd"/><circle cx="152" cy="116" r="8" class="f2 hd"/>
+            <polyline class="ldr" points="136,106 110,70"/><rect x="58" y="58" width="60" height="16" class="tagbg lit"/><circle cx="67" cy="66" r="3.5" class="f1"/><text class="tag" x="74" y="70" style="font-size:9px">Ofc. Pell</text>
+            <polyline class="ldr" points="156,124 180,150"/><rect x="180" y="142" width="66" height="16" class="tagbg"/><circle cx="189" cy="150" r="3.5" class="f2"/><text class="tag" x="196" y="154" style="font-size:9px">Ofc. Amari</text>
+          </svg>
+          <div class="tile" style="left:6px;bottom:6px;top:auto;width:120px"><div class="bar" style="font-size:10px"><i class="c1"></i>Ofc. Pell<span class="x">×</span></div><div class="video" style="height:66px"><b>20:33:40</b></div></div>
+          <span class="corner scale">50 ft</span>
+        </div>
+        <div class="list" style="padding:6px 8px">
+          <div class="h"><span><span class="tk half"></span> 2 of 5</span><span class="acts"><span class="btn tiny ghost">all</span><span class="btn tiny ghost">none</span></span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span class="nm">Ofc. Pell</span><span class="more">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span class="nm">Ofc. Amari</span><span class="more">▸</span></div>
+          <div class="row dim"><span class="tk"></span><span class="dot c3"></span><span class="nm">Ofc. Dunne</span><span class="more">▸</span></div>
+        </div>
+      </div>
+      <div class="frame">
+        <h3>Under 700 wide</h3>
+        <ul class="small">
+          <li>The list keeps its ticks and names; the ▸ opens the same facts and actions as cards.</li>
+          <li>One tile at a time, pinned to the pane's lower left; opening a second replaces the first. Leaders still fan the names out.</li>
+          <li>The circle works by touch: a long press places it, the handle widens it.</li>
+          <li>The head's Add path files and Add recordings wrap under the title as the head does on every page.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- G -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure G</span><h2>The chat and the readings with ticks and waiting files</h2></div>
+    <div class="two">
+      <div class="drawer">
+        <div class="q">Who was at the corner of Harbour Street and Ropewalk around 20:33, and were their cameras on?</div>
+        <div class="a"><p>Five cameras were within a few metres of each other at 20:33: Ofc. Pell (BWC1-1), Ofc. Amari (BWC2-1), Ofc. Dunne (BWC3-1), Sgt. Okafor (BWC6-1) and Ofc. Pell's vehicle (Dash-4), which had stood still since 20:31:50. Every body camera's microphone was on by then; Ofc. Amari's was muted from 20:40:10 to 20:44:02 [Recording 2, 20:40:10].</p><p class="small muted">From the cameras' readings. The 201 path files waiting for their videos were not read.</p></div>
+      </div>
+      <div class="frame">
+        <ul class="small">
+          <li><b>The chat reads only paths.</b> The readings block names a camera by its wearer first ("Ofc. Amari (BWC2-1)"), as the list now does. Waiting files are not in it, and the answer's foot says how many were left unread, so nobody wonders.</li>
+          <li><b>Ticks do not reach the chat.</b> What a person ticks is a view on the page, not the case's truth: the chat, the memo and the comparison keep reading every camera with a Path. A question about "the cameras shown" is a view the page could pass later if wanted; not drawn here.</li>
+          <li><b>Many cameras.</b> A case with dozens of paths already trims its block to the token budget, longest-standing readings first; the waiting files keep that block from growing with every file uploaded ahead of its video.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>The choices this drawing makes, to keep or change</h2></div>
+    <div class="verdict">
+      <ol class="small" style="margin:0">
+        <li><b>Ticks remembered per person per case</b> (drawn), or fresh each visit with everyone ticked.</li>
+        <li><b>The name shown</b> is the wearer as the path file gives it, falling back to the unit; a vehicle is its driver's name with "vehicle" (drawn). Or the unit first with the name small, as today.</li>
+        <li><b>The word for the small video window:</b> <b>Tile</b> (drawn; avoid pop-out, mini-player, thumbnail, picture-in-picture). Or another word of yours.</li>
+        <li><b>How many tiles at once:</b> six at most (four drawn), one with sound; or four.</li>
+        <li><b>A new tile rides with its marker</b> until dragged, then pins and stays where dropped, its line following the officer's marker as they move (your words of 2026-11-04; drawn); the pinned place is kept for that camera while the tab is open, not across visits.</li>
+        <li><b>Leaders appear</b> only when markers overlap at the current zoom (drawn), or always, on every marker.</li>
+        <li><b>The speed tag</b> beside a moving vehicle's marker (drawn) is on whenever it moves over 3 mph; or only while the vehicle is ticked and the clock plays.</li>
+        <li><b>Trails off</b> is "Markers only" plus the "faint paths under" tick off (drawn); or a fourth Show choice "Nothing".</li>
+        <li><b>The circle starts at 50 m</b> and reads in metres (drawn), or in feet with the scale bar.</li>
+        <li><b>Add path files moves to the head</b> and leaves the transport (drawn); or stays in both places.</li>
+        <li><b>Waiting files are kept raw</b> on the case and parsed only when paired (drawn), so they cost nothing to hold; or parsed on arrival so the fold can show their kind and cue count (a first look, as drawn, reads only the header and counts cues).</li>
+        <li><b>Pairing on arrival</b> covers upload, move-in and rename (drawn); the flagged cases wait in the recording's row rather than pair.</li>
+        <li><b>A note on all shown</b> is one moment note per ticked camera with a shared mark, shown once on the Notes tab (drawn); or a new kind of note kept on the case at a time of day, which would need a table of its own and a place on the Notes tab. The drawn way reuses what exists and lands the note on each recording's own page too.</li>
+      </ol>
+    </div>
+    <div class="flag small" style="margin-top:12px">
+      <b>One thing to flag before building.</b> Waiting files change what release 1 decided: a path file that matched no video was answered at once with a chooser, and a Path has always belonged to a Recording. The drawing keeps the second rule (a Path is made only on a Recording) and bends the first (the file may wait on the case). That needs a small new table on the case, a migration, and an amendment to ADR 0029. The rest of the drawing is page work on what exists.
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
