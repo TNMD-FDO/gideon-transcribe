@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An incident from the circle, and the clock's order</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .tk { display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--surface); position: relative; flex: none; vertical-align: -2px; }
+  .tk.on { background: var(--accent); border-color: var(--accent); }
+  .tk.on::after { content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 3px; height: 7px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .maptab { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); min-height: 300px; }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .list { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; background: var(--surface); font-size: 13px; display: flex; flex-direction: column; align-self: start; }
+  .list .h { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 0 0 6px; }
+  .row { display: grid; grid-template-columns: 14px 10px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 5px 4px; border-top: 1px solid var(--line); }
+  .row .dot { width: 10px; height: 10px; border-radius: 50%; } .row .dot.sq { border-radius: 2px; }
+  .row small { color: var(--muted); font-size: 11px; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; } .blk { fill: var(--surface-2); opacity: .55; }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; } .lbl.big { font-size: 11px; }
+  .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .35; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; } .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .circ { fill: var(--accent); fill-opacity: .08; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .circ-h { fill: var(--surface); stroke: var(--accent); stroke-width: 2; } .circ-r { font: 600 10px var(--mono); fill: var(--accent); }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); }
+  .box { border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; max-width: 520px; }
+  .box .field { display: flex; flex-direction: column; gap: 3px; }
+  .box .field span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .box .input { border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; background: var(--surface); }
+  .box .cams { display: flex; flex-direction: column; gap: 3px; }
+  .box .cams label { display: flex; gap: 8px; align-items: center; }
+  .box .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface); display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 10px; font-size: 12px; }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 18px; white-space: nowrap; overflow: hidden; }
+  .strip .head i { width: 8px; height: 8px; border-radius: 50%; flex: none; } .strip .head i.sq { border-radius: 2px; }
+  .strip .track { position: relative; height: 18px; }
+  .strip .track i { position: absolute; top: 4px; height: 10px; border-radius: 5px; }
+  .strip .track .in { top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: .22; }
+  .strip .track .span { top: 0; height: 18px; border-radius: 3px; background: var(--inc); opacity: .18; border-left: 2px solid var(--inc); border-right: 2px solid var(--inc); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 amended once more · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>An incident from the circle, and the order the clock is placed in</h1>
+    <p class="lede">Three asks of 2026-11-04 after v1.196.1: the circle on the map is a natural way to make an incident, so give it one; now that path files carry a clock, use them to place a camera, with vision first, the path file second and sound third; and a better way to suggest incidents than the Incidents tab's forming row, which the office's own picture shows as hairline brackets with their labels drawn over the strip's legend. Also riding with the next build, no drawing needed: the burned date in the shape 11-06-25, read as month, day, year. The fictional office throughout.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The circle drawn, and Make an incident from it</h2></div>
+    <div class="frame">
+      <div class="maptab">
+        <div class="pane">
+          <svg viewBox="0 0 700 330" aria-label="a drawn map with a circle">
+            <rect width="700" height="330" fill="var(--ground)"/>
+            <rect x="60" y="40" width="130" height="80" rx="3" class="blk"/><rect x="230" y="40" width="150" height="80" rx="3" class="blk"/><rect x="60" y="160" width="130" height="80" rx="3" class="blk"/><rect x="230" y="160" width="150" height="80" rx="3" class="blk"/><rect x="420" y="160" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="126" width="700" height="22" class="ro"/><rect x="0" y="246" width="700" height="22" class="ro"/><rect x="200" y="0" width="22" height="330" class="ro"/><rect x="390" y="0" width="22" height="330" class="ro"/>
+            <text class="lbl big" x="250" y="141">HARBOUR STREET</text><text class="lbl big" x="560" y="261">QUAY ROAD</text><text class="lbl" transform="translate(404 20) rotate(90)">ROPEWALK</text>
+            <polyline class="pf p4" points="40,257 200,257 440,257 440,180 460,145"/><polyline class="pf p1" points="80,137 380,137 400,140 405,180"/><polyline class="pf p2" points="680,60 560,137 470,137 420,180"/><polyline class="pf p3" points="212,10 212,137 330,137 440,150"/><polyline class="pf p5" points="690,300 560,257 500,257 450,210"/>
+            <circle cx="430" cy="165" r="95" class="circ"/><circle cx="430" cy="165" r="3" fill="var(--accent)"/><circle cx="525" cy="165" r="6" class="circ-h"/><text class="circ-r" x="534" y="158">150 m</text>
+            <rect x="431" y="171" width="14" height="14" rx="3" class="f4 hd"/><circle cx="380" cy="137" r="7" class="f1 hd"/><circle cx="470" cy="137" r="7" class="f2 hd"/><circle cx="330" cy="137" r="7" class="f3 hd"/><circle cx="560" cy="257" r="7" class="f5 hd"/>
+          </svg>
+        </div>
+        <div class="list">
+          <div class="h"><span><b style="color:var(--accent)">4 cameras</b> passed inside</span><span class="btn tiny">Tick these</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span>Ofc. Pell <small>20:30 to 20:53</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span>Ofc. Amari <small>20:28 to 20:53</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c3"></span><span>Ofc. Dunne <small>20:41 to 20:53</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span>Ofc. Pell <small>vehicle · 20:30 to 20:51</small></span><span class="muted">▸</span></div>
+          <div style="padding:8px 4px 2px;border-top:1px solid var(--line)"><span class="btn primary" style="width:100%;justify-content:center">Make an incident from the circle</span><p class="muted small" style="margin:6px 0 0">The four cameras, 20:28 to 20:53, named for the street under the circle.</p></div>
+        </div>
+      </div>
+      <div class="strip">
+        <div class="head"><i class="c1"></i>Ofc. Pell</div><div class="track"><i class="c1" style="left:40%;width:48%"></i><i class="in" style="left:50%;width:38%"></i><i class="span" style="left:46.6%;width:41.4%"></i></div>
+        <div class="head"><i class="c2"></i>Ofc. Amari</div><div class="track"><i class="c2" style="left:43%;width:45%"></i><i class="in" style="left:46.6%;width:41.4%"></i><i class="span" style="left:46.6%;width:41.4%"></i></div>
+        <div class="head"><i class="c3"></i>Ofc. Dunne</div><div class="track"><i class="c3" style="left:48%;width:40%"></i><i class="in" style="left:68%;width:20%"></i><i class="span" style="left:46.6%;width:41.4%"></i></div>
+        <div class="head"><i class="c4 sq"></i>Ofc. Pell <span class="muted">&nbsp;veh.</span></div><div class="track"><i class="c4" style="left:30%;width:55%"></i><i class="in" style="left:50%;width:35%"></i><i class="span" style="left:46.6%;width:41.4%"></i></div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Moving the circle</b> (added 2026-11-04): drag anywhere inside the circle and the whole circle moves with the pointer, the map staying still under it; the handle on its edge still widens and narrows it. Until now only the small dot at its centre moved it, which nobody could be expected to find. The answer, the lanes' bands and the Make an incident button follow the circle when it is let go.</p>
+      <p><b>One button under the circle's answer.</b> With a circle drawn, the list's foot gains <b>Make an incident from the circle</b>: the cameras that passed inside, ticked or not, and the span from the first camera's entry to the last camera's exit. The strip shows that span as a bracket across the lanes before anything is made, so the person sees what the incident would cover.</p>
+      <p><b>What it makes.</b> The Incidents tab's own New incident, through the same door the map's forming offer already uses (Figure B), so the incident is made the way every incident is: the cameras become its cameras, synced by their clocks, and the page lands on the new incident with its wall and its chronology.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The New incident box, filled from the circle</h2></div>
+    <div class="two">
+      <div class="box">
+        <h3>New incident from the map</h3>
+        <div class="field"><span>Name</span><div class="input">Harbour Street at Ropewalk, 20:28</div></div>
+        <div class="field"><span>Cameras</span><div class="cams">
+          <label><span class="tk on"></span><span class="dot c1" style="display:inline-block;width:10px;height:10px;border-radius:50%"></span> Ofc. Pell <span class="pill ok">Clear</span></label>
+          <label><span class="tk on"></span><span class="dot c2" style="display:inline-block;width:10px;height:10px;border-radius:50%"></span> Ofc. Amari <span class="pill ok">Clear</span></label>
+          <label><span class="tk on"></span><span class="dot c3" style="display:inline-block;width:10px;height:10px;border-radius:50%"></span> Ofc. Dunne <span class="pill warn">By its name</span></label>
+          <label><span class="tk on"></span><span class="dot c4" style="display:inline-block;width:10px;height:10px;border-radius:2px"></span> Ofc. Pell's vehicle <span class="pill ok">Clear</span></label>
+          <label><span class="tk"></span><span class="dot c5" style="display:inline-block;width:10px;height:10px;border-radius:50%"></span> Sgt. Okafor <small class="muted">· never inside; add anyway</small></label>
+        </div></div>
+        <div class="field"><span>Span</span><div class="input mono">20:28:11 to 20:53:02 · 6 Nov 2025 <span class="muted" style="font-family:var(--font)">(the first entry to the last exit; the cameras' whole recordings are in the incident, this is where its clock opens)</span></div></div>
+        <p class="muted small" style="margin:0">The circle itself is not kept; the incident is. Its cameras are synced by the clocks they already have: a picture's stamp, a path file's clock, a sound match, or the minute in a file's name, each shown with its surety.</p>
+        <div class="acts"><span class="btn">Cancel</span><span class="btn primary">Make the incident</span></div>
+      </div>
+      <div class="frame">
+        <ul class="small">
+          <li><b>The name</b> is offered from the street under the circle's centre when a basemap is installed ("Harbour Street at Ropewalk, 20:28"), else the time alone; it is a suggestion in the box, not a decision.</li>
+          <li><b>The cameras</b> are the ones that passed inside, ticked; the day's other cameras are listed unticked under them so one can be added without redrawing the circle. A camera with no clock is listed too, unticked, with "not on the clock" and the Incidents tab's usual way to place it.</li>
+          <li><b>The span</b> opens the incident's clock where the cameras were together; the recordings go in whole, as they always do.</li>
+          <li><b>Nothing new is kept</b> for the circle. The incident's rows are the Incidents tab's own ("Incident made", with the cameras), and the box is the New incident box the Incidents tab already draws, opened with the fields filled.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The order a camera is placed on the case's clock</h2></div>
+    <div class="frame">
+      <table class="t">
+        <tr><th>Order</th><th>Read from</th><th>How sure</th><th>Today</th><th>Proposed</th></tr>
+        <tr><td>1</td><td><b>Vision</b>: the date and time burned into the picture, read and checked by the engine</td><td>Clear once checked</td><td>Wins over everything</td><td>Unchanged: wins over everything</td></tr>
+        <tr><td>2</td><td><b>The path file's own clock</b>: an in-car unit's wall clock on every reading (a body camera's file carries none)</td><td>Clear when its first and last readings agree, else Likely</td><td>Places a camera only when nothing else has; a sound match made earlier stands over it</td><td><b>Moves above sound</b>: an in-car file places its camera even when sound had placed it, and sound does not replace a path placement</td></tr>
+        <tr><td>3</td><td><b>Sound</b>: the match a person took on the Not-on-the-clock panel, following another camera</td><td>By its strength</td><td>Stands until a stamp is read</td><td>Below the path file; above the file's name</td></tr>
+        <tr><td>4</td><td><b>The minute in the file's name</b> (a body camera's file: its name carries the start to the minute, read as UTC)</td><td>By its name, warn: up to a minute out, and resting on one office's naming</td><td>Used by the map only; places nothing</td><td><b>New, last</b>: places a camera that nothing else can, so its lane appears on the chronology; the pill says "By its name" and the Not-on-the-clock panel still offers sound and the hand, either of which replaces it</td></tr>
+        <tr><td>-</td><td><b>By hand</b>, <b>by the day</b>, <b>from the file's time</b></td><td>As today</td><td>Chosen by a person; stand</td><td>Unchanged: a person's placement is never replaced by the app; the path file's clock is offered beside it on the panel for a press</td></tr>
+      </table>
+    </div>
+    <div class="caption">
+      <p><b>What changes.</b> Two things: the path file's clock steps above sound, and the file name's minute becomes a placement of last resort for body cameras. Everything a person chose by hand stays as they chose it; the app only moves cameras that it placed itself.</p>
+      <p><b>Why the name's minute is last.</b> It is only ever accurate to the minute and assumes the camera named its file in UTC, which held for every one of the office's samples but is still one office's habit. A camera placed that way is up to fifty-nine seconds off its neighbours, which the incident page's wall will show as voices not quite lining up; a sound match then pulls it true, and the person sees the pill change from By its name to By sound.</p>
+      <p><b>When it happens.</b> A path file added or paired places its camera then and there; a camera already placed by sound is moved to the file's clock with a row saying so ("Placed on the clock, from its path file, over a sound match"). Nothing is re-read on the upgrade: the office's existing placements stand until a file is added or a camera is paired.</p>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Suggesting incidents: what the Incidents tab shows today, redrawn from the office's picture</h2></div>
+    <div class="frame">
+      <div class="strip" style="grid-template-columns: 90px minmax(0, 1fr)">
+        <div></div><div style="position:relative;height:16px;border-bottom:1px solid var(--line);font-size:10px;color:var(--muted)"><span style="position:absolute;left:0">14:53</span><span style="position:absolute;left:33%">16:43</span><span style="position:absolute;left:66%">18:33</span><span style="position:absolute;right:0">20:23</span></div>
+        <div class="head"><i class="c1"></i>FWD</div><div class="track"><i class="c1" style="left:0;width:5%"></i></div>
+        <div class="head"><i class="c3"></i>BWL7-...</div><div class="track"><i class="c3" style="left:4%;width:4%"></i></div>
+        <div class="head"><i class="c2"></i></div><div class="track"><i class="c2" style="left:3%;width:2%"></i></div>
+        <div class="head muted" style="font-size:11px">0 more with notes, and 16 with none, in the shade above · Show fewer</div><div class="track"></div>
+        <div class="head muted" style="font-size:10px;white-space:normal;height:auto;line-height:1.2">22 cameras<br>forming</div><div class="track" style="height:auto"><div style="font-size:10px;color:var(--muted);letter-spacing:-1px;white-space:nowrap;overflow:hidden">┆ ┆┆┆ ┆┆ ┆┆┆┆ ┆ ┆ ┆┆ ┆ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; same day · 24 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; notes</div></div>
+      </div>
+      <p class="muted small" style="margin:0">The forming row at the strip's foot: a row of hairline brackets no one can tell apart, its label, the lane legend "22 cameras", the day chip's words and the word "notes" all drawn over one another. Nothing says what the app thinks goes together, or why, or what to press. The three videos of one in-car unit sit under "Not on the clock" with "No time in its file", when the unit's path file carries its clock.</p>
+    </div>
+    <div class="caption">
+      <p><b>Three faults in one picture.</b> The forming row's labels collide with the strip's own legend (a drawing fault to fix outright). The suggestions themselves are brackets a few pixels wide with no words. And the unit's streams are "not placed" although the app holds their clock in the path file: Figure C's order places them the moment the file is paired.</p>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E</span><h2>After: the app's suggestions as cards, with their brackets on the strip and their circles on the map</h2></div>
+    <div class="frame">
+      <div class="strip" style="grid-template-columns: 90px minmax(0, 1fr)">
+        <div></div><div style="position:relative;height:16px;border-bottom:1px solid var(--line);font-size:10px;color:var(--muted)"><span style="position:absolute;left:0">14:53</span><span style="position:absolute;left:33%">16:43</span><span style="position:absolute;left:66%">18:33</span><span style="position:absolute;right:0">20:23</span></div>
+        <div class="head"><i class="c1"></i>Ofc. Pell</div><div class="track"><i class="c1" style="left:0;width:5%"></i><i class="span" style="left:1%;width:4%"></i></div>
+        <div class="head"><i class="c3"></i>Ofc. Dunne</div><div class="track"><i class="c3" style="left:4%;width:4%"></i><i class="span" style="left:1%;width:4%"></i></div>
+        <div class="head"><i class="c2"></i>Ofc. Amari</div><div class="track"><i class="c2" style="left:3%;width:2%"></i><i class="span" style="left:1%;width:4%"></i></div>
+        <div class="head muted" style="font-size:11px">Suggested</div><div class="track"><span class="pill inc" style="position:absolute;left:1%;top:0;height:18px">1 · 11 cameras, 14:56 to 15:12</span><span class="pill inc" style="position:absolute;left:14%;top:0;height:18px">2 · 3 cameras, 16:40</span></div>
+      </div>
+      <p class="muted small" style="margin:0">The strip keeps the ruler, the shade and the lanes, named by their officers; the hairline forming row becomes one <b>Suggested</b> row with a numbered chip per suggestion, each as wide as its span. The legend sits under the strip on a line of its own, never over a lane.</p>
+      <div class="two" style="margin-top:4px">
+        <div class="box" style="max-width:none;border-color:var(--inc)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><h3><span class="pill inc">1</span> &nbsp;11 cameras together, 14:56 to 15:12</h3><span class="pill">from their paths</span></div>
+          <p style="margin:0" class="small">Ofc. Pell, Ofc. Dunne, Ofc. Amari, Sgt. Okafor and 7 more were within 50 m of one another for 16 minutes on Harbour Street, and are in no incident.</p>
+          <div class="acts" style="justify-content:flex-start"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div>
+        </div>
+        <div class="box" style="max-width:none;border-color:var(--inc)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><h3><span class="pill inc">2</span> &nbsp;3 cameras together, 16:40 to 16:47</h3><span class="pill">from their notes</span></div>
+          <p style="margin:0" class="small">Ofc. Marsh, Ofc. Vale and Sgt. Ito ran at the same time and their notes name the same stop; none is in an incident.</p>
+          <div class="acts" style="justify-content:flex-start"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div>
+        </div>
+      </div>
+      <p class="muted small" style="margin:0"><b>On the Map tab</b>, reached by On the map (the Incidents tab itself shows no map):</p>
+      <div class="pane" style="min-height:0">
+        <svg viewBox="0 0 700 170" aria-label="the map with a suggested incident as a circle">
+          <rect width="700" height="170" fill="var(--ground)"/>
+          <rect x="0" y="70" width="700" height="22" class="ro"/><rect x="390" y="0" width="22" height="170" class="ro"/>
+          <text class="lbl big" x="250" y="85">HARBOUR STREET</text>
+          <circle cx="430" cy="90" r="60" class="circ" style="stroke: var(--inc); fill: var(--inc)"/>
+          <circle cx="421" cy="81" r="6" class="f1 hd"/><circle cx="438" cy="95" r="6" class="f2 hd"/><circle cx="446" cy="82" r="6" class="f3 hd"/><circle cx="428" cy="100" r="6" class="f5 hd"/>
+          <rect x="470" y="30" width="196" height="20" rx="10" fill="var(--inc-soft)" stroke="var(--inc)"/><text x="480" y="44" style="font: 600 10px var(--font); fill: var(--inc)">1 · 11 cameras together · Make an incident</text>
+          <line x1="470" y1="40" x2="452" y2="52" stroke="var(--inc)" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>A suggestion is a card, numbered.</b> Under the strip, <b>Suggested incidents</b> lists what the app can see: who, when, for how long, where (the street, when a basemap is installed), why it thinks so (from their paths: within 50 m for over five minutes; from their notes; from sound), and that none of them is in an incident yet. <b>Make an incident</b> opens the New incident box filled, exactly as the circle does (Figure B); <b>On the map</b> opens the Map tab with that suggestion's circle drawn; <b>Not this</b> puts it away, remembered, so it is not offered again.</p>
+      <p><b>The same suggestion in three places.</b> Its chip on the strip's Suggested row, its card, and on the map a circle in the incidents' colour round the cameras with a small chip to press. Pressing any one lights the other two. The map's old forming block at the foot of the camera list goes; a circle drawn by hand (Figure A) and a circle the app drew are the same thing to press.</p>
+      <p><b>Where each press lands.</b> The Incidents tab has no map of its own: the strip and the cards are what it shows. <b>On the map</b> leaves the Incidents tab for the case's <b>Map tab</b>, opened on that day with the suggestion's circle already drawn and its cameras ticked, the way an incident's row's On the map opens it today. <b>Make an incident</b> opens the New incident box right there on the Incidents tab (no map in it), and when it is made the page lands on the <b>incident's own page</b>, whose Map panel beside Cameras shows those cameras moving on the incident's clock (v1.191.0). So the map is reached from the Incidents tab, not shown inside it (choice 9).</p>
+      <p><b>What the app sees.</b> Paths first, now that it has them: cameras within 50 m of one another for over five minutes, on one clock, are a suggestion with a place. Then the notes, as the Incidents tab forms them today. Then sound matches between cameras not on the clock. A suggestion is never made into an incident by the app: the press is the person's.</p>
+      <p><b>The three streams in "Not on the clock".</b> With Figure C's order, pairing their path files places them from the unit's own clock, and the panel's row says "Placed from its path file" instead of "No time in its file". For a unit whose file is still waiting, the row gains "its path file is waiting for this video" so the person knows why.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>The choices this drawing makes</h2></div>
+    <div class="verdict">
+      <ol class="small" style="margin:0">
+        <li><b>Make an incident from the circle</b> opens the New incident box filled (drawn); or makes the incident at once with the offered name and lands on it.</li>
+        <li><b>The incident takes the cameras that passed inside</b>, with the day's others listed unticked (drawn); or the ticked cameras, whatever the circle says.</li>
+        <li><b>The name from the street under the circle</b> with the time (drawn); or the time alone, always.</li>
+        <li><b>The path file's clock above sound</b>, moving a sound-placed camera when a file comes (drawn); or above sound only for cameras not yet placed.</li>
+        <li><b>The file name's minute places a body camera last</b>, marked By its name (drawn); or the map keeps using it and the chronology does not.</li>
+        <li><b>Suggestions as numbered cards</b> under the strip, with a Suggested row of chips on the strip and circles on the map (drawn); or cards alone, the strip's forming row simply removed.</li>
+        <li><b>Not this is remembered</b> per suggestion for the case (drawn); or per person, so a colleague still sees it.</li>
+        <li><b>Paths first, then notes, then sound</b> as the sources of suggestions (drawn); or notes first, as today, with paths added.</li>
+        <li><b>The Incidents tab shows no map</b>: On the map goes to the Map tab with the circle drawn, and a made incident lands on its own page with its Map panel (drawn); or a small map under the suggestion cards on the Incidents tab itself, showing the lit suggestion's circle without leaving the tab.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

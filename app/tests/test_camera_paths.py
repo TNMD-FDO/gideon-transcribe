@@ -922,3 +922,107 @@ def test_where_a_line_was_said_names_the_other_cameras_by_distance(
     assert "hasPath: false" in page
     script = (HERE / "static" / "viewer.js").read_text(encoding="utf-8")
     assert "function whereOn(index)" in script and '"/path/where?t="' in script
+
+
+# The clock's order, the catch-up and the strip's suggestions (chapter 6, v1.197.0) --
+
+
+def test_the_path_files_clock_stands_over_sound_and_the_name_places_last(
+    person, a_case
+):
+    import datetime as dt
+
+    from core import case_chronology
+
+    # A sound placement gives way to an in-car file's own clock.
+    car = video(person, a_case, "Dash-4", name="Dash-4_202511061420_d.mp4")
+    case_chronology.place(
+        car, dt.date(2025, 11, 6), 51000.0, by=person, how=case_chronology.SOUND
+    )
+    assert case_chronology.clock_of(car)[2] == case_chronology.SOUND
+    added(car, car_file(), by=person)
+    assert case_chronology.clock_of(car)[2] == case_chronology.PATH
+    # Sound does not replace a path placement.
+    from core import clock_match
+
+    try:
+        clock_match.place_by_sound(car, by=person)
+    except ValueError as refused:
+        assert "sound match" in str(refused) or "path file" in str(refused)
+    assert case_chronology.clock_of(car)[2] == case_chronology.PATH
+    # A hand placement stands over the file.
+    hand = video(person, a_case, "Dash-5", name="Dash-5_202511061420_e.mp4")
+    case_chronology.place(hand, dt.date(2025, 11, 6), 50000.0, by=person)
+    added(hand, car_file(), by=person)
+    assert case_chronology.clock_of(hand)[2] == case_chronology.HAND
+    # A body camera's file carries no clock: the minute in its name places it last.
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_a.mp4")
+    assert case_chronology.clock_of(body)[2] == ""
+    added(body, body_file(), by=person)
+    date, second, how = case_chronology.clock_of(body)
+    assert how == case_chronology.NAME
+    named = camera_paths.name_moment_of("BWC2-1_202511061420_a.mp4")
+    assert (date.isoformat(), second) == camera_paths._day_second(named)
+    assert case_chronology.clock_surety(body)["word"] == "By its name"
+    assert case_chronology.placed_words(body).startswith("by its file's name")
+    # Sound (or the hand) replaces a name placement.
+    case_chronology.place(
+        body, dt.date(2025, 11, 6), 52000.0, by=person, how=case_chronology.SOUND
+    )
+    assert case_chronology.clock_of(body)[2] == case_chronology.SOUND
+    assert camera_paths.place_from_path(camera_paths.of(body), by=person) is False
+
+
+def test_the_catch_up_places_the_files_that_came_before_placing_existed(person, a_case):
+    from core import case_chronology
+
+    car = video(person, a_case, "Dash-4", name="Dash-4_202511061420_d.mp4")
+    added(car, car_file(), by=person)
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_a.mp4")
+    added(body, body_file(), by=person)
+    # As the files stood before v1.188.0: read, and placing nothing.
+    for one in (car, body):
+        one.clock_date = None
+        one.clock_start = None
+        one.clock_how = ""
+        one.save(update_fields=["clock_date", "clock_start", "clock_how"])
+        assert case_chronology.clock_of(one)[2] == ""
+    assert camera_paths.catch_up_placements() == 2
+    car.refresh_from_db()
+    body.refresh_from_db()
+    assert case_chronology.clock_of(car)[2] == case_chronology.PATH
+    assert case_chronology.clock_of(body)[2] == case_chronology.NAME
+    # Run again, nothing moves.
+    assert camera_paths.catch_up_placements() == 0
+    migration = (
+        HERE / "core" / "migrations" / "0106_place_from_paths_catch_up.py"
+    ).read_text(encoding="utf-8")
+    assert "camera_paths.catch_up_placements()" in migration
+
+
+def test_the_strip_lists_the_cameras_together_by_their_paths(person, a_case):
+    from core import case_chronology
+
+    a = video(person, a_case, "BWC1-1", name="BWC1-1_202511061420_a.mp4", seconds=400)
+    b = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_b.mp4", seconds=400)
+    added(a, body_file(seconds=400, still=True), by=person)
+    added(b, body_file(seconds=400, still=True), by=person)
+    date = case_chronology.clock_of(a)[0].isoformat()
+    told = camera_paths.strip_suggestions(a_case, date)
+    assert len(told) == 1
+    one = told[0]
+    assert sorted(one["ids"]) == sorted([str(a.pk), str(b.pk)])
+    assert one["source"] == "from their paths" and one["names"] == [
+        "Pat Doe",
+        "Pat Doe",
+    ]
+    assert one["to"] > one["from"] and one["key"].startswith("new:")
+    # The day's strip JSON carries them; a declined one is left out.
+    day = case_chronology.day_of(a_case, case_chronology.clock_of(a)[0], strip=True)
+    assert [s["key"] for s in day["paths"]] == [one["key"]]
+    from core import incidents
+
+    incidents.decline(a_case, one["key"])
+    a_case.refresh_from_db()
+    assert camera_paths.strip_suggestions(a_case, date) == []
+    assert camera_paths.strip_suggestions(a_case, "1999-01-01") == []

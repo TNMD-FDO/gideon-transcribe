@@ -121,7 +121,8 @@
       host.innerHTML = "<p class='muted small'>No video of this case is on the clock yet. A video whose clock was read places itself; the rest are placed on the Notes tab's chronology, by a drag or a typed time.</p>";
       return;
     }
-    host.innerHTML = dayChips() + ruler(d) + band(d) + notesLane(d) + incidentsLane(d) + formingLane(d) + rail(d);
+    // The legend sits under the whole strip (v1.197.0), never over a lane.
+    host.innerHTML = dayChips() + ruler(d) + band(d) + notesLane(d) + incidentsLane(d) + suggestedLane(d) + legend(d) + rail(d);
     wire();
     cards(d);
     panel(d);
@@ -171,7 +172,7 @@
         "<div class='facts'>Placed by the day alone, no hour, on " + esc(r.day_words) + "." + (r.file ? " File says " + esc(r.file.words) + "." : "") + "</div></div><div class='acts'>" +
         (r.file ? "<button type='button' class='tiny' data-file='" + r.id + "'>Place from the file</button>" : "") + "<button type='button' class='tiny' data-type='" + r.id + "'>Type a time</button><button type='button' class='tiny ghost' data-off='" + r.id + "'>Take off the clock</button></div></div>";
     }
-    var facts = r.file ? "File says " + esc(r.file.words) + "." : "No time in its file.";
+    var facts = (r.file ? "File says " + esc(r.file.words) + "." : "No time in its file.") + (r.path_waiting ? " " + esc(r.path_waiting) : "");
     var s = r.sound, sound = "", acts = "";
     if (s && (s.state === "queued" || s.state === "running")) { sound = "Matching the sound; about a minute."; }
     else if (s && s.state === "done" && s.may_place) { sound = "Sound lines up with " + esc(s.against) + " from " + esc(s.at) + (s.near_file ? ", near the file's time" : "") + " <span class='pill small " + esc(s.surety.tone) + "' title='" + esc(s.surety.why) + "'>" + esc(s.surety.word) + "</span>"; }
@@ -195,32 +196,46 @@
     });
     return html + "</div>";
   }
-  function formingLane(d) {
-    var runs = d.hints || [];
-    var same = d.same_day && !d.same_day.declined ? d.same_day : null;
-    if ((!runs.length && !same) || !d.incidents_on) { return ""; }
-    var html = "<div class='form-lane' id='chron-forming'>";
-    // The same day (v1.184.0): a dotted bracket over each loose video in no
-    // forming bracket, one label for the set.
-    if (same) {
-      same.spans.forEach(function (s) {
-        var l = x(s[1], d), wd = Math.max(1, x(s[2], d) - l);
-        html += "<span class='br day' style='left: " + l + "%; width: " + wd + "%' title='" + esc(same.words) + "'></span>";
-      });
-      html += "<span class='hl day' style='left: " + inside(x((same.from + same.to) / 2, d)) + "%' title='" + esc(same.words) + "'><b>" + esc(same.words) + "</b></span>";
-    }
-    runs.forEach(function (h) {
-      var left = x(h.from, d), width = Math.max(1, x(h.to, d) - left);
-      var faint = h.faint || h.declined;
-      var words = faint ? plural(h.cameras, "camera") + (h.declined ? ", not these" : "") : "Forming · " + esc(h.words);
-      var title = esc(h.words + (h.declined ? " · put away with Not these" : ""));
-      // The bracket, then its words centred on it and kept inside the strip,
-      // as the chronology's own brackets are.
-      html += "<span class='br" + (faint ? " faint" : "") + "' style='left: " + left + "%; width: " + width + "%' title='" + title + "'></span>" +
-        "<span class='hl" + (faint ? " faint" : "") + "' style='left: " + inside(left + width / 2) + "%' title='" + title + "'><b>" + words + "</b>" +
-        (!faint && state.mayMake ? "<button type='button' class='mk' data-make='" + h.from + "," + h.to + "' title='Make an incident from this span: the picker opens with these videos ticked'>Make it</button>" : "") + "</span>";
+  // The suggestions (Phase 12 chapter 6, v1.197.0): what the app can see on
+  // the day, numbered, one list for the strip's Suggested row, the cards
+  // under it and the map's circles. Paths first (cameras within reach of one
+  // another for minutes), then the forming brackets with notes, then the
+  // same day. A declined one is not listed.
+  function suggestions(d) {
+    var out = [];
+    (d.paths || []).forEach(function (p) { out.push({ key: p.key, ids: p.ids, from: p.from, to: p.to, names: p.names, source: p.source, words: p.words, kind: "paths" }); });
+    (d.hints || []).forEach(function (h) {
+      if (!h.notes || h.declined) { return; }
+      if (out.some(function (one) { return one.key === h.key; })) { return; }
+      var bars = d.bars.filter(function (b) { return h.ids.indexOf(b.id) >= 0; });
+      out.push({ key: h.key, ids: h.ids, from: h.from, to: h.to, names: bars.map(shortName), source: "from their notes", words: h.words, notes: h.notes, kind: "notes" });
     });
-    return html + "<span class='lbl'>forming</span></div>";
+    var same = d.same_day && !d.same_day.declined ? d.same_day : null;
+    if (same && !out.some(function (one) { return one.key === same.key; })) {
+      var sameBars = d.bars.filter(function (b) { return same.ids.indexOf(b.id) >= 0; });
+      out.push({ key: same.key, ids: same.ids, from: same.from, to: same.to, names: sameBars.map(shortName), source: "the same day", words: same.words, kind: "day", same: same });
+    }
+    out.sort(function (a, b) { return a.from - b.from; });
+    out.forEach(function (one, i) { one.n = i + 1; });
+    return out;
+  }
+  function suggestedLane(d) {
+    if (!d.incidents_on) { return ""; }
+    var list = suggestions(d);
+    if (!list.length) { return ""; }
+    // Chips as wide as their spans, packed into rows so none covers another.
+    var rows = [], chips = "";
+    list.forEach(function (s) {
+      var left = x(s.from, d), width = Math.max(9, x(s.to, d) - left);
+      if (left + width > 100) { left = Math.max(0, 100 - width); }
+      var row = 0;
+      while (rows[row] && rows[row].some(function (r) { return left < r.left + r.width + 1 && left + width + 1 > r.left; })) { row += 1; }
+      (rows[row] = rows[row] || []).push({ left: left, width: width });
+      // The number always shows; the words are cut to the chip's width.
+      var words = plural(s.ids.length, "camera") + ", " + hm(s.from) + " to " + hm(s.to);
+      chips += "<button type='button' class='sug-chip' data-suggest='" + esc(s.key) + "' style='left: " + left + "%; width: " + width + "%; top: " + (row * 20) + "px' title='" + esc(s.n + " · " + words + ". " + s.words) + "'><b>" + s.n + "</b><span>" + esc(words) + "</span></button>";
+    });
+    return "<div class='sug-lane' id='chron-suggested'><span class='head'>Suggested</span><div class='rows' style='height: " + (rows.length * 20) + "px'>" + chips + "</div></div>";
   }
   // The cards under the strip: the day's forming brackets with notes, not
   // declined and not already an offer's card, three cards at most with the
@@ -232,19 +247,15 @@
     // Incidents proposed governs the cards (v1.180.1): Off, none is drawn.
     if (!state.mayMake) { box.hidden = !box.children.length; return; }
     var have = {}; box.querySelectorAll("[data-key]").forEach(function (one) { have[one.dataset.key] = true; });
-    var worth = (d.hints || []).filter(function (h) { return h.notes && !h.declined && !have[h.key]; });
-    worth.sort(function (a, b) { return b.notes - a.notes; });
-    var room = Math.max(0, 3 - Object.keys(have).length);
-    var shown = worth.slice(0, room), more = worth.length - shown.length;
-    shown.forEach(function (h) { box.insertAdjacentHTML("beforeend", cardHtml(h, d)); });
-    // The day card (v1.184.0), after the forming ones while there is room.
-    var same = d.same_day && !d.same_day.declined && !have[d.same_day.key] ? d.same_day : null;
-    // The forming one the day card adds to: the most noted bracket of the
-    // day, whether its card is the strip's or the clocks' offer.
+    // The suggestions as numbered cards (v1.197.0): every one the strip's
+    // row shows, in the row's order, except those the page already drew as
+    // the clocks' offer. A press on a chip lights its card.
+    var list = suggestions(d).filter(function (s) { return !have[s.key]; });
     var formingHint = (d.hints || []).filter(function (h) { return h.notes && !h.declined; }).sort(function (a, b) { return b.notes - a.notes; })[0] || null;
-    if (same && shown.length < room) { box.insertAdjacentHTML("beforeend", dayCardHtml(same, d, formingHint)); }
-    else if (same) { more += 1; }
+    var shown = list, more = 0;
+    shown.forEach(function (s) { box.insertAdjacentHTML("beforeend", s.kind === "day" ? dayCardHtml(s.same, d, formingHint, s.n) : cardHtml(s, d)); });
     if (more > 0) { box.insertAdjacentHTML("beforeend", "<p class='muted small forming-more m0' data-forming='more'>and " + more + " more forming on the strip.</p>"); }
+    host.querySelectorAll("[data-suggest]").forEach(function (chip) { chip.addEventListener("click", function () { var card = box.querySelector("[data-forming='" + chip.dataset.suggest + "'], [data-key='" + chip.dataset.suggest + "']"); box.querySelectorAll(".lit").forEach(function (c) { c.classList.remove("lit"); }); if (card) { card.classList.add("lit"); card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }); });
     // The clocks' offers, drawn by the page (v1.185.0): the same stills at
     // the bracket's start, for an offer whose videos are on the day shown.
     box.querySelectorAll(".inc-offer[data-key^='new:']").forEach(function (card) {
@@ -259,7 +270,7 @@
     box.querySelectorAll("[data-forming] [data-make]").forEach(function (m) { m.addEventListener("click", function () { var p = m.dataset.make.split(","); makeSheet(parseFloat(p[0]), parseFloat(p[1]), m.dataset.tick ? m.dataset.tick.split(" ") : null); }); });
     box.querySelectorAll("[data-forming] [data-add-day]").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.addDay, b.dataset.tick.split(" "), d); }); });
     box.querySelectorAll("[data-forming] [data-decline]").forEach(function (b) { b.addEventListener("click", function () { decline(b.dataset.decline); }); });
-    shown.forEach(function (h) { var card = box.querySelector("[data-forming='" + h.key + "']"); if (card) { sittingBar(card, h.ids); } });
+    shown.forEach(function (h) { if (h.kind === "day") { return; } var card = box.querySelector("[data-forming='" + h.key + "']"); if (card) { sittingBar(card, h.ids); } });
     stills(box);
     // The box keeps its margin only while it holds a card.
     box.hidden = !box.children.length;
@@ -321,13 +332,19 @@
     });
     (d.marks || []).forEach(function (m) { if (m.seconds >= h.from && m.seconds <= h.to) { mini += "<em style='left: " + ((m.seconds - h.from) * 100 / span) + "%; background: " + paint(m.colour) + "'></em>"; } });
     mini += "</div>";
-    var list = names.length > 3 ? names.slice(0, 3).join(", ") + " and " + (names.length - 3) + " more" : names.join(", ");
+    // The officers' names as the path files give them, else the cameras' (v1.197.0).
+    var given = (h.names && h.names.length ? h.names : names).map(esc);
+    var list = given.length > 4 ? given.slice(0, 4).join(", ") + " and " + (given.length - 4) + " more" : given.join(", ");
+    var minutes = Math.max(1, Math.round((h.to - h.from) / 60));
+    var why = h.kind === "paths" ? " were within " + (d.together_metres || 50) + " m of one another for " + plural(minutes, "minute") + " by their paths" : " ran together, and the notes gather here";
+    var mapHref = host.dataset.map ? host.dataset.map + "&day=" + encodeURIComponent(d.date) + "&circle=" + encodeURIComponent(h.ids.join(",")) + "&from=" + h.from + "&to=" + h.to : "";
     return "<div class='card forming-card' data-forming='" + esc(h.key) + "' data-most='" + state.most + "'>" +
-      "<div class='h'><b>Forming · " + hm(h.from) + " to " + hm(h.to) + " on " + esc(d.words) + "</b><span class='pill small'>" + plural(h.notes, "note") + "</span></div>" + mini +
+      "<div class='h'><b><span class='pill acc n'>" + h.n + "</span> " + plural(h.ids.length, "camera") + " together, " + hm(h.from) + " to " + hm(h.to) + " on " + esc(d.words) + "</b><span class='pill small'>" + esc(h.source) + (h.notes ? " · " + plural(h.notes, "note") : "") + "</span></div>" + mini +
       stillsHtml(bars, h.from) +
-      "<div class='small muted'>" + list + " ran together, and the notes gather here. <span data-sitting></span></div>" +
-      "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "'>Make it</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
-      "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; the bracket stays faint on the strip'>Not these</button></div></div>";
+      "<div class='small muted'>" + list + why + "; none is in an incident. <span data-sitting></span></div>" +
+      "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "' data-tick='" + h.ids.join(" ") + "'>Make an incident</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
+      (mapHref ? "<a class='btn small' href='" + esc(mapHref) + "' title='The Map tab, with these cameras circled'>On the map</a>" : "") +
+      "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; it is not offered again'>Not this</button></div></div>";
   }
   // The day card (v1.184.0): the loose videos of the day in no forming
   // bracket, how they stand in time to the day's incidents and forming
@@ -569,7 +586,6 @@
         : "and " + plural(folded.length, "more recording") + " on this day";
       html += "<div class='band'><div class='bar'><i class='fold'></i><span class='more'>" + esc(words) + " · <a href='#' data-act='toggle-all'>" + (state.showAll ? "Show fewer" : (d.shape === "coverage" ? "Show all with notes" : "Show all")) + "</a></span></div></div>";
     }
-    html += legend(d);
     return html;
   }
 

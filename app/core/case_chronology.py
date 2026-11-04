@@ -39,6 +39,10 @@ SOUND = incidents.SOUND
 # Placed from its path file (v1.188.0, Phase 12 chapter 2): an in-car unit's
 # own clock, read from the file beside the video when nothing else placed it.
 PATH = "path"
+# Placed by the minute in its file's name (v1.197.0, Phase 12 chapter 6): a
+# body camera's file carries no clock, only its name's UTC minute; the
+# placement of last resort, which sound or the hand replaces.
+NAME = "name"
 HOW_WORDS = {
     CLOCK: "clock",
     HAND: "by hand",
@@ -46,8 +50,11 @@ HOW_WORDS = {
     FILE: "from the file",
     SOUND: "by sound",
     PATH: "from its path file",
+    NAME: "by its file's name",
 }
-PLACED_WAYS = (HAND, DAY, FILE, SOUND, PATH)
+PLACED_WAYS = (HAND, DAY, FILE, SOUND, PATH, NAME)
+# The app's own placements, which the app may move; a person's stand.
+APP_PLACED = (SOUND, PATH, NAME)
 # The band's shapes, chosen by the day's recordings (never the person).
 LANES, PACKED, COVERAGE = "lanes", "packed", "coverage"
 # Up to this many overlapping, lanes in colour; more overlapping, the
@@ -122,6 +129,11 @@ def clock_surety(recording) -> dict:
             word, why, tone = camera_paths.SURETY_PATH_CLEAR
         else:
             word, why, tone = camera_paths.SURETY_PATH_ONCE
+        return {"word": word, "why": why, "tone": tone}
+    if how == NAME:
+        from core import camera_paths
+
+        word, why, tone = camera_paths.SURETY_NAME
         return {"word": word, "why": why, "tone": tone}
     if how == FILE:
         return {
@@ -544,6 +556,9 @@ def day_of(
         ],
         "hints": hints,
         "same_day": same_day,
+        # The cameras together by their paths (Phase 12 chapter 6, v1.197.0),
+        # for the strip's Suggested row and its cards.
+        "paths": _path_suggestions(case, date) if strip else [],
         "incidents": on_day,
         "incidents_on": incidents.on(),
         "spells": [
@@ -723,6 +738,15 @@ def _runs(bars: list[dict]) -> list[dict]:
         else:
             runs.append({"from": bar["from"], "to": bar["to"], "ids": {bar["id"]}})
     return [run for run in runs if len(run["ids"]) > 1]
+
+
+def _path_suggestions(case, date: dt.date) -> list[dict]:
+    from core import camera_paths
+
+    try:
+        return camera_paths.strip_suggestions(case, date.isoformat())
+    except Exception:  # noqa: BLE001 - the strip stands without the paths' word
+        return []
 
 
 def _hints(

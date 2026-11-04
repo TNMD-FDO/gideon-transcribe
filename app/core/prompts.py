@@ -1469,6 +1469,9 @@ STAMP_DATE_FORMS = (
     "%b %d %Y",
     "%b %d, %Y",
     "%d%b%y",
+    # Two-digit parts with hyphens, month first (v1.197.0, one of the
+    # office's cameras): tried last, so nothing read before changes.
+    "%m-%d-%y",
 )
 
 

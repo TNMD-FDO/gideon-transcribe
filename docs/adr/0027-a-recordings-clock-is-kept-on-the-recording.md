@@ -80,3 +80,14 @@ one its own forerunner placed. Removing the file takes the clock with it;
 replacing the file places afresh. The surety word is Clear when the file's
 first and last readings agree within two seconds, Likely otherwise. No
 migration: `clock_how` takes a sixth value.
+
+## Amendment, 2026-11-04 (Phase 12 chapter 6, v1.197.0)
+
+The clocks the app reads for itself now stand in this order under the
+stamp: an in-car unit's path file (its own wall clock) above a sound match,
+and the minute in a body camera's file name, "By its name", last of all. The
+app moves only what it placed itself: a camera placed by sound takes the
+path file's clock when the file comes; a camera placed by its name takes a
+sound match or the hand; nothing a person placed by hand, by the day or
+from the file's time is moved. A catch-up at the upgrade places the cameras
+whose files arrived before a path file could place anything.

@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.197.0, 2026-11-04
+
+```
+Models: unchanged
+Database: migrates (0106, a catch-up that places cameras from their path files; no new table)
+```
+
+Phase 12 chapter 6, a sixth release: an incident from the circle, the order a camera is placed on the clock, suggested incidents as cards, and a burned date form (the drawing `docs/spec/mockups/phase-12-map-circle-incident.html`).
+
+- **The circle moves by dragging anywhere inside it**; the handle on its edge still widens it. **Make an incident from the circle** sits under the circle's answer: the cameras that passed inside, from the first entry to the last exit, named for the street under the circle when a street map names one (else "On the map") and the moment, through the New incident box with the cameras ticked and the day's others under them.
+- **The order a camera is placed**: vision first and unchanged; then an in-car unit's path file, which now places its camera over a sound match; then sound, which no longer replaces a path placement; then, new and last, the minute in a body camera's file name, marked "By its name", which sound or the hand replaces. Anything a person placed stays. A catch-up at the upgrade places the cameras whose files arrived before a path file could place anything.
+- **Suggested incidents.** The Incidents tab's forming row of hairline brackets becomes a Suggested row of numbered chips, packed so none covers another, and numbered cards under the strip say who (the officers as their files name them), when, for how long, why (from their paths, within 50 m for over five minutes; from their notes; the same day) and that none is in an incident; Make an incident opens the New incident box filled, On the map opens the Map tab with the suggestion circled, Not this puts it away for the case. On the map a suggestion is a dashed circle round the cameras with the same presses, and the Offer block that sat at the foot of the map's camera list goes. The strip's legend sits under the whole strip, after the Suggested row, and no longer draws over the lanes.
+- **Not on the clock** says when a path file of a video's name is waiting on the case and why it did not pair.
+- **A camera's burned date in the shape 11-06-25** (two-digit parts with hyphens, month first) is read; it is tried last, so nothing read before changes.
+
 ## v1.196.1, 2026-11-04
 
 ```

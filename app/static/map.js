@@ -87,7 +87,7 @@
       // The address may name a camera or an incident on another day than
       // the one the server chose: decided once, before the first drawing.
       if (!S.dayChosen) { S.dayChosen = true; var wanted = wantedDay(); if (wanted) { S.day = wanted; } }
-      if (!quiet || !map) { layout(); } else { drawList(); drawStrip(); tick(); refreshLayers(); }
+      if (!quiet || !map) { layout(); } else { drawList(); drawStrip(); tick(); refreshLayers(); drawSuggestions(); }
     }).catch(function () { host.innerHTML = "<p class='muted small'>The paths could not be read. Reload the page.</p>"; });
   }
 
@@ -350,7 +350,7 @@
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
       var mine = map;
-      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } });
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } drawSuggestions(); askedCircle(); });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
       map.on("click", "map-events-hit", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
@@ -822,6 +822,31 @@
       map.addLayer({ id: "map-circle-fill", type: "fill", source: "map-circle", paint: { "fill-color": token("--accent"), "fill-opacity": 0.08 } });
       map.addLayer({ id: "map-circle-line", type: "line", source: "map-circle", paint: { "line-color": token("--accent"), "line-width": 1.5, "line-dasharray": [3, 2] } });
     } else { map.getSource("map-circle").setData(data); }
+    // Drag anywhere inside the circle to move it (v1.197.0): the map holds
+    // still under it while the pointer is down on the fill.
+    if (!drawCircle.wired) {
+      drawCircle.wired = true;
+      var moving = null;
+      map.on("mousedown", "map-circle-fill", function (e) {
+        if (!S.circle || e.originalEvent.button !== 0) { return; }
+        e.preventDefault(); map.dragPan.disable();
+        moving = { lat: S.circle.lat - e.lngLat.lat, lon: S.circle.lon - e.lngLat.lng };
+        map.getCanvas().style.cursor = "grabbing";
+      });
+      map.on("mousemove", function (e) {
+        if (!moving || !S.circle) { return; }
+        S.circle.lat = e.lngLat.lat + moving.lat; S.circle.lon = e.lngLat.lng + moving.lon;
+        var src = map.getSource("map-circle"); if (src) { src.setData(circlePolygon(S.circle)); }
+        if (circleMarkers) { circleMarkers.centre.setLngLat([S.circle.lon, S.circle.lat]); circleMarkers.handle.setLngLat([eastOf(S.circle, S.circle.radius).lon, S.circle.lat]); }
+      });
+      map.on("mouseup", function () {
+        if (!moving) { return; }
+        moving = null; map.dragPan.enable(); map.getCanvas().style.cursor = "";
+        circleHits(); drawTransport(); drawList(); drawStrip();
+      });
+      map.on("mouseenter", "map-circle-fill", function () { if (S.circle && !S.asking) { map.getCanvas().style.cursor = "grab"; } });
+      map.on("mouseleave", "map-circle-fill", function () { if (!moving) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } });
+    }
     if (!circleMarkers) {
       var centre = document.createElement("div"); centre.className = "map-circle-centre"; centre.title = "Drag to move the circle";
       var handle = document.createElement("div"); handle.className = "map-circle-handle"; handle.title = "Drag to widen or narrow the circle";
@@ -858,6 +883,92 @@
       if (spells.length) { S.hits[cam.id] = spells; }
     });
   }
+  // The span the circle's cameras were inside: the first entry to the last exit.
+  function circleSpan(cams) {
+    var low = Infinity, high = -Infinity;
+    cams.forEach(function (c) { var s = S.hits[c.id]; if (!s) { return; } low = Math.min(low, c.zero.second + s[0][0]); high = Math.max(high, c.zero.second + s[s.length - 1][1]); });
+    return [low, high];
+  }
+  // The street under the circle's centre, from the basemap when one is drawn.
+  function streetWords() {
+    if (!map || !mapReady || !host.dataset.basemap || !S.circle) { return ""; }
+    try {
+      var pt = map.project([S.circle.lon, S.circle.lat]);
+      var hits = map.queryRenderedFeatures([[pt.x - 20, pt.y - 20], [pt.x + 20, pt.y + 20]]);
+      for (var i = 0; i < hits.length; i++) { var f = hits[i]; if (f.properties && f.properties.name && /road|street|path/i.test(f.layer.id)) { return f.properties.name; } }
+    } catch (e) { /* no street */ }
+    return "";
+  }
+  // The New incident box, filled from the circle or from a suggestion
+  // (v1.197.0): a name offered, the cameras ticked, the day's others under
+  // them unticked, the span where the clock opens; then the Incidents tab's
+  // own door makes it and the page lands on the incident.
+  function incidentBox(ticked, span, nameWords) {
+    if (!S.told.new_incident_url) { return; }
+    var tickedIds = {}; ticked.forEach(function (c) { tickedIds[c.id] = true; });
+    var others = dayCams().filter(function (c) { return !tickedIds[c.id]; });
+    // The name offered: the street under the circle when the basemap names
+    // one, else "On the map", then the moment; the person changes it.
+    var name = (nameWords || "On the map") + ", " + hm(span[0]);
+    var row = function (c, on) { return "<label class='row gap6'><input type='checkbox' name='recordings' value='" + c.id + "'" + (on ? " checked" : "") + "><span class='dot " + (c.source === "car" ? "sq" : "") + "' style='background: " + paint(c.colour) + "; width: 10px; height: 10px; border-radius: " + (c.source === "car" ? "2px" : "50%") + "; display: inline-block'></span> " + nameHtml(c) + " " + suretyPill(c) + (on ? "" : " <span class='muted small'>· not inside; add anyway</span>") + "</label>"; };
+    var layer = document.createElement("div");
+    layer.className = "map-layer";
+    layer.innerHTML = "<div class='map-layer-card'><div class='h'><b>New incident from the map</b><button type='button' class='tiny ghost' data-act='layer-close'>Cancel</button></div>" +
+      "<label class='small'>Name<input type='text' class='small' id='map-inc-name' maxlength='200' value='" + esc(name) + "' style='width: 100%'></label>" +
+      "<div class='small'>Cameras</div><div class='map-inc-cams'>" + ticked.map(function (c) { return row(c, true); }).join("") + others.map(function (c) { return row(c, false); }).join("") + "</div>" +
+      "<p class='muted small' style='margin: 0'>From " + hms(span[0]) + " to " + hms(span[1]) + (S.day ? " on " + esc(dayWords(S.day)) : "") + ": the first entry to the last exit, where the incident's clock opens. The recordings go in whole, synced by the clocks they already have.</p>" +
+      "<div class='acts'><button type='button' class='small' data-act='layer-close'>Cancel</button><button type='button' class='small primary' data-act='layer-make'>Make the incident</button></div></div>";
+    document.body.appendChild(layer);
+    layer.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-act]"); if (!b) { return; }
+      if (b.dataset.act === "layer-close") { layer.remove(); return; }
+      if (b.dataset.act === "layer-make") {
+        var ids = Array.prototype.map.call(layer.querySelectorAll("input[name=recordings]:checked"), function (i) { return i.value; });
+        if (!ids.length) { toast("Tick at least one camera.", true); return; }
+        var form = document.createElement("form");
+        form.method = "post"; form.action = S.told.new_incident_url;
+        [["csrfmiddlewaretoken", cookie("csrftoken")], ["name", layer.querySelector("#map-inc-name").value.trim()]].concat(ids.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
+        document.body.appendChild(form); form.submit();
+      }
+    });
+    window.setTimeout(function () { var box = layer.querySelector("#map-inc-name"); if (box) { box.focus(); box.select(); } }, 50);
+  }
+  // A suggestion's circle (v1.197.0): round the cameras' fixes within the
+  // span, drawn in the incidents' colour with a chip to press; the address
+  // ?circle=<ids>&from=&to= draws one from the Incidents tab's card.
+  function circleAround(ids, from, to) {
+    var pts = [];
+    ids.forEach(function (id) {
+      var cam = S.byId[id]; if (!cam || !cam.onClock) { return; }
+      cam.fixes.forEach(function (f) { var m = cam.zero.second + f[0]; if (m >= from && m <= to) { pts.push({ lat: f[1], lon: f[2] }); } });
+    });
+    if (!pts.length) { return null; }
+    var lat = 0, lon = 0; pts.forEach(function (p) { lat += p.lat; lon += p.lon; }); lat /= pts.length; lon /= pts.length;
+    var far = 0; pts.forEach(function (p) { far = Math.max(far, metres({ lat: lat, lon: lon }, p)); });
+    return { lat: lat, lon: lon, radius: Math.max(NEAR, Math.min(5000, far + 20)) };
+  }
+  function drawSuggestions() {
+    if (!map || !mapReady || INC) { return; }
+    var offers = (S.told.offer || []).filter(function (o) { return o.date === S.day; });
+    var features = [];
+    el.pane.querySelectorAll(".map-suggest").forEach(function (n) { n.remove(); });
+    (S.suggestMarkers || []).forEach(function (m) { m.remove(); }); S.suggestMarkers = [];
+    offers.forEach(function (o, i) {
+      var c = circleAround(o.recordings, o.from, o.to); if (!c) { return; }
+      features.push(circlePolygon(c).features[0]);
+      var node = document.createElement("div"); node.className = "map-suggest";
+      node.innerHTML = "<span class='pill small acc'>" + (i + 1) + "</span> " + plural(o.recordings.length, "camera") + " together · <button type='button' class='tiny primary' data-act='suggest-make' data-i='" + i + "'>Make an incident</button><button type='button' class='tiny ghost' data-act='suggest-decline' data-key='" + esc(o.key) + "'>Not this</button>";
+      node.title = o.line;
+      var marker = new maplibregl.Marker({ element: node, anchor: "bottom", offset: [0, -4] }).setLngLat([c.lon, c.lat + c.radius / 111320]).addTo(map);
+      S.suggestMarkers.push(marker);
+    });
+    var data = { type: "FeatureCollection", features: features };
+    if (!map.getSource("map-suggest")) {
+      map.addSource("map-suggest", { type: "geojson", data: data });
+      map.addLayer({ id: "map-suggest-fill", type: "fill", source: "map-suggest", paint: { "fill-color": token("--accent"), "fill-opacity": 0.07 } });
+      map.addLayer({ id: "map-suggest-line", type: "line", source: "map-suggest", paint: { "line-color": token("--accent"), "line-width": 1.5, "line-dasharray": [4, 3] } });
+    } else { map.getSource("map-suggest").setData(data); }
+  }
   function clearCircle() {
     S.circle = null; S.hits = null; S.asking = false;
     if (circleMarkers) { circleMarkers.centre.remove(); circleMarkers.handle.remove(); circleMarkers = null; }
@@ -878,6 +989,12 @@
       inside.sort(function (a, b) { return (a.zero.second + S.hits[a.id][0][0]) - (b.zero.second + S.hits[b.id][0][0]); });
       html = "<div class='h'><span><b class='acc'>" + plural(inside.length, "camera") + "</b> passed inside the circle</span><span class='acts'>" + (inside.length ? "<button type='button' class='tiny' data-act='tick-inside' title='Tick these cameras alone'>Tick these</button>" : "") + fold + "</span></div>";
       inside.forEach(function (c) { html += rowOf(c, !shown(c)); });
+      // An incident from the circle (v1.197.0): the cameras that passed inside,
+      // from the first entry to the last exit, through the Incidents tab's door.
+      if (inside.length && S.told.new_incident_url && host.dataset.edit) {
+        var span = circleSpan(inside);
+        html += "<div class='map-circle-make'><button type='button' class='small primary' data-act='circle-incident'>Make an incident from the circle</button><p class='muted small'>" + plural(inside.length, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + (streetWords() ? ", named for " + esc(streetWords()) : "") + ".</p></div>";
+      }
       if (never.length) { html += "<details class='map-fold' open><summary>Never inside: " + plural(never.length, "camera") + "</summary>" + never.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
     } else {
       var all = ticked.length === today.length;
@@ -893,10 +1010,8 @@
         without.map(function (v) { return "<div class='map-row dim' data-video='" + v.id + "'><span class='dot' style='background: var(--muted)'></span><div><b>" + esc(v.title) + "</b><div class='facts'>no path file</div></div><div class='acts'>" + (host.dataset.edit ? "<label class='tiny btn'>Add a path file<input type='file' accept='.vtt,text/vtt' hidden data-add-one='" + v.id + "'></label>" : "") + "</div></div>"; }).join("") + "</details>";
     }
     html += waitingFold();
-    // The forming offer from the map (join 1): the Incidents tab's own Make it.
-    (S.told.offer || []).forEach(function (one) {
-      html += "<div class='map-offer'><span class='pill small offer'>Offer</span> <span class='small'>" + esc(one.line) + "</span><div class='acts'><button type='button' class='tiny primary' data-act='make-incident' data-recordings='" + esc(one.recordings.join(" ")) + "'>Make an incident</button><a class='btn tiny ghost' href='?tab=incidents'>On the Incidents tab</a></div></div>";
-    });
+    // The forming offer's block at the list's foot (join 1) went in v1.197.0:
+    // a suggestion is a circle on the map with its chip, drawSuggestions().
     el.list.innerHTML = html;
     var half = el.list.querySelector("#map-tick-all[data-half]"); if (half) { half.indeterminate = true; }
     el.list.querySelectorAll("details.map-fold").forEach(function (d) { d.addEventListener("toggle", function () { S.foldOpen = d.open; }); });
@@ -1293,6 +1408,9 @@
         case "waiting-remove": waitingAct(b.dataset.url, "Waiting file removed.", ""); return;
         case "waiting-add-anyway": waitingAct(b.dataset.url, "Path file added.", ""); return;
         case "waiting-remove-all": waitingAct(S.told.waiting_remove_all_url, "Waiting files removed.", "Remove every waiting path file?"); return;
+        case "circle-incident": { if (!S.hits) { return; } var inside = dayCams().filter(function (c) { return S.hits[c.id]; }); incidentBox(inside, circleSpan(inside), streetWords()); return; }
+        case "suggest-make": { var o = (S.told.offer || []).filter(function (x) { return x.date === S.day; })[parseInt(b.dataset.i, 10)]; if (!o) { return; } var cams = o.recordings.map(function (id) { return S.byId[id]; }).filter(Boolean); incidentBox(cams, [o.from, o.to], ""); return; }
+        case "suggest-decline": { var fd = new FormData(); fd.append("key", b.dataset.key); postForm(S.told.decline_url, fd).then(function () { toast("Put away; it is not offered again."); load(true); }).catch(function (e) { toast(e.message, true); }); return; }
         case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
         case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
@@ -1460,6 +1578,18 @@
     history.replaceState(null, "", location.pathname + "?" + p.toString());
   }
 
+  // The circle the Incidents tab's card asked for (v1.197.0): drawn once,
+  // round those cameras' fixes in the span, the cameras ticked.
+  function askedCircle() {
+    if (INC || askedCircle.done) { return; }
+    askedCircle.done = true;
+    var p = new URLSearchParams(location.search);
+    var ids = (p.get("circle") || "").split(",").filter(Boolean), from = parseFloat(p.get("from")), to = parseFloat(p.get("to"));
+    if (!ids.length || isNaN(from) || isNaN(to)) { return; }
+    var c = circleAround(ids, from, to); if (!c) { return; }
+    S.circle = c; drawCircle(); circleHits(); drawTransport(); drawList(); drawStrip();
+    map.fitBounds([[c.lon - c.radius / 55000, c.lat - c.radius / 111320], [c.lon + c.radius / 55000, c.lat + c.radius / 111320]], { padding: 60, maxZoom: 17, duration: 0 });
+  }
   function wantedDay() {
     if (host.dataset.day) { return ""; }
     var rec = host.dataset.recording;

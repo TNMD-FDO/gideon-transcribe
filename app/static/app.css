@@ -3831,6 +3831,17 @@ nav.rail { view-transition-name: rail; }
 .chron .form-lane .mk { font-size: var(--t-label); line-height: 14px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); background: var(--surface); cursor: pointer; font-family: inherit; }
 .chron .form-lane .mk:hover { background: var(--accent-soft); }
 .chron .form-lane .lbl { position: absolute; right: 0; top: 1px; font-size: var(--t-label); color: var(--muted); }
+/* The Suggested row (Phase 12 chapter 6, v1.197.0): a head on the left, then numbered chips as wide as their spans, packed into rows so none covers another or the strip's words. */
+.chron .sug-lane { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 0 8px; align-items: start; margin-top: 4px; }
+.chron .sug-lane .head { font-size: var(--t-label); color: var(--muted); padding-top: 3px; }
+.chron .sug-lane .rows { position: relative; }
+.chron .sug-chip { position: absolute; display: flex; align-items: center; gap: 4px; height: 18px; min-width: 0; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 500 var(--t-label) var(--font); white-space: nowrap; overflow: hidden; cursor: pointer; box-sizing: border-box; }
+.chron .sug-chip b { flex: none; font-weight: 700; }
+.chron .sug-chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chron .sug-chip:hover { background: var(--surface); }
+.forming-card .n { margin-right: 2px; }
+.forming-card.lit { box-shadow: 0 0 0 2px var(--accent); }
+.chron .legend { margin-top: 8px; }
 .forming-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 10px 0 14px; }
 .forming-cards:empty { display: none; }
 .forming-card { border: 1px dashed var(--accent); display: flex; flex-direction: column; gap: 6px; }
@@ -4000,6 +4011,12 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-circle-handle { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: ew-resize; position: relative; }
 .map-circle-handle b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); font: 600 var(--t-label) var(--mono); color: var(--accent); white-space: nowrap; }
 .map-strip .map-lane .track i.in { top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: 0.2; }
+/* An incident from the circle, and a suggestion's chip on the map (v1.197.0). */
+.map-circle-make { padding: 8px 4px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.map-circle-make p { margin: 0; }
+.map-inc-cams { display: flex; flex-direction: column; gap: 3px; max-height: 40vh; overflow: auto; }
+.map-suggest { display: inline-flex; gap: 5px; align-items: center; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 999px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); font-size: var(--t-label); white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+.map-suggest button { min-height: 18px; padding: 0 6px; }
 /* The tiles (chapter 6): a small video on the map, riding beside its marker or pinned where dropped, its line to the marker drawn with the leaders. */
 .map-tile { --cam: var(--muted); position: absolute; width: 168px; z-index: 4; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; font-size: var(--t-label); }
 .map-tile.pinned { border-color: var(--accent); }
@@ -4028,8 +4045,6 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-strip .map-lane .track svg.spd { position: absolute; left: 0; top: 0; width: 100%; height: 18px; pointer-events: none; }
 .map-strip .map-lane .track svg.spd polyline { fill: none; stroke: var(--text); stroke-opacity: 0.55; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .map-strip .map-lane .track em.off { width: auto; height: 3px; top: 15px; background: var(--muted); border-radius: 2px; cursor: default; }
-.map-offer { border-top: 1px solid var(--line); padding: 8px 4px 4px; display: flex; flex-direction: column; gap: 4px; }
-.map-offer .acts { display: flex; gap: 4px; }
 .map-strip { display: grid; grid-template-columns: var(--head, 150px) minmax(0, 1fr); gap: 4px 10px; position: relative; margin: 0; font-size: var(--t-small); }
 .map-strip .ruler { display: contents; }
 .map-strip .ruler .ticks { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); }

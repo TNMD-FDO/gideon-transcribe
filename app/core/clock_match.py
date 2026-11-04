@@ -285,6 +285,9 @@ def place_by_sound(recording, *, by, request=None) -> str:
     )
     if match is None or not may_place(match):
         raise ValueError("there is no clear sound match to place it by")
+    # The path file's clock stands over sound (v1.197.0, Phase 12 chapter 6).
+    if case_chronology.clock_of(recording)[2] == case_chronology.PATH:
+        raise ValueError("it is placed from its path file, which stands over sound")
     date, start = placed_at_of(match)
     case_chronology.place(
         recording,
@@ -317,6 +320,26 @@ def _surety_words(surety: str) -> dict:
         surety, incidents.SURETY_WORDS[incidents.SURETY_UNCLEAR]
     )
     return {"word": word, "why": why, "tone": tone}
+
+
+def _path_waiting_words(recording) -> str:
+    """ "A path file of its name is waiting: ..." when one sits on the case
+    unpaired against this video, else ""."""
+    from core import camera_paths
+
+    if recording.case_id is None or not camera_paths.on():
+        return ""
+    stem = camera_paths.stem_of(recording.original_filename)
+    if not stem:
+        return ""
+    one = camera_paths.WaitingPathFile.objects.filter(
+        case_id=recording.case_id, stem=stem
+    ).first()
+    if one is None:
+        return ""
+    if one.flagged:
+        return f"A path file of its name is waiting on the case: {one.flagged}"
+    return "A path file of its name is waiting on the case."
 
 
 def rows_of(case) -> list[dict]:
@@ -386,6 +409,9 @@ def rows_of(case) -> list[dict]:
                 "still": f"/recording/{one.pk}/still?t=0.0",
                 "file": file,
                 "sound": sound,
+                # A path file of this video's name waiting on the case, and why
+                # it did not pair (Phase 12 chapter 6, v1.197.0).
+                "path_waiting": _path_waiting_words(one),
                 "set_aside": bool(match and match.set_aside),
                 "rank": rank,
                 "placed_by_day": day_alone is not None,

@@ -747,3 +747,40 @@ def test_the_heads_script_posts_in_batches_and_the_map_lists_the_waiting():
     )
     assert "data-act='waiting-add-anyway'" in script and "map-waiting-find" in script
     assert "function addMany" not in script and "function settle" not in script
+
+
+# The circle's incident and the suggestions (chapter 6, v1.197.0) -------------------
+
+
+def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
+    script = static("map.js")
+    assert (
+        'map.on("mousedown", "map-circle-fill"' in script
+        and "dragPan.disable()" in script
+    )
+    assert "data-act='circle-incident'" in script and "function incidentBox(" in script
+    assert "function circleSpan(cams)" in script and "function streetWords()" in script
+    assert "function drawSuggestions()" in script and "function askedCircle()" in script
+    assert (
+        "data-act='suggest-make'" in script and "data-act='suggest-decline'" in script
+    )
+    assert "S.told.new_incident_url" in script and "S.told.decline_url" in script
+    strip = static("chronology.js")
+    assert "function suggestedLane(d)" in strip and "function suggestions(d)" in strip
+    assert "data-suggest='" in strip and "formingLane(" not in strip
+    assert '"from their notes"' in strip and "On the map" in strip
+    assert "&circle=" in strip and "data-decline=" in strip
+    page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
+    assert "data-map=\"{% url 'case' case.pk %}?tab=map\"" in page
+    css = static("app.css")
+    assert (
+        ".chron .sug-lane" in css
+        and ".map-circle-make" in css
+        and ".map-suggest" in css
+    )
+    assert ".chron .legend { margin-top" in css
+    # The legend is drawn after the Suggested row, under the whole strip, and
+    # a chip's number always shows whatever its width.
+    assert "suggestedLane(d) + legend(d) + rail(d)" in strip
+    assert '<b>" + s.n + "</b><span>' in strip
+    assert ".chron .sug-chip span { min-width: 0; overflow: hidden;" in css

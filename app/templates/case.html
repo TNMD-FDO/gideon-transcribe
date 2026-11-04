@@ -388,7 +388,7 @@
             forming cards beside the clocks' offers. Not these on either
             keeps the same key.
           {% endcomment %}
-          <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-cards="#forming-cards" data-export=""></div>
+          <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-cards="#forming-cards" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
           <div class="forming-cards" id="forming-cards">
           {% for offer in incident_offers %}
             <div class="card inc-offer" data-key="{{ offer.key }}">

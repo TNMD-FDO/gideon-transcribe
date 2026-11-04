@@ -615,30 +615,75 @@ def remove(path: CameraPath, *, by, request=None, replacing: bool = False) -> No
 
 
 def place_from_path(path: CameraPath, *, by, request=None) -> bool:
-    """The path file's own clock places the recording on the case's clock
-    (Phase 12 chapter 2, v1.188.0; ADR 0027 amended): only an in-car file
-    that carries a clock, and only a recording nothing else has placed, or
-    that this file's forerunner placed. Never over a stamp, a hand placement,
-    a day, the file's time or a sound match: those are read or chosen, and
-    stand. The person who added the file is the placement's name."""
+    """The path file places the recording on the case's clock (Phase 12
+    chapter 2, v1.188.0; the order of chapter 6, v1.197.0: vision, then the
+    path file, then sound, then the file's name). An in-car file's own clock
+    places its camera when nothing a person chose stands: over nothing, over
+    a sound match, over a name. A body camera's file carries no clock, so
+    the minute in its name places the camera last of all, only when nothing
+    at all has, marked "By its name". Never over a stamp, a hand placement,
+    a day or the file's time: those are read or chosen, and stand. The
+    person who added the file is the placement's name."""
     from core import case_chronology
 
     recording = path.recording
-    if path.clock_start is None:
-        return False
     _date, _second, how = case_chronology.clock_of(recording)
-    if how not in ("", case_chronology.PATH):
+    if path.clock_start is not None:
+        movable = (
+            "",
+            case_chronology.PATH,
+            case_chronology.SOUND,
+            case_chronology.NAME,
+        )
+        if how not in movable:
+            return False
+        date, second = _day_second(path.clock_start)
+        case_chronology.place(
+            recording,
+            dt.date.fromisoformat(date),
+            second,
+            by=by,
+            request=request,
+            how=case_chronology.PATH,
+        )
+        return True
+    named = name_moment_of(path.original_filename or recording.original_filename)
+    if named is None or how not in ("", case_chronology.NAME):
         return False
-    date, second = _day_second(path.clock_start)
+    date, second = _day_second(named)
     case_chronology.place(
         recording,
         dt.date.fromisoformat(date),
         second,
         by=by,
         request=request,
-        how=case_chronology.PATH,
+        how=case_chronology.NAME,
     )
     return True
+
+
+def catch_up_placements() -> int:
+    """Once, at the upgrade to v1.197.0: every camera whose path file can
+    place it and which nothing has placed (the files added before a path
+    file could place anything, v1.188.0, and the body cameras the name's
+    minute now places) takes its clock. Nothing a person chose is touched;
+    nothing already placed moves. Returns how many were placed."""
+    from core import case_chronology
+
+    placed = 0
+    for path in CameraPath.objects.select_related("recording").iterator():
+        recording = path.recording
+        if recording.case_id is None:
+            continue
+        _date, _second, how = case_chronology.clock_of(recording)
+        if how:
+            continue
+        try:
+            if place_from_path(path, by=path.added_by, request=None):
+                placed += 1
+        except Exception:  # noqa: BLE001 - one odd file is not a reason to stop the rest
+            log.exception("catch-up placement of %s failed", recording.pk)
+    return placed
 
 
 def offer_to_chronology(
@@ -1598,6 +1643,7 @@ def map_of(case, *, day: str = "", viewer) -> dict:
             case, [paths[one.pk] for one in videos if one.pk in paths], zeros
         ),
         "new_incident_url": reverse("new-incident", args=[case.pk]),
+        "decline_url": reverse("decline-incident-offer", args=[case.pk]),
         # Offer to the chronology (chapter 3): withheld, with the reason,
         # while the Proposed events tab is off.
         "may_offer": _may_offer(),
@@ -1609,6 +1655,46 @@ def _may_offer() -> bool:
     from core import proposals
 
     return proposals.tab_offered()
+
+
+def strip_suggestions(case, date_iso: str) -> list[dict]:
+    """The Incidents tab's Suggested row (chapter 6, v1.197.0): the cameras
+    that were together by their paths on the day, as the map offers them,
+    with the officers' names as the files give them. Empty while Maps is
+    off or no path is on the clock that day."""
+    from core import incidents
+
+    if not on():
+        return []
+    declined = set(case.declined_offers or [])
+    paths = for_case(case)
+    zeros = {}
+    for path in paths:
+        zero = zero_of(path.recording, path)
+        if zero and zero.get("second") is not None:
+            zeros[path.recording_id] = zero
+    out = []
+    for offer in offers_of(case, [p for p in paths if p.recording_id in zeros], zeros):
+        if offer["date"] != date_iso or offer["key"] in declined:
+            continue
+        names = []
+        for path in paths:
+            if str(path.recording_id) in offer["recordings"]:
+                names.append(path.wearer or path.unit or path.recording.title)
+        out.append(
+            {
+                "key": offer["key"],
+                "ids": offer["recordings"],
+                "from": offer["from"],
+                "to": offer["to"],
+                "names": names,
+                "words": offer["line"],
+                "source": "from their paths",
+                "together_metres": NEAR_METRES,
+            }
+        )
+    del incidents
+    return out
 
 
 def _day_words(date: str) -> str:
@@ -1690,9 +1776,16 @@ def offers_of(case, paths: list[CameraPath], zeros: dict) -> list[dict]:
             for one in group["ids"]
         ]
         minutes = int((group["to"] - group["from"]) // 60)
+        first = zeros.get(group["ids"][0]) or {}
         out.append(
             {
                 "recordings": [str(one) for one in group["ids"]],
+                # The span as seconds of the day and the day (v1.197.0): the
+                # strip's Suggested row and the map's circle read them.
+                "from": round(group["from"], 1),
+                "to": round(group["to"], 1),
+                "date": first.get("date", ""),
+                "key": "new:" + ",".join(sorted(str(one) for one in group["ids"])),
                 "line": (
                     f"{', '.join(names[:-1])} and {names[-1]} were within "
                     f"{NEAR_METRES} m of each other for {minutes} minutes, "

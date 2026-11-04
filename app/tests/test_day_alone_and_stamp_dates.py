@@ -79,8 +79,12 @@ def test_a_printed_date_is_read_in_every_form_a_camera_burns_it():
         "Nov 02 2026",
         "Nov 2, 2026",
         "02NOV26",
+        # Two-digit parts with hyphens, month first (v1.197.0), tried last.
+        "11-02-26",
     ):
         assert prompts.stamp_date_of(text) == want, text
+    # A four-digit year never reads as the two-digit form.
+    assert prompts.stamp_date_of("11-02-2026") == want
     for text in ("", "   ", "yesterday", "02NOV99", "31/31/2026", "2026"):
         assert prompts.stamp_date_of(text) is None, text
     assert incidents.plain_date("02NOV2026") == "02 Nov 2026"
