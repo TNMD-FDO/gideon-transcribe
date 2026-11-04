@@ -67,6 +67,7 @@ def days(case) -> list[dict]:
         todays = bars.get(when, [])
         forming = 0
         forming_ids: set = set()
+        suggested_keys: list = []
         loose = [b for b in todays if b["id"] not in taken]
         for run in case_chronology._runs(loose):
             notes = sum(
@@ -74,8 +75,10 @@ def days(case) -> list[dict]:
             )
             if notes:
                 forming_ids |= run["ids"]
-                if incidents.offer_key(sorted(run["ids"])) not in declined:
+                run_key = incidents.offer_key(sorted(run["ids"]))
+                if run_key not in declined:
                     forming += 1
+                    suggested_keys.append(run_key)
         # The same day (chapter 5, v1.184.0): the loose videos in no forming
         # bracket, two or more, or one beside an incident or a forming one.
         rest = [b for b in loose if b["video"] and b["id"] not in forming_ids]
@@ -84,6 +87,7 @@ def days(case) -> list[dict]:
         key = incidents.offer_key(sorted(b["id"] for b in rest)) if rest else ""
         if suggested and key not in declined:
             same_day = 1
+            suggested_keys.append(key)
         out.append(
             {
                 "date": when.isoformat(),
@@ -98,6 +102,9 @@ def days(case) -> list[dict]:
                 # strip's mark), whether or not in an incident.
                 "together": bool(case_chronology._runs(todays)),
                 "unclocked": unclocked.get(when, 0),
+                # The suggestions' keys (Phase 12 chapter 7), for the lead's
+                # count over every day.
+                "suggested_keys": suggested_keys,
             }
         )
     return out
@@ -125,6 +132,65 @@ def same_day_count(case) -> int:
 def forming_count(case) -> int:
     """The lead's figure: forming brackets with a card, over every day."""
     return sum(day["forming"] for day in days(case))
+
+
+def all_incidents(case) -> list[dict]:
+    """Every incident of the case for the strip's reader (Phase 12 chapter
+    7), which lists the day's and folds the rest: the name, the cameras, the
+    span, the placed words, the events, the day, Open and On the map."""
+    from core import camera_paths, prompts
+
+    on_map = camera_paths.incidents_on_map(case)
+    out = []
+    for row in incidents.strip_rows(case):
+        incident = row["incident"]
+        when = prompts.stamp_date_of(incident.clock_date or "")
+        out.append(
+            {
+                "id": str(incident.pk),
+                "name": incident.name,
+                "url": row["url"],
+                "cameras": row["cameras"],
+                "span": row["span"],
+                "placed": row["placed"],
+                "tone": row["tone"],
+                "events": row["events"],
+                "memo": row["memo"],
+                "date": when.isoformat() if when else "",
+                "map_url": camera_paths.incident_map_url(incident, on_map),
+            }
+        )
+    return out
+
+
+def counts(case, strip_days: list[dict], unclocked_rows: list | None = None) -> dict:
+    """The lead's counts (Phase 12 chapter 7): the incidents, the suggestions
+    over every day (one key each, whatever found it), the videos in no
+    incident, and the videos not on the clock."""
+    from core import camera_paths, clock_match
+
+    keys: set = set()
+    if incidents.proposed_on():
+        for day in strip_days:
+            keys |= set(day.get("suggested_keys", []))
+            for one in camera_paths.strip_suggestions(case, day["date"]):
+                keys.add(one["key"])
+        for offer in incidents.offers(case):
+            keys.add(offer["key"])
+    taken = incidents.taken_ids(case)
+    in_none = sum(
+        1
+        for one in incidents.videos_of(case.recordings.all())
+        if incidents.is_video(one) and str(one.pk) not in taken
+    )
+    if unclocked_rows is None:
+        unclocked_rows = clock_match.rows_of(case)
+    return {
+        "incidents": case.incidents.count(),
+        "suggested": len(keys),
+        "in_none": in_none,
+        "unclocked": len(unclocked_rows),
+    }
 
 
 def pick_day(strip_days: list[dict]) -> dt.date | None:

@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.199.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 7, the first release: the Incidents tab as the day (the drawing `docs/spec/mockups/phase-12-incidents-tab-redesign.html`, Direction B, chosen 2026-11-04).
+
+- **The strip grows up.** One lane per camera, named by the officer as the path file gives them (else the unit, else the file), the cameras in an incident or a suggestion first; each camera's notes as marks on its own lane; an incident is a shaded column across the lanes with its name on top, a suggestion a dashed column with its number. The thin notes, incidents and Suggested lanes are gone.
+- **One Reader beside the strip** reads what you press: a suggestion (who, when, why, the stills, Make an incident or Add to the incident it ran during, On the map, Not this), an incident (Open, On the map), a camera (Play here, On the map, Move or take off the clock), and with nothing pressed the day: its counts, the suggestions as numbered rows, the incidents on the day with Open and the others folded, and the same day.
+- **One kind of suggestion.** The clocks' offers, the cameras together by their paths, the overlapping videos with notes and the same day are all the same shape with the same presses. The offers' cards, the forming and same-day cards, the incidents table and Choose myself are gone; nothing kept changes.
+- **The lead is counts:** incidents, suggested, videos in none, not on the clock.
+
 ## v1.198.0, 2026-11-04
 
 ```

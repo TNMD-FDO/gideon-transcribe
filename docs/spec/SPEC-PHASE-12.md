@@ -266,6 +266,48 @@ Asked on 2026-11-04 after v1.196.1 and drawn in `docs/spec/mockups/phase-12-map-
 
 No new kind of note: a note on all shown is copies with one mark. No larger and smaller buttons on a tile's bar (choice 5 of the fourth release: the grip alone). No map inside the Incidents tab (choice 9 of the sixth release): the map is reached, not shown there. A suggestion is never made into an incident by the app; the press is the person's. The streams of a vehicle are not named front, cabin or rear. Pinned places are not remembered across visits. An officer's body camera and vehicle keep two tags (choice 4 of the fifth release). The streams are not named front, cabin or rear: the files carry no such names, so they are numbered. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
 
+## 7. The Incidents tab as the day (the first release, v1.199.0)
+
+### About
+
+Asked 2026-11-04 ("we need to redesign the incidents tab considering everything we have built, present some mock up ideas"), drawn as three whole-page directions in `docs/spec/mockups/phase-12-incidents-tab-redesign.html` (Figure 0 the tab as it stood with six faults marked; A incidents first with the strip folded; B the day as the page; C the inbox), and Direction B chosen the same day with the six choices as recommended. The tab had grown in six layers (the clocks' offer of Phase 6, the strip, the same day, the stills, Not on the clock, the suggestions from paths), each sound alone and together a page that spoke four dialects: a four-sentence lead, lanes named by file, three thin lanes saying "something is here" in three idioms, four kinds of card with four vocabularies, the incidents last as a seven-column table, and Not on the clock as a page under the page.
+
+### Principles
+
+1. **The strip is the page.** The maintainer asked for a timeline that updates with notes (2026-10-30); it is the one thing on the tab that shows time, so it is given the names the path files brought, the width its bars lacked, and everything drawn where it happens on it.
+2. **One kind of suggestion.** Whatever found it (the clocks, the paths, the notes, the same day), a suggestion is one shape with the same presses. `CONTEXT.md` gains **Suggested** and **Reader**; Forming and Same day become kinds of Suggested.
+3. **One place to read.** Pressing anything on the strip reads it in the Reader beside it; with nothing pressed the Reader reads the day. No cards, no table.
+4. **Nothing new is kept.** The stores, the keys, the offers, the declines and the audit rows stay as they are; the directions redraw what the tab holds.
+
+### The lead
+
+Counts as pills, in place of the sentences: "N incidents" (or "No incident yet"), "N suggested" (or "nothing suggested"), "N videos in none", and "N not on the clock" as a link to the panel, when any; New incident at the right. The definitions sit on hover and in the guide. `incident_strip.counts` reads them: the suggestions are the distinct keys over every day (the forming runs with notes and the same day from `days()`, the paths from `camera_paths.strip_suggestions`, the clocks' offers), zero while Incidents proposed is off.
+
+### The strip
+
+- **The lanes.** One row per camera on the day, named by the officer as the path file gives them (`camera_paths.names_of`), else the unit from the stamp, else the title cut, with the unit in small beside the name where it differs; each bar in the camera's colour carries its surety word; each camera's notes are marks on its own row (from the day's entries); the band's three shapes and its notes lane are not drawn on the strip. The cameras in an incident or a suggestion come first, then the most noted, then by start; twelve rows shown and "and N more cameras on this day · Show all" (the stored Show all), the whole list scrolling in a box past twenty-four. A press on a lane's name or its bar reads the camera.
+- **The columns.** An incident is a shaded column across every lane with its name as a tag on top; a suggestion a dashed column with its number at its foot. They are drawn after the lanes over the bars' track, from the first lane's bar in pixels so the names' column stays clear, and again on resize. A press on a tag or a number reads it; the pressed one is lit.
+- **The day chips, the ruler and the foot** stay; the foot says what the columns are.
+
+### The Reader
+
+An aside beside the strip (320 px from 1024, under it narrower), `#strip-reader`, drawn by the strip's script from the same reading:
+
+- **The day** (nothing pressed): the day's words; cameras on the clock, incidents, suggestions; the suggestions as numbered rows (press to read one); **Incidents on this day** with Open and On the map, and the case's other incidents folded ("Other days: N incidents"), from `incidents_all` in `strip.json` (`incident_strip.all_incidents`: name, cameras, span, placed words, events, day, map url); and **The same day** when it stands: the loose videos' names, their stills, Add to the forming one or to the day's incident, Make an incident (New incident with them ticked) and Not this.
+- **A suggestion**: the number, the officers' names, the span and the day, the source pill ("by their paths", "by their clocks", "by the clocks, during <incident>", "from their notes"), the stills at the span's start, one line of why with the sitting's bar, and the presses: **Make an incident** (the span's picker with the cameras ticked, as before) or **Add to <incident>** for one more camera that ran during it (the clocks' offer, posted through the Incidents tab's own door), **On the map** when any has a path file (`?show=`), and **Not this** (the decline, by the same key). Choose myself is gone: the picker and the New incident box both let the ticks change.
+- **An incident**: its name, span, cameras, events and placed pill, its stills, Open the incident and On the map.
+- **A camera**: its name and title, span, placed words with the surety pill, note count, its still, Play here, On the map when it has a path file, and Move or take off the clock when the placing is movable (the move box as before).
+
+`day_of(strip=True)` gains `offers` (the clocks' offers whose videos are on the day, in the suggestions' shape with the incident an "add" would join), each bar's `name`, `unit` and `on_map`, and each incident's `map_url`.
+
+### What goes
+
+The offers' cards rendered by the page, the forming and same-day cards, the Suggested row, the notes lane and the incidents lane on the strip, the incidents table, and Choose myself. Not on the clock keeps its panel under the strip for this release.
+
+### Left to the next release
+
+The small read-only map in the Reader on a suggestion or an incident (the Map tab's drawing mounted small, Open the map), and Not on the clock as the strip's last row with Place… opening its panel as a sheet.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |

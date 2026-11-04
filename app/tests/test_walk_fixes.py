@@ -103,7 +103,8 @@ def test_the_five_breaks_of_the_october_walk_are_held_in_the_files():
         # The assignment tools' fold adds a class (v1.121.2); the cards stay.
         assert 'class="tbl as-cards' in page and 'id="recordings"' in page, name
     case = (APP / "templates" / "case.html").read_text(encoding="utf-8")
-    assert 'class="tbl as-cards" id="incidents"' in case
+    # The incidents table left the Incidents tab in v1.199.0 (the Reader
+    # lists them); the documents table stays a card table.
     assert 'class="tbl as-cards" id="documents"' in case
     assert ".tabs { overflow-x: auto; flex-wrap: nowrap;" in css
     # 5. The sign-in card fits the page's own width.

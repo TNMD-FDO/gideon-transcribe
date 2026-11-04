@@ -89,6 +89,7 @@ def strip(request: HttpRequest, case_id) -> JsonResponse:
     if asked is None:
         asked = incident_strip.pick_day(days)
     reading = case_chronology.day_of(case, asked, strip=True) if asked else None
+    unclocked = clock_match.rows_of(case)
     return JsonResponse(
         {
             "days": days,
@@ -96,8 +97,12 @@ def strip(request: HttpRequest, case_id) -> JsonResponse:
             "me": request.user.pk,
             "may_place": True,
             "may_make": incidents.proposed_on(),
+            # The reader beside the strip (Phase 12 chapter 7): every incident
+            # of the case, and the lead's counts.
+            "incidents_all": incident_strip.all_incidents(case),
+            "counts": incident_strip.counts(case, days, unclocked),
             # The panel for what is not on the clock (v1.186.0).
-            "unclocked": clock_match.rows_of(case),
+            "unclocked": unclocked,
             "panel_most": clock_match.PANEL_MOST,
             "sound_on": incidents.sound_match_on(),
             "most": incidents.most_cameras(),

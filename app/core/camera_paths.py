@@ -443,6 +443,21 @@ def count(case) -> int:
     return CameraPath.objects.filter(recording__case=case).count()
 
 
+def names_of(case) -> dict:
+    """The officers' names for the Incidents tab's lanes (Phase 12 chapter
+    7): by recording id, the wearer or driver as the path file gives them
+    and the unit. Empty while Maps is off."""
+    if not on():
+        return {}
+    return {
+        str(path.recording_id): {
+            "name": " ".join(path.wearer.split()),
+            "unit": " ".join((path.unit or "").split()),
+        }
+        for path in CameraPath.objects.filter(recording__case=case)
+    }
+
+
 def _fill(path: CameraPath, parsed: Parsed) -> None:
     path.source = parsed.source
     path.wearer = parsed.wearer

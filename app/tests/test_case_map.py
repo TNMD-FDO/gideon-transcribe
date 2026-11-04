@@ -766,19 +766,20 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "suggest-make" not in script and "map-suggest" not in script
     assert "S.told.new_incident_url" in script
     strip = static("chronology.js")
-    assert "function suggestedLane(d)" in strip and "function suggestions(d)" in strip
-    assert "data-suggest='" in strip and "formingLane(" not in strip
+    # The day as the page (Phase 12 chapter 7): lanes, columns and a reader
+    # in place of the Suggested row and the cards.
+    assert "function columns(d)" in strip and "function suggestions(d)" in strip
+    assert "function readerDraw(d)" in strip and "formingLane(" not in strip
+    assert "suggestedLane" not in strip and "cardHtml" not in strip
     assert '"from their notes"' in strip and "On the map" in strip
     assert "&show=" in strip and "&circle=" not in strip and "data-decline=" in strip
     page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
     assert "data-map=\"{% url 'case' case.pk %}?tab=map\"" in page
     css = static("app.css")
-    assert ".chron .sug-lane" in css and ".map-circle-make" in css
-    assert ".map-suggest" not in css and ".chron .sug .n {" in css
+    assert ".chron .lanes {" in css and ".map-circle-make" in css
+    assert ".map-suggest" not in css and ".chron .col .n {" in css
     assert ".chron .legend { margin-top" in css
-    # The legend is drawn after the Suggested row, under the whole strip; the
-    # row is one row of numbered pills, the same day a card alone, and a pill
-    # that would land on another steps right.
-    assert "suggestedLane(d) + legend(d) + rail(d)" in strip
-    assert "class='sug' data-sug='" in strip and "lastPx + 20" in strip
+    # The strip is the day chips, the ruler, the named lanes and a foot; the
+    # same day is read in the day's reading, never a column.
+    assert "dayChips() + ruler(d) + lanes(d) + stripFoot(d)" in strip
     assert 's.kind !== "day"' in strip

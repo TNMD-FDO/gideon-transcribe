@@ -229,7 +229,11 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert 'tab=incidents"' in page and 'Incidents <span class="count">0</span>' in page
     assert "Make them an incident?" not in page and "Clock in the picture" not in page
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "Make them an incident?" in page and "New incident" in page
+    # The clocks' offer is read in the strip's Reader (Phase 12 chapter 7).
+    assert "New incident" in page and "1 suggested" in page
+    told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    offers = told["day"]["offers"]
+    assert any(o["words"].endswith("Make them an incident?") for o in offers)
     assert "07 Jun 2025 21:56:19, checked" in page
     # A video with no clock shows nothing for it: not a fault.
     mute = video(person, a_case, "mute", stamp={})
@@ -244,9 +248,14 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert answer.status_code == 302 and answer["Location"] == incident.url()
     assert incident.name == "06/07/2025, BWC2-1" and incident.how == "offer"
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "Open the incident" in page and "2 of 2 synced" in page
-    assert "Make them an incident?" not in page
+    # The incident is read in the strip's reader (Phase 12 chapter 7), not
+    # a table on the page; the lead counts it.
+    assert "1 incident" in page and "Make them an incident?" not in page
     assert 'Incidents <span class="count">1</span>' in page
+    told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    assert told["incidents_all"][0]["name"] == incident.name
+    assert told["incidents_all"][0]["placed"] == "2 of 2 synced"
+    assert told["incidents_all"][0]["url"] == incident.url()
 
     # Not these, for a further offer.
     third = video(person, a_case, "third", stamp=stamp("22:03:00", camera="BWC2-3"))

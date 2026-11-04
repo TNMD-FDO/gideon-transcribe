@@ -23,9 +23,9 @@ def test_the_name_column_is_floored_by_its_own_class():
     assert "#recordings td:first-child { min-width" not in CSS
     case = (TEMPLATES / "case.html").read_text(encoding="utf-8")
     # The Recordings table (whose first cell is the tick when the person may
-    # direct), the Incidents table and the clips; the loose videos table left
-    # the Incidents tab in v1.180.1.
-    assert case.count('<td class="name">') == 3
+    # direct) and the clips; the loose videos table left the Incidents tab in
+    # v1.180.1 and the incidents table in v1.199.0 (the Reader lists them).
+    assert case.count('<td class="name">') == 2
     # The notes column had been the one crushed to 39 px once the name held.
     assert ".tbl td.notes { min-width: 7rem; }" in CSS
     assert ".panes.audit .tbl td.mono { white-space: nowrap; }" in CSS

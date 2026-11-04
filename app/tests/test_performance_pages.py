@@ -505,8 +505,10 @@ def test_the_case_page_asks_a_handful_and_never_stats(owner, client, monkeypatch
     )
     assert touched == []
     page = answer.content.decode()
-    assert "The stop" in page and "8 of 8 synced" in page
-    assert count < 100, count
+    # The incident is read in the strip's Reader (Phase 12 chapter 7); the
+    # page's lead counts it, and the lead's counts ask a handful more.
+    assert "1 incident" in page and 'id="strip-reader"' in page
+    assert count < 120, count
 
 
 # My recordings (finding 30) ----------------------------------------------------

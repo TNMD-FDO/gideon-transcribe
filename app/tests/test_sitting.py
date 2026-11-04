@@ -258,17 +258,29 @@ def test_the_offer_and_the_case_page_carry_the_bar(client, incident, person, a_c
     assert new and new[0]["sitting"]["on"]
     assert new[0]["sitting"]["count"] == len(new[0]["recordings"])
     assert new[0]["sitting"]["zone"] == "room"
-    # The tab's rows carry the column and the offer carries the bar.
+    # The offer is read in the strip's Reader (Phase 12 chapter 7), which
+    # asks the sitting for its cameras when drawn; the page carries no bar.
     incidents.make(a_case, "Again", [cameras_of_case(a_case)["first"]], by=person)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
     body = page.content.decode()
-    assert "One sitting" in body
-    assert "sitting-mini" in body and "hours&#x27; worth" in body
-    assert third.pk  # the offer still stands, its bar drawn
+    assert 'id="strip-reader"' in body and "sitting-mini" not in body
+    strip = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    offer = [
+        one
+        for one in strip["day"]["offers"]
+        if one["kind"] == "add" and one["ids"] == [str(third.pk)]
+    ][0]
+    assert offer["incident"]["name"] == "Again"
+    asked = client.get(
+        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(offer["ids"])
+    ).json()
+    assert asked["sitting"]["on"]
     # Off when the assistant is off.
     settings_store.set_to("assistant_available", False)
-    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
-    assert "One sitting" not in page.content.decode()
+    asked = client.get(
+        f"/case/{a_case.pk}/chronology/sitting?recordings=" + ",".join(offer["ids"])
+    ).json()
+    assert not asked["sitting"]["on"]
     settings_store.set_to("assistant_available", True)
 
 

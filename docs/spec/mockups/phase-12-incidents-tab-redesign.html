@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab redesigned: three directions</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #b5881b; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #e4c062; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #e4c062; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1160px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 84ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .num { display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: var(--inc); color: var(--accent-ink); font: 700 11px/18px var(--font); justify-content: center; flex: none; }
+  .tabs { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs small { color: var(--muted); font-size: 11px; }
+  .lead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
+  .counts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  .block { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .block > .h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .block > .h h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+  .card.sug { border-style: dashed; border-color: var(--inc); }
+  .card.lit { box-shadow: 0 0 0 2px var(--inc); }
+  .card .h { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; } .card .h b { font-size: 13px; }
+  .card .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .stills { display: flex; gap: 4px; }
+  .still { width: 58px; height: 36px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .still::after { content: attr(data-n); position: absolute; left: 3px; bottom: 2px; font-size: 9px; color: var(--muted); }
+  .still.inc { background: linear-gradient(135deg, var(--surface-2), var(--inc-soft)); }
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface); display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 3px 10px; font-size: 12px; }
+  .strip.wide { grid-template-columns: 150px minmax(0, 1fr); }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 16px; white-space: nowrap; overflow: hidden; color: var(--text); font-size: 11px; }
+  .strip .head small { color: var(--muted); font-size: 10px; }
+  .strip .head i { width: 8px; height: 8px; border-radius: 50%; flex: none; } .strip .head i.sq { border-radius: 2px; }
+  .strip .ruler { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--muted); }
+  .strip .track { position: relative; height: 16px; }
+  .strip .track i { position: absolute; top: 4px; height: 8px; border-radius: 4px; }
+  .strip .track i.lane { top: 3px; height: 10px; background: var(--surface-2); border-radius: 5px; }
+  .strip .track em { position: absolute; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--warn); }
+  .strip .legend { grid-column: 1 / -1; color: var(--muted); font-size: 11px; padding-top: 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+  .strip .full { grid-column: 1 / -1; }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); } .c6 { background: var(--c6); }
+  /* columns over the lanes (direction B) */
+  .cols { position: relative; }
+  .col { position: absolute; top: 0; bottom: 0; border-radius: 4px; pointer-events: none; }
+  .col.inc { background: var(--inc); opacity: .13; border-left: 2px solid var(--inc); border-right: 2px solid var(--inc); }
+  .col.sug { border: 2px dashed var(--inc); opacity: .7; }
+  .col.lit { opacity: 1; box-shadow: inset 0 0 0 2px var(--inc); background: var(--inc-soft); }
+  .coltag { position: absolute; top: -1px; left: 0; transform: translateX(-2px); font: 600 10px/16px var(--font); color: var(--inc); white-space: nowrap; background: var(--surface); padding: 0 4px; border-radius: 3px; }
+  .sug .n { position: absolute; top: 0; width: 18px; height: 18px; border-radius: 999px; background: var(--inc); color: var(--accent-ink); font: 700 11px/18px var(--font); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+  .inbox { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .list { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 12px; overflow: hidden; }
+  .list .grp { padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--surface-2); }
+  .list .it { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; border-top: 1px solid var(--line); }
+  .list .it.on { background: var(--inc-soft); }
+  .list .it small { display: block; color: var(--muted); font-size: 11px; }
+  .panel { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mapbox { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--ground); height: 150px; position: relative; overflow: hidden; }
+  .mapbox svg { width: 100%; height: 100%; display: block; }
+  .ro { fill: var(--road); stroke: var(--road-edge); } .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; opacity: .5; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .fault { position: absolute; width: 18px; height: 18px; border-radius: 999px; background: var(--bad); color: #fff; font: 700 11px/18px var(--font); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+  .rel { position: relative; }
+  .fold { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-2); font-size: 13px; }
+  .unplaced { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, a new chapter proposed · three directions for the maintainer's word · 2026-11-04</span>
+    <h1>The Incidents tab redesigned, with everything built so far in hand</h1>
+    <p class="lede">The ask of 2026-11-04: "redesign the Incidents tab considering everything we have built". The tab grew in six layers over five weeks (the clocks' offer, the strip, the same day, the stills, Not on the clock, the suggestions from paths), each sound alone and together a page that speaks four dialects. Below: what the tab holds today and where it hurts, then three directions drawn as whole pages, the ideas every direction shares, and a recommendation. The fictional office throughout.</p>
+  </header>
+
+  <!-- Stock -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure 0</span><h2>What the tab holds today, in the order it is drawn, and where it hurts</h2></div>
+    <div class="frame">
+      <div class="rel">
+        <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events</span><span>Notes <small>14</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>2</small></span><span>Map <small>26</small></span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+        <div class="lead" style="margin-top:8px"><span class="muted">2 incidents, 1 forming, 1 day to look at. An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own. A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press. A day to look at has videos on it not yet in an incident, whether or not they overlap.</span><span class="btn tiny">New incident</span></div>
+        <span class="fault" style="right:120px;top:40px">1</span>
+        <div class="strip" style="margin-top:10px">
+          <div class="head">Days</div><div><span class="pill acc">6 Nov 2025 · 6 videos · 13 notes · 1 forming · same day ●</span></div>
+          <div class="ruler" style="grid-column:2"><span>14:20</span><span>15:23</span><span>16:26</span><span>17:30</span><span>18:33</span><span>19:36</span><span>20:40</span></div>
+          <div class="head"><i class="c1"></i>Officer1_20251106…</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:94%;width:5%"></i></div>
+          <div class="head"><i class="c2"></i>Officer2_20251106…</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:95%;width:4%"></i></div>
+          <div class="head"><i class="c3"></i>Officer3_20251106…</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:95%;width:4%"></i></div>
+          <div class="head"><i class="c4"></i>Officer4_20251106…</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:96%;width:4%"></i></div>
+          <div class="head"><i class="c6"></i>Officer1_…-1-0-2</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6" style="left:1%;width:3%"></i></div>
+          <div class="head">notes</div><div class="track"><span class="pill" style="position:absolute;right:0;top:0;font-size:10px">+13</span></div>
+          <div class="head">incidents</div><div class="track"><span class="pill inc" style="position:absolute;right:0;top:0;font-size:10px">Walk i…</span></div>
+          <div class="head">Suggested</div><div class="track"><span class="num" style="position:absolute;right:0;top:-1px">1</span></div>
+          <div class="legend">Officer1_20251106…_BWC-1-0 · clock · Officer2_…_BWC-2-0 · clock · Officer3_… · clock · Officer4_… · clock · Officer1_…-1-0-2 · from its path file</div>
+        </div>
+        <span class="fault" style="left:120px;top:118px">2</span><span class="fault" style="right:90px;top:200px">3</span>
+        <div class="cards" style="margin-top:10px">
+          <div class="card"><span class="pill">Offer</span><b>1 more video ran during Harbour car park. Add it?</b><span class="muted">Officer4_20251106…</span><div class="acts"><span class="btn tiny primary">Add it</span><span class="btn tiny ghost">Not these</span></div></div>
+          <div class="card sug"><div class="h"><span class="num">1</span><b>2 cameras together, 20:25 to 20:40</b><span class="pill">from their paths</span></div><div class="stills"><span class="still" data-n="20:25"></span><span class="still" data-n="20:25"></span></div><span class="muted">Kit Vale, Jo Marsh were within 50 m of one another for 15 minutes; none is in an incident.</span><div class="acts"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">Choose myself</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div></div>
+          <div class="card" style="border-style:dotted"><div class="h"><b>Same day · 6 Nov 2025</b><span class="pill">1 video not in an incident</span></div><span class="muted">Officer1_… ran on the same day as the forming one, 20:25 to 20:40 and Harbour car park, 20:25 to 20:38 and Walk incident, 6 Nov, 20:25 to 20:38, sharing no minute with them…</span><div class="acts"><span class="btn tiny primary">Add to the forming one</span><span class="btn tiny">Choose myself</span><span class="btn tiny ghost">Its own matter</span></div></div>
+        </div>
+        <span class="fault" style="left:-6px;top:330px">4</span>
+        <table class="t" style="margin-top:10px"><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th>Placed</th><th>One sitting</th><th>Events</th><th>Made</th><th></th></tr>
+          <tr><td><b>Harbour car park</b></td><td>3</td><td class="mono">11/06/2025 20:25:17 to 20:38:40</td><td><span class="pill ok">3 of 3 synced</span></td><td>6% used</td><td>8</td><td class="muted">04 Oct 2026 by test</td><td><span class="btn tiny">Open the incident</span> <span class="btn tiny ghost">On the map</span></td></tr>
+          <tr><td><b>Walk incident, 6 Nov</b></td><td>2</td><td class="mono">11/06/2025 20:25:17 to 20:38:40</td><td><span class="pill ok">2 of 2 synced</span></td><td>4% used</td><td>0</td><td class="muted">04 Nov 2026 by test</td><td><span class="btn tiny">Open the incident</span> <span class="btn tiny ghost">On the map</span></td></tr>
+        </table>
+        <span class="fault" style="left:-6px;top:470px">5</span>
+        <div class="fold" style="margin-top:10px"><span><b>Not on the clock</b> <span class="muted">· 3 videos</span></span><span class="muted small">one row each: still, file facts, sound line, Place from the file · Type a time · Place by the day</span></div>
+        <span class="fault" style="left:-6px;top:548px">6</span>
+      </div>
+      <div class="caption">
+        <p><b>1 · The lead is a paragraph.</b> Four sentences of definitions before anything can be done, written for the first visit and read on every one.</p>
+        <p><b>2 · The lanes are named by file.</b> "Officer1_20251106…" on every lane and in the legend, while the Map tab and the suggestion cards already know the officers by name from their path files. The bars are too thin to carry a word on a six-hour day.</p>
+        <p><b>3 · Three thin lanes say little.</b> The notes lane is a "+13" chip, the incidents lane a cut label, the Suggested row a dot; each is a different idiom for "something is here".</p>
+        <p><b>4 · Four kinds of card, four vocabularies.</b> Offer / Add it / Not these; a numbered suggestion / Make an incident / Choose myself / On the map / Not this; Same day / Add to the forming one / Its own matter; and the forming card of v1.180.0 still in the code. The person has to learn that these are all the one thing: the app thinks some videos go together.</p>
+        <p><b>5 · The incidents come last.</b> The tab is named Incidents, and the incidents the office made sit at the foot as a table with seven columns.</p>
+        <p><b>6 · Not on the clock is a page of its own.</b> Under everything, with its own rows and presses, though it is the same day's videos as the strip's.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Direction A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A</span><h2>Incidents first, one kind of suggestion, the day as a tool</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events</span><span>Notes <small>14</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>2</small></span><span>Map <small>26</small></span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+      <div class="lead"><div class="counts"><span class="pill inc">2 incidents</span><span class="pill acc">3 suggested</span><span class="pill">21 videos in none</span><span class="pill warn">3 not on the clock</span></div><span class="btn tiny">New incident</span></div>
+      <div class="block">
+        <div class="h"><h3>Incidents</h3><span class="muted small">each opens on a page of its own</span></div>
+        <div class="cards">
+          <div class="card"><div class="h"><b>Harbour car park</b><span class="pill ok">3 cameras · synced</span></div><div class="stills"><span class="still inc" data-n="Pell"></span><span class="still inc" data-n="Amari"></span><span class="still inc" data-n="9082"></span></div><span class="muted">6 Nov 2025, 20:25 to 20:38 · 8 events · 6% of one reading · made 4 Oct by Dana Reyes</span><div class="acts"><span class="btn tiny primary">Open</span><span class="btn tiny">On the map</span></div></div>
+          <div class="card"><div class="h"><b>Walk incident, 6 Nov</b><span class="pill ok">2 cameras · synced</span></div><div class="stills"><span class="still inc" data-n="Dunn"></span><span class="still inc" data-n="Ruiz"></span></div><span class="muted">6 Nov 2025, 20:25 to 20:38 · no events yet · 4% of one reading · made 4 Nov by Dana Reyes</span><div class="acts"><span class="btn tiny primary">Open</span><span class="btn tiny">On the map</span></div></div>
+        </div>
+      </div>
+      <div class="block">
+        <div class="h"><h3>Suggested</h3><span class="muted small">videos the app thinks go together; nothing is made without a press</span></div>
+        <div class="cards">
+          <div class="card sug"><div class="h"><span class="num">1</span><b>Ofc. Amari ran during Harbour car park</b><span class="pill">by the clocks</span></div><div class="stills"><span class="still" data-n="20:25"></span></div><span class="muted">One more camera on the clock inside the incident's span; it is not in it.</span><div class="acts"><span class="btn tiny primary">Add to Harbour car park</span><span class="btn tiny">Look</span><span class="btn tiny ghost">Not this</span></div></div>
+          <div class="card sug"><div class="h"><span class="num">2</span><b>Kit Vale and Jo Marsh, 20:25 to 20:40</b><span class="pill">by their paths</span></div><div class="stills"><span class="still" data-n="20:25"></span><span class="still" data-n="20:25"></span></div><span class="muted">Within 50 m of one another for 15 minutes; neither is in an incident.</span><div class="acts"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">Look</span><span class="btn tiny ghost">Not this</span></div></div>
+          <div class="card sug"><div class="h"><span class="num">3</span><b>Ofc. Pell, the same day</b><span class="pill">same day</span></div><div class="stills"><span class="still" data-n="14:20"></span></div><span class="muted">Ran on 6 Nov with no minute shared with the day's incidents.</span><div class="acts"><span class="btn tiny primary">Add to an incident…</span><span class="btn tiny">Look</span><span class="btn tiny ghost">Not this</span></div></div>
+        </div>
+      </div>
+      <div class="fold"><span><b>The day in time</b> <span class="muted">· 6 Nov 2025 · 6 videos on the clock, 13 notes · 3 not on the clock</span></span><span class="btn tiny">Open the strip ▾</span></div>
+      <div class="caption">
+        <p><b>Order of use.</b> What the office made comes first, as cards with a still per camera and the facts the table held (the One sitting figure stays, as a phrase). Then one <b>Suggested</b> block where every kind of suggestion the app can make (a camera inside an incident's span by the clocks, cameras together by their paths, overlapping videos with notes, the same day) is a card of one shape: a number, a headline that names the officers, one source pill, one line of why, the stills, and the same three presses: the primary (Make an incident, or Add to <i>name</i>), <b>Look</b>, and <b>Not this</b>.</p>
+        <p><b>Look.</b> One press for "show me": it opens the strip below, lit to those cameras, and offers On the map beside it. The picker and Choose myself go behind the primary press: Make an incident opens the New incident box with the cameras ticked, where the person can still change the ticks, which is what Choose myself did.</p>
+        <p><b>The strip is a tool, folded.</b> The day's timeline, Not on the clock and the day chips live under one fold, opened by Look or by hand, drawn as Direction B draws it. The tab opens short; a case with no incidents and no suggestions says so in one line with New incident.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Direction B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction B</span><h2>The day is the page: named lanes, columns, and a panel that reads what you press</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events</span><span>Notes <small>14</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>2</small></span><span>Map <small>26</small></span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+      <div class="lead"><div class="counts"><span class="pill acc">6 Nov 2025 ●</span><span class="pill">7 Nov 2025</span><span class="muted small">· 2 incidents · 3 suggested · 3 not on the clock</span></div><span class="btn tiny">New incident</span></div>
+      <div class="two">
+        <div class="strip wide">
+          <div class="ruler" style="grid-column:2"><span>20:20</span><span>20:25</span><span>20:30</span><span>20:35</span><span>20:40</span><span>20:45</span></div>
+          <div class="full cols" style="grid-column:1 / -1; display:grid; grid-template-columns:150px minmax(0,1fr); gap:3px 10px">
+            <div class="head"><i class="c1"></i>Ofc. Pell <small>BWC1-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:18%;width:52%"></i><em style="left:30%"></em><em style="left:41%"></em></div>
+            <div class="head"><i class="c2"></i>Ofc. Amari <small>BWC2-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:20%;width:50%"></i><em style="left:33%"></em></div>
+            <div class="head"><i class="c4 sq"></i>Unit 9082 <small>in-car, 3 streams</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:16%;width:56%"></i></div>
+            <div class="head"><i class="c3"></i>Ofc. Dunn <small>BWC3-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:22%;width:40%"></i><em style="left:50%"></em></div>
+            <div class="head"><i class="c5"></i>Ofc. Ruiz <small>BWC5-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c5" style="left:24%;width:36%"></i></div>
+            <div class="head"><i class="c6"></i>Kit Vale <small>BWC6-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6" style="left:60%;width:38%"></i></div>
+            <div class="head"><i style="background:var(--muted)"></i>Jo Marsh <small>BWC7-1</small></div><div class="track"><i class="lane" style="left:0;right:0"></i><i style="left:61%;width:37%;background:var(--muted)"></i><em style="left:80%"></em></div>
+            <!-- columns -->
+            <div class="col inc" style="left:calc(160px + (100% - 160px) * .20); width:calc((100% - 160px) * .50); top:0; bottom:0"><span class="coltag" style="top:-14px">Harbour car park</span></div>
+            <div class="col sug lit" style="left:calc(160px + (100% - 160px) * .60); width:calc((100% - 160px) * .38); top:0; bottom:0"><span class="num" style="position:absolute;left:-9px;top:-9px">2</span></div>
+            <div class="col sug" style="left:calc(160px + (100% - 160px) * .20); width:calc((100% - 160px) * .50); top:0; bottom:0"><span class="num" style="position:absolute;left:-9px;top:-9px">1</span></div>
+          </div>
+          <div class="head muted" style="margin-top:6px">Not on the clock</div><div class="track" style="margin-top:6px"><span class="muted" style="position:absolute;left:0;top:0;font-size:11px">Cell-9 · AirOne · BWC8-1 <span class="btn tiny" style="margin-left:6px">Place…</span></span></div>
+          <div class="legend">Press a column to read it on the right; press a lane for the camera; drag on the ruler to make an incident from a span (the existing way).</div>
+        </div>
+        <div class="panel">
+          <div style="display:flex;gap:6px;align-items:center"><span class="num">2</span><b>Kit Vale and Jo Marsh</b><span class="pill">by their paths</span></div>
+          <div class="muted">20:25 to 20:40 · within 50 m of one another for 15 minutes · neither is in an incident</div>
+          <div class="stills"><span class="still" data-n="Kit Vale"></span><span class="still" data-n="Jo Marsh"></span></div>
+          <div class="mapbox"><svg viewBox="0 0 300 150"><rect width="300" height="150" fill="var(--ground)"/><rect x="0" y="66" width="300" height="14" class="ro"/><rect x="140" y="0" width="14" height="150" class="ro"/><polyline class="pf p4" points="20,73 140,73 200,73 200,120"/><polyline class="pf p2" points="280,20 200,73 160,73"/><circle cx="200" cy="80" r="5" fill="var(--c6)" stroke="var(--surface)" stroke-width="2"/><circle cx="192" cy="73" r="5" fill="var(--muted)" stroke="var(--surface)" stroke-width="2"/></svg><span class="btn tiny" style="position:absolute;right:6px;bottom:6px">Open the map</span></div>
+          <div class="card acts" style="border:0;padding:0;flex-direction:row;gap:6px"><span class="btn tiny primary">Make an incident</span><span class="btn tiny ghost">Not this</span></div>
+          <div class="muted" style="border-top:1px solid var(--line);padding-top:6px">With nothing pressed this panel reads the day: 7 cameras on the clock, 2 incidents, 3 suggested, 3 not on the clock, and the incidents as a short list with Open.</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>The strip grows up.</b> The lanes are named by the officer (from the path file, else the unit, else the file), one lane per camera, a vehicle's streams as one lane; the ruler fits the day's recordings so the bars have width; the notes are marks on their own lanes, no notes lane. An <b>incident</b> is a shaded column across every lane it covers, with its name on top; a <b>suggestion</b> is a dashed column with its number; a camera that is suggested into an incident is lit inside the incident's column. The thin lanes of today (notes, incidents, Suggested) are gone: the things are drawn where they happen.</p>
+        <p><b>One panel reads what you press.</b> Press a suggestion's column and the panel on the right says who, when, why, the stills, a small map of where they were at that span (the Map tab's drawing, read-only, with Open the map), and the two presses. Press an incident's column and it reads the incident (cameras, span, events, One sitting, Open). Press a lane and it reads the camera (its clock and surety, its notes, Play here, On the map). Press nothing and it reads the day. One place to read, instead of cards of four kinds.</p>
+        <p><b>Not on the clock</b> is the strip's last row: the clockless videos named, with Place… opening today's panel as a sheet. The day chips stay in the lead. The incidents table goes; the day panel lists the incidents with Open, and a day chip carries its incident count.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Direction C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction C</span><h2>The inbox: one list of things to do on the left, the evidence on the right</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events</span><span>Notes <small>14</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>2</small></span><span>Map <small>26</small></span><span>Clips</span><span>Speakers</span><span>Details</span></div>
+      <div class="inbox">
+        <div class="list">
+          <div class="grp">Incidents · 2</div>
+          <div class="it"><span class="still inc" style="width:24px;height:18px"></span><span><b>Harbour car park</b><small>3 cameras · 6 Nov 20:25 to 20:38 · 8 events</small></span><span class="btn tiny">Open</span></div>
+          <div class="it"><span class="still inc" style="width:24px;height:18px"></span><span><b>Walk incident, 6 Nov</b><small>2 cameras · 6 Nov 20:25 to 20:38</small></span><span class="btn tiny">Open</span></div>
+          <div class="grp">Suggested · 3</div>
+          <div class="it"><span class="num">1</span><span><b>Ofc. Amari ran during Harbour car park</b><small>by the clocks · one more camera in the span</small></span><span class="btn tiny primary">Add</span></div>
+          <div class="it on"><span class="num">2</span><span><b>Kit Vale and Jo Marsh, 20:25 to 20:40</b><small>by their paths · within 50 m for 15 minutes</small></span><span class="btn tiny primary">Make</span></div>
+          <div class="it"><span class="num">3</span><span><b>Ofc. Pell, the same day</b><small>same day · shares no minute with the incidents</small></span><span class="btn tiny">Add to…</span></div>
+          <div class="grp">Not on the clock · 3</div>
+          <div class="it"><span class="still" style="width:24px;height:18px"></span><span><b>Cell-9</b><small>sound lines up with Ofc. Amari from 20:26:04 · Clear</small></span><span class="btn tiny primary">Place</span></div>
+          <div class="it"><span class="still" style="width:24px;height:18px"></span><span><b>AirOne</b><small>file says 6 Nov 2025 20:25:58</small></span><span class="btn tiny">Place…</span></div>
+          <div class="it"><span class="still" style="width:24px;height:18px"></span><span><b>BWC8-1</b><small>no time in its file</small></span><span class="btn tiny">Place…</span></div>
+          <div class="grp" style="display:flex;justify-content:space-between"><span>Not in an incident · 18 videos</span><span class="btn tiny">New incident</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="panel">
+            <div style="display:flex;gap:6px;align-items:center"><span class="num">2</span><b>Kit Vale and Jo Marsh, 20:25 to 20:40 on 6 Nov 2025</b><span class="pill">by their paths</span></div>
+            <div class="muted">Within 50 m of one another for 15 minutes by their paths; neither is in an incident. Make an incident opens the New incident box with the two ticked and the day's others under them.</div>
+            <div style="display:flex;gap:10px"><div class="stills"><span class="still" data-n="Kit Vale"></span><span class="still" data-n="Jo Marsh"></span></div><div class="mapbox" style="flex:1;height:110px"><svg viewBox="0 0 300 110"><rect width="300" height="110" fill="var(--ground)"/><rect x="0" y="48" width="300" height="14" class="ro"/><rect x="140" y="0" width="14" height="110" class="ro"/><polyline class="pf p4" points="20,55 140,55 200,55 200,100"/><polyline class="pf p2" points="280,10 200,55 160,55"/><circle cx="200" cy="62" r="5" fill="var(--c6)" stroke="var(--surface)" stroke-width="2"/><circle cx="192" cy="55" r="5" fill="var(--muted)" stroke="var(--surface)" stroke-width="2"/></svg><span class="btn tiny" style="position:absolute;right:6px;bottom:6px">Open the map</span></div></div>
+            <div style="display:flex;gap:6px"><span class="btn tiny primary">Make an incident</span><span class="btn tiny ghost">Not this</span></div>
+          </div>
+          <div class="strip">
+            <div class="ruler" style="grid-column:2"><span>20:20</span><span>20:30</span><span>20:40</span><span>20:50</span></div>
+            <div class="head"><i class="c1"></i>Ofc. Pell</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:18%;width:52%;opacity:.35"></i></div>
+            <div class="head"><i class="c2"></i>Ofc. Amari</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:20%;width:50%;opacity:.35"></i></div>
+            <div class="head"><i class="c6"></i>Kit Vale</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c6" style="left:60%;width:38%"></i></div>
+            <div class="head"><i style="background:var(--muted)"></i>Jo Marsh</div><div class="track"><i class="lane" style="left:0;right:0"></i><i style="left:61%;width:37%;background:var(--muted)"></i></div>
+            <div class="legend">The day's strip, the chosen item's cameras lit and the rest faint; every lane with "show all 7".</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>One list, in the order of doing.</b> The incidents made, the suggestions, the videos not on the clock, and the count of videos in no incident with New incident: every item is one row with one primary press. It reads like a work queue, which is what the tab is for an office that has 27 videos and no incident yet.</p>
+        <p><b>The evidence follows the choice.</b> Choosing a row shows its panel on the right (who, why, stills, a small map, the presses) and the day's strip under it with that row's cameras lit; an incident row shows its summary and its span on the strip; a Not-on-the-clock row shows the file's facts, the sound line and the place presses with its still. Nothing on the left needs a card.</p>
+        <p><b>The cost.</b> The strip is narrower (about 760 px at 1366), so a day of seventy cameras scrolls inside its box; under 1024 the list goes on top and the panel under it, as the Map tab's list does.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shared ideas -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">In every direction</span><h2>The ideas all three share, from what is already built</h2></div>
+    <div class="frame">
+      <table class="t">
+        <tr><th>Idea</th><th>What it uses</th><th>What it replaces</th></tr>
+        <tr><td><b>Officers' names on the lanes and in every headline.</b> From the path file's wearer, else the unit, else the file's short name.</td><td>v1.187.0's path files, v1.192.0's names-first rule on the map</td><td>"Officer1_20251106…" on the lanes and in the legend</td></tr>
+        <tr><td><b>One kind of suggestion, one vocabulary.</b> Whatever found it (the clocks, the paths, the notes, the same day), the same shape and the same presses: the primary (Make an incident / Add to <i>name</i>), Look (or the panel), Not this.</td><td>incidents.offers, camera_paths.strip_suggestions, the forming hints, the same day</td><td>Offer / Add it / Not these; Choose myself; Add to the forming one / Its own matter</td></tr>
+        <tr><td><b>A still per camera on every incident and suggestion.</b></td><td>v1.185.0's still address</td><td>the table row's number of cameras</td></tr>
+        <tr><td><b>Where they were, in a small map.</b> The suggestion's or incident's cameras drawn on a small read-only map with Open the map, when they have path files.</td><td>v1.191.0's map pane on the incident page, mounted small</td><td>On the map as a bare link</td></tr>
+        <tr><td><b>Not on the clock joined to the day.</b> The clockless videos are rows of the same page, not a page under it, with the one primary press each earns (Place, from sound or the file).</td><td>v1.186.0's panel and sound match</td><td>the panel under the cards</td></tr>
+        <tr><td><b>A short lead of counts.</b> "2 incidents · 3 suggested · 21 in none · 3 not on the clock", and the definitions on hover or in the guide.</td><td>the counts the tab already computes</td><td>the four-sentence lead</td></tr>
+        <tr><td><b>Nothing made without a press</b>, and nothing new kept: the directions redraw what the tab holds; the stores, the keys and the audit rows stay as they are.</td><td>every rule of Phase 6, 10 and 12</td><td>nothing</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- Verdict -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">A recommendation, and the choices</span><h2>Direction B, with Direction A's one card shape inside its panel</h2></div>
+    <div class="frame">
+      <div class="verdict"><b>Why B.</b> The maintainer asked for the strip on 2026-10-30 ("a timeline view that updates with notes") and it is the one thing on the tab that shows time; today it is starved of names and width and hemmed in by three thin lanes. B gives it the names the path files brought, draws incidents and suggestions where they happen on it, and puts every reading in one panel. A is the simplest and would do well for an office that makes incidents by hand; C is the best work queue but halves the strip. B keeps the timeline the hero and folds A's one vocabulary into its panel. Built in two releases: the lanes, the columns and the panel first; the small map and Not on the clock as a row second.</div>
+      <table class="t" style="margin-top:12px">
+        <tr><th>#</th><th>The choice</th><th>Recommended</th><th>The other way</th></tr>
+        <tr><td>1</td><td>Which direction</td><td>B, the day as the page</td><td>A (incidents first, strip folded) or C (the inbox)</td></tr>
+        <tr><td>2</td><td>Where the incidents made are listed</td><td>In the panel's day reading, as a short list with Open, and as shaded columns on the strip; the table goes</td><td>Keep the table under the strip</td></tr>
+        <tr><td>3</td><td>The small map on a suggestion</td><td>Yes, read-only, with Open the map; drawn only when the cameras have path files</td><td>On the map as a link only</td></tr>
+        <tr><td>4</td><td>The four vocabularies</td><td>One: the primary press, Look (B: the panel), Not this; Choose myself folds into the New incident box the primary opens</td><td>Keep Choose myself as a second button</td></tr>
+        <tr><td>5</td><td>Not on the clock</td><td>A row of the strip with Place…, the panel as a sheet</td><td>Keep the panel under the strip</td></tr>
+        <tr><td>6</td><td>The lead</td><td>Counts as pills; the definitions on hover and in the guide</td><td>Keep the sentences</td></tr>
+      </table>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

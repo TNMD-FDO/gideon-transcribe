@@ -558,13 +558,23 @@ _Avoid_: incident strip, incident bar, timeline of incidents
 The band's third shape on the case's chronology, when more than six recordings overlap: one shaded strip whose height at each moment is how many recordings were running then, labelled at its peaks; hover for the count, press for the list of recordings running then. Under it, bars for the eight most noted recordings only, the rest folded. Phase 10 chapter 1.
 _Avoid_: density, histogram, heat
 
+**Suggested**:
+On the Incidents tab (Phase 12 chapter 7, v1.199.0), videos the app thinks go together, whatever found it: their clocks (the offer of Phase 6), their paths (within reach of one another for minutes, Phase 12), the notes under them (a Forming run), or the Same day. One shape everywhere: a numbered dashed column on the strip, the same number in the Reader, the officers' names, one line of why, and the same presses: Make an incident (or Add to the incident it ran during), On the map, and Not this, which puts the suggestion away for the case by its key. Nothing is made without a press.
+_Avoid_: proposed incident, candidate, offer (as a page word), forming card
+
+**Reader**:
+The box beside the Incidents tab's strip (Phase 12 chapter 7, v1.199.0) that reads whatever is pressed on the strip: with nothing pressed, the day (its counts and the case's incidents with Open); a Suggested column, a shaded incident column, or a lane's camera. One place to read, in place of cards and a table.
+_Avoid_: side panel, inspector, details pane, drawer
+
 **Forming**:
 On the Incidents tab's strip (Phase 10 chapter 5, v1.180.0), two or more videos that overlap on the case's clock with notes gathering under them: a dashed bracket in the forming lane and, for the three most noted, a card under the strip with Make it (the picker, those videos ticked), Choose myself and Not these. A bracket with no notes is drawn faint and makes no card; Not these folds one to faint for good, by the same key the clocks' offer keeps. A forming one is never called an incident until it is made.
-_Avoid_: proposed incident, suggestion, candidate, draft incident
+From v1.199.0 a Forming run is one kind of Suggested, drawn and read as the others are.
+_Avoid_: proposed incident, candidate, draft incident
 
 **Same day**:
 On the Incidents tab's strip (Phase 10 chapter 5, v1.184.0), the loose videos of one day that sit in no forming bracket, two or more of them, or one beside an incident or a forming one: a dotted bracket over each and one card, which says how they stand in time to the day's incidents and offers Add to the forming one (or to the day's incident), Choose myself, and Its own matter, which puts the set away by the offers' key. Never called an incident until one is made. The day chips and the Date strip mark a day whose videos ran together with a dot.
-_Avoid_: same-date incident, suggested incident, group
+From v1.199.0 the Same day is read in the Reader's day reading, with Make an incident (New incident with them ticked), Add to the day's incident or forming one, and Not this.
+_Avoid_: same-date incident, group
 
 **Still**:
 One frame of a video at a moment, cut on request from its playback copy by the app's grabber and never kept: in the notes export and the timeline report at a note's or an event's moment (Phase 9 chapter 4, Phase 8 chapter 12), and on the Incidents tab's forming and day cards and the picker's rows (Phase 10 chapter 5, v1.185.0), the same moment from every camera, so a person can see which cameras belong together. Served as content, private and never stored on the machine that looked, to whoever may open the recording.

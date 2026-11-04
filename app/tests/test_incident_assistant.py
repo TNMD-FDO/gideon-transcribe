@@ -1373,10 +1373,11 @@ def test_the_page_and_the_act_endpoint_carry_chapter_3(incident, person, client)
     assert client.post(url + "/act", {"action": "propose"}).status_code == 400
     assert client.post(url + "/act", {"action": "memo"}).status_code == 400
     assert client.post(url + "/export/memo").status_code == 404
-    # The case page says whether an incident has a memo.
+    # The Incidents tab's Reader says whether an incident has a memo (Phase
+    # 12 chapter 7: the strip's reading carries every incident's line).
     settings_store.set_to("incidents_memo", True)
-    case_page = client.get(f"/case/{incident.case_id}?tab=incidents").content.decode()
-    assert "no memo yet" in case_page
+    told = client.get(f"/case/{incident.case_id}/incidents/strip.json").json()
+    assert told["incidents_all"][0]["memo"] == "no memo yet"
 
 
 def test_a_numbered_label_does_not_show_under_a_tile(incident, person, client):

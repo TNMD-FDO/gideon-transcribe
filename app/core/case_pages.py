@@ -554,10 +554,17 @@ def _incidents_context(
                 "elsewhere": elsewhere.incident.name if elsewhere else "",
             }
         )
-    from core import camera_paths, incident_strip
+    from core import camera_paths, clock_match, incident_strip
 
     # On the map (Phase 12 chapter 1) on the rows whose cameras have a path.
     rows = incidents.strip_rows(case)
+    # The lead's counts (Phase 12 chapter 7): incidents, suggested, in none,
+    # not on the clock.
+    counts = None
+    if strip:
+        counts = incident_strip.counts(
+            case, incident_strip.days(case), clock_match.rows_of(case)
+        )
     for row in rows:
         # strip_rows read whether a camera has a path with its own query.
         row["map_url"] = camera_paths.incident_map_url(
@@ -568,6 +575,7 @@ def _incidents_context(
         "incidents_on": True,
         "incident_rows": rows,
         "incident_offers": incidents.offers(case),
+        "incident_counts": counts,
         "incident_videos": videos,
         # The strip (Phase 10 chapter 5, v1.180.0): the lead's forming count.
         "incident_forming": (

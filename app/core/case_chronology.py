@@ -401,6 +401,9 @@ def day_of(
     from core import camera_paths
 
     on_map = camera_paths.ids_with_path(case)
+    # The officers' names on the strip's lanes (Phase 12 chapter 7): the
+    # wearer or driver as the path file gives them, with the unit.
+    names = camera_paths.names_of(case) if strip else {}
     colours: dict = {}
     bars: list[dict] = []
     entries: list[dict] = []
@@ -451,6 +454,12 @@ def day_of(
                 # The camera's id from its stamp, the bar's short name
                 # (v1.164.1); empty for a recording with none.
                 "camera": str((one.stamp or {}).get("camera") or "")[:24],
+                # The lane's name (Phase 12 chapter 7): the officer as the
+                # path file names them, else the unit from the stamp, else
+                # the title cut; and whether the camera is on the map.
+                "name": _lane_name(one, names.get(key)),
+                "unit": (names.get(key) or {}).get("unit", ""),
+                "on_map": one.pk in on_map,
                 "from": round(running[0], 1),
                 "to": round(running[1], 1),
                 "notes": count,
@@ -537,7 +546,11 @@ def day_of(
     for row in entries:
         _place_in_incidents(row, on_day)
     groups = spells(entries)
+    # The clocks' offers on the day (Phase 12 chapter 7), in the suggestions'
+    # shape, so the strip's reader draws every kind of suggestion alike.
+    offers = _offers_on_day(case, bars) if strip else []
     return {
+        "offers": offers,
         "date": date.isoformat(),
         "words": day_words(date),
         "span": span is not None,
@@ -793,6 +806,55 @@ def _hints(
 # An incident from a span (Phase 10 chapter 2, v1.167.0) ----------------------
 
 
+def _lane_name(recording, given: dict | None) -> str:
+    """A lane's name on the strip (Phase 12 chapter 7): the officer as the
+    path file names them, else the unit the stamp carries, else the title
+    cut to the lane."""
+    if given and given.get("name"):
+        return given["name"][:40]
+    camera = str((recording.stamp or {}).get("camera") or "").strip()
+    if camera:
+        return camera[:24]
+    title = exports.title_of(recording)
+    return title if len(title) <= 24 else title[:23] + "…"
+
+
+def _offers_on_day(case, bars: list[dict]) -> list[dict]:
+    """The clocks' offers (Phase 6 chapter 1) whose videos are on this day's
+    strip, each as a suggestion: its key, kind ("new" or "add"), the ids,
+    the span from the bars, the offer's words, and the incident an "add"
+    would join."""
+    by_id = {b["id"]: b for b in bars}
+    out = []
+    for offer in incidents.offers(case):
+        found = offer["recordings"] if offer["kind"] == "new" else [offer["recording"]]
+        ids = [str(one.pk) for one in found]
+        its = [by_id[one] for one in ids if one in by_id]
+        if not its:
+            continue
+        incident = offer.get("incident")
+        out.append(
+            {
+                "key": offer["key"],
+                "kind": offer["kind"],
+                "ids": ids,
+                "from": min(b["from"] for b in its),
+                "to": max(b["to"] for b in its),
+                "words": offer["line"],
+                "incident": (
+                    {
+                        "id": str(incident.pk),
+                        "name": incident.name,
+                        "url": incident.url(),
+                    }
+                    if incident is not None
+                    else None
+                ),
+            }
+        )
+    return out
+
+
 def _incidents_on_day(case, date: dt.date, span, placements: dict) -> list[dict]:
     """The case's incidents on this day: each one's span on the day from its
     cameras as the case's clock reads them, so the lane and the bars agree.
@@ -800,6 +862,9 @@ def _incidents_on_day(case, date: dt.date, span, placements: dict) -> list[dict]
     only the incidents the span touches."""
     if not incidents.on():
         return []
+    from core import camera_paths
+
+    on_map = camera_paths.incidents_on_map(case)
     out = []
     for incident in case.incidents.prefetch_related("cameras__recording"):
         low = high = None
@@ -834,6 +899,8 @@ def _incidents_on_day(case, date: dt.date, span, placements: dict) -> list[dict]
                 "camera_ids": ids,
                 "placed_ids": placed_ids,
                 "events": events,
+                # On the map (Phase 12 chapter 7), from the strip's reader.
+                "map_url": camera_paths.incident_map_url(incident, on_map),
                 "words": (
                     f"{incident.name} · {len(ids)} camera{'' if len(ids) == 1 else 's'}"
                     f" · {events} event{'' if events == 1 else 's'}"

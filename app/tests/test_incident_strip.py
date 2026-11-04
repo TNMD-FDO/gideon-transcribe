@@ -160,12 +160,20 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     # addresses, the clocks' offer is a card with its key, the videos fold
     # closed because every video is on the clock.
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "No incident yet, 1 forming." in page
+    # The lead as counts (Phase 12 chapter 7): the forming run and the
+    # clocks' offer share one key, so one suggestion.
+    assert "No incident yet" in page and "1 suggested" in page
     assert 'id="incident-strip"' in page and 'data-mode="strip"' in page
     assert f"/case/{a_case.pk}/incidents/strip.json" in page
-    assert 'id="forming-cards"' in page
+    assert 'id="strip-reader"' in page and 'id="unclocked-host"' in page
+    assert 'id="forming-cards"' not in page
+    # The clocks' offer is read in the day's reading, by its key.
     key = incidents.offer_key([one.pk, two.pk, three.pk])
-    assert f'data-key="{key}"' in page
+    told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    assert told["day"]["offers"] == [] or told["day"]["offers"][0]["key"] == key
+    assert told["counts"]["suggested"] == 1 and told["counts"]["incidents"] == 0
+    assert told["incidents_all"] == []
+    assert told["day"]["bars"][0]["name"] and "on_map" in told["day"]["bars"][0]
     # No table of every video under the incidents (v1.180.1): the recordings
     # list carries the clock columns. New incident's own tick list stays.
     assert "Videos in this case" not in page and 'id="case-videos"' not in page
@@ -176,7 +184,7 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
     assert told["may_make"] is False
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
-    assert "No incident yet." in page and ", 1 forming" not in page
+    assert "No incident yet" in page and "nothing suggested" in page
     assert 'id="incident-strip"' in page
 
 

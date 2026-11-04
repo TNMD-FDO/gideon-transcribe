@@ -373,11 +373,22 @@
             videos not yet in one. A tab beside Chat at the maintainer's word,
             after the strip under the case name had floated over the page.
           {% endcomment %}
+          {% comment %}
+            The lead as counts (Phase 12 chapter 7, v1.199.0; the drawing
+            docs/spec/mockups/phase-12-incidents-tab-redesign.html, Direction
+            B): the definitions sit on hover and in the guide.
+          {% endcomment %}
           <div class="row" style="align-items: center; margin: 14px 0 8px">
-            <p class="lead grow m0">
-              {% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}{% if incident_forming %}, {{ incident_forming }} forming{% endif %}{% if incident_sameday %}, {{ incident_sameday }} day{{ incident_sameday|pluralize }} to look at{% endif %}.
-              An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.{% if incident_forming %} A forming one is videos that overlap on the case's clock with notes gathering under them; nothing is made without a press.{% endif %}{% if incident_sameday %} A day to look at has videos on it not yet in an incident, whether or not they overlap.{% endif %}
-            </p>
+            <div class="lead grow m0 inc-counts" id="incident-counts">
+              {% if incident_counts %}
+                <span class="pill small {% if incident_counts.incidents %}acc{% endif %}" title="An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }}{% else %}No incident yet{% endif %}</span>
+                <span class="pill small" title="Videos the app thinks go together: by their clocks, by their paths, by the notes under them, or the same day. Nothing is made without a press.">{% if incident_counts.suggested %}{{ incident_counts.suggested }} suggested{% else %}nothing suggested{% endif %}</span>
+                <span class="pill small" title="Videos of the case that are in no incident.">{{ incident_counts.in_none }} video{{ incident_counts.in_none|pluralize }} in none</span>
+                {% if incident_counts.unclocked %}<a class="pill small warn" href="#unclocked-host" title="Videos whose clock nobody has read or placed; each row under the strip offers a time or a sound match.">{{ incident_counts.unclocked }} not on the clock</a>{% endif %}
+              {% else %}
+                <span class="pill small">{% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident yet{% endif %}</span>
+              {% endif %}
+            </div>
             <button type="button" class="btn small" id="new-incident">{% icon "camera" %} New incident</button>
           </div>
           {% comment %}
@@ -388,78 +399,19 @@
             forming cards beside the clocks' offers. Not these on either
             keeps the same key.
           {% endcomment %}
-          <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-cards="#forming-cards" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
-          <div class="forming-cards" id="forming-cards">
-          {% for offer in incident_offers %}
-            <div class="card inc-offer" data-key="{{ offer.key }}">
-              <span class="pill small offer">Offer</span>
-              <span class="small"><b>{{ offer.line }}</b>
-                {% if offer.kind == "new" %}<span class="muted">{% for one in offer.recordings %}{{ one.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="muted">{{ offer.recording.title }}</span>{% endif %}
-                {% comment %}One sitting on the case page (Phase 8 chapter 10): the bar as the incident would read.{% endcomment %}
-                {% with T=offer.sitting %}{% if T.on %}
-                  <span class="sitting-mini {{ T.zone }}" title="{{ T.sentence }}">
-                    <span class="figure">{{ T.figure }}</span>
-                    <span class="bar"><span class="blocks">{% for cam in T.cameras %}<i class="{% if cam.read == 'words' %}words{% endif %}" style="width: {{ cam.percent }}%" title="{{ cam.name }}"></i>{% endfor %}</span></span>
-                    <span class="word {{ T.tone }}">{{ T.short }}</span>
-                  </span>
-                {% endif %}{% endwith %}
-              </span>
-              <span class="nowrap">
-                {% if offer.kind == "new" %}
-                  <form class="inline-form" method="post" action="{% url 'new-incident' case.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="how" value="offer">
-                    {% for one in offer.recordings %}<input type="hidden" name="recordings" value="{{ one.pk }}">{% endfor %}
-                    <button type="submit" class="small primary">Make it</button>
-                  </form>
-                  <button type="button" class="small ghost choose-myself" data-recordings="{% for one in offer.recordings %}{{ one.pk }} {% endfor %}">Choose myself</button>
-                {% else %}
-                  <form class="inline-form" method="post" action="{% url 'add-to-incident' case.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="incident" value="{{ offer.incident.pk }}">
-                    <input type="hidden" name="recording" value="{{ offer.recording.pk }}">
-                    <button type="submit" class="small primary">Add it</button>
-                  </form>
-                {% endif %}
-                <form class="inline-form" method="post" action="{% url 'decline-incident-offer' case.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="key" value="{{ offer.key }}">
-                  <button type="submit" class="tiny ghost">Not these</button>
-                </form>
-              </span>
-            </div>
-          {% endfor %}
+          {% comment %}
+            The day as the page (Phase 12 chapter 7, v1.199.0): the strip
+            with named lanes and columns on the left, the reader on the
+            right, which reads the day, a suggestion, an incident or a
+            camera; the clocks' offers, the forming cards, the day cards and
+            the incidents table are all read there. Not on the clock keeps
+            its panel under them.
+          {% endcomment %}
+          <div class="strip-wrap">
+            <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-reader="#strip-reader" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
+            <aside id="strip-reader" class="chron reader" aria-live="polite"></aside>
           </div>
-          {% if incident_rows %}
-            <div class="tbl-wrap">
-              <table class="tbl as-cards" id="incidents">
-                <thead><tr><th>Incident</th><th>Cameras</th><th>By the clocks</th><th title="How many cameras sit on the clock, and whether whole or cut">Placed</th>{% if sitting_on %}<th title="How much of one reading of the engine the incident's cameras fill">One sitting</th>{% endif %}<th>Events</th><th>Made</th><th></th></tr></thead>
-                <tbody>
-                  {% for row in incident_rows %}
-                    <tr class="goes" tabindex="0" data-open="{{ row.url }}">
-                      <td class="name"><b>{{ row.incident.name }}</b></td>
-                      <td>{{ row.cameras }}</td>
-                      <td class="mono">{{ row.span }}</td>
-                      <td><span class="pill {{ row.tone }} small">{{ row.placed }}</span></td>
-                      {% if sitting_on %}
-                        {% comment %}One sitting on the case page (Phase 8 chapter 10): the bar in small, from the kept shares.{% endcomment %}
-                        <td>{% with T=row.sitting %}{% if T.on %}
-                          <span class="sitting-mini {{ T.zone }}" title="{{ T.sentence }}">
-                            <span class="figure">{{ T.percent|floatformat:0 }}% used</span>
-                            <span class="bar"><span class="blocks">{% for cam in T.cameras %}<i class="{% if cam.read == 'words' %}words{% endif %}" style="width: {{ cam.percent }}%" title="{{ cam.name }}"></i>{% endfor %}</span></span>
-                            <span class="word {{ T.tone }}">{{ T.word }}</span>
-                          </span>
-                        {% endif %}{% endwith %}</td>
-                      {% endif %}
-                      <td>{{ row.events }}{% if row.memo %}<div class="muted small nowrap">{{ row.memo }}</div>{% endif %}</td>
-                      <td class="muted nowrap">{{ row.incident.created|date:"d M Y" }}{% if row.incident.created_by %} by {{ row.incident.created_by.shown_name }}{% endif %}</td>
-                      <td class="acts"><a href="{{ row.url }}" class="btn small">Open the incident</a>{% if row.map_url %} <a href="{{ row.map_url }}" class="btn small ghost" title="Its cameras' paths on the Map tab, this incident alone">{% icon "map" %} On the map</a>{% endif %}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% endif %}
+          <div id="unclocked-host"></div>
         {% elif tab == "map" %}
           {% comment %}
             The Map tab (Phase 12 chapter 1; the drawing

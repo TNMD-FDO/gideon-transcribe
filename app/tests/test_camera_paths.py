@@ -685,8 +685,10 @@ def test_the_counts_and_links_reach_home_search_notes_and_incidents(
         f"?tab=map&incident={incident.pk}"
     )
     signed_in(client, person)
-    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
-    assert f"?tab=map&amp;incident={incident.pk}" in page.content.decode()
+    # On the map from the Incidents tab's Reader (Phase 12 chapter 7).
+    told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
+    map_url = told["incidents_all"][0]["map_url"]
+    assert map_url.endswith(f"?tab=map&incident={incident.pk}")
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=details")
     assert "1 camera with a path file" in page.content.decode()
     assert "1 video without" in page.content.decode()
