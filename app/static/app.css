@@ -3973,11 +3973,16 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-leaders { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .map-leaders svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .map-leaders line { stroke: var(--text); stroke-width: 1; opacity: 0.55; }
-.map-tag { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: inline-flex; gap: 5px; align-items: center; min-height: 20px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); font-size: var(--t-label); font-weight: 600; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: pointer; }
+.map-tag { position: absolute; pointer-events: auto; display: inline-flex; gap: 5px; align-items: center; min-height: 20px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); font-size: var(--t-label); font-weight: 600; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: grab; user-select: none; touch-action: none; }
 .map-tag i { width: 8px; height: 8px; border-radius: 50%; display: block; }
 .map-tag i.sq { border-radius: 2px; }
 .map-tag.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.map-tag.pinned { border-color: var(--accent); }
 .map-tag small { font-weight: 400; }
+.map-tag .pinmark { display: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-left: 2px; cursor: pointer; }
+.map-tag.pinned .pinmark { display: block; }
+.map-tag.away::after { content: " · out of view"; font-weight: 400; color: var(--muted); }
+.map-leaders line.pinned { stroke: var(--accent); opacity: 0.9; stroke-width: 1.2; }
 /* A vehicle's speed beside its marker while it moves (chapter 6). */
 .map-head .spd { position: absolute; left: calc(100% + 5px); top: 50%; transform: translateY(-50%); background: color-mix(in srgb, var(--text) 85%, transparent); color: var(--surface); font-size: var(--t-label); font-weight: 600; line-height: 1.2; padding: 1px 5px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
 /* Within a circle (chapter 6): the centre to drag, the handle to widen, the radius on it. */
@@ -3997,8 +4002,9 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-tile .tile-bar .pin { color: var(--muted); }
 .map-tile.pinned .tile-bar .pin { color: var(--accent); }
 .map-tile .tile-bar button { min-height: 18px; padding: 0 4px; }
-.map-tile .pic { position: relative; background: var(--well); }
-.map-tile video { display: block; width: 100%; height: 94px; object-fit: cover; }
+.map-tile .pic { position: relative; background: var(--well); height: 94px; }
+.map-tile video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.map-tile .grip { position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--well-ink) 70%, transparent) 50%); }
 .map-tile .cover { position: absolute; inset: 0; display: grid; place-items: center; color: var(--well-ink); background: color-mix(in srgb, var(--well) 55%, transparent); font-size: var(--t-label); text-align: center; padding: 4px; }
 .map-tile.away .tile-bar .nm::after { content: " · out of view"; font-weight: 400; color: var(--muted); }
 .map-leaders line.teth { stroke: var(--accent); stroke-dasharray: 3 3; opacity: 0.85; stroke-width: 1.2; }

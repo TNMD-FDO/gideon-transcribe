@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.195.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6, a fourth release: the names move like the video, the video carries the name, and the video can be resized (the drawing `docs/spec/mockups/phase-12-map-tags.html`).
+
+- **Every marker carries its name** on a thin line, not only the knots. Drag a name and it pins where you drop it, the line following the officer; press its pin mark to let it ride again. Opening a camera's video from its name puts the tile in the name's place, with the name in the tile's bar and the one line from the marker; closing the tile puts the name back.
+- **Nothing overlaps.** Names and tiles are laid out so none touches another or covers a marker: riding ones take the nearest free place to their marker, spreading sideways beside a crowded knot, and slide out of the way while you drag; dropped onto something pinned, the dragged one is nudged beside it. **Tidy names** lays everything out afresh.
+- **Resizable tiles.** A grip at the lower right corner sizes a tile from 120 px to half the map, the picture keeping its proportion; the size you settle on is the size the next tiles open at, and a double press on the grip restores the first size. Save a picture keeps the names, lines and tiles as laid out.
+
 ## v1.194.0, 2026-11-04
 
 ```

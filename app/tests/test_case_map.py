@@ -412,13 +412,16 @@ def test_trails_can_go_off_entirely():
 
 def test_the_leaders_and_the_speed_beside_a_vehicle():
     script = static("map.js")
-    assert "function drawLeaders()" in script and "LEADER_NEAR" in script
-    assert "class='map-tag" in script and "data-act='tag'" in script
+    # Amended 2026-11-04: every marker carries a draggable name; nothing overlaps.
+    assert "function layoutNames()" in script and "function freePlace(" in script
+    assert "function rectsTouch(a, b)" in script and "TAG_GAP" in script
+    assert 'node.className = "map-tag"' in script and "function wireDrag(" in script
     assert 'map.on("move", function () { drawLeaders(); });' in script
     assert "flags.speed > 3" in script
     assert "<span class='spd mono' hidden></span>" in script
     css = static("app.css")
     assert ".map-leaders" in css and ".map-tag" in css and ".map-head .spd" in css
+    assert ".map-tag.pinned .pinmark" in css and ".map-tile .grip" in css
 
 
 def test_within_a_circle_is_answered_in_the_browser_and_kept_nowhere():
@@ -540,13 +543,18 @@ def test_the_tiles_ride_pin_and_play_in_step():
     script = static("map.js")
     assert "function openTile(cam)" in script and "TILES_MOST = 6" in script
     assert "TILE_PLAYS_TO = 4" in script and "function syncTiles(m)" in script
-    assert "function placeTiles(w, h)" in script and "class='teth'" in script
-    assert "tile.pinned = true;" in script and "pointerdown" in script
+    assert "teth" in script and "pointerdown" in script
+    # The tile takes the name's place, and gives it back; the grip resizes.
+    assert "var tag = S.tags[cam.id] || { x: 0, y: 0, pinned: false };" in script
+    assert "tag.x = tile.x; tag.y = tile.y; tag.pinned = tile.pinned;" in script
+    assert "function wireResize(tile)" in script and "TILE_W_LEAST = 120" in script
+    assert 'remember("map-tile-w"' in script and "function tidyNames()" in script
+    assert "data-act='tidy'" in script and "function pictureNames(" in script
     assert "v.muted = S.sound !== id" in script
     assert "data-act='tile-note'" in script and "data-act='note-all'" in script
     assert "data-act='close-tiles'" in script
     # A tag's press opens the tile; a note from the map says so.
-    assert 'case "tag": if (cam) { select(cam); openTile(cam); }' in script
+    assert "function () { select(cam); openTile(cam); }" in script
     assert 'from: "map"' in script and "function noteAll()" in script
     assert "postJson(host.dataset.noteAll" in script
     host = (HERE / "templates" / "map-host.html").read_text(encoding="utf-8")

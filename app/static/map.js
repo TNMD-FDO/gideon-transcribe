@@ -53,7 +53,9 @@
     // strip and the events; still listed), the one row opened, the circle.
     hidden: {}, open: null, circle: null, hits: null,
     // The tiles (chapter 6, second release): small videos on the map, one per camera, by id.
-    tiles: {}, sound: null
+    tiles: {}, sound: null,
+    // The name tags (chapter 6, amended): where each sits and whether pinned, by camera id.
+    tags: {}, tileW: parseInt(recall("map-tile-w"), 10) || 168
   };
   var TILES_MOST = 6;    // videos decoding at once is the heaviest thing the page does
   var TILE_PLAYS_TO = 4; // the speed up to which a tile plays its video; above it, a frame a second
@@ -189,7 +191,7 @@
   function layout() {
     if (INC) { layoutPane(); return; }
     host.classList.toggle("large", S.large);
-    S.tiles = {}; S.sound = null;
+    S.tiles = {}; S.sound = null; S.tags = {};
     host.innerHTML =
       "<div class='map-lead'>" +
         "<div class='map-lead-left'>" + dayChips() +
@@ -279,6 +281,7 @@
         "<span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span>" +
         "<span class='grow'></span>" +
         "<button type='button' class='tiny' data-act='fit'>Fit all</button>" +
+        "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
         (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a Document on the incident'>Save a picture</button>" : "") +
         "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
       return;
@@ -294,6 +297,7 @@
       (S.following ? "<span class='pill small acc'>following " + esc((S.byId[S.following] || {}).unit || (S.byId[S.following] || {}).title || "") + "</span>" : "") +
       "<button type='button' class='small' data-act='fit'>Fit shown</button>" +
       (tileCount() ? "<span class='pill small acc'>" + plural(tileCount(), "tile") + "</span><button type='button' class='tiny ghost' data-act='close-tiles'>close all</button>" : "") +
+      "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
       "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
       (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
       "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>Within a circle</button>" +
@@ -545,51 +549,137 @@
     if (nearest) { parts.push((best < 1000 ? Math.round(best) + " m" : (best / 1000).toFixed(1) + " km") + " from " + esc(nameOf(nearest))); }
     return parts.length ? parts.join(" · ") : "<span class='muted'>here at " + hms(m) + "</span>";
   }
-  // The leaders (chapter 6): when markers would overlap at this zoom, each
-  // gets a thin line out to a tag with its name, fanned round the knot so no
-  // tag covers another. A lone marker keeps its own small label.
-  var LEADER_NEAR = 30;  // px between marker centres that reads as a knot
-  function drawLeaders() {
+  // The names (chapter 6, amended 2026-11-04): every marker drawn carries a
+  // tag with its name, led out on a thin line; a tag rides beside its marker
+  // where the app places it, or pins where a person drags it. A camera with
+  // its tile open has no tag: the tile carries the name and the one line.
+  // Names and tiles are rectangles that never touch: each riding one takes
+  // the nearest free place to its marker, searched outward sideways first,
+  // round the pinned ones and the tiles; while one is dragged the riding
+  // ones slide out of its way. Nothing here is kept beyond the page.
+  var TAG_GAP = 4;       // px kept between any two rectangles
+  var MARKER_R = 14;     // px round a marker that nothing may cover
+  function drawLeaders() { layoutNames(); }
+  function tagOf(cam) {
+    var tag = S.tags[cam.id];
+    if (!tag) { tag = S.tags[cam.id] = { x: 0, y: 0, w: 90, h: 20, pinned: false }; }
+    if (!tag.node) {
+      var node = document.createElement("button");
+      node.type = "button"; node.className = "map-tag"; node.dataset.cam = cam.id;
+      node.innerHTML = "<i class='" + (cam.source === "car" ? "sq" : "") + "' style='background: " + colourOf(cam) + "'></i>" + nameHtml(cam) + "<span class='pinmark' title='Pinned where you dropped it; press to let it ride again'></span>";
+      node.title = "Press: open its video on the map. Drag: put the name where you like.";
+      wireDrag(node, function () { return tag; }, function () { select(cam); openTile(cam); }, function () { tag.pinned = false; layoutNames(); });
+      tag.node = node;
+    }
+    return tag;
+  }
+  function rectsTouch(a, b) { return a.x < b.x + b.w + TAG_GAP && a.x + a.w + TAG_GAP > b.x && a.y < b.y + b.h + TAG_GAP && a.y + a.h + TAG_GAP > b.y; }
+  // The nearest free place for a rectangle near a point: rings outward,
+  // sideways first, so a crowd spreads into columns beside its knot.
+  function freePlace(item, ax, ay, placed, w, h) {
+    var angles = [0, Math.PI, -Math.PI / 4, Math.PI / 4, -3 * Math.PI / 4, 3 * Math.PI / 4, -Math.PI / 2, Math.PI / 2];
+    for (var ring = 0; ring < 14; ring++) {
+      var radius = 18 + ring * Math.max(16, item.h + TAG_GAP);
+      for (var a = 0; a < angles.length; a++) {
+        var ang = angles[a] + (ring % 2 ? Math.PI / 8 : 0);
+        var cx = ax + Math.cos(ang) * (radius + item.w / 2), cy = ay + Math.sin(ang) * radius;
+        var x = Math.max(0, Math.min(w - item.w, cx - item.w / 2)), y = Math.max(0, Math.min(h - item.h, cy - item.h / 2));
+        var rect = { x: x, y: y, w: item.w, h: item.h };
+        if (!placed.some(function (r) { return rectsTouch(rect, r); })) { return rect; }
+      }
+    }
+    return { x: Math.max(0, Math.min(w - item.w, ax)), y: Math.max(0, Math.min(h - item.h, ay)), w: item.w, h: item.h };
+  }
+  function layoutNames() {
     if (!map || !mapReady || !el.pane) { return; }
     var layer = el.pane.querySelector(".map-leaders");
     if (!layer) { layer = document.createElement("div"); layer.className = "map-leaders"; layer.innerHTML = "<svg aria-hidden='true'></svg><div class='tags'></div>"; el.pane.appendChild(layer); }
-    var w = el.pane.clientWidth, h = el.pane.clientHeight, pts = [];
+    var box = layer.querySelector(".tags"), w = el.pane.clientWidth, h = el.pane.clientHeight;
+    var items = [], placed = [], lit = S.following || S.pressed || S.lit;
     S.cams.forEach(function (cam) {
-      var mk = markers[cam.id]; if (!mk) { return; }
-      var node = mk.getElement(); if (node.classList.contains("before")) { return; }
+      var mk = markers[cam.id], tag = S.tags[cam.id];
+      var shownMarker = mk && !mk.getElement().classList.contains("before");
+      if (!shownMarker) { if (tag && tag.node && tag.node.parentNode) { tag.node.remove(); } return; }
       var p = map.project(mk.getLngLat());
-      if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) { return; }
-      pts.push({ cam: cam, x: p.x, y: p.y, group: -1 });
-    });
-    var groups = [];
-    pts.forEach(function (a, i) {
-      if (a.group >= 0) { return; }
-      var g = [a]; a.group = groups.length;
-      for (var j = i + 1; j < pts.length; j++) {
-        var b = pts[j];
-        if (b.group < 0 && g.some(function (k) { return Math.hypot(k.x - b.x, k.y - b.y) < LEADER_NEAR; })) { b.group = a.group; g.push(b); }
+      var away = p.x < 0 || p.y < 0 || p.x > w || p.y > h;
+      var ax = Math.max(2, Math.min(w - 2, p.x)), ay = Math.max(2, Math.min(h - 2, p.y));
+      placed.push({ x: p.x - MARKER_R, y: p.y - MARKER_R, w: 2 * MARKER_R, h: 2 * MARKER_R });
+      var tile = S.tiles[cam.id];
+      if (tile) {
+        if (tag && tag.node && tag.node.parentNode) { tag.node.remove(); }
+        tile.w = tile.node.offsetWidth || tile.w || 168; tile.h = tile.node.offsetHeight || tile.h || 120;
+        items.push({ kind: "tile", it: tile, cam: cam, ax: ax, ay: ay, mx: p.x, my: p.y, away: away });
+        return;
       }
-      groups.push(g);
+      tag = tagOf(cam);
+      if (!tag.node.parentNode) { box.appendChild(tag.node); }
+      tag.node.classList.toggle("on", lit === cam.id);
+      tag.node.classList.toggle("pinned", !!tag.pinned);
+      tag.w = tag.node.offsetWidth || tag.w; tag.h = tag.node.offsetHeight || tag.h;
+      items.push({ kind: "tag", it: tag, cam: cam, ax: ax, ay: ay, mx: p.x, my: p.y, away: away });
     });
-    var lines = "", tags = "", lit = S.following || S.pressed || S.lit;
-    groups.forEach(function (g) {
-      if (g.length < 2) { return; }
-      var cx = 0, cy = 0; g.forEach(function (k) { cx += k.x; cy += k.y; }); cx /= g.length; cy /= g.length;
-      // Each marker takes the tag nearest its own bearing from the knot's centre, so the lines do not cross.
-      g.forEach(function (k) { k.ang = Math.atan2(k.y - cy, k.x - cx); });
-      g.sort(function (p1, p2) { return p1.ang - p2.ang; });
-      var r = 46 + 7 * g.length, start = -Math.PI / 2 - Math.PI / g.length;
-      g.forEach(function (k, i) {
-        var ang = start + (i / g.length) * 2 * Math.PI;
-        var tx = Math.max(52, Math.min(w - 52, cx + Math.cos(ang) * r)), ty = Math.max(12, Math.min(h - 12, cy + Math.sin(ang) * r));
-        lines += "<line x1='" + k.x.toFixed(1) + "' y1='" + k.y.toFixed(1) + "' x2='" + tx.toFixed(1) + "' y2='" + ty.toFixed(1) + "'></line>";
-        tags += "<button type='button' class='map-tag" + (lit === k.cam.id ? " on" : "") + "' data-act='tag' data-cam='" + k.cam.id + "' style='left: " + tx.toFixed(1) + "px; top: " + ty.toFixed(1) + "px'><i class='" + (k.cam.source === "car" ? "sq" : "") + "' style='background: " + colourOf(k.cam) + "'></i>" + nameHtml(k.cam) + "</button>";
-      });
+    // The pinned (and the one being dragged) are walls; the riding take the free places, tiles first.
+    items.forEach(function (one) { var it = one.it; if (it.pinned || it.dragging) { it.x = Math.max(0, Math.min(w - it.w, it.x)); it.y = Math.max(0, Math.min(h - it.h, it.y)); placed.push({ x: it.x, y: it.y, w: it.w, h: it.h }); } });
+    items.sort(function (a, b) { return (a.kind === "tile" ? 0 : 1) - (b.kind === "tile" ? 0 : 1); });
+    items.forEach(function (one) {
+      var it = one.it;
+      if (it.pinned || it.dragging) { return; }
+      var rect = freePlace(it, one.ax, one.ay, placed, w, h);
+      it.x = rect.x; it.y = rect.y; placed.push(rect);
     });
-    lines += placeTiles(w, h);
-    var svg = layer.querySelector("svg"), box = layer.querySelector(".tags");
+    var lines = "";
+    items.forEach(function (one) {
+      var it = one.it, node = it.node;
+      node.style.left = it.x.toFixed(1) + "px"; node.style.top = it.y.toFixed(1) + "px";
+      node.classList.toggle("away", one.away);
+      if (one.kind === "tile") { node.classList.toggle("pinned", !!it.pinned); var pin = node.querySelector(".pin"); if (pin) { pin.classList.toggle("on", !!it.pinned); pin.title = it.pinned ? "Pinned where you dropped it; press to let it ride again" : "Rides with the marker; drag the tile to pin it"; } }
+      // The line from the middle of the edge facing the marker.
+      var cx = it.x + it.w / 2, cy = it.y + it.h / 2, sx = cx, sy = cy;
+      if (Math.abs(one.ax - cx) * it.h > Math.abs(one.ay - cy) * it.w) { sx = one.ax > cx ? it.x + it.w : it.x; sy = cy; } else { sy = one.ay > cy ? it.y + it.h : it.y; sx = cx; }
+      lines += "<line class='" + (one.kind === "tile" ? "teth" : "") + (it.pinned ? " pinned" : "") + "' x1='" + sx.toFixed(1) + "' y1='" + sy.toFixed(1) + "' x2='" + one.ax.toFixed(1) + "' y2='" + one.ay.toFixed(1) + "'></line>";
+    });
+    var svg = layer.querySelector("svg");
     if (svg.innerHTML !== lines) { svg.innerHTML = lines; }
-    if (box.innerHTML !== tags) { box.innerHTML = tags; }
+  }
+  // One drag for names and tiles: a press that does not move is a press; a
+  // move pins the thing where it is dropped, nudged off anything pinned.
+  function wireDrag(node, getItem, onPress, onUnpin) {
+    var from = null, moved = false;
+    node.addEventListener("pointerdown", function (e) {
+      if (e.target.closest("button") && e.target.closest("button") !== node) { return; }
+      if (e.target.closest(".pinmark, .grip")) { return; }
+      var it = getItem();
+      from = { x: e.clientX, y: e.clientY, left: it.x, top: it.y }; moved = false;
+      try { node.setPointerCapture(e.pointerId); } catch (err) { /* no capture */ }
+      e.preventDefault();
+    });
+    node.addEventListener("pointermove", function (e) {
+      if (!from) { return; }
+      var it = getItem(), dx = e.clientX - from.x, dy = e.clientY - from.y;
+      if (!moved && Math.hypot(dx, dy) < 4) { return; }
+      moved = true; it.dragging = true; it.x = from.left + dx; it.y = from.top + dy;
+      layoutNames();
+    });
+    function done(e) {
+      if (!from) { return; }
+      var it = getItem(); from = null;
+      if (!moved) { it.dragging = false; if (e.type !== "pointercancel") { onPress(); } return; }
+      it.dragging = false; it.pinned = true;
+      // Dropped onto something pinned: the nearest free place beside it.
+      var w = el.pane.clientWidth, h = el.pane.clientHeight, walls = [];
+      Object.keys(S.tags).forEach(function (id) { var t = S.tags[id]; if (t !== it && t.pinned && t.node && t.node.parentNode) { walls.push({ x: t.x, y: t.y, w: t.w, h: t.h }); } });
+      Object.keys(S.tiles).forEach(function (id) { var t = S.tiles[id]; if (t !== it) { walls.push({ x: t.x, y: t.y, w: t.w || 168, h: t.h || 120 }); } });
+      var mine = { x: it.x, y: it.y, w: it.w, h: it.h };
+      if (walls.some(function (r) { return rectsTouch(mine, r); })) { var spot = freePlace(it, it.x + it.w / 2, it.y + it.h / 2, walls, w, h); it.x = spot.x; it.y = spot.y; }
+      layoutNames();
+    }
+    node.addEventListener("pointerup", done); node.addEventListener("pointercancel", done);
+    node.addEventListener("click", function (e) { if (e.target.closest(".pinmark")) { e.stopPropagation(); onUnpin(); } });
+  }
+  function tidyNames() {
+    Object.keys(S.tags).forEach(function (id) { S.tags[id].pinned = false; });
+    Object.keys(S.tiles).forEach(function (id) { S.tiles[id].pinned = false; });
+    layoutNames();
   }
   function trailSegments(cam, index, p) {
     var out = [], run = [];
@@ -967,73 +1057,52 @@
     node.innerHTML = "<div class='tile-bar'><i class='" + (cam.source === "car" ? "sq" : "") + "'></i><span class='nm'>" + nameHtml(cam) + "</span><span class='spd mono'></span>" +
       (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='tile-note' data-cam='" + cam.id + "' title='A note on this recording at the moment its video is on'><svg class='i' aria-hidden='true'><use href='#i-note'></use></svg></button>" : "") +
       "<button type='button' class='tiny ghost' data-act='tile-sound' data-cam='" + cam.id + "' title='Sound from this tile (one at a time)'><svg class='i' aria-hidden='true'><use href='#i-muted'></use></svg></button>" +
-      "<span class='pin' title='Rides with the marker; drag the tile to pin it'><svg class='i' aria-hidden='true'><use href='#i-move'></use></svg></span>" +
+      "<button type='button' class='tiny ghost pin' data-act='tile-pin' data-cam='" + cam.id + "' title='Rides with the marker; drag the tile to pin it'><svg class='i' aria-hidden='true'><use href='#i-move'></use></svg></button>" +
       "<button type='button' class='tiny ghost' data-act='tile-close' data-cam='" + cam.id + "' title='Close'><svg class='i' aria-hidden='true'><use href='#i-close'></use></svg></button></div>" +
-      "<div class='pic'><video muted playsinline preload='metadata'></video><div class='cover' hidden></div></div>";
+      "<div class='pic'><video muted playsinline preload='metadata'></video><div class='cover' hidden></div><span class='grip' title='Drag to resize; double press for the first size'></span></div>";
     var video = node.querySelector("video");
     video.src = cam.media;
+    node.style.width = S.tileW + "px";
+    node.querySelector(".pic").style.height = Math.round(S.tileW * 9 / 16) + "px";
     el.pane.appendChild(node);
-    var tile = { cam: cam, node: node, video: video, pinned: false, x: 0, y: 0, seekAt: 0, state: "" };
+    // The tile takes the name's place: pinned where the name was pinned, riding where it rode.
+    var tag = S.tags[cam.id] || { x: 0, y: 0, pinned: false };
+    var tile = { cam: cam, node: node, video: video, pinned: !!tag.pinned, x: tag.x, y: tag.y, w: S.tileW, h: 0, seekAt: 0, state: "" };
     S.tiles[cam.id] = tile;
-    wireTileDrag(tile);
+    wireDrag(node.querySelector(".tile-bar"), function () { return tile; }, function () { /* a press on the bar does nothing */ }, function () { /* the pin button does */ });
+    wireResize(tile);
     drawTransport(); drawList(); tick();
   }
   function closeTile(id) {
     var tile = S.tiles[id]; if (!tile) { return; }
     try { tile.video.pause(); tile.video.removeAttribute("src"); tile.video.load(); } catch (e) { /* gone */ }
     tile.node.remove(); delete S.tiles[id];
+    // The name comes back where the tile was, pinned as the tile was.
+    var tag = S.tags[id]; if (tag) { tag.x = tile.x; tag.y = tile.y; tag.pinned = tile.pinned; }
     if (S.sound === id) { S.sound = null; }
     drawTransport(); drawList(); drawLeaders();
   }
   function closeTiles() { Object.keys(S.tiles).forEach(closeTile); }
-  function wireTileDrag(tile) {
-    var bar = tile.node.querySelector(".tile-bar"), from = null;
-    bar.addEventListener("pointerdown", function (e) {
-      if (e.target.closest("button")) { return; }
-      from = { x: e.clientX, y: e.clientY, left: tile.x, top: tile.y };
-      bar.setPointerCapture(e.pointerId); e.preventDefault();
-    });
-    bar.addEventListener("pointermove", function (e) {
-      if (!from) { return; }
-      tile.pinned = true; tile.node.classList.add("pinned");
-      tile.x = from.left + (e.clientX - from.x); tile.y = from.top + (e.clientY - from.y);
-      drawLeaders();
-    });
-    var done = function () { from = null; };
-    bar.addEventListener("pointerup", done); bar.addEventListener("pointercancel", done);
+  // The grip at a tile's corner (chapter 6, amended): drag it and the tile
+  // grows or shrinks, the picture keeping the video's proportion, from
+  // TILE_W_LEAST wide to half the pane; the size settled on is the size
+  // the next tiles open at, remembered per person. A double press puts the
+  // tile back to the first size.
+  var TILE_W = 168, TILE_W_LEAST = 120;
+  function sizeTile(tile, width) {
+    var most = Math.max(TILE_W_LEAST, Math.floor((el.pane.clientWidth || 800) / 2));
+    width = Math.round(Math.max(TILE_W_LEAST, Math.min(most, width)));
+    tile.w = width; tile.node.style.width = width + "px";
+    tile.node.querySelector(".pic").style.height = Math.round(width * 9 / 16) + "px";
+    tile.h = tile.node.offsetHeight || tile.h;
   }
-  // Each tile's place and its line to the marker, every tick and every pan:
-  // a riding tile sits beside the marker; a pinned one stays, its line
-  // redrawn to wherever the marker is, to the pane's edge when it has left
-  // the view. Returns the lines for the leaders' drawing.
-  function placeTiles(w, h) {
-    var lines = "", placed = [];
-    function overlaps(x, y, tw, th) { return placed.some(function (r) { return x < r.x + r.w + 6 && x + tw + 6 > r.x && y < r.y + r.h + 6 && y + th + 6 > r.y; }); }
-    Object.keys(S.tiles).forEach(function (id) {
-      var tile = S.tiles[id], mk = markers[id];
-      var tw = tile.node.offsetWidth || 168, th = tile.node.offsetHeight || 120;
-      var p = mk && !mk.getElement().classList.contains("before") && map && mapReady ? map.project(mk.getLngLat()) : null;
-      if (!tile.pinned && p) {
-        // Riding tiles of one knot take the places round it in turn, so none covers another.
-        var spots = [[16, -th - 12], [-tw - 16, -th - 12], [16, 12], [-tw - 16, 12], [16, -th / 2], [-tw - 16, -th / 2]], chosen = spots[0];
-        for (var i = 0; i < spots.length; i++) { var sx = Math.max(0, Math.min(w - tw, p.x + spots[i][0])), sy = Math.max(0, Math.min(h - th, p.y + spots[i][1])); if (!overlaps(sx, sy, tw, th)) { chosen = spots[i]; break; } }
-        tile.x = p.x + chosen[0]; tile.y = p.y + chosen[1];
-      }
-      tile.x = Math.max(0, Math.min(w - tw, tile.x)); tile.y = Math.max(0, Math.min(h - th, tile.y));
-      placed.push({ x: tile.x, y: tile.y, w: tw, h: th });
-      tile.node.style.left = tile.x + "px"; tile.node.style.top = tile.y + "px";
-      var pin = tile.node.querySelector(".pin"); if (pin) { pin.classList.toggle("on", tile.pinned); pin.title = tile.pinned ? "Pinned where you dropped it; drag again to move it" : "Rides with the marker; drag the tile to pin it"; }
-      if (!p) { tile.node.classList.remove("away"); return; }
-      var away = p.x < 0 || p.y < 0 || p.x > w || p.y > h;
-      tile.node.classList.toggle("away", away);
-      var tx = p.x, ty = p.y;
-      if (away) { tx = Math.max(2, Math.min(w - 2, p.x)); ty = Math.max(2, Math.min(h - 2, p.y)); }
-      // From the tile's nearest corner-ish point: the middle of the edge facing the marker.
-      var cx = tile.x + tw / 2, cy = tile.y + th / 2, sx = cx, sy = cy;
-      if (Math.abs(tx - cx) * th > Math.abs(ty - cy) * tw) { sx = tx > cx ? tile.x + tw : tile.x; sy = cy; } else { sy = ty > cy ? tile.y + th : tile.y; sx = cx; }
-      lines += "<line class='teth' x1='" + sx.toFixed(1) + "' y1='" + sy.toFixed(1) + "' x2='" + tx.toFixed(1) + "' y2='" + ty.toFixed(1) + "'></line>";
-    });
-    return lines;
+  function wireResize(tile) {
+    var grip = tile.node.querySelector(".grip"), from = null;
+    grip.addEventListener("pointerdown", function (e) { from = { x: e.clientX, w: tile.w }; try { grip.setPointerCapture(e.pointerId); } catch (err) { /* no capture */ } e.preventDefault(); e.stopPropagation(); });
+    grip.addEventListener("pointermove", function (e) { if (!from) { return; } tile.pinned = true; sizeTile(tile, from.w + (e.clientX - from.x)); layoutNames(); });
+    function done() { if (!from) { return; } from = null; S.tileW = tile.w; remember("map-tile-w", String(tile.w)); layoutNames(); }
+    grip.addEventListener("pointerup", done); grip.addEventListener("pointercancel", done);
+    grip.addEventListener("dblclick", function (e) { e.stopPropagation(); sizeTile(tile, TILE_W); S.tileW = TILE_W; remember("map-tile-w", String(TILE_W)); layoutNames(); });
   }
   // Each tile's video in step with the clock: playing at 1x to 4x, else the
   // frame at the clock's moment, refreshed each second.
@@ -1154,6 +1223,8 @@
         case "tag": if (cam) { select(cam); openTile(cam); } return;
         case "tile": if (cam) { select(cam); openTile(cam); } return;
         case "tile-close": if (cam) { closeTile(cam.id); } return;
+        case "tile-pin": if (cam && S.tiles[cam.id]) { S.tiles[cam.id].pinned = !S.tiles[cam.id].pinned; layoutNames(); } return;
+        case "tidy": tidyNames(); return;
         case "close-tiles": closeTiles(); return;
         case "tile-sound": if (cam) { S.sound = S.sound === cam.id ? null : cam.id; tick(); } return;
         case "tile-note": if (cam) { var tl = S.tiles[cam.id]; noteOn(cam, Math.max(0, tl ? tl.video.currentTime || (now() - cam.zero.second) : now() - cam.zero.second), "the camera's tile"); } return;
@@ -1229,6 +1300,38 @@
     return null;
   }
   function pictureTitle(m) { return "Map at " + hms(m) + (S.day ? ", " + dayWords(S.day) : ""); }
+  // The names and the tiles as the person laid them out, with their lines
+  // (chapter 6, amended): a tile's picture is the frame its video is on.
+  function pictureNames(ctx, ratio, font) {
+    var lines = el.pane.querySelectorAll(".map-leaders line");
+    ctx.lineWidth = ratio;
+    Array.prototype.forEach.call(lines, function (line) {
+      var pinned = line.classList.contains("pinned") || line.classList.contains("teth");
+      ctx.strokeStyle = pinned ? token("--accent") : token("--text"); ctx.globalAlpha = pinned ? 0.9 : 0.55;
+      ctx.beginPath(); ctx.moveTo(parseFloat(line.getAttribute("x1")) * ratio, parseFloat(line.getAttribute("y1")) * ratio); ctx.lineTo(parseFloat(line.getAttribute("x2")) * ratio, parseFloat(line.getAttribute("y2")) * ratio); ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    S.cams.forEach(function (cam) {
+      var tag = S.tags[cam.id], tile = S.tiles[cam.id];
+      if (tile) {
+        var tx = tile.x * ratio, ty = tile.y * ratio, tw = tile.w * ratio, th = tile.h * ratio, bar = 22 * ratio;
+        ctx.fillStyle = token("--surface"); ctx.strokeStyle = tile.pinned ? token("--accent") : token("--line"); ctx.lineWidth = ratio;
+        ctx.fillRect(tx, ty, tw, th); ctx.strokeRect(tx, ty, tw, th);
+        try { ctx.drawImage(tile.video, tx, ty + bar, tw, th - bar); } catch (e) { ctx.fillStyle = token("--well"); ctx.fillRect(tx, ty + bar, tw, th - bar); }
+        ctx.fillStyle = colourOf(cam); ctx.beginPath(); ctx.arc(tx + 10 * ratio, ty + bar / 2, 4 * ratio, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(11 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(String(nameOf(cam)).slice(0, 28), tx + 18 * ratio, ty + bar / 2);
+        return;
+      }
+      if (!tag || !tag.node || !tag.node.parentNode) { return; }
+      var x = tag.x * ratio, y = tag.y * ratio, w = tag.w * ratio, h = tag.h * ratio;
+      ctx.fillStyle = token("--surface"); ctx.strokeStyle = tag.pinned ? token("--accent") : token("--line"); ctx.lineWidth = ratio;
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = colourOf(cam); ctx.beginPath(); ctx.arc(x + 10 * ratio, y + h / 2, 4 * ratio, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(10 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(String(nameOf(cam)).slice(0, 28), x + 18 * ratio, y + h / 2);
+    });
+  }
   function savePicture() {
     if (!map || !mapReady) { toast("The map is not drawn yet.", true); return; }
     var home = pictureHome();
@@ -1254,13 +1357,9 @@
           ctx.beginPath();
           if (cam.source === "car") { ctx.rect(x - r, y - r, 2 * r, 2 * r); } else { ctx.arc(x, y, r, 0, Math.PI * 2); }
           ctx.fill(); ctx.stroke();
-          // The camera's name beside its marker, with a halo so it reads on any ground.
-          var label = String(nameOf(cam)).slice(0, 28);
-          ctx.font = "700 " + Math.round(11 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-          ctx.lineWidth = 3 * ratio; ctx.strokeStyle = token("--surface"); ctx.strokeText(label, x + r + 4 * ratio, y);
-          ctx.fillStyle = token("--text"); ctx.fillText(label, x + r + 4 * ratio, y);
           ctx.globalAlpha = 1;
         });
+        pictureNames(ctx, ratio, font);
         var y0 = src.height, mid = y0 + band / 2;
         ctx.fillStyle = token("--surface"); ctx.fillRect(0, y0, out.width, band);
         ctx.strokeStyle = token("--line"); ctx.lineWidth = ratio; ctx.beginPath(); ctx.moveTo(0, y0 + 0.5); ctx.lineTo(out.width, y0 + 0.5); ctx.stroke();

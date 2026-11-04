@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Names that move with the video</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480; --well: #000000; --well-ink: #ffffff;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #45201d;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .pane .corner { position: absolute; font-size: 10px; color: var(--muted); background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 6px; border-radius: 3px; }
+  .pane .scale { left: 8px; bottom: 8px; font-family: var(--mono); border-bottom: 2px solid var(--text); border-left: 2px solid var(--text); border-right: 2px solid var(--text); padding: 0 4px 1px; background: none; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; }
+  .blk { fill: var(--surface-2); opacity: .55; }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; }
+  .lbl.big { font-size: 11px; }
+  .pt { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .hl { font: 600 9px var(--font); fill: var(--surface); paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .ldr.pinned { stroke: var(--accent); opacity: .9; stroke-width: 1.2; }
+  .tag { font: 600 10px var(--font); fill: var(--text); }
+  .tagbg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .tagbg.pinned { stroke: var(--accent); stroke-width: 1.5; }
+  .pinmark { fill: var(--accent); }
+  .tile { position: absolute; width: 168px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; z-index: 3; font-size: 11px; }
+  .tile.pinned { border-color: var(--accent); }
+  .tile .bar { display: flex; align-items: center; gap: 5px; padding: 3px 6px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .tile .bar i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .tile .bar .x, .tile .bar .pn { color: var(--muted); font-weight: 400; }
+  .tile.pinned .bar .pn { color: var(--accent); }
+  .tile .bar .spd { font-family: var(--mono); font-weight: 400; color: var(--muted); margin-left: auto; font-size: 10px; }
+  .tile .video { height: 94px; background: linear-gradient(135deg, #2a3038, #10151b); position: relative; }
+  .tile .video b { position: absolute; left: 6px; bottom: 4px; color: var(--well-ink); font: 600 10px var(--mono); background: rgba(0,0,0,.5); padding: 0 4px; border-radius: 3px; }
+  .tile .video .grip { position: absolute; right: 2px; bottom: 0; color: var(--well-ink); opacity: .7; font-size: 12px; cursor: nwse-resize; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  ul { margin: 6px 0 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 amended · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>The officer's name moves like the video, the video carries the name, and the video can be resized</h1>
+    <p class="lede">The ask of 2026-11-04, after v1.194.0: when a camera's video is opened, the officer's name pointer should be part of the video's pop-out rather than a tag of its own beside it; and the names should move the way the video does, dragged and left where they are put; and the videos should be resizable; and with many officers at one scene the names must not overlap, whether the app places them or a person drags them. Today the name tags are placed by the app round a knot of markers and cannot be moved, and an open tile hangs beside the tag with a second line. The fictional office of the local demo throughout.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>A knot of four: two names riding, one name dragged and pinned, one video open in its name's place</h2></div>
+    <div class="frame">
+      <div class="pane">
+        <svg viewBox="0 0 760 420" aria-label="a drawn map, zoomed to a corner">
+          <rect width="760" height="420" fill="var(--ground)"/>
+          <rect x="60" y="30" width="250" height="140" rx="4" class="blk"/><rect x="60" y="270" width="250" height="130" rx="4" class="blk"/><rect x="430" y="30" width="300" height="140" rx="4" class="blk"/><rect x="430" y="270" width="300" height="130" rx="4" class="blk"/>
+          <rect x="0" y="190" width="760" height="60" class="ro"/><rect x="330" y="0" width="80" height="420" class="ro"/>
+          <text class="lbl big" x="90" y="225">HARBOUR STREET</text><text class="lbl" transform="translate(377 30) rotate(90)">ROPEWALK</text>
+          <polyline class="pt p1" points="0,215 120,215 300,215 352,218"/>
+          <polyline class="pt p2" points="760,120 700,160 560,215 440,215 372,222"/>
+          <polyline class="pt p3" points="370,0 370,100 370,160 362,205"/>
+          <polyline class="pt p5" points="760,330 640,290 500,240 400,225 378,212"/>
+          <!-- the knot -->
+          <circle cx="352" cy="218" r="10" class="f1 hd"/><text class="hl" x="352" y="222" text-anchor="middle">1</text>
+          <circle cx="372" cy="222" r="10" class="f2 hd"/><text class="hl" x="372" y="226" text-anchor="middle">2</text>
+          <circle cx="362" cy="205" r="10" class="f3 hd"/><text class="hl" x="362" y="209" text-anchor="middle">3</text>
+          <circle cx="378" cy="212" r="10" class="f5 hd"/><text class="hl" x="378" y="216" text-anchor="middle">6</text>
+          <!-- two names riding, placed by the app -->
+          <polyline class="ldr" points="362,195 362,130"/><rect x="320" y="110" width="92" height="18" class="tagbg"/><circle cx="330" cy="119" r="4" class="f3"/><text class="tag" x="338" y="123">Ofc. Dunne</text>
+          <polyline class="ldr" points="384,205 430,150"/><rect x="428" y="134" width="96" height="18" class="tagbg"/><circle cx="438" cy="143" r="4" class="f5"/><text class="tag" x="446" y="147">Sgt. Okafor</text>
+          <!-- one name dragged to the left and pinned: a blue edge, a pin mark, its line following -->
+          <polyline class="ldr pinned" points="345,218 150,300"/><rect x="60" y="290" width="92" height="18" class="tagbg pinned"/><circle cx="70" cy="299" r="4" class="f1"/><text class="tag" x="78" y="303">Ofc. Pell</text><circle cx="146" cy="294" r="3" class="pinmark"/>
+          <!-- one video open: the tile carries the name, one line from the marker, no tag -->
+          <polyline class="ldr" points="380,228 560,330"/>
+        </svg>
+        <div class="tile" style="left:66%;top:58%;width:240px"><div class="bar"><i style="background:var(--c2)"></i>Ofc. Amari<span class="pn" title="rides with the marker">⌖</span><span class="x">×</span></div><div class="video" style="height:135px"><b>20:33:40</b><span class="grip" title="Drag to resize">◢</span></div></div>
+        <span class="corner scale">50 ft</span>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The video carries the name.</b> Opening Ofc. Amari's video from the name tag turns the tag into the tile: the name moves into the tile's bar, and the one line now runs from the marker to the tile. There is no second tag and no second line; closing the tile puts the name tag back where the tile was.</p>
+      <p><b>Names move like the video.</b> A name tag is dragged the way a tile is: it pins where it is dropped (a blue edge and a small pin), stays through pans, zooms and the clock's running, and its line is redrawn every tick to wherever the officer's marker is, to the pane's edge when they leave the view. A tag nobody has moved keeps riding where the app places it round the knot, out of the way of the pinned ones.</p>
+      <p><b>Opening from a pinned name.</b> The tile opens in the pinned name's place and is pinned there too; closing it leaves the pinned name where the tile was. Dragging a tile or a name is the same gesture, by the bar or the tag.</p>
+      <p><b>The pin again.</b> A press on the pin mark of a pinned name, or on the pin in a tile's bar, lets it ride again beside the marker.</p>
+      <p><b>Resizing the video.</b> Every tile has a grip at its lower right corner (drawn on Ofc. Amari's, grown to 240 px wide): drag it and the tile grows or shrinks, the picture keeping the video's proportion, from 120 px wide up to half the pane. A resized tile pins where it stands. The size a person settles on becomes the size the next tiles open at, so a layout of four large videos takes four drags, not eight; a double press on the grip puts a tile back to the first size.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The small things</h2></div>
+    <div class="two">
+      <div class="frame">
+        <ul class="small">
+          <li><b>A lone marker</b> (no knot) has no name tag today. With names that move, every marker on the map may carry one: drawn beside the marker, draggable like the rest, so a person can lay the names out as they like. Choice 2 below.</li>
+          <li><b>Hovering a marker, a name or a tile</b> lights the camera's path and row as now; a press on a name opens the tile; a press on the marker still opens the Preview.</li>
+          <li><b>Where pinned things live.</b> Pinned places are kept while the tab is open and go with it, as a tile's place does today; they are not remembered across visits (choice 3).</li>
+          <li><b>Save a picture</b> draws the names and the lines where the person left them, so a laid-out map can be kept as a Document as it was arranged.</li>
+          <li><b>On the incident page's pane</b> the same names and lines appear; a tile is not opened there (the wall plays the video), so a name's press brings that camera to the front of the wall as the marker's does.</li>
+        </ul>
+      </div>
+      <div class="frame">
+        <h2 class="small muted" style="font-size:13px">Under 700 wide</h2>
+        <ul class="small">
+          <li>Names can be dragged by touch as tiles can; a long press on a name opens the tile, since a tap and a drag need telling apart.</li>
+          <li>One tile at a time, as now; opening a second replaces the first and the first's name goes back to its tag.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Twelve officers at one scene: the names never overlap, placed or dragged</h2></div>
+    <div class="frame">
+      <div class="pane">
+        <svg viewBox="0 0 760 400" aria-label="a drawn map with twelve names laid out round a knot">
+          <rect width="760" height="400" fill="var(--ground)"/>
+          <rect x="60" y="30" width="250" height="130" rx="4" class="blk"/><rect x="60" y="260" width="250" height="130" rx="4" class="blk"/><rect x="430" y="30" width="300" height="130" rx="4" class="blk"/><rect x="430" y="260" width="300" height="130" rx="4" class="blk"/>
+          <rect x="0" y="180" width="760" height="60" class="ro"/><rect x="330" y="0" width="80" height="400" class="ro"/>
+          <text class="lbl big" x="90" y="215">HARBOUR STREET</text>
+          <!-- the knot of twelve -->
+          <g>
+            <circle cx="352" cy="208" r="9" class="f1 hd"/><circle cx="368" cy="214" r="9" class="f2 hd"/><circle cx="360" cy="198" r="9" class="f3 hd"/><circle cx="378" cy="204" r="9" class="f5 hd"/>
+            <circle cx="346" cy="220" r="9" class="f4 hd"/><circle cx="372" cy="226" r="9" class="f1 hd"/><circle cx="386" cy="216" r="9" class="f3 hd"/><circle cx="356" cy="230" r="9" class="f2 hd"/>
+            <circle cx="340" cy="206" r="9" class="f5 hd"/><circle cx="382" cy="194" r="9" class="f4 hd"/><circle cx="364" cy="186" r="9" class="f1 hd"/><circle cx="394" cy="228" r="9" class="f2 hd"/>
+          </g>
+          <!-- a column of names on each side, each with its line; none overlaps -->
+          <g class="ldr">
+            <line x1="352" y1="208" x2="250" y2="88"/><line x1="360" y1="198" x2="250" y2="112"/><line x1="346" y1="220" x2="250" y2="136"/><line x1="340" y1="206" x2="250" y2="160"/><line x1="356" y1="230" x2="250" y2="258"/><line x1="364" y1="186" x2="250" y2="282"/>
+            <line x1="368" y1="214" x2="500" y2="88"/><line x1="378" y1="204" x2="500" y2="112"/><line x1="372" y1="226" x2="500" y2="136"/><line x1="386" y1="216" x2="500" y2="160"/><line x1="382" y1="194" x2="500" y2="258"/><line x1="394" y1="228" x2="500" y2="282"/>
+          </g>
+          <g>
+            <rect x="150" y="79" width="100" height="18" class="tagbg"/><circle cx="160" cy="88" r="4" class="f1"/><text class="tag" x="168" y="92">Ofc. Pell</text>
+            <rect x="150" y="103" width="100" height="18" class="tagbg"/><circle cx="160" cy="112" r="4" class="f3"/><text class="tag" x="168" y="116">Ofc. Dunne</text>
+            <rect x="150" y="127" width="100" height="18" class="tagbg"/><circle cx="160" cy="136" r="4" class="f4"/><text class="tag" x="168" y="140">Ofc. Pell · veh.</text>
+            <rect x="150" y="151" width="100" height="18" class="tagbg pinned"/><circle cx="160" cy="160" r="4" class="f5"/><text class="tag" x="168" y="164">Sgt. Okafor</text><circle cx="244" cy="155" r="3" class="pinmark"/>
+            <rect x="150" y="249" width="100" height="18" class="tagbg"/><circle cx="160" cy="258" r="4" class="f2"/><text class="tag" x="168" y="262">Ofc. Amari</text>
+            <rect x="150" y="273" width="100" height="18" class="tagbg"/><circle cx="160" cy="282" r="4" class="f1"/><text class="tag" x="168" y="286">Ofc. Reyes</text>
+            <rect x="500" y="79" width="100" height="18" class="tagbg"/><circle cx="510" cy="88" r="4" class="f2"/><text class="tag" x="518" y="92">Ofc. Brandt</text>
+            <rect x="500" y="103" width="100" height="18" class="tagbg"/><circle cx="510" cy="112" r="4" class="f5"/><text class="tag" x="518" y="116">Ofc. Lund</text>
+            <rect x="500" y="127" width="100" height="18" class="tagbg"/><circle cx="510" cy="136" r="4" class="f1"/><text class="tag" x="518" y="140">Ofc. Vale</text>
+            <rect x="500" y="151" width="100" height="18" class="tagbg"/><circle cx="510" cy="160" r="4" class="f3"/><text class="tag" x="518" y="164">Ofc. Marsh</text>
+            <rect x="500" y="249" width="100" height="18" class="tagbg"/><circle cx="510" cy="258" r="4" class="f4"/><text class="tag" x="518" y="262">Sgt. Ito · veh.</text>
+            <rect x="500" y="273" width="100" height="18" class="tagbg"/><circle cx="510" cy="282" r="4" class="f2"/><text class="tag" x="518" y="286">Ofc. Nwosu</text>
+          </g>
+          <!-- a name being dragged onto the left column: the neighbour slides down -->
+          <rect x="150" y="300" width="100" height="18" class="tagbg pinned" stroke-dasharray="3 2"/><circle cx="160" cy="309" r="4" class="f3"/><text class="tag" x="168" y="313">Ofc. Marsh</text>
+          <text class="lbl" x="150" y="332">dragged here: Ofc. Reyes's tag slid aside</text>
+        </svg>
+        <span class="corner scale">50 ft</span>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Placed without overlap.</b> Names are laid out as rectangles that may not touch: each riding name takes the nearest free place to its marker, searched outward in rings, and a knot too big for a ring becomes columns either side of it (six to a side here, the lines fanning). Pinned names and open tiles are walls the riding names go round. The layout is redone each tick as the markers move, so names drift with their officers but never onto one another; a name whose marker has left the view sits at the pane's edge.</p>
+      <p><b>Dragged without overlap.</b> While a name or a tile is dragged, the riding names slide out of its way and settle when it is dropped. Dropped onto a pinned name or a tile, the dragged one is nudged to the nearest free place beside it, so two pinned things never cover each other.</p>
+      <p><b>When it is still too many.</b> The ticks thin the crowd: untick the cameras not wanted and their names go. Tidy names on the transport (choice 7) releases every pin and lays the names out afresh.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>The choices this drawing makes</h2></div>
+    <div class="verdict">
+      <ol class="small" style="margin:0">
+        <li><b>The tile takes the name's place</b> and the one line runs from the marker to the tile (drawn); or the tile keeps a small name tag riding beside it as well.</li>
+        <li><b>Every marker gets a name tag</b>, draggable, not only the knots (drawn in words, not in the figure; the knot figure stands either way). Or knots only, as today, with pinned names staying put.</li>
+        <li><b>Pinned places last while the tab is open</b> (drawn); or they are remembered per person per case, as the ticks are, so a laid-out map comes back the next visit.</li>
+        <li><b>The pin mark on a pinned name</b> lets it ride again (drawn); or dragging it back near the marker does.</li>
+        <li><b>Resizing by the corner grip</b>, the picture keeping its proportion, 120 px to half the pane (drawn); or also larger and smaller buttons in the bar, for touch.</li>
+        <li><b>The last size chosen is the size new tiles open at</b>, and the browser remembers it per person (drawn); or every tile opens at the first size.</li>
+        <li><b>Tidy names</b> on the transport releases every pin and lays the names out afresh (drawn in words); or no such button, the ticks and the pins being enough.</li>
+        <li><b>A big knot becomes columns</b> either side of it (drawn); or rings widening outward, which keeps each name nearer its marker but fills the map faster.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -218,9 +218,25 @@ A path file whose name matches no video in the case is no longer a leftover to s
 
 This amends ADR 0029: a Path is still made only on a Recording; the file may wait on the Case. The pairing's actor is the person who landed the recording (a move), or, from the pipeline, the person who added the waiting file.
 
+### 6.4 Names that move like the video, and videos that resize (the fourth release, v1.195.0)
+
+Asked on 2026-11-04 after v1.194.0 and drawn in `docs/spec/mockups/phase-12-map-tags.html` (figures A to C, eight choices), agreed the same day.
+
+**Every marker carries its name.** Not only a knot: each marker drawn on the map has a tag with its colour and the officer's name, led out on a thin line, riding beside the marker where the app places it. A press on the tag opens the camera's tile (on the incident page's pane it brings the camera to the front of the wall, as the marker's press does); a drag moves it.
+
+**Names move like the video.** A tag dragged pins where it is dropped (a blue edge and a pin mark), stays through pans, zooms and the clock's running, its line redrawn every tick to wherever the marker is, to the pane's edge when the marker leaves the view ("out of view" after the name); a press on the pin mark lets it ride again. Opening the tile from a tag puts the tile in the tag's place, pinned if the tag was; closing the tile puts the tag back where the tile was, pinned as the tile was. The tile's bar has the pin as a button for the same purpose. Pinned places last while the tab is open and go with it (choice 3).
+
+**The video carries the name.** A camera whose tile is open has no tag: the tile's bar is its name, and the one line runs from the marker to the tile.
+
+**Nothing overlaps.** Names and tiles are rectangles that may not touch (a 4 px gap) nor cover a marker (14 px round it). Each tick, the pinned ones and the one being dragged are walls; the riding ones, tiles first, each take the nearest free place to their marker, searched outward in rings, sideways first, so a crowd spreads into columns beside its knot (choice 8 answered as rings sideways: the effect the columns were drawn for, without a second rule). While a name or a tile is dragged the riding ones slide out of its way; dropped onto something pinned, the dragged one is nudged to the nearest free place beside it. **Tidy names** on the transport, and on the incident pane's foot, lets every name and tile ride again, laid out afresh.
+
+**Resizing.** Every tile has a grip at its lower right corner: dragging it sets the tile's width from 120 px to half the pane, the picture keeping a 16:9 proportion; a resized tile pins where it stands; the width settled on becomes the width the next tiles open at, remembered per person (`map-tile-w`); a double press on the grip puts the tile back to 168 px.
+
+**Save a picture** draws the names and the lines where the person left them, each tile as a frame with its name in the bar and the frame its video is on. Nothing new is kept on the server; no row is written.
+
 ### What is not
 
-No new kind of note: a note on all shown is copies with one mark. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
+No new kind of note: a note on all shown is copies with one mark. No larger and smaller buttons on a tile's bar (choice 5: the grip alone). Pinned places are not remembered across visits. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
 
 ## Appendix A. Audit rows added in Phase 12
 
@@ -246,6 +262,7 @@ The basemap's route writes no row; the map's reading writes the case page's own 
 
 - The maintainer's asks and answers of 2026-11-02, recorded on `docs/spec/mockups/phase-12-map.html` (figures A to L, the fifteen choices and the joins chosen).
 - The maintainer's asks of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-refine.html` (figures A to G, thirteen choices), agreed the same day.
+- The maintainer's further asks of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-tags.html` (figures A to C, eight choices), agreed the same day.
 - The dry run on the office's own path files, counts only, in `docs/research/path-file.md`.
 - The street map's pins, hashes and the extract command in `docs/research/basemap.md`.
 - Phase 6 chapters 1 and 2, Phase 8 chapter 2, Phase 10 chapters 1 and 5, Phase 7 chapter 5, ADR 0011, ADR 0027.
