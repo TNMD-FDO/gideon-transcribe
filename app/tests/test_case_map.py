@@ -438,3 +438,119 @@ def test_the_map_tab_words_of_chapter_six_are_in_the_glossary():
     words = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
     assert "**Tile**" in words
     assert "Within a circle" in words
+
+
+# Tiles and the notes (chapter 6, v1.193.0) --------------------------------------------
+
+
+def two_cameras_with_paths(person, case):
+    from tests.test_camera_paths import added, body_file
+
+    first = video(person, case, "BWC1-1")
+    second = video(person, case, "BWC2-1")
+    added(first, body_file(), by=person)
+    added(second, body_file(), by=person)
+    return first, second
+
+
+def test_note_on_all_shown_writes_one_note_per_camera_with_one_mark(
+    client, person, a_case
+):
+    import json
+
+    from core import notes
+    from core.audit import Row
+    from core.notes import MomentNote
+
+    signed_in(client, person)
+    first, second = two_cameras_with_paths(person, a_case)
+    url = reverse("case-map-note-all", args=[a_case.pk])
+    body = {
+        "note": "All units at the corner",
+        "at": {str(first.pk): 30, str(second.pk): 41.5},
+    }
+    told = client.post(url, json.dumps(body), content_type="application/json")
+    assert told.status_code == 200, told.content
+    assert told.json()["count"] == 2 and "2 cameras" in told.json()["words"]
+    kept = list(MomentNote.objects.filter(recording__case=a_case).order_by("at"))
+    assert [one.at for one in kept] == [30.0, 41.5]
+    assert kept[0].note_from["group"] == kept[1].note_from["group"]
+    assert kept[0].note_from["words"] == "from the map, on 2 cameras"
+    # The Notes tab lists the copies once, naming every camera.
+    rows = notes.of_case(a_case)["rows"]
+    assert len(rows) == 1 and rows[0]["where"].startswith("on 2 cameras: ")
+    assert "BWC1-1" in rows[0]["where"] and "BWC2-1" in rows[0]["where"]
+    assert len(rows[0]["others"]) == 1
+    # Two ordinary audit rows, never the words.
+    added_rows = Row.objects.filter(event="Note added")
+    assert added_rows.count() == 2
+    assert not any("corner" in json.dumps(r.details) for r in added_rows)
+    # Refusals: an empty note, a camera of another case, maps off.
+    empty = client.post(
+        url,
+        json.dumps({"note": " ", "at": body["at"]}),
+        content_type="application/json",
+    )
+    assert empty.status_code == 400
+    other = Case.objects.create(owner=person, name="Elsewhere")
+    stranger = video(person, other, "BWC9-1")
+    wrong = client.post(
+        url,
+        json.dumps({"note": "x", "at": {str(stranger.pk): 1}}),
+        content_type="application/json",
+    )
+    assert wrong.status_code == 400 and "not in this case" in wrong.json()["error"]
+    settings_store.set_to("maps", False)
+    assert (
+        client.post(url, json.dumps(body), content_type="application/json").status_code
+        == 404
+    )
+
+
+def test_a_note_from_the_map_says_so(client, person, a_case):
+    import json
+
+    from core.notes import MomentNote
+
+    signed_in(client, person)
+    first, _ = two_cameras_with_paths(person, a_case)
+    url = reverse("recording-note-at", args=[first.pk])
+    told = client.post(
+        url,
+        json.dumps({"at": 12, "note": "Here", "from": "map"}),
+        content_type="application/json",
+    )
+    assert (
+        told.status_code == 200 and told.json()["moment"]["note_from"] == "from the map"
+    )
+    assert MomentNote.objects.get(recording=first).note_from == {
+        "kind": "map",
+        "words": "from the map",
+    }
+    # Anything else the page claims as its origin is not kept.
+    plain = client.post(
+        url,
+        json.dumps({"at": 50, "note": "There", "from": "somewhere"}),
+        content_type="application/json",
+    )
+    assert plain.status_code == 200 and plain.json()["moment"]["note_from"] == ""
+
+
+def test_the_tiles_ride_pin_and_play_in_step():
+    script = static("map.js")
+    assert "function openTile(cam)" in script and "TILES_MOST = 6" in script
+    assert "TILE_PLAYS_TO = 4" in script and "function syncTiles(m)" in script
+    assert "function placeTiles(w, h)" in script and "class='teth'" in script
+    assert "tile.pinned = true;" in script and "pointerdown" in script
+    assert "v.muted = S.sound !== id" in script
+    assert "data-act='tile-note'" in script and "data-act='note-all'" in script
+    assert "data-act='close-tiles'" in script
+    # A tag's press opens the tile; a note from the map says so.
+    assert 'case "tag": if (cam) { select(cam); openTile(cam); }' in script
+    assert 'from: "map"' in script and "function noteAll()" in script
+    assert "postJson(host.dataset.noteAll" in script
+    host = (HERE / "templates" / "map-host.html").read_text(encoding="utf-8")
+    assert "data-note-all=" in host
+    css = static("app.css")
+    assert ".map-tile {" in css and ".map-tile.pinned" in css and "line.teth" in css
+    assert ".map-tile.away" in css

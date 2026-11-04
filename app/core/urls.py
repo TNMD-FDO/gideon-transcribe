@@ -418,6 +418,11 @@ urlpatterns = [
         name="case-map-picture",
     ),
     path(
+        "case/<uuid:case_id>/map/note-all",
+        camera_path_pages.note_all,
+        name="case-map-note-all",
+    ),
+    path(
         "recording/<uuid:recording_id>/path/where",
         camera_path_pages.where,
         name="camera-path-where",

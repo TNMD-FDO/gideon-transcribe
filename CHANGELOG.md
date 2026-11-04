@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.193.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6, the second of three releases: tiles on the map, and the notes from it.
+
+- **Tiles.** Press a camera's name tag on the map, or **Open a tile** in its row, and a small window plays that camera's video at the clock's moment, muted, with its colour, name and (for a vehicle) its speed in the bar. It rides beside its marker on a dashed line; drag it by its bar and it pins where you drop it, the line following the officer as they move (to the pane's edge when they leave the view). Up to six at once, one with sound; **close all** on the transport. At 1× to 4× the tiles play; at 16× and 60×, or with the clock stopped, each shows the frame at the moment and says so.
+- **A note from a tile.** The ✎ in a tile's bar writes a note on that recording at the moment its video is on; a note from the map now says "from the map" on the Notes tab, the Preview and the exports.
+- **Note on all shown.** One note on every ticked camera at the clock's moment of each: ordinary notes with one shared mark, listed once on the Notes tab as "on 5 cameras: ...", each camera's own page showing its copy.
+
 ## v1.192.0, 2026-11-04
 
 ```

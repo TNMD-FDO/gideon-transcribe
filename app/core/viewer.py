@@ -843,6 +843,11 @@ def note_at(request: HttpRequest, recording_id) -> JsonResponse:
     except json.JSONDecodeError:
         return JsonResponse({"error": "that could not be read"}, status=400)
     words = wanted.get("note", "")
+    # Where the note came from (Phase 12 chapter 6): the map says so, in the
+    # app's own words; nothing else the page sends is kept.
+    origin = None
+    if wanted.get("from") == "map":
+        origin = {"kind": "map", "words": "from the map"}
     if wanted.get("id"):
         one = notes.MomentNote.objects.filter(
             pk=wanted["id"], recording=recording
@@ -863,9 +868,13 @@ def note_at(request: HttpRequest, recording_id) -> JsonResponse:
         )
     spoken = notes.spoken_at(getattr(recording, "transcript", None), at)
     if spoken is not None:
-        saved = notes.set_note(spoken, words, by=request.user, request=request)
+        saved = notes.set_note(
+            spoken, words, by=request.user, request=request, origin=origin
+        )
         return JsonResponse({"saved": True, "on": "line", "line": spoken.pk, **saved})
-    saved = notes.note_at(recording, at, words, by=request.user, request=request)
+    saved = notes.note_at(
+        recording, at, words, by=request.user, request=request, origin=origin
+    )
     return JsonResponse({"saved": True, "on": "moment", "moment": saved})
 
 

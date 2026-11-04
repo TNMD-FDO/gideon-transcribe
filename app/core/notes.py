@@ -130,11 +130,15 @@ def line_json(segment) -> dict:
     }
 
 
-def set_note(segment, text, *, by, request=None, where: str = "") -> dict:
+def set_note(
+    segment, text, *, by, request=None, where: str = "", origin: dict | None = None
+) -> dict:
     """Write, change or clear the note on a line; one audit row, never the words.
 
     `where` names the view it was done from when that is not the line itself
     ("chronology", chapter 11); the row carries it and nothing else changes.
+    `origin` (Phase 12 chapter 6) is where the note came from when that is
+    worth saying ("from the map"), kept as note_from; never the words.
     """
     wanted = clean(text)
     had = segment.note
@@ -146,6 +150,8 @@ def set_note(segment, text, *, by, request=None, where: str = "") -> dict:
     segment.note_changed = timezone.now() if wanted else None
     if not wanted:
         segment.note_from = {}
+    elif origin:
+        segment.note_from = origin
     segment.save(update_fields=["note", "note_by", "note_changed", "note_from"])
     reflect_line(segment)
     recording = segment.transcript.recording
@@ -251,10 +257,19 @@ def _moment_row(one, event: str, *, by, request, where: str) -> None:
         cases.note_activity(recording.case, by=by)
 
 
-def note_at(recording, at: float, text, *, by, request=None, where: str = "") -> dict:
+def note_at(
+    recording,
+    at: float,
+    text,
+    *,
+    by,
+    request=None,
+    where: str = "",
+    origin: dict | None = None,
+) -> dict:
     """Write a note at a moment where nothing is being said: a new one, or the
     one already within a second of it. One audit row, never the words.
-    Nothing is kept for an empty note."""
+    Nothing is kept for an empty note. `origin` as set_note's."""
     wanted = clean(text)
     at = max(0.0, float(at))
     one = (
@@ -265,7 +280,9 @@ def note_at(recording, at: float, text, *, by, request=None, where: str = "") ->
         .first()
     )
     if one is not None:
-        return set_moment_note(one, wanted, by=by, request=request, where=where)
+        return set_moment_note(
+            one, wanted, by=by, request=request, where=where, origin=origin
+        )
     if not wanted:
         return {
             "id": None,
@@ -276,14 +293,21 @@ def note_at(recording, at: float, text, *, by, request=None, where: str = "") ->
             "note_on": "",
         }
     one = MomentNote.objects.create(
-        recording=recording, at=at, note=wanted, note_by=by, note_changed=timezone.now()
+        recording=recording,
+        at=at,
+        note=wanted,
+        note_by=by,
+        note_changed=timezone.now(),
+        note_from=origin or {},
     )
     reflect_moment(one)
     _moment_row(one, "Note added", by=by, request=request, where=where)
     return moment_json(one)
 
 
-def set_moment_note(one, text, *, by, request=None, where: str = "") -> dict:
+def set_moment_note(
+    one, text, *, by, request=None, where: str = "", origin: dict | None = None
+) -> dict:
     """Change the note at a moment, or remove it when the words are cleared."""
     wanted = clean(text)
     if wanted == one.note:
@@ -303,7 +327,9 @@ def set_moment_note(one, text, *, by, request=None, where: str = "") -> dict:
     one.note = wanted
     one.note_by = by
     one.note_changed = timezone.now()
-    one.save(update_fields=["note", "note_by", "note_changed"])
+    if origin:
+        one.note_from = origin
+    one.save(update_fields=["note", "note_by", "note_changed", "note_from"])
     reflect_moment(one)
     _moment_row(one, "Note changed", by=by, request=request, where=where)
     return moment_json(one)
@@ -562,6 +588,7 @@ def _line_rows(case, links: dict | None = None) -> list[dict]:
                 "rests_on": one.text,
                 "who": one.speaker,
                 "from": origin_words(one),
+                "group": (one.note_from or {}).get("group", ""),
                 # The clock verdict of the line (ADR 0023), for the export's pill.
                 "verdict": clock_check.verdict_json(one),
             }
@@ -587,6 +614,7 @@ def _moment_rows(case, links: dict | None = None) -> list[dict]:
             {
                 "kind": "moment",
                 "from": origin_words(one),
+                "group": (one.note_from or {}).get("group", ""),
                 "id": one.pk,
                 "text": one.note,
                 "by": one.note_by.shown_name if one.note_by else "",
@@ -725,7 +753,7 @@ def of_case(case, kind: str = "") -> dict:
     # The notes at moments are listed with the notes on lines (v1.99.0).
     links = incidents.links_in(case)
     moments = _moment_rows(case, links)
-    lines = _line_rows(case, links) + moments
+    lines = merge_groups(_line_rows(case, links) + moments)
     events = _event_rows(case)
     rows = {"lines": lines, "events": events}.get(kind, lines + events)
     # Newest first; a note without a date (none is written that way) goes last.
@@ -740,6 +768,36 @@ def of_case(case, kind: str = "") -> dict:
         "total": len(lines) + len(events),
         "kind": kind if kind in ("lines", "events") else "",
     }
+
+
+def merge_groups(rows: list[dict]) -> list[dict]:
+    """A note written on several cameras at once from the map (Phase 12
+    chapter 6) is listed once: the first copy carries the others' cameras in
+    `where` ("on 3 cameras: A, B, C") and their ids in `others`."""
+    first: dict[str, dict] = {}
+    out = []
+    for one in rows:
+        group = one.get("group") or ""
+        if not group:
+            out.append(one)
+            continue
+        kept = first.get(group)
+        if kept is None:
+            kept = {**one, "others": []}
+            first[group] = kept
+            out.append(kept)
+            continue
+        kept["others"].append(
+            {
+                "recording_id": one["recording_id"],
+                "where": one["where"],
+                "id": one["id"],
+            }
+        )
+    for kept in first.values():
+        names = [kept["where"]] + [other["where"] for other in kept["others"]]
+        kept["where"] = f"on {len(names)} cameras: " + ", ".join(names)
+    return out
 
 
 def count(case) -> int:

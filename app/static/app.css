@@ -124,6 +124,7 @@
   /* The two colours that are the same in both themes: a video well, and the
    * white knob of a switch. */
   --well: #000000;
+  --well-ink: #ffffff;
   --knob: #ffffff;
   /* Behind an uploaded logo: nothing on the light theme, white on the dark. */
   --logo-plate: transparent;
@@ -3984,6 +3985,23 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-circle-handle { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: ew-resize; position: relative; }
 .map-circle-handle b { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); font: 600 var(--t-label) var(--mono); color: var(--accent); white-space: nowrap; }
 .map-strip .map-lane .track i.in { top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: 0.2; }
+/* The tiles (chapter 6): a small video on the map, riding beside its marker or pinned where dropped, its line to the marker drawn with the leaders. */
+.map-tile { --cam: var(--muted); position: absolute; width: 168px; z-index: 4; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; font-size: var(--t-label); }
+.map-tile.pinned { border-color: var(--accent); }
+.map-tile .tile-bar { display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 6px; border-bottom: 1px solid var(--line); font-weight: 600; cursor: move; user-select: none; touch-action: none; }
+.map-tile .tile-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--cam); flex: none; }
+.map-tile .tile-bar i.sq { border-radius: 2px; }
+.map-tile .tile-bar .nm { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.map-tile .tile-bar .nm small { font-weight: 400; }
+.map-tile .tile-bar .spd { color: var(--muted); font-weight: 400; white-space: nowrap; }
+.map-tile .tile-bar .pin { color: var(--muted); }
+.map-tile.pinned .tile-bar .pin { color: var(--accent); }
+.map-tile .tile-bar button { min-height: 18px; padding: 0 4px; }
+.map-tile .pic { position: relative; background: var(--well); }
+.map-tile video { display: block; width: 100%; height: 94px; object-fit: cover; }
+.map-tile .cover { position: absolute; inset: 0; display: grid; place-items: center; color: var(--well-ink); background: color-mix(in srgb, var(--well) 55%, transparent); font-size: var(--t-label); text-align: center; padding: 4px; }
+.map-tile.away .tile-bar .nm::after { content: " · out of view"; font-weight: 400; color: var(--muted); }
+.map-leaders line.teth { stroke: var(--accent); stroke-dasharray: 3 3; opacity: 0.85; stroke-width: 1.2; }
 .map-fold summary { color: var(--muted); font-size: var(--t-small); padding: 6px 4px; border-top: 1px solid var(--line); cursor: pointer; }
 .map-readings { list-style: none; margin: 0 0 4px; padding: 0 0 4px 22px; font-size: var(--t-label); }
 .map-readings li { display: flex; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 4px; cursor: pointer; }

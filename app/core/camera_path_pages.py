@@ -124,6 +124,74 @@ def offer(request: HttpRequest, recording_id) -> JsonResponse:
 
 @login_required
 @require_POST
+def note_all(request: HttpRequest, case_id) -> JsonResponse:
+    """Note on all shown (chapter 6): one note written on every camera the
+    page names, each at its own moment, as ordinary notes with one shared
+    mark so the Notes tab lists them once. JSON: note, at {recording: seconds}."""
+    import json
+    import uuid
+
+    from core import notes, numbers
+
+    _maps_or_404()
+    case = _their_case(request, case_id)
+    if not case.role_of(request.user):
+        return JsonResponse({"error": "You cannot add to this case."}, status=403)
+    try:
+        wanted = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "That could not be read."}, status=400)
+    words = notes.clean(wanted.get("note", ""))
+    moments = wanted.get("at") if isinstance(wanted.get("at"), dict) else {}
+    if not words:
+        return JsonResponse({"error": "The note is empty."}, status=400)
+    if not moments:
+        return JsonResponse({"error": "No camera is shown to note."}, status=400)
+    recordings = {
+        str(one.pk): one
+        for one in Recording.objects.filter(case=case, pk__in=list(moments)[:200])
+    }
+    if len(recordings) != len(moments):
+        return JsonResponse(
+            {"error": "A camera named is not in this case."}, status=400
+        )
+    origin = {
+        "kind": "map-all",
+        "group": uuid.uuid4().hex,
+        "count": len(recordings),
+        "words": f"from the map, on {len(recordings)} cameras",
+    }
+    kept = 0
+    for recording_id, recording in recordings.items():
+        at = numbers.finite(
+            moments[recording_id], least=0.0, most=numbers.A_DAY_AND_MORE
+        )
+        if at is None:
+            continue
+        length = recording.duration_seconds
+        if length and at > float(length) + 1:
+            continue
+        spoken = notes.spoken_at(getattr(recording, "transcript", None), at)
+        if spoken is not None:
+            notes.set_note(
+                spoken, words, by=request.user, request=request, origin=origin
+            )
+        else:
+            notes.note_at(
+                recording, at, words, by=request.user, request=request, origin=origin
+            )
+        kept += 1
+    if not kept:
+        return JsonResponse(
+            {"error": "No camera is at that moment of its recording."}, status=400
+        )
+    return JsonResponse(
+        {"ok": True, "count": kept, "words": f"Note kept on {kept} cameras."}
+    )
+
+
+@login_required
+@require_POST
 def picture(request: HttpRequest, case_id) -> JsonResponse:
     """Save a picture of the map (chapter 5): the PNG the browser drew, kept
     as a Document on the incident or the recording the picture is about."""
