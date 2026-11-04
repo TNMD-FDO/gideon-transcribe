@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.194.0, 2026-11-04
+
+```
+Models: unchanged
+Database: migrates (0105, path files that wait for their video)
+```
+
+Phase 12 chapter 6, the third of three releases: path files that wait for their video, and Add path files in the case's head.
+
+- **Add path files** now stands in the case's head to the left of Add recordings, on every tab; it has left the Map tab's lead. A folder's worth of files is posted in batches of twenty and answered in one layer: added to their videos, waiting for their video, flagged, already has one, refused.
+- **Waiting files.** A path file whose name matches no video is kept on the case, read by nothing (no map, no lane, no chat, no memo, no Speakers page), until a recording of that name lands by upload or by a move into the case, when it becomes that recording's path file with the usual row. A file that disagrees with its video (the unit inside, the length) stays waiting and says why, with Add anyway. The Map tab's list has the fold **Waiting for their video** with Find by file name, Remove and Remove all waiting; the Details tab counts them.
+
 ## v1.193.0, 2026-11-04
 
 ```

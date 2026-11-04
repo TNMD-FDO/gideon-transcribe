@@ -16,6 +16,7 @@ row, a log line or a prompt (the chat gets times, distances and words).
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import errno
 import json
@@ -83,6 +84,51 @@ RULE = (
     "camera keeps the minute before the officer activates it without sound; "
     "its microphone coming on is the officer activating it."
 )
+
+
+class WaitingPathFile(models.Model):
+    """A path file that matched no video of its case when it came in (chapter
+    6, third release): kept on the case, read by nothing, until a recording
+    of that name lands and it becomes that recording's Path. Its bytes sit
+    under the case's folder by id; its name is the only content kept here."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    case = models.ForeignKey(
+        "core.Case", on_delete=models.CASCADE, related_name="waiting_path_files"
+    )
+    original_filename = models.CharField(max_length=300)
+    stem = models.CharField(max_length=300, db_index=True)
+    size_bytes = models.BigIntegerField(default=0)
+    # A first look, for the list: body or car, and how many readings.
+    source = models.CharField(max_length=8, blank=True, default="")
+    cues = models.IntegerField(default=0)
+    # Why it was not paired when its video came: the words, and that video.
+    flagged = models.CharField(max_length=300, blank=True, default="")
+    flagged_recording = models.ForeignKey(
+        "core.Recording",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["original_filename", "created"]
+
+    def __str__(self) -> str:
+        return self.original_filename
+
+    @property
+    def file_path(self) -> Path:
+        return self.case.folder / "waiting" / f"{self.id}.vtt"
 
 
 class Refused(Exception):
@@ -475,10 +521,12 @@ def add(
     by,
     request=None,
     replace: bool = False,
+    paired: bool = False,
 ) -> tuple[CameraPath, list[str]]:
     """Keep the file on the recording and read it, in the request: the
     largest file seen reads in a fraction of a second. Returns the path and
-    the warnings; raises Refused with the words."""
+    the warnings; raises Refused with the words. `paired` says the file had
+    waited on the case for this video (chapter 6); the row says so."""
     if not on():
         raise Refused("Maps are off.")
     if len(data) > MOST_BYTES:
@@ -529,6 +577,7 @@ def add(
         cues=path.cues,
         name_matches=path.stem_matches,
         clock=bool(path.clock_start),
+        **({"paired_from_waiting": True} if paired else {}),
     )
     if recording.case_id:
         cases.note_activity(recording.case, by=by)
@@ -696,7 +745,7 @@ def match_files(case, uploads: list, *, by, request=None, replace_ids=None) -> d
     for one in videos:
         by_stem.setdefault(stem_of(one.original_filename), []).append(one)
     by_id = {str(one.pk): one for one in videos}
-    landed, leftovers = [], []
+    landed, leftovers, waiting = [], [], []
     for filename, data, chosen in uploads:
         recording = by_id.get(str(chosen or ""))
         if recording is None:
@@ -704,19 +753,25 @@ def match_files(case, uploads: list, *, by, request=None, replace_ids=None) -> d
             recording = matches[0] if len(matches) == 1 else None
         row = {"file": str(filename)[:300], "recording": "", "title": ""}
         if recording is None:
+            # No video of that name: kept waiting on the case (chapter 6,
+            # third release), paired when the video lands. Refused files
+            # come back with the reason; a file already waiting is not kept twice.
+            if len(data) > MOST_BYTES:
+                leftovers.append(
+                    {**row, "why": "refused", "words": "That file is too large."}
+                )
+                continue
+            if WaitingPathFile.objects.filter(
+                case=case, original_filename=str(filename)[:300]
+            ).exists():
+                waiting.append({**row, "again": True})
+                continue
             try:
-                parsed = parse(data.decode("utf-8-sig", errors="replace"))
+                keep_waiting(case, data=data, filename=filename, by=by, request=request)
             except Refused as refused:
                 leftovers.append({**row, "why": "refused", "words": str(refused)})
                 continue
-            leftovers.append(
-                {
-                    **row,
-                    "why": "unmatched",
-                    "words": "No video of that name in this case.",
-                    "about": about_words(parsed, filename),
-                }
-            )
+            waiting.append(row)
             continue
         row["recording"] = str(recording.pk)
         row["title"] = recording.title
@@ -756,7 +811,181 @@ def match_files(case, uploads: list, *, by, request=None, replace_ids=None) -> d
             leftovers.append({**row, "why": "refused", "words": str(refused)})
             continue
         landed.append({**row, "fixes": path.fix_count, "warnings": warnings})
-    return {"landed": landed, "leftovers": leftovers}
+    return {"landed": landed, "leftovers": leftovers, "waiting": waiting}
+
+
+# Path files that wait for their video (chapter 6, third release) ---------------------
+
+
+def keep_waiting(
+    case, *, data: bytes, filename: str, by, request=None
+) -> WaitingPathFile:
+    """Keep a file that matched no video on the case, after one look to see
+    it is a path file at all (the parse is the same look the take-in does).
+    One audit row, never the names inside the file."""
+    parsed = parse(data.decode("utf-8-sig", errors="replace"))
+    one = WaitingPathFile.objects.create(
+        case=case,
+        original_filename=str(filename)[:300],
+        stem=stem_of(filename)[:300],
+        size_bytes=len(data),
+        source=parsed.source,
+        cues=parsed.cues,
+        added_by=by,
+    )
+    one.file_path.parent.mkdir(parents=True, exist_ok=True)
+    one.file_path.write_bytes(data)
+    audit.write(
+        audit.Category.RECORDINGS,
+        "Path file kept waiting",
+        actor=by,
+        request=request,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name[:400],
+        source=parsed.source,
+        cues=parsed.cues,
+    )
+    return one
+
+
+def waiting_of(case) -> list[WaitingPathFile]:
+    return list(
+        WaitingPathFile.objects.filter(case=case).select_related("flagged_recording")
+    )
+
+
+def waiting_count(case) -> int:
+    return WaitingPathFile.objects.filter(case=case).count()
+
+
+def waiting_rows(case) -> list[dict]:
+    """The Map tab's fold: the name, the kind and the count, and why one was
+    not paired when its video came."""
+    return [
+        {
+            "id": str(one.pk),
+            "file": one.original_filename,
+            "kind": "in-car" if one.source == CAR else "body",
+            "cues": one.cues,
+            "flagged": one.flagged,
+            "flagged_title": (
+                one.flagged_recording.title if one.flagged_recording is not None else ""
+            ),
+            "flagged_recording": (
+                str(one.flagged_recording_id) if one.flagged_recording_id else ""
+            ),
+        }
+        for one in waiting_of(case)
+    ]
+
+
+def remove_waiting(one: WaitingPathFile, *, by, request=None) -> None:
+    case = one.case
+    with contextlib.suppress(FileNotFoundError):
+        one.file_path.unlink()
+    one.delete()
+    audit.write(
+        audit.Category.RECORDINGS,
+        "Waiting path file removed",
+        actor=by,
+        request=request,
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name[:400],
+    )
+
+
+def remove_all_waiting(case, *, by, request=None) -> int:
+    found = waiting_of(case)
+    for one in found:
+        with contextlib.suppress(FileNotFoundError):
+            one.file_path.unlink()
+    WaitingPathFile.objects.filter(case=case).delete()
+    if found:
+        audit.write(
+            audit.Category.RECORDINGS,
+            "Waiting path files removed",
+            actor=by,
+            request=request,
+            object_type="case",
+            object_id=case.pk,
+            object_label=case.name[:400],
+            count=len(found),
+        )
+    return len(found)
+
+
+def pair_waiting(recording, *, by=None, request=None) -> CameraPath | None:
+    """A recording that has just landed in a case: the waiting file of its
+    name becomes its Path, by the same stem rule the take-in uses, with the
+    usual "Path file added" row. A file that is flagged against this
+    recording (the unit inside it is not the camera the picture names, or
+    the lengths differ) stays waiting and says why; a second recording of
+    the same name takes the next waiting file. None when nothing matched."""
+    if not on() or recording.case_id is None or of(recording) is not None:
+        return None
+    stem = stem_of(recording.original_filename)
+    if not stem:
+        return None
+    for one in WaitingPathFile.objects.filter(case_id=recording.case_id, stem=stem):
+        try:
+            data = one.file_path.read_bytes()
+        except OSError:
+            continue
+        try:
+            parsed = parse(data.decode("utf-8-sig", errors="replace"))
+        except Refused:
+            continue
+        flagged = [
+            words
+            for words in warnings_for(recording, parsed, one.original_filename)
+            if not words.startswith("Its name")
+        ]
+        if flagged:
+            one.flagged = " ".join(flagged)[:300]
+            one.flagged_recording = recording
+            one.save(update_fields=["flagged", "flagged_recording"])
+            continue
+        try:
+            path, _warnings = add(
+                recording,
+                data=data,
+                filename=one.original_filename,
+                by=by or one.added_by,
+                request=request,
+                paired=True,
+            )
+        except Refused:
+            continue
+        with contextlib.suppress(FileNotFoundError):
+            one.file_path.unlink()
+        one.delete()
+        return path
+    return None
+
+
+def pair_anyway(one: WaitingPathFile, *, by, request=None) -> CameraPath:
+    """Add anyway, from the fold: the flagged file onto the recording it was
+    flagged against, as the take-in's Add anyway does."""
+    recording = one.flagged_recording
+    if recording is None or recording.case_id != one.case_id:
+        raise Refused("That video is no longer in this case.")
+    if of(recording) is not None:
+        raise Refused("That video has a path file now.")
+    data = one.file_path.read_bytes()
+    path, _warnings = add(
+        recording,
+        data=data,
+        filename=one.original_filename,
+        by=by,
+        request=request,
+        paired=True,
+    )
+    with contextlib.suppress(FileNotFoundError):
+        one.file_path.unlink()
+    one.delete()
+    return path
 
 
 def about_words(parsed: Parsed, filename: str) -> str:
@@ -1345,6 +1574,22 @@ def map_of(case, *, day: str = "", viewer) -> dict:
         "videos_without_path": without,
         "add_url": reverse("case-paths-add", args=[case.pk]),
         "may_add": may_add,
+        # The path files waiting for their video (chapter 6, third release).
+        "waiting": [
+            {
+                **row,
+                "remove_url": reverse(
+                    "case-paths-waiting-remove", args=[case.pk, row["id"]]
+                ),
+                "add_anyway_url": reverse(
+                    "case-paths-waiting-add-anyway", args=[case.pk, row["id"]]
+                ),
+            }
+            for row in waiting_rows(case)
+        ],
+        "waiting_remove_all_url": reverse(
+            "case-paths-waiting-remove-all", args=[case.pk]
+        ),
         "incidents": _incident_spans(case),
         "note_url": reverse("recording-note-at", args=[uuid.UUID(int=0)]),
         # The forming offer from the map (join 1): cameras that kept close

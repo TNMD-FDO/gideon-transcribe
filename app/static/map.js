@@ -214,7 +214,6 @@
     var asked = askedMoment();
     S.moment = asked !== null ? asked : span()[0] + 60;
     drawTransport(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar();
-    wireAdd();
   }
   // The incident page's pane: the map and a foot row, nothing of its own
   // to play with; the page's transport is the clock.
@@ -759,6 +758,7 @@
       html += "<details class='map-fold' " + (today.length ? "" : "open") + "><summary>No path file: " + plural(without.length, "video") + "</summary>" +
         without.map(function (v) { return "<div class='map-row dim' data-video='" + v.id + "'><span class='dot' style='background: var(--muted)'></span><div><b>" + esc(v.title) + "</b><div class='facts'>no path file</div></div><div class='acts'>" + (host.dataset.edit ? "<label class='tiny btn'>Add a path file<input type='file' accept='.vtt,text/vtt' hidden data-add-one='" + v.id + "'></label>" : "") + "</div></div>"; }).join("") + "</details>";
     }
+    html += waitingFold();
     // The forming offer from the map (join 1): the Incidents tab's own Make it.
     (S.told.offer || []).forEach(function (one) {
       html += "<div class='map-offer'><span class='pill small offer'>Offer</span> <span class='small'>" + esc(one.line) + "</span><div class='acts'><button type='button' class='tiny primary' data-act='make-incident' data-recordings='" + esc(one.recordings.join(" ")) + "'>Make an incident</button><a class='btn tiny ghost' href='?tab=incidents'>On the Incidents tab</a></div></div>";
@@ -771,6 +771,12 @@
       r.addEventListener("mouseleave", function () { if (!S.selected) { light(null); } });
     });
     el.list.querySelectorAll(".own-bar").forEach(function (bar) { bar.addEventListener("input", function () { var cam = S.byId[bar.dataset.cam]; cam.own = parseFloat(bar.value); tick(); }); });
+    var waiting = el.list.querySelector("details.map-waiting");
+    if (waiting) {
+      waiting.addEventListener("toggle", function () { S.waitingOpen = waiting.open; });
+      var find = waiting.querySelector("#map-waiting-find");
+      find.addEventListener("input", function () { S.waitingFind = find.value; var at = find.selectionStart; drawList(); var again = el.list.querySelector("#map-waiting-find"); if (again) { again.focus(); try { again.setSelectionRange(at, at); } catch (e) { /* fine */ } } });
+    }
   }
   // The list's inputs (chapter 6): a tick, the tick-all box, a file chosen
   // for a row. The rows are redrawn often, so the host listens once.
@@ -1087,53 +1093,31 @@
   }
 
   // The files ----------------------------------------------------------------------
-  function wireAdd() {
-    var label = document.getElementById("map-add-files");
-    if (!label) { return; }
-    var input = label.querySelector("input");
-    input.addEventListener("change", function () { if (input.files.length) { addMany(Array.prototype.slice.call(input.files), {}, []); input.value = ""; } });
-  }
-  function addMany(files, chosen, replace) {
-    var form = new FormData();
-    files.forEach(function (f, i) { form.append("files", f, f.name); form.append("chosen", chosen[i] || ""); });
-    replace.forEach(function (id) { form.append("replace", id); });
-    toast("Adding " + plural(files.length, "path file") + "...");
-    postForm(host.dataset.add, form).then(function (told) {
-      var landed = told.landed || [], left = told.leftovers || [];
-      if (landed.length) { toast(plural(landed.length, "file") + " added to " + (landed.length === 1 ? "its video" : "their videos") + (left.length ? " · " + left.length + " to settle" : "")); }
-      if (left.length) { settle(files, left); } else if (!landed.length) { toast("Nothing was added.", true); }
-      load(true);
-    }).catch(function (e) { toast(e.message, true); });
-  }
-  function settle(files, left) {
-    var byName = {}; files.forEach(function (f) { byName[f.name] = f; });
-    var without = (S.told.videos_without_path || []).concat(S.cams.map(function (c) { return { id: c.id, title: c.title }; }));
-    var layer = document.createElement("div");
-    layer.className = "map-layer";
-    layer.innerHTML = "<div class='map-layer-card'><div class='h'><b>" + plural(left.length, "file") + " to settle</b><button type='button' class='tiny ghost' data-act='layer-close'>Close</button></div>" +
-      "<table class='tbl small'><thead><tr><th>File</th><th>What the app found</th><th></th></tr></thead><tbody>" +
-      left.map(function (one, i) {
-        var what = esc(one.words) + (one.about ? "<br><span class='muted'>" + esc(one.about) + "</span>" : "");
-        var act = "";
-        if (one.why === "flagged") { what = "Matches <b>" + esc(one.title) + "</b> by name, but: " + what + " <span class='pill warn small'>Flagged</span>"; act = "<label><input type='checkbox' data-i='" + i + "' data-rec='" + one.recording + "'> Add anyway</label>"; }
-        else if (one.why === "has_one") { what = "<b>" + esc(one.title) + "</b> already has a path file. <span class='pill small'>Has one</span>"; act = "<label><input type='checkbox' data-i='" + i + "' data-rec='" + one.recording + "' data-replace='1'> Replace</label>"; }
-        else if (one.why === "unmatched") { what += " <span class='pill small'>Unmatched</span>"; act = "<select data-i='" + i + "'><option value=''>Choose its video…</option>" + without.map(function (v) { return "<option value='" + v.id + "'>" + esc(v.title) + "</option>"; }).join("") + "</select>"; }
-        else { what += " <span class='pill danger small'>Refused</span>"; }
-        return "<tr><td class='mono'>" + esc(one.file) + "</td><td>" + what + "</td><td>" + act + "</td></tr>";
-      }).join("") + "</tbody></table>" +
-      "<div class='acts'><button type='button' class='small' data-act='layer-close'>Close</button><button type='button' class='small primary' data-act='layer-go'>Add the settled files</button></div></div>";
-    document.body.appendChild(layer);
-    layer.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-act]"); if (!b) { return; }
-      if (b.dataset.act === "layer-close") { layer.remove(); return; }
-      if (b.dataset.act === "layer-go") {
-        var picked = [], chosen = {}, replace = [];
-        layer.querySelectorAll("input[type=checkbox]:checked").forEach(function (c) { var one = left[parseInt(c.dataset.i, 10)]; if (byName[one.file]) { chosen[picked.length] = c.dataset.rec; if (c.dataset.replace) { replace.push(c.dataset.rec); } picked.push(byName[one.file]); } });
-        layer.querySelectorAll("select").forEach(function (s) { if (s.value) { var one = left[parseInt(s.dataset.i, 10)]; if (byName[one.file]) { chosen[picked.length] = s.value; picked.push(byName[one.file]); } } });
-        layer.remove();
-        if (picked.length) { addMany(picked, chosen, replace); }
-      }
+  // A folder's worth comes in through the case's head (path-files.js, chapter
+  // 6); it asks this tab to read its paths again. One file onto one row stays here.
+  window.MapTab = { reload: function () { if (S.loaded) { load(true); } } };
+  // The fold of path files waiting for their video (chapter 6, third release).
+  function waitingFold() {
+    var rows = S.told.waiting || [];
+    if (!rows.length) { return ""; }
+    var find = (S.waitingFind || "").toLowerCase();
+    var shown = rows.filter(function (one) { return !find || one.file.toLowerCase().indexOf(find) >= 0; });
+    var html = "<details class='map-fold map-waiting' " + (S.waitingOpen ? "open" : "") + "><summary>Waiting for their video: " + plural(rows.length, "path file") + " <span class='muted'>· kept on the case, not on the map</span></summary>" +
+      "<div class='acts'><input type='search' class='small' id='map-waiting-find' placeholder='Find by file name' value='" + esc(S.waitingFind || "") + "'>" +
+      (host.dataset.edit ? "<button type='button' class='tiny ghost danger' data-act='waiting-remove-all'>Remove all waiting</button>" : "") + "</div>";
+    shown.slice(0, 50).forEach(function (one) {
+      html += "<div class='map-row waiting' data-waiting='" + one.id + "'><span class='nm mono small' title='" + esc(one.file) + "'>" + esc(one.file) + "</span><span class='muted small'>" + esc(one.kind) + " · " + plural(one.cues, "cue") + "</span>" +
+        "<span class='tail'>" + (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='waiting-remove' data-url='" + esc(one.remove_url) + "'>Remove</button>" : "") + "</span></div>" +
+        (one.flagged ? "<div class='map-open small'><span class='pill warn small'>Flagged</span> Matches <b>" + esc(one.flagged_title) + "</b> by name, but: " + esc(one.flagged) + (host.dataset.edit ? " <button type='button' class='tiny' data-act='waiting-add-anyway' data-url='" + esc(one.add_anyway_url) + "'>Add anyway</button>" : "") + "</div>" : "");
     });
+    if (shown.length > 50) { html += "<div class='fold muted small'>" + (shown.length - 50) + " more: find by name to narrow the list.</div>"; }
+    if (!shown.length) { html += "<div class='fold muted small'>No waiting file matches.</div>"; }
+    return html + "</details>";
+  }
+  function waitingAct(url, words, confirmWords) {
+    var go = function () { return postJson(url, {}).then(function (told) { toast(told.words || words); load(true); }).catch(function (e) { toast(e.message, true); }); };
+    if (!confirmWords || !window.UI || !window.UI.confirm) { go(); return; }
+    window.UI.confirm({ title: confirmWords, body: "They are not on any map or in any reading; their videos would have to be added again with them.", ok: "Remove" }).then(function (yes) { if (yes) { go(); } });
   }
   function addOne(recordingId, file, replace) {
     var form = new FormData(); form.append("file", file, file.name); if (replace) { form.append("replace", "1"); }
@@ -1178,6 +1162,9 @@
         case "tick-none": tickAll(false); return;
         case "tick-inside": if (S.hits) { S.hidden = {}; dayCams().forEach(function (c) { if (!S.hits[c.id]) { S.hidden[c.id] = true; } }); afterTicks(); } return;
         case "remove": if (cam) { removeOne(cam); } return;
+        case "waiting-remove": waitingAct(b.dataset.url, "Waiting file removed.", ""); return;
+        case "waiting-add-anyway": waitingAct(b.dataset.url, "Path file added.", ""); return;
+        case "waiting-remove-all": waitingAct(S.told.waiting_remove_all_url, "Waiting files removed.", "Remove every waiting path file?"); return;
         case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
         case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;

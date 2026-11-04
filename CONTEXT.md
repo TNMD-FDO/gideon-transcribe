@@ -587,7 +587,7 @@ One reading of where a camera was: a second of its Recording, a latitude and a l
 _Avoid_: point, waypoint, ping, location (that is a place, not a reading), coordinate (on a page)
 
 **Path file**:
-The text file a body-worn or in-car camera's export puts beside the video, with the video's name and the ending .vtt, holding one reading a second: the position, the microphone and battery flags, the wearer, the unit, the department, and for an in-car unit its own clock, speed and switches. Added from the Map tab, where a folder's worth finds their videos by name; kept with the Recording as the camera's own record. Phase 12 chapter 1.
+The text file a body-worn or in-car camera's export puts beside the video, with the video's name and the ending .vtt, holding one reading a second: the position, the microphone and battery flags, the wearer, the unit, the department, and for an in-car unit its own clock, speed and switches. Added from the Case's head (Add path files), where a folder's worth finds their videos by name; kept with the Recording as the camera's own record. One whose video is not in the Case yet waits on the Case, read by nothing, and becomes the Recording's Path when a video of its name lands (Phase 12 chapter 6). Phase 12 chapter 1.
 _Avoid_: GPS file, metadata file, subtitle file, sidecar, caption file
 
 **Reading**:

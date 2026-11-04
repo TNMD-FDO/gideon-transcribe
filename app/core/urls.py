@@ -423,6 +423,21 @@ urlpatterns = [
         name="case-map-note-all",
     ),
     path(
+        "case/<uuid:case_id>/paths/waiting/<uuid:waiting_id>/remove",
+        camera_path_pages.waiting_remove,
+        name="case-paths-waiting-remove",
+    ),
+    path(
+        "case/<uuid:case_id>/paths/waiting/<uuid:waiting_id>/add-anyway",
+        camera_path_pages.waiting_add_anyway,
+        name="case-paths-waiting-add-anyway",
+    ),
+    path(
+        "case/<uuid:case_id>/paths/waiting/remove-all",
+        camera_path_pages.waiting_remove_all,
+        name="case-paths-waiting-remove-all",
+    ),
+    path(
         "recording/<uuid:recording_id>/path/where",
         camera_path_pages.where,
         name="camera-path-where",

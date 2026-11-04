@@ -14,6 +14,8 @@
       </div>
       <div class="acts">
         {# The head's Notes page door (v1.121.1) went in v1.173.0: the Page shape is in the Notes tab's toggle. #}
+        {% comment %}Add path files (Phase 12 chapter 6, v1.194.0): a path file is the case's input, not the map's; a folder's worth finds their videos by name, and the rest wait on the case for theirs.{% endcomment %}
+        {% if paths_door %}<label class="btn" id="case-add-paths" data-add="{% url 'case-paths-add' case.pk %}" data-map="{% url 'case' case.pk %}?tab=map" title="A folder's worth of .vtt path files: each finds its video by name; the rest wait here for theirs">{% icon "upload" %} Add path files<input type="file" accept=".vtt,text/vtt" multiple hidden></label>{% endif %}
         <a href="{% url 'add-recordings' case.pk %}" class="btn primary">Add recordings</a>
       </div>
     </header>
@@ -271,7 +273,7 @@
           {% endif %}
           <dt>Recordings</dt><dd>{{ recordings|length }}, {{ size }}</dd>
           {% comment %}On the map (Phase 12 chapter 1): the cameras with a path file, and the videos without one.{% endcomment %}
-          {% if map_count %}<dt>On the map</dt><dd><a href="{% url 'case' case.pk %}?tab=map">{{ map_count }} camera{{ map_count|pluralize }} with a path file</a>{% if map_videos_without %}, {{ map_videos_without }} video{{ map_videos_without|pluralize }} without{% endif %}</dd>{% endif %}
+          {% if map_count or map_waiting %}<dt>On the map</dt><dd>{% if map_count %}<a href="{% url 'case' case.pk %}?tab=map">{{ map_count }} camera{{ map_count|pluralize }} with a path file</a>{% if map_videos_without %}, {{ map_videos_without }} video{{ map_videos_without|pluralize }} without{% endif %}{% else %}<a href="{% url 'case' case.pk %}?tab=map">No camera has a path file yet</a>{% endif %}{% if map_waiting %}, {{ map_waiting }} path file{{ map_waiting|pluralize }} waiting for {% if map_waiting == 1 %}its{% else %}their{% endif %} video{% endif %}</dd>{% endif %}
           <dt>Last activity</dt><dd>{{ case.last_activity|date:"d M Y H:i" }}</dd>
           <dt>Retention</dt>
           <dd>{% if warned %}<span class="deletes">{{ deletes_line }}</span>{% else %}{{ deletes_line }}{% endif %}</dd>
@@ -472,9 +474,7 @@
               {% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %}
               <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth here and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</span>
             </p>
-            {% if map_may_add %}
-              <label class="btn small" id="map-add-files">{% icon "upload" %} Add path files<input type="file" accept=".vtt,text/vtt" multiple hidden></label>
-            {% endif %}
+            {% comment %}Add path files left for the case's head in v1.194.0 (chapter 6).{% endcomment %}
           </div>
           {% include "map-host.html" with map_clock="" %}
         {% elif tab == "speakers" %}
@@ -1081,6 +1081,7 @@
   <script src="{% static 'case-scope.js' %}"></script>
   <script src="{% static 'recordings.js' %}"></script>
   <script src="{% static 'cases.js' %}"></script>
+  {% if paths_door %}<script src="{% static 'path-files.js' %}"></script>{% endif %}
   {% comment %}The Page shape's script (v1.172.0), after preview.js, which it mounts into the desk.{% endcomment %}
   <script src="{% static 'chronology.js' %}"></script>
   <script src="{% static 'report-panel.js' %}"></script>

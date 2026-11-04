@@ -76,6 +76,14 @@ def prepare(recording: Recording) -> Recording:
     # The figure on disk, now that the prepared audio is there (v1.134.0).
     recording.measure_disk()
     _record_accepted(recording)
+    # A path file that waited on the case for this video (Phase 12 chapter 6)
+    # becomes its Path now that the video is known; never a reason to fail.
+    try:
+        from core import camera_paths
+
+        camera_paths.pair_waiting(recording)
+    except Exception:  # noqa: BLE001 - the pairing is a courtesy, not the pipeline
+        log.exception("the waiting path file for %s could not be paired", recording.pk)
     log.info(
         "recording %s is ready: %.1f minutes, %d side(s)",
         recording.id,

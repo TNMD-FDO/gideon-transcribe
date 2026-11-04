@@ -493,12 +493,13 @@ def test_several_files_land_on_their_videos_by_name_and_the_rest_come_back(
     assert whys == {
         "BWC3-1_202511061420_c.vtt": "has_one",
         "Dash-4_202511061420_d.vtt": "flagged",
-        "nobody.vtt": "unmatched",
         "notes.vtt": "refused",
     }
     by_file = {row["file"]: row for row in told["leftovers"]}
     assert "9082" in by_file["Dash-4_202511061420_d.vtt"]["words"]
-    assert by_file["nobody.vtt"]["about"].startswith("A body camera, 2 minutes")
+    # A file of no video's name waits on the case (chapter 6, v1.194.0).
+    assert [row["file"] for row in told["waiting"]] == ["nobody.vtt"]
+    assert camera_paths.WaitingPathFile.objects.filter(case=a_case).count() == 1
     # Settled: the flagged one taken anyway, the unmatched one given its
     # video, the one with a file replaced.
     settled = camera_paths.match_files(

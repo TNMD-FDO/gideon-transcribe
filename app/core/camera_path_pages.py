@@ -122,6 +122,55 @@ def offer(request: HttpRequest, recording_id) -> JsonResponse:
     )
 
 
+def _waiting_for(request: HttpRequest, case_id, waiting_id):
+    _maps_or_404()
+    case = _their_case(request, case_id)
+    if not case.role_of(request.user):
+        return None, JsonResponse({"error": "You cannot change this case."}, status=403)
+    one = camera_paths.WaitingPathFile.objects.filter(pk=waiting_id, case=case).first()
+    if one is None:
+        return None, JsonResponse(
+            {"error": "That file is no longer waiting."}, status=404
+        )
+    return one, None
+
+
+@login_required
+@require_POST
+def waiting_remove(request: HttpRequest, case_id, waiting_id) -> JsonResponse:
+    """Remove one path file that waits for its video (chapter 6)."""
+    one, refused = _waiting_for(request, case_id, waiting_id)
+    if refused is not None:
+        return refused
+    camera_paths.remove_waiting(one, by=request.user, request=request)
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def waiting_add_anyway(request: HttpRequest, case_id, waiting_id) -> JsonResponse:
+    """Add anyway: a flagged waiting file onto the video it was flagged against."""
+    one, refused = _waiting_for(request, case_id, waiting_id)
+    if refused is not None:
+        return refused
+    try:
+        path = camera_paths.pair_anyway(one, by=request.user, request=request)
+    except camera_paths.Refused as told:
+        return JsonResponse({"error": str(told)}, status=400)
+    return JsonResponse({"ok": True, "words": camera_paths.words(path)})
+
+
+@login_required
+@require_POST
+def waiting_remove_all(request: HttpRequest, case_id) -> JsonResponse:
+    _maps_or_404()
+    case = _their_case(request, case_id)
+    if not case.role_of(request.user):
+        return JsonResponse({"error": "You cannot change this case."}, status=403)
+    count = camera_paths.remove_all_waiting(case, by=request.user, request=request)
+    return JsonResponse({"ok": True, "count": count})
+
+
 @login_required
 @require_POST
 def note_all(request: HttpRequest, case_id) -> JsonResponse:

@@ -450,6 +450,11 @@ def move_recording(recording, case: Case, actor, description="", request=None) -
     if from_case is not None:
         incidents.left_the_case(recording)
     incidents.after_playback(recording)
+    # A path file waiting in the new case for a video of this name becomes
+    # its Path (Phase 12 chapter 6); a recording moved in with a path keeps it.
+    from core import camera_paths
+
+    camera_paths.pair_waiting(recording, by=actor, request=request)
 
     audit.write(
         CATEGORY,

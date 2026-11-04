@@ -459,9 +459,11 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             **incidents_context,
             # The Map tab (Phase 12 chapter 1): drawn by map.js from map.json.
             "map_count": map_count,
+            # Add path files in the head (chapter 6, third release), on every tab.
+            "paths_door": bool(maps_on and role),
             **(
                 _map_context(case, request.user)
-                if tab == "map" or (tab == "details" and map_count)
+                if tab == "map" or (tab == "details" and maps_on)
                 else {}
             ),
         },
@@ -486,6 +488,7 @@ def _map_context(case: Case, user) -> dict:
         "map_add_url": reverse("case-paths-add", args=[case.pk]),
         "map_time_zone": settings.TIME_ZONE,
         "map_videos_without": max(0, videos - camera_paths.count(case)),
+        "map_waiting": camera_paths.waiting_count(case),
         # The glyph and sprite folders by their plain names: the map library
         # builds "{fontstack}/{range}.pbf" itself, which no manifest hash
         # can name, and the static server serves the plain names beside the

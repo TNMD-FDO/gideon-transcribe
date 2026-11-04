@@ -554,3 +554,171 @@ def test_the_tiles_ride_pin_and_play_in_step():
     css = static("app.css")
     assert ".map-tile {" in css and ".map-tile.pinned" in css and "line.teth" in css
     assert ".map-tile.away" in css
+
+
+# Path files that wait, and the head's door (chapter 6, v1.194.0) ---------------------
+
+
+def test_an_unmatched_path_file_waits_on_the_case_and_is_read_by_nothing(
+    client, person, a_case
+):
+    import io
+
+    from core import camera_paths
+    from core.audit import Row
+    from core.camera_paths import WaitingPathFile
+    from tests.test_camera_paths import body_file
+
+    signed_in(client, person)
+    video(person, a_case, "BWC1-1")
+    url = reverse("case-paths-add", args=[a_case.pk])
+    matched = io.BytesIO(body_file(600))  # as long as the video, so not flagged
+    matched.name = "BWC1-1.vtt"
+    stranger = io.BytesIO(body_file())
+    stranger.name = "BWC7-2_202511062031_0001.vtt"
+    told = client.post(url, {"files": [matched, stranger], "chosen": ["", ""]})
+    assert told.status_code == 200, told.content
+    assert len(told.json()["landed"]) == 1, told.json()
+    assert told.json()["leftovers"] == []
+    assert [w["file"] for w in told.json()["waiting"]] == [stranger.name]
+    kept = WaitingPathFile.objects.get(case=a_case)
+    assert kept.stem == camera_paths.stem_of(stranger.name)
+    assert kept.file_path.exists() and kept.source == "body" and kept.cues > 0
+    assert kept.file_path.parent == a_case.folder / "waiting"
+    # Read by nothing: one Path, one camera on the map, one in the readings.
+    assert camera_paths.count(a_case) == 1
+    told = camera_paths.map_of(a_case, viewer=person)
+    assert len(told["cameras"]) == 1 and len(told["waiting"]) == 1
+    assert told["waiting"][0]["remove_url"].endswith("/remove")
+    assert "waiting_remove_all_url" in told
+    assert len(camera_paths.ids_with_path(a_case)) == 1
+    # The row says the case and the kind, never the names inside the file.
+    row = Row.objects.get(event="Path file kept waiting")
+    assert row.details["source"] == "body" and "officer" not in str(row.details).lower()
+    assert "Pat" not in str(row.details)
+    # The same name is not kept twice.
+    again = io.BytesIO(body_file())
+    again.name = stranger.name
+    told = client.post(url, {"files": [again], "chosen": [""]})
+    assert told.json()["waiting"][0].get("again") is True
+    assert WaitingPathFile.objects.filter(case=a_case).count() == 1
+
+
+def test_a_waiting_file_is_paired_when_its_video_lands(client, person, a_case):
+    from core import camera_paths, cases
+    from core.audit import Row
+    from core.camera_paths import WaitingPathFile
+    from tests.test_camera_paths import body_file, car_file
+
+    settings_store.set_to("maps", True)
+    camera_paths.keep_waiting(
+        a_case, data=body_file(600), filename="BWC7-2.vtt", by=person
+    )
+    camera_paths.keep_waiting(a_case, data=car_file(), filename="Dash-9.vtt", by=person)
+    elsewhere = Case.objects.create(owner=person, name="Elsewhere")
+    arriving = video(person, elsewhere, "BWC7-2")
+    cases.move_recording(arriving, a_case, person)
+    path = camera_paths.of(arriving)
+    assert path is not None and path.fix_count > 0
+    assert not WaitingPathFile.objects.filter(case=a_case, stem="bwc7-2").exists()
+    row = Row.objects.filter(event="Path file added").latest("at")
+    assert row.details.get("paired_from_waiting") is True
+    # A file that disagrees with its video stays waiting and says why.
+    dash = video(person, elsewhere, "Dash-9")
+    dash.stamp = {"camera": "UNIT-77"}
+    dash.save(update_fields=["stamp"])
+    cases.move_recording(dash, a_case, person)
+    assert camera_paths.of(dash) is None
+    waiting = WaitingPathFile.objects.get(case=a_case, stem="dash-9")
+    assert waiting.flagged and waiting.flagged_recording_id == dash.pk
+    rows = camera_paths.map_of(a_case, viewer=person)["waiting"]
+    assert rows[0]["flagged_title"] == "Dash-9" and rows[0]["add_anyway_url"]
+    # Add anyway pairs it after all.
+    signed_in(client, person)
+    told = client.post(rows[0]["add_anyway_url"])
+    assert told.status_code == 200, told.content
+    assert camera_paths.of(dash) is not None
+    assert not WaitingPathFile.objects.filter(case=a_case).exists()
+    # The pipeline pairs too, once the upload is Ready; a move pairs at once.
+    pipeline = (HERE / "core" / "pipeline.py").read_text(encoding="utf-8")
+    assert "camera_paths.pair_waiting(recording)" in pipeline
+    # A recording that already has a path keeps it.
+    camera_paths.keep_waiting(
+        a_case, data=body_file(), filename="BWC7-2.vtt", by=person
+    )
+    assert camera_paths.pair_waiting(arriving) is None
+    assert WaitingPathFile.objects.filter(case=a_case).count() == 1
+
+
+def test_waiting_files_can_be_removed_one_or_all(client, person, a_case):
+    from core import camera_paths
+    from core.audit import Row
+    from core.camera_paths import WaitingPathFile
+    from tests.test_camera_paths import body_file
+
+    signed_in(client, person)
+    first = camera_paths.keep_waiting(
+        a_case, data=body_file(), filename="A.vtt", by=person
+    )
+    camera_paths.keep_waiting(a_case, data=body_file(), filename="B.vtt", by=person)
+    camera_paths.keep_waiting(a_case, data=body_file(), filename="C.vtt", by=person)
+    gone = client.post(reverse("case-paths-waiting-remove", args=[a_case.pk, first.pk]))
+    assert gone.status_code == 200 and not first.file_path.exists()
+    assert WaitingPathFile.objects.filter(case=a_case).count() == 2
+    assert (
+        client.post(
+            reverse("case-paths-waiting-remove", args=[a_case.pk, first.pk])
+        ).status_code
+        == 404
+    )
+    told = client.post(reverse("case-paths-waiting-remove-all", args=[a_case.pk]))
+    assert (
+        told.json()["count"] == 2
+        and not WaitingPathFile.objects.filter(case=a_case).exists()
+    )
+    assert (
+        Row.objects.filter(event="Waiting path files removed").get().details["count"]
+        == 2
+    )
+    settings_store.set_to("maps", False)
+    assert (
+        client.post(
+            reverse("case-paths-waiting-remove-all", args=[a_case.pk])
+        ).status_code
+        == 404
+    )
+
+
+def test_add_path_files_stands_in_the_case_head_on_every_tab(client, person, a_case):
+    from core import camera_paths
+    from tests.test_camera_paths import body_file
+
+    signed_in(client, person)
+    video(person, a_case, "BWC1-1")
+    camera_paths.keep_waiting(a_case, data=body_file(), filename="Z.vtt", by=person)
+    for tab in ("", "?tab=notes", "?tab=map", "?tab=details"):
+        page = client.get(reverse("case", args=[a_case.pk]) + tab).content.decode()
+        assert 'id="case-add-paths"' in page and "path-files.js" in page, tab
+        assert 'id="map-add-files"' not in page
+        head = page[: page.index("Add recordings")]
+        assert "Add path files" in head  # to the left of Add recordings
+    details = client.get(
+        reverse("case", args=[a_case.pk]) + "?tab=details"
+    ).content.decode()
+    assert "1 path file waiting for its video" in details
+    settings_store.set_to("maps", False)
+    page = client.get(reverse("case", args=[a_case.pk])).content.decode()
+    assert 'id="case-add-paths"' not in page
+
+
+def test_the_heads_script_posts_in_batches_and_the_map_lists_the_waiting():
+    door = static("path-files.js")
+    assert "BATCH = 20" in door and "window.PathFiles" in door
+    assert "Waiting for their video" in door and "layer-go" in door
+    script = static("map.js")
+    assert "window.MapTab = { reload:" in script
+    assert (
+        "function waitingFold()" in script and "data-act='waiting-remove-all'" in script
+    )
+    assert "data-act='waiting-add-anyway'" in script and "map-waiting-find" in script
+    assert "function addMany" not in script and "function settle" not in script

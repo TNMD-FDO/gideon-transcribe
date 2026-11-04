@@ -69,3 +69,17 @@ map runs on.
 - A browser without WebGL has the list and the strip and no map.
 - A future content-security policy must allow `worker-src blob:` for the
   library's worker.
+
+## Amendment, 2026-11-04 (Phase 12 chapter 6, v1.194.0)
+
+A path file may wait on the Case for its video. Offices upload path files
+by the hundred before the videos they belong to, so a file that matches no
+video is no longer answered at once with a chooser: it is kept on the Case
+(`WaitingPathFile`, its bytes under the case's folder), read by nothing,
+and made the recording's Path through the same `add()` when a recording of
+its name lands by upload or by a move into the case. The decision above
+stands: a Path is made only on a Recording, is kept in its folder and goes
+with it; the waiting file is not a Path and has no readings, so nothing
+that reads paths (the map, the chat, the memo, the comparison, the Speakers
+page) can see it. Add path files moved to the case's head for the same
+reason: a path file is the case's input, not the map's.
