@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The circle by hand, and a tidy Suggested row</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .btn.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.inc { background: var(--inc-soft); color: var(--inc); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .tk { display: inline-block; width: 13px; height: 13px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--surface); position: relative; flex: none; vertical-align: -2px; }
+  .tk.on { background: var(--accent); border-color: var(--accent); }
+  .tk.on::after { content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 3px; height: 7px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .transport { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+  .maptab { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); min-height: 300px; }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .list { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; background: var(--surface); font-size: 13px; display: flex; flex-direction: column; align-self: start; }
+  .list .h { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 0 0 6px; }
+  .row { display: grid; grid-template-columns: 14px 10px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 5px 4px; border-top: 1px solid var(--line); }
+  .row .dot { width: 10px; height: 10px; border-radius: 50%; } .row .dot.sq { border-radius: 2px; }
+  .row small { color: var(--muted); font-size: 11px; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; } .blk { fill: var(--surface-2); opacity: .55; }
+  .lbl { font: 9px var(--font); fill: var(--label); letter-spacing: .04em; } .lbl.big { font-size: 11px; }
+  .pf { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .35; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p4 { stroke: var(--c4); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; } .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .circ { fill: var(--accent); fill-opacity: .08; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .circ-h { fill: var(--surface); stroke: var(--accent); stroke-width: 2; } .circ-r { font: 600 10px var(--mono); fill: var(--accent); }
+  .ghost-c { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 3; opacity: .5; }
+  .hand { font: 600 10px var(--font); fill: var(--accent); }
+  .c1 { background: var(--c1); } .c2 { background: var(--c2); } .c3 { background: var(--c3); } .c4 { background: var(--c4); } .c5 { background: var(--c5); }
+  .tag { font: 600 10px var(--font); fill: var(--text); } .tagbox { fill: var(--surface); stroke: var(--line); }
+  /* the strip */
+  .strip { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface); display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 4px 10px; font-size: 12px; }
+  .strip .head { display: flex; gap: 6px; align-items: center; height: 18px; white-space: nowrap; overflow: hidden; color: var(--muted); font-size: 11px; }
+  .strip .ruler { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--muted); }
+  .strip .track { position: relative; height: 18px; }
+  .strip .track i { position: absolute; top: 5px; height: 8px; border-radius: 4px; }
+  .strip .track i.lane { top: 4px; height: 10px; background: var(--surface-2); border-radius: 5px; }
+  .strip .track .in { top: 2px; height: 14px; border-radius: 3px; background: var(--accent); opacity: .22; }
+  .strip .legend { grid-column: 1 / -1; color: var(--muted); font-size: 11px; padding-top: 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+  /* the old chips, drawn as the office saw them */
+  .chip { position: absolute; display: flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; white-space: nowrap; overflow: hidden; box-sizing: border-box; }
+  .chip b { font-weight: 700; } .chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* the new pills */
+  .sug { position: absolute; top: 0; height: 18px; }
+  .sug .n { position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 999px; background: var(--inc); color: var(--accent-ink); font: 700 11px/18px var(--font); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+  .sug .ln { position: absolute; left: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--inc); opacity: .45; }
+  .sug.lit .n { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--inc); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .card { border: 1px dashed var(--inc); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; background: var(--surface); }
+  .card.lit { box-shadow: 0 0 0 2px var(--inc); }
+  .card .h { display: flex; gap: 6px; align-items: baseline; } .card .h b { font-size: 13px; }
+  .card .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .card .num { display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: var(--inc); color: var(--accent-ink); font: 700 11px/18px var(--font); justify-content: center; flex: none; }
+  .tabs { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs small { color: var(--muted); font-size: 11px; }
+  .lead { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 13px; }
+  .panel-head { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; font-size: 13px; background: var(--surface-2); }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 amended again · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>The circle drawn by hand only, and a Suggested row that stays tidy</h1>
+    <p class="lede">Two corrections of 2026-11-04 after v1.197.0 went on the server. First, lost in translation: the Map tab must not offer a circle when it opens; the person draws the circle, moves it, and then, as an option, makes an incident from that same circle. Second, the office's own Incidents tab showed the new Suggested row as one chip across the whole day and three chips piled on one spot with their words cut off. The fictional office throughout.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The Map tab as it opens: nothing circled</h2></div>
+    <div class="frame">
+      <div class="transport"><span class="btn tiny">Play</span><span class="btn tiny">-10 s</span><span class="btn tiny">+10 s</span><span class="mono" style="font-size:16px">20:28:00</span><span class="btn tiny">Fit shown</span><span class="btn tiny">Tidy names</span><span class="btn tiny">Note here</span><span class="btn tiny">Note on all shown</span><span class="btn tiny">Within a circle</span><span class="muted small">150 m</span></div>
+      <div class="maptab">
+        <div class="pane">
+          <svg viewBox="0 0 700 300" aria-label="a drawn map with paths and no circle">
+            <rect width="700" height="300" fill="var(--ground)"/>
+            <rect x="60" y="40" width="130" height="80" rx="3" class="blk"/><rect x="230" y="40" width="150" height="80" rx="3" class="blk"/><rect x="60" y="160" width="130" height="80" rx="3" class="blk"/><rect x="230" y="160" width="150" height="80" rx="3" class="blk"/><rect x="420" y="160" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="126" width="700" height="22" class="ro"/><rect x="0" y="246" width="700" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="141">HARBOUR STREET</text><text class="lbl big" x="560" y="261">QUAY ROAD</text><text class="lbl" transform="translate(404 20) rotate(90)">ROPEWALK</text>
+            <polyline class="pf p4" points="40,257 200,257 440,257 440,180 460,145"/><polyline class="pf p1" points="80,137 380,137 400,140 405,180"/><polyline class="pf p2" points="680,60 560,137 470,137 420,180"/><polyline class="pf p3" points="212,10 212,137 330,137 440,150"/><polyline class="pf p5" points="690,290 560,257 500,257 450,210"/>
+            <rect x="431" y="171" width="14" height="14" rx="3" class="f4 hd"/><circle cx="380" cy="137" r="7" class="f1 hd"/><circle cx="470" cy="137" r="7" class="f2 hd"/><circle cx="330" cy="137" r="7" class="f3 hd"/><circle cx="560" cy="257" r="7" class="f5 hd"/>
+            <rect x="350" y="105" width="58" height="16" rx="8" class="tagbox"/><text class="tag" x="358" y="116">Ofc. Pell</text>
+            <rect x="478" y="105" width="64" height="16" rx="8" class="tagbox"/><text class="tag" x="486" y="116">Ofc. Amari</text>
+            <rect x="282" y="105" width="56" height="16" rx="8" class="tagbox"/><text class="tag" x="290" y="116">Ofc. Dunn</text>
+            <rect x="452" y="185" width="78" height="16" rx="8" class="tagbox"/><text class="tag" x="460" y="196">Unit 9082 · 0</text>
+            <rect x="572" y="266" width="54" height="16" rx="8" class="tagbox"/><text class="tag" x="580" y="277">Ofc. Ruiz</text>
+          </svg>
+        </div>
+        <div class="list">
+          <div class="h"><span>5 of 5 shown · 5 in view</span><span class="muted">all · none</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span>Ofc. Pell <small>Clear</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span>Ofc. Amari <small>Clear</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c3"></span><span>Ofc. Dunn <small>Clear</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span>Unit 9082 <small>vehicle · Clear</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c5"></span><span>Ofc. Ruiz <small>Clear</small></span><span class="muted">▸</span></div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>What is gone.</b> In v1.197.0 the map drew a dashed circle with a numbered chip round every suggestion the Incidents tab held, the moment the tab opened. None of that is drawn any more: no circle, no chip, no "Make an incident · Not this" floating over the paths. The map opens as it did before, the paths and the named markers alone.</p>
+        <p><b>What stays.</b> The suggestions themselves live on the Incidents tab, as its Suggested row and its numbered cards (Figures C and D). <b>Within a circle</b> on the transport is the one way a circle appears on the map, and it is the person's.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The person's circle: drawn, moved, and made into an incident as an option</h2></div>
+    <div class="frame">
+      <div class="transport"><span class="btn tiny on">Within a circle</span><span class="muted small">150 m</span><span class="btn tiny ghost">clear the circle</span></div>
+      <div class="maptab">
+        <div class="pane">
+          <svg viewBox="0 0 700 300" aria-label="the circle drawn by hand and dragged">
+            <rect width="700" height="300" fill="var(--ground)"/>
+            <rect x="60" y="40" width="130" height="80" rx="3" class="blk"/><rect x="230" y="40" width="150" height="80" rx="3" class="blk"/><rect x="60" y="160" width="130" height="80" rx="3" class="blk"/><rect x="230" y="160" width="150" height="80" rx="3" class="blk"/><rect x="420" y="160" width="260" height="80" rx="3" class="blk"/>
+            <rect x="0" y="126" width="700" height="22" class="ro"/><rect x="0" y="246" width="700" height="22" class="ro"/><rect x="200" y="0" width="22" height="300" class="ro"/><rect x="390" y="0" width="22" height="300" class="ro"/>
+            <text class="lbl big" x="250" y="141">HARBOUR STREET</text><text class="lbl big" x="560" y="261">QUAY ROAD</text>
+            <polyline class="pf p4" points="40,257 200,257 440,257 440,180 460,145"/><polyline class="pf p1" points="80,137 380,137 400,140 405,180"/><polyline class="pf p2" points="680,60 560,137 470,137 420,180"/><polyline class="pf p3" points="212,10 212,137 330,137 440,150"/><polyline class="pf p5" points="690,290 560,257 500,257 450,210"/>
+            <circle cx="300" cy="200" r="95" class="ghost-c"/><text class="hand" x="236" y="300">where it was first drawn</text>
+            <path d="M 330 190 L 400 170" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/><path d="M 400 170 l -7 -2 l 2 6 z" fill="var(--accent)" opacity=".7"/>
+            <circle cx="430" cy="165" r="95" class="circ"/><circle cx="430" cy="165" r="3" fill="var(--accent)"/><circle cx="525" cy="165" r="6" class="circ-h"/><text class="circ-r" x="534" y="158">150 m</text>
+            <text class="hand" x="392" y="128">drag anywhere inside to move it</text>
+            <text class="hand" x="520" y="186">drag the handle to widen it</text>
+            <rect x="431" y="171" width="14" height="14" rx="3" class="f4 hd"/><circle cx="380" cy="137" r="7" class="f1 hd"/><circle cx="470" cy="137" r="7" class="f2 hd"/><circle cx="330" cy="137" r="7" class="f3 hd"/><circle cx="560" cy="257" r="7" class="f5 hd"/>
+          </svg>
+        </div>
+        <div class="list">
+          <div class="h"><span><b style="color:var(--accent)">4 cameras</b> passed inside</span><span class="btn tiny">Tick these</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c1"></span><span>Ofc. Pell <small>20:30 to 20:53</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c2"></span><span>Ofc. Amari <small>20:28 to 20:53</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c3"></span><span>Ofc. Dunn <small>20:31 to 20:49</small></span><span class="muted">▸</span></div>
+          <div class="row"><span class="tk on"></span><span class="dot c4 sq"></span><span>Unit 9082 <small>vehicle · 20:28 to 20:53</small></span><span class="muted">▸</span></div>
+          <div style="padding: 8px 0 4px"><span class="btn primary" style="width:100%; justify-content:center">Make an incident from the circle</span></div>
+          <div class="muted small" style="padding: 0 4px 6px">4 cameras, 20:28 to 20:53.</div>
+          <div class="h" style="border-top:1px solid var(--line); padding-top:6px">▸ Never inside: 1 camera</div>
+        </div>
+      </div>
+      <div class="caption">
+        <p><b>As built in v1.197.0, kept.</b> Within a circle draws one at the map's centre; dragging anywhere inside moves it and the answer follows; the handle widens it; <b>Make an incident from the circle</b> sits under the answer and opens the New incident box with the inside cameras ticked, the day's others under them, and the span from the first entry to the last exit. Nothing is made without the press.</p>
+        <p><b>The only circle.</b> This is the circle, the one the person drew. The map draws no other, and "Make an incident from the circle" appears only while a hand-drawn circle is on the map.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>The Suggested row, the last row of the strip on the Incidents tab: what the office saw, and the row redrawn</h2></div>
+    <p class="small muted" style="margin: -8px 0 12px"><b>Where it lands.</b> This row is part of the strip on the Incidents tab, where it is today: under the lanes and the notes lane, as the strip's last row, with the legend under it and the cards (Figure D) under that. Figure D shows it in place. It is not on the Map tab. The two pictures below cut the strip down to three lanes to show the row close up.</p>
+    <div class="two">
+      <div class="frame">
+        <h3 class="muted">As the office saw it at v1.197.0 (redrawn with the fictional office's names)</h3>
+        <div class="strip">
+          <div class="ruler" style="grid-column: 2"><span>14:53</span><span>16:43</span><span>18:33</span><span>20:23</span></div>
+          <div class="head"><i class="c1" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Pell</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:2%;width:4%"></i></div>
+          <div class="head"><i class="c2" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Amari</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:3%;width:5%"></i></div>
+          <div class="head"><i class="c3" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Dunn</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:3%;width:3%"></i></div>
+          <div class="head">Suggested</div>
+          <div class="track" style="height:62px">
+            <span class="chip" style="left:0;width:100%;top:0;justify-content:center"><b>1</b><span>27 cameras, 14:53 to 20:23</span></span>
+            <span class="chip" style="left:3%;width:9%;top:20px"><b>2</b><span>4 cameras, 14:55 to 15:02</span></span>
+            <span class="chip" style="left:3%;width:9%;top:40px"><b>3</b><span>4 cameras, 14:56 to 15:03</span></span>
+            <span class="chip" style="left:6%;width:9%;top:40px;margin-top:0"><b>4</b><span>4 cameras, 15:00 to 15:08</span></span>
+          </div>
+          <div class="legend">The 8 with the most notes have a bar; press the shade at a moment for every recording running then.</div>
+        </div>
+        <div class="flag small"><b>Three faults.</b> The "same day" suggestion, every video of the day, draws as one chip across the whole row, which says nothing. The three path suggestions sit on one spot of a six-hour day, so their chips are the minimum width and pile into rows with their words cut to "4 cameras, 1…". A chip's width means its span, but a seven-minute span on a six-hour strip is nine pixels wide, so the width never had room for words.</div>
+      </div>
+      <div class="frame">
+        <h3 class="muted">Redrawn: a numbered pill at each start, one row</h3>
+        <div class="strip">
+          <div class="ruler" style="grid-column: 2"><span>14:53</span><span>16:43</span><span>18:33</span><span>20:23</span></div>
+          <div class="head"><i class="c1" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Pell</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:2%;width:4%"></i></div>
+          <div class="head"><i class="c2" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Amari</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:3%;width:5%"></i></div>
+          <div class="head"><i class="c3" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Dunn</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:3%;width:3%"></i></div>
+          <div class="head">Suggested</div>
+          <div class="track">
+            <span class="sug" style="left:3%"><span class="ln" style="width:28px"></span><span class="n">1</span></span>
+            <span class="sug lit" style="left:3%"><span class="ln" style="width:30px"></span><span class="n" style="left:22px">2</span></span>
+            <span class="sug" style="left:6%"><span class="ln" style="width:34px"></span><span class="n" style="left:44px">3</span></span>
+          </div>
+          <div class="legend">The 8 with the most notes have a bar; press the shade at a moment for every recording running then.</div>
+        </div>
+        <div class="verdict small"><b>How it works.</b> Each suggestion is a numbered pill at the start of its span, with a thin line in the incidents' colour under it for the span's length. Pills that would land on one another step to the right, in order, so every number is readable; the row is always one row high. The words are on the card below (Figure D) and on hover; a press lights the card and the card's hover lights the pill. The same-day suggestion gets no pill at all.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>Where the cards land: the Incidents tab, under the strip</h2></div>
+    <div class="frame">
+      <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>0</small></span><span>Notes <small>0</small></span><span>Documents <small>3</small></span><span class="on">Incidents <small>0</small></span><span>Map <small>26</small></span><span>Clips <small>0</small></span><span>Speakers</span><span>Details</span></div>
+      <div class="lead"><span class="muted">No incident yet. An incident is the cameras that ran at the same time, laid on one clock so they play in step. Each opens on a page of its own.</span><span class="btn tiny">New incident</span></div>
+      <div class="strip">
+        <div class="head">Days</div><div><span class="pill acc">11 Mar 2025 · 27 videos · same day</span></div>
+        <div class="ruler" style="grid-column: 2"><span>14:53</span><span>15:48</span><span>16:43</span><span>17:38</span><span>18:33</span><span>19:28</span><span>20:23</span></div>
+        <div class="head"><i class="c1" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Pell</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c1" style="left:2%;width:4%"></i></div>
+        <div class="head"><i class="c2" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Amari</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c2" style="left:3%;width:5%"></i></div>
+        <div class="head"><i class="c3" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Dunn</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c3" style="left:3%;width:3%"></i></div>
+        <div class="head"><i class="c4" style="width:8px;height:8px;border-radius:2px"></i>Unit 9082</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c4" style="left:2%;width:6%"></i></div>
+        <div class="head"><i class="c5" style="width:8px;height:8px;border-radius:50%"></i>Ofc. Ruiz</div><div class="track"><i class="lane" style="left:0;right:0"></i><i class="c5" style="left:4%;width:4%"></i></div>
+        <div class="head muted">22 more</div><div class="track"><i class="lane" style="left:0;right:0;opacity:.5"></i><span class="muted" style="position:absolute;left:6px;top:1px;font-size:10px">0 more with notes, and 22 with none, in the shade above · Show fewer</span></div>
+        <div class="head">notes</div><div class="track"></div>
+        <div class="head" style="outline: 2px dashed var(--inc); outline-offset: 4px; border-radius: 3px">Suggested</div>
+        <div class="track" style="outline: 2px dashed var(--inc); outline-offset: 4px; border-radius: 3px">
+          <span class="sug" style="left:3%"><span class="ln" style="width:28px"></span><span class="n">1</span></span>
+          <span class="sug lit" style="left:3%"><span class="ln" style="width:30px"></span><span class="n" style="left:22px">2</span></span>
+          <span class="sug" style="left:6%"><span class="ln" style="width:44px"></span><span class="n" style="left:44px">3</span></span>
+          <span style="position:absolute;left:14%;top:1px;font-size:11px;font-weight:600;color:var(--inc)">← this dashed box is Figure C's row, in place on the Incidents tab</span>
+        </div>
+        <div class="legend">The 8 with the most notes have a bar; press the shade at a moment for every recording running then.</div>
+      </div>
+      <div class="small" style="margin: 6px 0 -4px; color: var(--inc); font-weight: 600">↓ the cards, directly under the strip, in the pills' order (the dotted box)</div>
+      <div class="cards" style="outline: 2px dotted var(--inc); outline-offset: 6px; border-radius: 4px">
+        <div class="card"><div class="h"><span class="num">1</span><b>4 cameras together, 14:55 to 15:02</b></div><div class="muted">on 11 Mar 2025 · from their paths</div><div>Ofc. Pell, Ofc. Amari, Ofc. Dunn, Unit 9082</div><div class="muted">were within 50 m of one another for 7 minutes by their paths; none is in an incident.</div><div class="acts"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div></div>
+        <div class="card lit"><div class="h"><span class="num">2</span><b>4 cameras together, 14:56 to 15:03</b></div><div class="muted">on 11 Mar 2025 · from their paths</div><div>Ofc. Amari, Ofc. Dunn, Ofc. Ruiz, Unit 9082</div><div class="muted">were within 50 m of one another for 7 minutes by their paths; none is in an incident.</div><div class="acts"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div></div>
+        <div class="card"><div class="h"><span class="num">3</span><b>4 cameras together, 15:00 to 15:08</b></div><div class="muted">on 11 Mar 2025 · from their paths</div><div>Ofc. Pell, Ofc. Dunn, Ofc. Ruiz, Unit 9082</div><div class="muted">were within 50 m of one another for 8 minutes by their paths; none is in an incident.</div><div class="acts"><span class="btn tiny primary">Make an incident</span><span class="btn tiny">On the map</span><span class="btn tiny ghost">Not this</span></div></div>
+        <div class="card" style="border-style: dotted"><div class="h"><b>Same day · 11 Mar 2025</b><span class="pill">27 videos not in an incident</span></div><div class="muted">Every video of the day ran on the same day as the ones above; none is in an incident. If they belong together, make them one; if not, each waits its turn.</div><div class="acts"><span class="btn tiny">Choose myself</span></div></div>
+      </div>
+      <div class="panel-head"><b>Not on the clock</b> <span class="muted small">· 3 videos the app could not place; each row offers a time or a sound match</span></div>
+      <div class="caption">
+        <p><b>Where they land.</b> On the Incidents tab, where they are today: directly under the strip, above the Not on the clock panel, three or four to a row and wrapping on a narrow screen. Nothing of theirs is on the Map tab. A press on a pill scrolls to its card and lights it; a hover on a card lights its pill.</p>
+        <p><b>Numbered to match.</b> Cards 1 to 3 are the pills 1 to 3; the same-day card comes last, unnumbered, with no pill, and only when the day holds videos in no incident. "Make an incident" opens the New incident box filled, on this tab; "Not this" puts the suggestion away for the case.</p>
+        <p><b>On the map</b> opens the Map tab on that day with the suggestion's cameras ticked and lit and the map fitted to them. Whether it also draws the circle round them is choice 10 below: the person pressed for it, so it is not the map offering a circle unasked, but the maintainer's word on the circle is "the user draws it", so the drawing recommends no circle here either.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Settled by the ask, and three to decide</h2></div>
+    <div class="frame">
+      <p class="small"><b>Settled by the maintainer's word (2026-11-04).</b> The map never draws a circle of its own: no suggestion circles, no chips on the map. The one circle is the person's, from Within a circle, moved by dragging and widened by its handle, with Make an incident from the circle as the option under its answer, as built.</p>
+      <table class="t">
+        <tr><th>#</th><th>The choice</th><th>Drawn and recommended</th><th>The other way</th></tr>
+        <tr><td>10</td><td>What <b>On the map</b> on a suggestion's card does</td><td>Opens the Map tab on the day with the suggestion's cameras ticked and lit, the map fitted to them, no circle. The person draws one if they want one.</td><td>Also draws the circle round them (as v1.197.0 does), since the person pressed for it; it is still the one movable circle.</td></tr>
+        <tr><td>11</td><td>How the <b>Suggested row</b> draws a suggestion</td><td>A numbered pill at the start of the span with a thin span line under it; colliding pills step right; always one row.</td><td>Chips as wide as their words, packed into rows; readable, but the row grows to three or four rows on a busy day and a chip's width no longer means its span.</td></tr>
+        <tr><td>12</td><td>The <b>same-day</b> suggestion on the strip</td><td>No pill; a card alone, last and unnumbered.</td><td>A pill at the day's start too, numbered last.</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:10px">Also riding with this build, no drawing needed: the numbers on the pills, the cards and the map's New incident box all count the same list in the same order, so "2" means the same suggestion everywhere. The release would be v1.198.0, no migration.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

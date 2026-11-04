@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.198.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Two corrections to v1.197.0 from the maintainer's word and the office's own strip (the drawing `docs/spec/mockups/phase-12-map-circle-by-hand.html`).
+
+- **The map draws no circle of its own.** The dashed circles and chips the Map tab drew round every suggestion the moment it opened are gone. The one circle is the one you draw with Within a circle: drag inside it to move it, drag its handle to widen it, and Make an incident from the circle under its answer is the option, unchanged.
+- **On the map** on a suggestion's card now opens the Map tab with those cameras shown where they were in the span, ticked alone, lit and fitted, with the clock at the span's start; it draws no circle.
+- **The Suggested row stays tidy.** The chips, which drew as one chip across the whole day for the same-day suggestion and piled up with their words cut when several suggestions sat on one spot, become a numbered pill at the start of each span with a thin line under it for the span, always one row; pills that would land on one another step to the right. The words are on the card and on hover; a press lights the card and hovering a card lights its pill. The same-day suggestion is a card alone, last and unnumbered, with no pill.
+
 ## v1.197.0, 2026-11-04
 
 ```

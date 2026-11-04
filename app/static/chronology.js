@@ -215,27 +215,31 @@
       var sameBars = d.bars.filter(function (b) { return same.ids.indexOf(b.id) >= 0; });
       out.push({ key: same.key, ids: same.ids, from: same.from, to: same.to, names: sameBars.map(shortName), source: "the same day", words: same.words, kind: "day", same: same });
     }
-    out.sort(function (a, b) { return a.from - b.from; });
-    out.forEach(function (one, i) { one.n = i + 1; });
+    // In order of their start, the same day last; numbered except the same
+    // day, which is a card alone with no pill on the strip (v1.198.0).
+    out.sort(function (a, b) { return (a.kind === "day") - (b.kind === "day") || a.from - b.from; });
+    var n = 0;
+    out.forEach(function (one) { if (one.kind !== "day") { n += 1; one.n = n; } });
     return out;
   }
   function suggestedLane(d) {
     if (!d.incidents_on) { return ""; }
-    var list = suggestions(d);
+    var list = suggestions(d).filter(function (s) { return s.kind !== "day"; });
     if (!list.length) { return ""; }
-    // Chips as wide as their spans, packed into rows so none covers another.
-    var rows = [], chips = "";
+    // One row (v1.198.0): a numbered pill at each span's start with a thin
+    // line under it for the span; a pill that would land on another steps
+    // right, in order, so every number is readable. The words are on the
+    // card and on hover.
+    var width = (host.clientWidth || 900) - 78, lastPx = -Infinity, pills = "";
     list.forEach(function (s) {
-      var left = x(s.from, d), width = Math.max(9, x(s.to, d) - left);
-      if (left + width > 100) { left = Math.max(0, 100 - width); }
-      var row = 0;
-      while (rows[row] && rows[row].some(function (r) { return left < r.left + r.width + 1 && left + width + 1 > r.left; })) { row += 1; }
-      (rows[row] = rows[row] || []).push({ left: left, width: width });
-      // The number always shows; the words are cut to the chip's width.
-      var words = plural(s.ids.length, "camera") + ", " + hm(s.from) + " to " + hm(s.to);
-      chips += "<button type='button' class='sug-chip' data-suggest='" + esc(s.key) + "' style='left: " + left + "%; width: " + width + "%; top: " + (row * 20) + "px' title='" + esc(s.n + " · " + words + ". " + s.words) + "'><b>" + s.n + "</b><span>" + esc(words) + "</span></button>";
+      var left = x(s.from, d), span = Math.max(0.3, x(s.to, d) - left);
+      // A pill stays inside the row at the day's end.
+      var px = Math.min(Math.max(left * width / 100, lastPx + 20), Math.max(0, width - 18)), off = px - left * width / 100;
+      lastPx = px;
+      var words = s.n + " · " + plural(s.ids.length, "camera") + ", " + hm(s.from) + " to " + hm(s.to) + ". " + s.words;
+      pills += "<span class='sug' data-sug='" + esc(s.key) + "' style='left: " + left + "%; width: " + span + "%'><i class='ln'></i><button type='button' class='n' data-suggest='" + esc(s.key) + "' style='left: " + Math.round(off) + "px' title='" + esc(words) + "'>" + s.n + "</button></span>";
     });
-    return "<div class='sug-lane' id='chron-suggested'><span class='head'>Suggested</span><div class='rows' style='height: " + (rows.length * 20) + "px'>" + chips + "</div></div>";
+    return "<div class='sug-lane' id='chron-suggested'><span class='head'>Suggested</span><div class='rows'>" + pills + "</div></div>";
   }
   // The cards under the strip: the day's forming brackets with notes, not
   // declined and not already an offer's card, three cards at most with the
@@ -253,9 +257,15 @@
     var list = suggestions(d).filter(function (s) { return !have[s.key]; });
     var formingHint = (d.hints || []).filter(function (h) { return h.notes && !h.declined; }).sort(function (a, b) { return b.notes - a.notes; })[0] || null;
     var shown = list, more = 0;
-    shown.forEach(function (s) { box.insertAdjacentHTML("beforeend", s.kind === "day" ? dayCardHtml(s.same, d, formingHint, s.n) : cardHtml(s, d)); });
+    shown.forEach(function (s) { box.insertAdjacentHTML("beforeend", s.kind === "day" ? dayCardHtml(s.same, d, formingHint) : cardHtml(s, d)); });
     if (more > 0) { box.insertAdjacentHTML("beforeend", "<p class='muted small forming-more m0' data-forming='more'>and " + more + " more forming on the strip.</p>"); }
-    host.querySelectorAll("[data-suggest]").forEach(function (chip) { chip.addEventListener("click", function () { var card = box.querySelector("[data-forming='" + chip.dataset.suggest + "'], [data-key='" + chip.dataset.suggest + "']"); box.querySelectorAll(".lit").forEach(function (c) { c.classList.remove("lit"); }); if (card) { card.classList.add("lit"); card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }); });
+    // A press on a pill lights its card; a hover on a card lights its pill.
+    host.querySelectorAll("[data-suggest]").forEach(function (pill) { pill.addEventListener("click", function () { var card = box.querySelector("[data-forming='" + pill.dataset.suggest + "'], [data-key='" + pill.dataset.suggest + "']"); box.querySelectorAll(".lit").forEach(function (c) { c.classList.remove("lit"); }); if (card) { card.classList.add("lit"); card.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }); });
+    box.querySelectorAll("[data-forming]").forEach(function (card) {
+      var pill = host.querySelector(".sug[data-sug='" + card.dataset.forming + "']"); if (!pill) { return; }
+      card.addEventListener("mouseenter", function () { pill.classList.add("lit"); });
+      card.addEventListener("mouseleave", function () { pill.classList.remove("lit"); });
+    });
     // The clocks' offers, drawn by the page (v1.185.0): the same stills at
     // the bracket's start, for an offer whose videos are on the day shown.
     box.querySelectorAll(".inc-offer[data-key^='new:']").forEach(function (card) {
@@ -337,13 +347,15 @@
     var list = given.length > 4 ? given.slice(0, 4).join(", ") + " and " + (given.length - 4) + " more" : given.join(", ");
     var minutes = Math.max(1, Math.round((h.to - h.from) / 60));
     var why = h.kind === "paths" ? " were within " + (d.together_metres || 50) + " m of one another for " + plural(minutes, "minute") + " by their paths" : " ran together, and the notes gather here";
-    var mapHref = host.dataset.map ? host.dataset.map + "&day=" + encodeURIComponent(d.date) + "&circle=" + encodeURIComponent(h.ids.join(",")) + "&from=" + h.from + "&to=" + h.to : "";
+    // On the map (v1.198.0): the Map tab on the day with these cameras shown
+    // and the map fitted to where they were in the span; no circle drawn.
+    var mapHref = host.dataset.map ? host.dataset.map + "&day=" + encodeURIComponent(d.date) + "&show=" + encodeURIComponent(h.ids.join(",")) + "&from=" + h.from + "&to=" + h.to : "";
     return "<div class='card forming-card' data-forming='" + esc(h.key) + "' data-most='" + state.most + "'>" +
       "<div class='h'><b><span class='pill acc n'>" + h.n + "</span> " + plural(h.ids.length, "camera") + " together, " + hm(h.from) + " to " + hm(h.to) + " on " + esc(d.words) + "</b><span class='pill small'>" + esc(h.source) + (h.notes ? " · " + plural(h.notes, "note") : "") + "</span></div>" + mini +
       stillsHtml(bars, h.from) +
       "<div class='small muted'>" + list + why + "; none is in an incident. <span data-sitting></span></div>" +
       "<div class='acts'>" + (state.mayMake ? "<button type='button' class='small primary' data-make='" + h.from + "," + h.to + "' data-tick='" + h.ids.join(" ") + "'>Make an incident</button><button type='button' class='small choose-myself' data-recordings='" + h.ids.join(" ") + "'>Choose myself</button>" : "") +
-      (mapHref ? "<a class='btn small' href='" + esc(mapHref) + "' title='The Map tab, with these cameras circled'>On the map</a>" : "") +
+      (mapHref ? "<a class='btn small' href='" + esc(mapHref) + "' title='The Map tab, showing these cameras where they were'>On the map</a>" : "") +
       "<button type='button' class='small ghost' data-decline='" + esc(h.key) + "' title='Put this one away; it is not offered again'>Not this</button></div></div>";
   }
   // The day card (v1.184.0): the loose videos of the day in no forming

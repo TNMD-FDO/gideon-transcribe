@@ -87,7 +87,7 @@
       // The address may name a camera or an incident on another day than
       // the one the server chose: decided once, before the first drawing.
       if (!S.dayChosen) { S.dayChosen = true; var wanted = wantedDay(); if (wanted) { S.day = wanted; } }
-      if (!quiet || !map) { layout(); } else { drawList(); drawStrip(); tick(); refreshLayers(); drawSuggestions(); }
+      if (!quiet || !map) { layout(); } else { drawList(); drawStrip(); tick(); refreshLayers(); }
     }).catch(function () { host.innerHTML = "<p class='muted small'>The paths could not be read. Reload the page.</p>"; });
   }
 
@@ -350,7 +350,7 @@
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
       var mine = map;
-      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } drawSuggestions(); askedCircle(); });
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
       map.on("click", "map-events-hit", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
@@ -933,9 +933,10 @@
     });
     window.setTimeout(function () { var box = layer.querySelector("#map-inc-name"); if (box) { box.focus(); box.select(); } }, 50);
   }
-  // A suggestion's circle (v1.197.0): round the cameras' fixes within the
-  // span, drawn in the incidents' colour with a chip to press; the address
-  // ?circle=<ids>&from=&to= draws one from the Incidents tab's card.
+  // The round of some cameras' fixes within a span (v1.197.0), used to fit
+  // the map to the cameras an Incidents tab's card asked to see. The map
+  // never draws a circle of its own (v1.198.0): the one circle is the
+  // person's, from Within a circle.
   function circleAround(ids, from, to) {
     var pts = [];
     ids.forEach(function (id) {
@@ -946,28 +947,6 @@
     var lat = 0, lon = 0; pts.forEach(function (p) { lat += p.lat; lon += p.lon; }); lat /= pts.length; lon /= pts.length;
     var far = 0; pts.forEach(function (p) { far = Math.max(far, metres({ lat: lat, lon: lon }, p)); });
     return { lat: lat, lon: lon, radius: Math.max(NEAR, Math.min(5000, far + 20)) };
-  }
-  function drawSuggestions() {
-    if (!map || !mapReady || INC) { return; }
-    var offers = (S.told.offer || []).filter(function (o) { return o.date === S.day; });
-    var features = [];
-    el.pane.querySelectorAll(".map-suggest").forEach(function (n) { n.remove(); });
-    (S.suggestMarkers || []).forEach(function (m) { m.remove(); }); S.suggestMarkers = [];
-    offers.forEach(function (o, i) {
-      var c = circleAround(o.recordings, o.from, o.to); if (!c) { return; }
-      features.push(circlePolygon(c).features[0]);
-      var node = document.createElement("div"); node.className = "map-suggest";
-      node.innerHTML = "<span class='pill small acc'>" + (i + 1) + "</span> " + plural(o.recordings.length, "camera") + " together · <button type='button' class='tiny primary' data-act='suggest-make' data-i='" + i + "'>Make an incident</button><button type='button' class='tiny ghost' data-act='suggest-decline' data-key='" + esc(o.key) + "'>Not this</button>";
-      node.title = o.line;
-      var marker = new maplibregl.Marker({ element: node, anchor: "bottom", offset: [0, -4] }).setLngLat([c.lon, c.lat + c.radius / 111320]).addTo(map);
-      S.suggestMarkers.push(marker);
-    });
-    var data = { type: "FeatureCollection", features: features };
-    if (!map.getSource("map-suggest")) {
-      map.addSource("map-suggest", { type: "geojson", data: data });
-      map.addLayer({ id: "map-suggest-fill", type: "fill", source: "map-suggest", paint: { "fill-color": token("--accent"), "fill-opacity": 0.07 } });
-      map.addLayer({ id: "map-suggest-line", type: "line", source: "map-suggest", paint: { "line-color": token("--accent"), "line-width": 1.5, "line-dasharray": [4, 3] } });
-    } else { map.getSource("map-suggest").setData(data); }
   }
   function clearCircle() {
     S.circle = null; S.hits = null; S.asking = false;
@@ -1010,8 +989,8 @@
         without.map(function (v) { return "<div class='map-row dim' data-video='" + v.id + "'><span class='dot' style='background: var(--muted)'></span><div><b>" + esc(v.title) + "</b><div class='facts'>no path file</div></div><div class='acts'>" + (host.dataset.edit ? "<label class='tiny btn'>Add a path file<input type='file' accept='.vtt,text/vtt' hidden data-add-one='" + v.id + "'></label>" : "") + "</div></div>"; }).join("") + "</details>";
     }
     html += waitingFold();
-    // The forming offer's block at the list's foot (join 1) went in v1.197.0:
-    // a suggestion is a circle on the map with its chip, drawSuggestions().
+    // The forming offer's block at the list's foot (join 1) went in v1.197.0;
+    // a suggestion is a card on the Incidents tab, and nothing on the map.
     el.list.innerHTML = html;
     var half = el.list.querySelector("#map-tick-all[data-half]"); if (half) { half.indeterminate = true; }
     el.list.querySelectorAll("details.map-fold").forEach(function (d) { d.addEventListener("toggle", function () { S.foldOpen = d.open; }); });
@@ -1409,8 +1388,6 @@
         case "waiting-add-anyway": waitingAct(b.dataset.url, "Path file added.", ""); return;
         case "waiting-remove-all": waitingAct(S.told.waiting_remove_all_url, "Waiting files removed.", "Remove every waiting path file?"); return;
         case "circle-incident": { if (!S.hits) { return; } var inside = dayCams().filter(function (c) { return S.hits[c.id]; }); incidentBox(inside, circleSpan(inside), streetWords()); return; }
-        case "suggest-make": { var o = (S.told.offer || []).filter(function (x) { return x.date === S.day; })[parseInt(b.dataset.i, 10)]; if (!o) { return; } var cams = o.recordings.map(function (id) { return S.byId[id]; }).filter(Boolean); incidentBox(cams, [o.from, o.to], ""); return; }
-        case "suggest-decline": { var fd = new FormData(); fd.append("key", b.dataset.key); postForm(S.told.decline_url, fd).then(function () { toast("Put away; it is not offered again."); load(true); }).catch(function (e) { toast(e.message, true); }); return; }
         case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
         case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
@@ -1578,17 +1555,23 @@
     history.replaceState(null, "", location.pathname + "?" + p.toString());
   }
 
-  // The circle the Incidents tab's card asked for (v1.197.0): drawn once,
-  // round those cameras' fixes in the span, the cameras ticked.
-  function askedCircle() {
-    if (INC || askedCircle.done) { return; }
-    askedCircle.done = true;
+  // The cameras an Incidents tab's card asked to see (v1.198.0):
+  // ?show=<ids>&from=&to= ticks those cameras alone, lights their paths,
+  // fits the map to where they were in the span and sets the clock at its
+  // start. No circle is drawn: the one circle is the person's.
+  function askedCameras() {
+    if (INC || askedCameras.done) { return; }
+    askedCameras.done = true;
     var p = new URLSearchParams(location.search);
-    var ids = (p.get("circle") || "").split(",").filter(Boolean), from = parseFloat(p.get("from")), to = parseFloat(p.get("to"));
-    if (!ids.length || isNaN(from) || isNaN(to)) { return; }
-    var c = circleAround(ids, from, to); if (!c) { return; }
-    S.circle = c; drawCircle(); circleHits(); drawTransport(); drawList(); drawStrip();
-    map.fitBounds([[c.lon - c.radius / 55000, c.lat - c.radius / 111320], [c.lon + c.radius / 55000, c.lat + c.radius / 111320]], { padding: 60, maxZoom: 17, duration: 0 });
+    var ids = (p.get("show") || "").split(",").filter(Boolean), from = parseFloat(p.get("from")), to = parseFloat(p.get("to"));
+    var cams = ids.map(function (id) { return S.byId[id]; }).filter(Boolean);
+    if (!cams.length) { return; }
+    var asked = {}; cams.forEach(function (c) { asked[c.id] = true; });
+    S.hidden = {}; dayCams().forEach(function (c) { if (!asked[c.id]) { S.hidden[c.id] = true; } }); afterTicks();
+    if (!isNaN(from)) { seek(from); }
+    var c = circleAround(ids, isNaN(from) ? -Infinity : from, isNaN(to) ? Infinity : to);
+    if (c) { map.fitBounds([[c.lon - c.radius / 55000, c.lat - c.radius / 111320], [c.lon + c.radius / 55000, c.lat + c.radius / 111320]], { padding: 60, maxZoom: 17, duration: 0 }); }
+    cams.forEach(function (cam) { if (cam.fixes.length) { map.setFeatureState({ source: "map-paths", id: cam.n }, { lit: true }); } });
   }
   function wantedDay() {
     if (host.dataset.day) { return ""; }
