@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.196.0, 2026-11-04
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6, a fifth release, from the office's own map: knots of markers, and letting a moved name go (the drawing `docs/spec/mockups/phase-12-map-knots.html`).
+
+- **Markers are plain dots**, colour and shape only; the name tag beside each says who, and the unit is on hover and in the row. The vehicle's speed chip now sits inside its name tag, and the loose chip beside the marker is gone.
+- **Room round every marker and every note.** Names and tiles keep clear of every marker and of every note pip, and a pip takes a press a few pixels off it, so the notes that would not open on a crowded spot open now.
+- **Letting a moved name go.** A pinned name grows "pinned · release" on hover (always, on touch); a press on it or a double press on the name lets it ride again. The transport says "N pinned" beside Tidy names.
+- **A vehicle's tag asks which stream.** A press on a vehicle's name shows Stream 1, 2, 3 under it; the tile opens on the one pressed, and its bar switches streams in place. Until now only the first stream could be opened from the map.
+
 ## v1.195.1, 2026-11-04
 
 ```

@@ -420,7 +420,16 @@ def test_the_leaders_and_the_speed_beside_a_vehicle():
     assert "flags.speed > 3" in script
     assert "<span class='spd mono' hidden></span>" in script
     css = static("app.css")
-    assert ".map-leaders" in css and ".map-tag" in css and ".map-head .spd" in css
+    assert ".map-leaders" in css and ".map-tag" in css and ".map-tag .spd" in css
+    # v1.196.0: dots for markers, the speed chip in the tag, the release chip,
+    # the pip hit ring, and a vehicle's stream chooser.
+    assert ".map-head b" not in css and "pinned · release" in script
+    assert "map-events-hit" in script and "PIP_R" in script
+    assert (
+        "function showChooser(cam, under)" in script
+        and "function switchStream(" in script
+    )
+    assert "function pinnedCount()" in script and ".map-chooser" in css
     assert ".map-tag.pinned .pinmark" in css and ".map-tile .grip" in css
 
 
@@ -541,7 +550,7 @@ def test_a_note_from_the_map_says_so(client, person, a_case):
 
 def test_the_tiles_ride_pin_and_play_in_step():
     script = static("map.js")
-    assert "function openTile(cam)" in script and "TILES_MOST = 6" in script
+    assert "function openTile(cam, stream)" in script and "TILES_MOST = 6" in script
     assert "TILE_PLAYS_TO = 4" in script and "function syncTiles(m)" in script
     assert "teth" in script and "pointerdown" in script
     # The tile takes the name's place, and gives it back; the grip resizes.
@@ -554,7 +563,7 @@ def test_the_tiles_ride_pin_and_play_in_step():
     assert "data-act='tile-note'" in script and "data-act='note-all'" in script
     assert "data-act='close-tiles'" in script
     # A tag's press opens the tile; a note from the map says so.
-    assert "function () { select(cam); openTile(cam); }" in script
+    assert "showChooser(cam, node); } else { openTile(cam, 0); }" in script
     assert 'from: "map"' in script and "function noteAll()" in script
     assert "postJson(host.dataset.noteAll" in script
     host = (HERE / "templates" / "map-host.html").read_text(encoding="utf-8")

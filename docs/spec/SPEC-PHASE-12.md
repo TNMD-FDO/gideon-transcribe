@@ -234,9 +234,23 @@ Asked on 2026-11-04 after v1.194.0 and drawn in `docs/spec/mockups/phase-12-map-
 
 **Save a picture** draws the names and the lines where the person left them, each tile as a frame with its name in the bar and the frame its video is on. Nothing new is kept on the server; no row is written.
 
+### 6.5 Knots of markers, and letting a moved name go (the fifth release, v1.196.0)
+
+Asked on 2026-11-04 from the office's own map after v1.195.1 and drawn in `docs/spec/mockups/phase-12-map-knots.html` (figures A to D, six choices), agreed the same day.
+
+**Markers are plain dots.** A marker is its colour and its shape (round for a body camera, square for a vehicle), 14 px, with no letters inside: the name tag beside it says who, and the unit is on hover and in the row. The lights and siren badges, the hollow marker for a camera that has ended (its colour on the edge) and the dimmed one for no fix stay. Two cameras on one spot are two dots a few pixels apart, the pressed one on top; markers stand where the cameras stood and are never moved.
+
+**The speed is in the vehicle's tag.** The dark speed chip sits inside the vehicle's name tag at its end, changing with the clock ("0 mph" parked, blank after the recording ends), and the loose chip beside the marker is gone; the lane head and the tile's bar keep showing it.
+
+**Room round every marker and every note.** Names, tiles and the layout keep 12 px clear of every marker drawn (19 px from its centre) and of every note pip of a ticked camera, not only their own. The pips get a second, invisible ring 12 px in radius on the same layer source that takes the press, so a press a few pixels off a pip opens it; the chapter 3 card is unchanged. A note at a moment the camera had no fix has no pip and opens from its lane mark alone.
+
+**Letting a moved name go.** A pinned name shows a small blue dot at its end; hovering it (or, on touch, always) grows the chip "pinned · release", and a press on the chip, or a double press anywhere on the name, lets it ride again. A tile's pin button does the same for a tile. The transport says "N pinned" beside Tidy names while anything is pinned; Tidy names releases all.
+
+**A vehicle's tag asks which stream.** A vehicle's unit records two or three streams that share one path file, one marker and one tag. A press on its tag opens a small chooser under the tag ("Which stream?" Stream 1, Stream 2, Stream 3, the recording's title on hover); the tile opens on the one pressed, and its bar carries the same choice to switch in place, the moment and the playing state carried over. A second press on the tag, Escape, or a press elsewhere closes the chooser. A body camera's tag is one video and opens at once. On the incident page's pane a vehicle's tag brings the unit's first stream to the front of the wall, as before.
+
 ### What is not
 
-No new kind of note: a note on all shown is copies with one mark. No larger and smaller buttons on a tile's bar (choice 5: the grip alone). Pinned places are not remembered across visits. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
+No new kind of note: a note on all shown is copies with one mark. No larger and smaller buttons on a tile's bar (choice 5 of the fourth release: the grip alone). Pinned places are not remembered across visits. An officer's body camera and vehicle keep two tags (choice 4 of the fifth release). The streams are not named front, cabin or rear: the files carry no such names, so they are numbered. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
 
 ## Appendix A. Audit rows added in Phase 12
 
@@ -263,6 +277,7 @@ The basemap's route writes no row; the map's reading writes the case page's own 
 - The maintainer's asks and answers of 2026-11-02, recorded on `docs/spec/mockups/phase-12-map.html` (figures A to L, the fifteen choices and the joins chosen).
 - The maintainer's asks of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-refine.html` (figures A to G, thirteen choices), agreed the same day.
 - The maintainer's further asks of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-tags.html` (figures A to C, eight choices), agreed the same day.
+- The office's map of 2026-11-04 and the drawing `docs/spec/mockups/phase-12-map-knots.html` (figures A to D, six choices), agreed the same day.
 - The dry run on the office's own path files, counts only, in `docs/research/path-file.md`.
 - The street map's pins, hashes and the extract command in `docs/research/basemap.md`.
 - Phase 6 chapters 1 and 2, Phase 8 chapter 2, Phase 10 chapters 1 and 5, Phase 7 chapter 5, ADR 0011, ADR 0027.

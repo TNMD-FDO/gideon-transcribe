@@ -281,6 +281,7 @@
         "<span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span>" +
         "<span class='grow'></span>" +
         "<button type='button' class='tiny' data-act='fit'>Fit all</button>" +
+        (pinnedCount() ? "<span class='pill small acc'>" + plural(pinnedCount(), "name") + " pinned</span>" : "") +
         "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
         (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a Document on the incident'>Save a picture</button>" : "") +
         "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
@@ -297,6 +298,7 @@
       (S.following ? "<span class='pill small acc'>following " + esc((S.byId[S.following] || {}).unit || (S.byId[S.following] || {}).title || "") + "</span>" : "") +
       "<button type='button' class='small' data-act='fit'>Fit shown</button>" +
       (tileCount() ? "<span class='pill small acc'>" + plural(tileCount(), "tile") + "</span><button type='button' class='tiny ghost' data-act='close-tiles'>close all</button>" : "") +
+      (pinnedCount() ? "<span class='pill small acc' title='Names and tiles you have put somewhere; Tidy names lets them all go'>" + pinnedCount() + " pinned</span>" : "") +
       "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
       "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
       (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
@@ -351,10 +353,10 @@
       map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
-      map.on("click", "map-events", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
+      map.on("click", "map-events-hit", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
       map.on("click", function (e) { if (S.asking) { placeCircle(e.lngLat); } });
-      map.on("mouseenter", "map-events", function () { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "map-events", function () { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", "map-events-hit", function () { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "map-events-hit", function () { map.getCanvas().style.cursor = ""; });
       document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); window.setTimeout(function () { map.resize(); }, 50); });
     });
     if (!drawMap.observing) {
@@ -416,6 +418,9 @@
       "circle-opacity": ["case", ["all", ["==", ["get", "kind"], "camera"], ["==", ["get", "on"], 1]], 0, 1],
       "circle-stroke-opacity": 1
     } });
+    // A wider ring to press (v1.196.0): the pips are ten pixels across, and a
+    // press a few pixels off used to do nothing.
+    map.addLayer({ id: "map-events-hit", type: "circle", source: "map-events", paint: { "circle-radius": 12, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
     drawMarkers();
   }
   function refreshLayers() {
@@ -442,8 +447,10 @@
       var node = document.createElement("div");
       node.className = "map-head " + (cam.source === "car" ? "car" : "body");
       node.style.setProperty("--cam", colourOf(cam));
-      node.innerHTML = "<b>" + esc(cam.unit || cam.title) + "</b><i class='badge' aria-hidden='true'></i>" + (cam.source === "car" ? "<span class='spd mono' hidden></span>" : "");
-      node.title = nameOf(cam) + (cam.wearer ? " · " + cam.title : "");
+      // A plain dot (chapter 6, v1.196.0): the colour and the shape; the name
+      // tag beside it says who, the unit is on hover and in the row.
+      node.innerHTML = "<i class='badge' aria-hidden='true'></i>";
+      node.title = nameOf(cam) + (cam.unit || cam.wearer ? " · " + (cam.unit || cam.title) : "");
       node.addEventListener("click", function (e) { e.stopPropagation(); select(cam); openPreview(cam); });
       var marker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat([cam.fixes[0][2], cam.fixes[0][1]]).addTo(map);
       markers[cam.id] = marker;
@@ -504,11 +511,12 @@
       node.classList.toggle("lights", !!flags.lights);
       node.classList.toggle("siren", !!flags.siren);
       node.classList.toggle("muted-mic", cam.source === "body" && flags.mic === 0);
-      // A vehicle's speed (chapter 6): beside its marker while it moves, in
-      // the lane's head and at the end of its row.
+      // A vehicle's speed (chapter 6): the chip inside its name tag (v1.196.0),
+      // the lane's head, and the end of its row while it moves.
       var speedWords = flags.speed !== undefined ? Math.round(flags.speed) + " " + (cam.speed_unit || "mph").toLowerCase() : "";
       var moving = cam.source === "car" && flags.speed !== undefined && flags.speed > 3 && !p.ended;
-      var tag = node.querySelector(".spd"); if (tag) { tag.hidden = !moving; if (moving) { tag.textContent = speedWords; } }
+      var tagChip = S.tags[cam.id] && S.tags[cam.id].node ? S.tags[cam.id].node.querySelector(".spd") : null;
+      if (tagChip) { var chipWords = p.ended ? "" : speedWords; if (tagChip.textContent !== chipWords) { tagChip.textContent = chipWords; tagChip.hidden = !chipWords; } }
       var head = host.querySelector(".map-lane[data-cam='" + cam.id + "'] .spd");
       if (head) { head.textContent = speedWords; }
       var rowSpeed = host.querySelector(".map-row[data-cam='" + cam.id + "'] .spd");
@@ -558,7 +566,8 @@
   // round the pinned ones and the tiles; while one is dragged the riding
   // ones slide out of its way. Nothing here is kept beyond the page.
   var TAG_GAP = 4;       // px kept between any two rectangles
-  var MARKER_R = 14;     // px round a marker that nothing may cover
+  var MARKER_R = 19;     // px round a marker's centre that nothing may cover: the 7 px dot and 12 px of room
+  var PIP_R = 17;        // the same round a note pip, which is a thing to press
   function drawLeaders() { layoutNames(); }
   function tagOf(cam) {
     var tag = S.tags[cam.id];
@@ -566,9 +575,11 @@
     if (!tag.node) {
       var node = document.createElement("button");
       node.type = "button"; node.className = "map-tag"; node.dataset.cam = cam.id;
-      node.innerHTML = "<i class='" + (cam.source === "car" ? "sq" : "") + "' style='background: " + colourOf(cam) + "'></i>" + nameHtml(cam) + "<span class='pinmark' title='Pinned where you dropped it; press to let it ride again'></span>";
-      node.title = "Press: open its video on the map. Drag: put the name where you like.";
-      wireDrag(node, function () { return tag; }, function () { select(cam); openTile(cam); }, function () { tag.pinned = false; layoutNames(); });
+      node.innerHTML = "<i class='" + (cam.source === "car" ? "sq" : "") + "' style='background: " + colourOf(cam) + "'></i>" + nameHtml(cam) +
+        (cam.source === "car" ? "<span class='spd mono' hidden></span>" : "") +
+        "<span class='pinmark' title='Pinned where you dropped it; press to let it ride again'>pinned · release</span>";
+      node.title = "Press: open its video on the map. Drag: put the name where you like." + (cam.streams.length ? " This unit has " + (cam.streams.length + 1) + " streams; a press asks which." : "");
+      wireDrag(node, function () { return tag; }, function () { select(cam); if (cam.streams.length && !INC) { showChooser(cam, node); } else { openTile(cam, 0); } }, function () { tag.pinned = false; layoutNames(); drawTransport(); });
       tag.node = node;
     }
     return tag;
@@ -604,6 +615,10 @@
       var away = p.x < 0 || p.y < 0 || p.x > w || p.y > h;
       var ax = Math.max(2, Math.min(w - 2, p.x)), ay = Math.max(2, Math.min(h - 2, p.y));
       placed.push({ x: p.x - MARKER_R, y: p.y - MARKER_R, w: 2 * MARKER_R, h: 2 * MARKER_R });
+      // The camera's note pips are things to press: names keep clear of them too.
+      if (S.events.notes && (cam.notes || []).length && cam.onClock) {
+        cam.notes.forEach(function (n) { var q = positionAt(cam, n.t); if (!q) { return; } var pp = map.project([q.lon, q.lat]); if (pp.x < -PIP_R || pp.y < -PIP_R || pp.x > w + PIP_R || pp.y > h + PIP_R) { return; } placed.push({ x: pp.x - PIP_R, y: pp.y - PIP_R, w: 2 * PIP_R, h: 2 * PIP_R }); });
+      }
       var tile = S.tiles[cam.id];
       if (tile) {
         if (tag && tag.node && tag.node.parentNode) { tag.node.remove(); }
@@ -664,7 +679,7 @@
       if (!from) { return; }
       var it = getItem(); from = null;
       if (!moved) { it.dragging = false; if (e.type !== "pointercancel") { onPress(); } return; }
-      it.dragging = false; it.pinned = true;
+      it.dragging = false; it.pinned = true; drawTransport();
       // Dropped onto something pinned: the nearest free place beside it.
       var w = el.pane.clientWidth, h = el.pane.clientHeight, walls = [];
       Object.keys(S.tags).forEach(function (id) { var t = S.tags[id]; if (t !== it && t.pinned && t.node && t.node.parentNode) { walls.push({ x: t.x, y: t.y, w: t.w, h: t.h }); } });
@@ -675,11 +690,34 @@
     }
     node.addEventListener("pointerup", done); node.addEventListener("pointercancel", done);
     node.addEventListener("click", function (e) { if (e.target.closest(".pinmark")) { e.stopPropagation(); onUnpin(); } });
+    // A double press on a pinned name lets it go too (v1.196.0).
+    node.addEventListener("dblclick", function (e) { if (e.target.closest("button") && e.target.closest("button") !== node) { return; } var it = getItem(); if (it.pinned) { e.preventDefault(); onUnpin(); } });
+  }
+  function pinnedCount() {
+    var n = 0;
+    Object.keys(S.tags).forEach(function (id) { var t = S.tags[id]; if (t.pinned && t.node && t.node.parentNode) { n += 1; } });
+    Object.keys(S.tiles).forEach(function (id) { if (S.tiles[id].pinned) { n += 1; } });
+    return n;
   }
   function tidyNames() {
     Object.keys(S.tags).forEach(function (id) { S.tags[id].pinned = false; });
     Object.keys(S.tiles).forEach(function (id) { S.tiles[id].pinned = false; });
-    layoutNames();
+    layoutNames(); drawTransport();
+  }
+  // A vehicle's tag stands for its streams (v1.196.0): a press asks which.
+  function closeChooser() { var c = el.pane && el.pane.querySelector(".map-chooser"); if (c) { c.remove(); } }
+  function streamCam(cam, index) { return index > 0 && cam.streams[index - 1] ? cam.streams[index - 1] : cam; }
+  function streamWords(cam) { return ["Stream 1"].concat(cam.streams.map(function (s, i) { return "Stream " + (i + 2); })); }
+  function showChooser(cam, under) {
+    if (el.pane.querySelector(".map-chooser[data-cam='" + cam.id + "']")) { closeChooser(); return; }
+    closeChooser();
+    var box = document.createElement("div");
+    box.className = "map-chooser"; box.dataset.cam = cam.id;
+    box.innerHTML = "<span class='muted small'>Which stream?</span>" + streamWords(cam).map(function (words, i) { var one = streamCam(cam, i); return "<button type='button' class='tiny" + (i === 0 ? " primary" : "") + "' data-act='tile-open' data-cam='" + cam.id + "' data-stream='" + i + "' title='" + esc(one.title) + "'>" + esc(words) + "</button>"; }).join("");
+    el.pane.appendChild(box);
+    var r = { x: under.offsetLeft, y: under.offsetTop + under.offsetHeight + 4 };
+    box.style.left = Math.max(0, Math.min(el.pane.clientWidth - box.offsetWidth - 4, r.x)) + "px";
+    box.style.top = Math.max(0, Math.min(el.pane.clientHeight - box.offsetHeight - 4, r.y)) + "px";
   }
   function trailSegments(cam, index, p) {
     var out = [], run = [];
@@ -1043,11 +1081,13 @@
   // marker. The videos are the page's heaviest work: six at most.
   function tileCount() { return Object.keys(S.tiles).length; }
   function narrow() { return window.innerWidth < 700; }
-  function openTile(cam) {
+  function openTile(cam, stream) {
+    closeChooser();
+    stream = stream || 0;
     if (INC) { openPreview(cam); return; }
     if (!cam.onClock) { toast("That camera is not on the clock.", true); return; }
-    if (!cam.media) { toast("That recording has no copy to play yet.", true); return; }
-    if (S.tiles[cam.id]) { closeTile(cam.id); return; }
+    if (!streamCam(cam, stream).media) { toast("That recording has no copy to play yet.", true); return; }
+    if (S.tiles[cam.id]) { if (S.tiles[cam.id].stream !== stream) { switchStream(S.tiles[cam.id], stream); return; } closeTile(cam.id); return; }
     if (narrow()) { closeTiles(); }
     if (tileCount() >= TILES_MOST) { toast("Six tiles at once is the most this page will play. Close one first.", true); return; }
     var node = document.createElement("div");
@@ -1055,19 +1095,20 @@
     node.dataset.cam = cam.id;
     node.style.setProperty("--cam", colourOf(cam));
     node.innerHTML = "<div class='tile-bar'><i class='" + (cam.source === "car" ? "sq" : "") + "'></i><span class='nm'>" + nameHtml(cam) + "</span><span class='spd mono'></span>" +
+      (cam.streams.length ? "<span class='seg streams'>" + streamWords(cam).map(function (words, i) { return "<button type='button' data-act='tile-stream' data-cam='" + cam.id + "' data-stream='" + i + "' class='" + (i === stream ? "on" : "") + "' title='" + esc(streamCam(cam, i).title) + "'>" + (i + 1) + "</button>"; }).join("") + "</span>" : "") +
       (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='tile-note' data-cam='" + cam.id + "' title='A note on this recording at the moment its video is on'><svg class='i' aria-hidden='true'><use href='#i-note'></use></svg></button>" : "") +
       "<button type='button' class='tiny ghost' data-act='tile-sound' data-cam='" + cam.id + "' title='Sound from this tile (one at a time)'><svg class='i' aria-hidden='true'><use href='#i-muted'></use></svg></button>" +
       "<button type='button' class='tiny ghost pin' data-act='tile-pin' data-cam='" + cam.id + "' title='Rides with the marker; drag the tile to pin it'><svg class='i' aria-hidden='true'><use href='#i-move'></use></svg></button>" +
       "<button type='button' class='tiny ghost' data-act='tile-close' data-cam='" + cam.id + "' title='Close'><svg class='i' aria-hidden='true'><use href='#i-close'></use></svg></button></div>" +
       "<div class='pic'><video muted playsinline preload='metadata'></video><div class='cover' hidden></div><span class='grip' title='Drag to resize; double press for the first size'></span></div>";
     var video = node.querySelector("video");
-    video.src = cam.media;
+    video.src = streamCam(cam, stream).media;
     node.style.width = S.tileW + "px";
     node.querySelector(".pic").style.height = Math.round(S.tileW * 9 / 16) + "px";
     el.pane.appendChild(node);
     // The tile takes the name's place: pinned where the name was pinned, riding where it rode.
     var tag = S.tags[cam.id] || { x: 0, y: 0, pinned: false };
-    var tile = { cam: cam, node: node, video: video, pinned: !!tag.pinned, x: tag.x, y: tag.y, w: S.tileW, h: 0, seekAt: 0, state: "" };
+    var tile = { cam: cam, node: node, video: video, pinned: !!tag.pinned, x: tag.x, y: tag.y, w: S.tileW, h: 0, seekAt: 0, state: "", stream: stream };
     S.tiles[cam.id] = tile;
     wireDrag(node.querySelector(".tile-bar"), function () { return tile; }, function () { /* a press on the bar does nothing */ }, function () { /* the pin button does */ });
     wireResize(tile);
@@ -1083,6 +1124,14 @@
     drawTransport(); drawList(); drawLeaders();
   }
   function closeTiles() { Object.keys(S.tiles).forEach(closeTile); }
+  function switchStream(tile, stream) {
+    var one = streamCam(tile.cam, stream);
+    if (!one.media) { toast("That stream has no copy to play yet.", true); return; }
+    var at = tile.video.currentTime, playing = !tile.video.paused;
+    tile.stream = stream; tile.video.src = one.media;
+    tile.video.addEventListener("loadedmetadata", function () { try { tile.video.currentTime = at; } catch (e) { /* the next tick seeks */ } if (playing) { var p = tile.video.play(); if (p && p.catch) { p.catch(function () { /* the frame then */ }); } } }, { once: true });
+    tile.node.querySelectorAll("[data-act='tile-stream']").forEach(function (b) { b.classList.toggle("on", parseInt(b.dataset.stream, 10) === stream); });
+  }
   // The grip at a tile's corner (chapter 6, amended): drag it and the tile
   // grows or shrinks, the picture keeping the video's proportion, from
   // TILE_W_LEAST wide to half the pane; the size settled on is the size
@@ -1223,7 +1272,9 @@
         case "tag": if (cam) { select(cam); openTile(cam); } return;
         case "tile": if (cam) { select(cam); openTile(cam); } return;
         case "tile-close": if (cam) { closeTile(cam.id); } return;
-        case "tile-pin": if (cam && S.tiles[cam.id]) { S.tiles[cam.id].pinned = !S.tiles[cam.id].pinned; layoutNames(); } return;
+        case "tile-pin": if (cam && S.tiles[cam.id]) { S.tiles[cam.id].pinned = !S.tiles[cam.id].pinned; layoutNames(); drawTransport(); } return;
+        case "tile-open": if (cam) { openTile(cam, parseInt(b.dataset.stream, 10) || 0); } return;
+        case "tile-stream": if (cam && S.tiles[cam.id]) { switchStream(S.tiles[cam.id], parseInt(b.dataset.stream, 10) || 0); } return;
         case "tidy": tidyNames(); return;
         case "close-tiles": closeTiles(); return;
         case "tile-sound": if (cam) { S.sound = S.sound === cam.id ? null : cam.id; tick(); } return;
@@ -1285,7 +1336,7 @@
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
-    else if (e.key === "Escape") { if (S.selected || S.asking) { clearSelection(); } else if (S.circle) { clearCircle(); } }
+    else if (e.key === "Escape") { if (el.pane && el.pane.querySelector(".map-chooser")) { closeChooser(); } else if (S.selected || S.asking) { clearSelection(); } else if (S.circle) { clearCircle(); } }
   });
 
   // Save a picture (Phase 12 chapter 5) --------------------------------------------
@@ -1351,7 +1402,7 @@
           var marker = markers[cam.id]; if (!marker) { return; }
           var node = marker.getElement(); if (node.classList.contains("before")) { return; }
           var pt = map.project(marker.getLngLat());
-          var x = pt.x * ratio, y = pt.y * ratio, r = 11 * ratio, ended = node.classList.contains("ended");
+          var x = pt.x * ratio, y = pt.y * ratio, r = 7 * ratio, ended = node.classList.contains("ended");
           ctx.globalAlpha = node.classList.contains("nofix") ? 0.45 : 1;
           ctx.fillStyle = ended ? token("--surface") : colourOf(cam); ctx.strokeStyle = ended ? colourOf(cam) : token("--surface"); ctx.lineWidth = 2 * ratio;
           ctx.beginPath();

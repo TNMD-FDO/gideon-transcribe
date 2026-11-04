@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knots, and letting a name go</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480; --well: #000000; --well-ink: #ffffff;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; }
+  .pt { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); } .p5 { stroke: var(--c5); }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f5 { fill: var(--c5); }
+  .hl { font: 600 9px var(--font); fill: var(--surface); paint-order: stroke; stroke: rgba(0,0,0,.35); stroke-width: 2; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .ldr.pinned { stroke: var(--accent); opacity: .9; stroke-width: 1.2; }
+  .tag { font: 600 10px var(--font); fill: var(--text); }
+  .tag.dim { font-weight: 400; fill: var(--muted); }
+  .tagbg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .tagbg.pinned { stroke: var(--accent); stroke-width: 1.5; }
+  .spdtag { font: 600 9px var(--mono); fill: var(--surface); }
+  .spdbg { fill: var(--text); rx: 3; opacity: .85; }
+  .knot { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+  .release { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+  .releasetxt { font: 600 9px var(--font); fill: var(--accent); }
+  .badge { fill: var(--warn); stroke: var(--surface); stroke-width: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 amended again · a drawing for the maintainer's word · 2026-11-04</span>
+    <h1>Knots of markers, and an easy way to let a moved name go</h1>
+    <p class="lede">Two asks of 2026-11-04 after v1.195.1, from the office's own map: a name dragged somewhere stays locked, which is right, but a person needs an easy way to put it back; and when two or three cameras stand on one spot the markers, their short unit letters, a vehicle's speed tag and the name tags pile up on each other. The fictional office throughout; the picture the office sent is redrawn here with made-up names.</p>
+  </header>
+
+  <!-- A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today: what piles up on a knot</h2></div>
+    <div class="frame">
+      <div class="pane">
+        <svg viewBox="0 0 560 220" aria-label="a drawn knot as it is today">
+          <rect width="560" height="220" fill="var(--ground)"/>
+          <rect x="0" y="60" width="560" height="26" class="ro" transform="rotate(-8 280 73)"/><rect x="300" y="0" width="22" height="220" class="ro"/>
+          <!-- two markers on one spot, their unit letters cut short, tags touching them -->
+          <rect x="246" y="48" width="22" height="22" rx="4" class="f3 hd"/><text class="hl" x="257" y="63" text-anchor="middle">BW</text>
+          <circle cx="268" cy="59" r="11" class="f2 hd"/><text class="hl" x="268" y="63" text-anchor="middle">BW</text>
+          <rect x="60" y="49" width="180" height="20" class="tagbg"/><rect x="70" y="55" width="8" height="8" rx="2" class="f3"/><text class="tag" x="84" y="63">Ofc. Marsh <tspan class="dim">vehicle</tspan></text>
+          <rect x="282" y="49" width="110" height="20" class="tagbg"/><circle cx="292" cy="59" r="4" class="f2"/><text class="tag" x="300" y="63">Ofc. Marsh</text>
+          <!-- lower: two body cameras with a speed tag between them, overlapping -->
+          <circle cx="248" cy="148" r="11" class="f5 hd"/><text class="hl" x="248" y="152" text-anchor="middle">BW</text>
+          <rect x="258" y="140" width="46" height="16" class="spdbg"/><text class="spdtag" x="281" y="151" text-anchor="middle">6 mph</text>
+          <circle cx="304" cy="148" r="11" class="f2 hd"/><text class="hl" x="304" y="152" text-anchor="middle">BW</text>
+          <polyline class="ldr" points="304,140 420,100"/><polyline class="ldr" points="248,140 160,110"/>
+        </svg>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Four things fight for the same twenty pixels.</b> The marker heads with their unit letters cut to "BW"; a vehicle's dark speed tag, which sits on whatever is beside the marker; the name tags, laid out clear of each other but allowed to touch the markers; and the markers themselves, which stand where the cameras stood and may not be moved. The same officer's body camera and vehicle also show the name twice.</p>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The same knot after: dots, the speed inside the tag, room round every marker</h2></div>
+    <div class="frame">
+      <div class="pane">
+        <svg viewBox="0 0 560 220" aria-label="the same knot, tidied">
+          <rect width="560" height="220" fill="var(--ground)"/>
+          <rect x="0" y="60" width="560" height="26" class="ro" transform="rotate(-8 280 73)"/><rect x="300" y="0" width="22" height="220" class="ro"/>
+          <!-- markers are plain dots: the colour and the shape, no letters -->
+          <rect x="251" y="53" width="13" height="13" rx="3" class="f3 hd"/>
+          <circle cx="269" cy="59" r="7" class="f2 hd"/>
+          <!-- tags keep 12 px from any marker; the vehicle's tag carries its speed -->
+          <polyline class="ldr" points="251,59 232,59"/><rect x="26" y="49" width="206" height="20" class="tagbg"/><rect x="36" y="55" width="8" height="8" rx="2" class="f3"/><text class="tag" x="50" y="63">Ofc. Marsh <tspan class="dim">vehicle</tspan></text><rect x="178" y="51" width="48" height="16" class="spdbg"/><text class="spdtag" x="202" y="62" text-anchor="middle">6 mph</text>
+          <polyline class="ldr" points="276,59 296,59"/><rect x="296" y="49" width="94" height="20" class="tagbg"/><circle cx="306" cy="59" r="4" class="f2"/><text class="tag" x="314" y="63">Ofc. Marsh</text>
+          <!-- lower pair: dots a few px apart read as two; the lit one on top -->
+          <circle cx="262" cy="148" r="7" class="f5 hd"/><circle cx="272" cy="150" r="7" class="f2 hd"/>
+          <polyline class="ldr" points="255,148 170,110"/><rect x="60" y="100" width="110" height="20" class="tagbg"/><circle cx="70" cy="110" r="4" class="f5"/><text class="tag" x="78" y="114">Sgt. Okafor</text>
+          <polyline class="ldr" points="279,150 390,110"/><rect x="390" y="100" width="100" height="20" class="tagbg"/><circle cx="400" cy="110" r="4" class="f2"/><text class="tag" x="408" y="114">Ofc. Amari</text>
+          <!-- a lights badge still shows -->
+          <circle cx="258" cy="51" r="3.5" class="badge"/>
+          <!-- a second vehicle on the move, its speed in its tag -->
+          <rect x="434" y="173" width="13" height="13" rx="3" class="f1 hd"/>
+          <polyline class="ldr" points="434,180 414,180"/><rect x="236" y="170" width="178" height="20" class="tagbg"/><rect x="246" y="176" width="8" height="8" rx="2" class="f1"/><text class="tag" x="260" y="184">Sgt. Ito <tspan class="dim">vehicle</tspan></text><rect x="358" y="172" width="50" height="16" class="spdbg"/><text class="spdtag" x="383" y="183" text-anchor="middle">38 mph</text>
+        </svg>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Markers become dots.</b> A marker is its colour and its shape (round for a body camera, square for a vehicle), 14 px, with no letters inside: the name tag beside it says who, and the unit is on hover and in the row. The lights and siren badges stay, as does the hollow marker for a camera that has ended and the dimmed one for no fix. The letters come back only where there is no tag to say the name, which is nowhere now.</p>
+      <p><b>The speed moves into the vehicle's tag.</b> The dark speed chip is kept, but it sits inside the vehicle's name tag at its end ("Ofc. Marsh vehicle [6 mph]", changing as it drives; a parked vehicle shows "0 mph"), and the loose tag beside the marker goes. One fewer thing on the map, the number as readable as before, and sitting with the name it belongs to. The lane head and the tile's bar keep showing it too.</p>
+      <p><b>Room round every marker.</b> A name tag, a tile and a note pip (the earlier fix) are kept 12 px clear of every marker drawn, not only their own, and the pips get a wider hit ring. Markers themselves stay exactly where the cameras stood: two cameras on one spot are two dots a few pixels apart, the pressed one drawn on top; zooming in parts them, and the names were never on top of them.</p>
+      <p><b>One officer, two cameras.</b> The vehicle's tag keeps "vehicle" after the name so the two read apart; the drawing does not merge them (choice 4).</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>Letting a moved name go</h2></div>
+    <div class="two">
+      <div class="frame">
+        <div class="pane">
+          <svg viewBox="0 0 520 150" aria-label="a pinned name with its release control">
+            <rect width="520" height="150" fill="var(--ground)"/>
+            <circle cx="380" cy="100" r="7" class="f1 hd"/>
+            <polyline class="ldr pinned" points="373,100 170,52"/>
+            <!-- the pinned tag: a blue edge, and a release button at its end that reads on hover -->
+            <rect x="40" y="40" width="190" height="22" class="tagbg pinned"/><circle cx="51" cy="51" r="4" class="f1"/><text class="tag" x="60" y="55">Ofc. Pell</text>
+            <rect x="130" y="43" width="92" height="16" rx="8" class="release"/><text class="releasetxt" x="176" y="54" text-anchor="middle">pinned · release</text>
+            <text class="tag dim" x="40" y="90">Hovering a pinned name shows "pinned · release"; a press puts it back beside the marker.</text>
+            <text class="tag dim" x="40" y="106">A double press on a pinned name does the same. Tidy names on the transport releases every one.</text>
+            <text class="tag dim" x="40" y="122">A tile's bar has the same pin button, lit while pinned; a press releases it.</text>
+          </svg>
+        </div>
+      </div>
+      <div class="frame">
+        <ul class="small">
+          <li><b>Today</b> a pinned name carries an 8 px blue dot that releases it, which nobody can be expected to find, and Tidy names sits among nine other buttons on the transport.</li>
+          <li><b>The release reads as words</b>: hovering a pinned name grows a small "pinned · release" chip at its end; a press on it, or a double press anywhere on the name, lets it ride again. On touch, a long press shows the chip.</li>
+          <li><b>Tidy names stays</b> for the lot, and the transport also says how many are pinned ("3 pinned") so a person knows there is something to tidy.</li>
+          <li>A tile's pin button in its bar already does this for tiles; it gets the same hover words.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure D</span><h2>A tag that stands for more than one video: a press asks which</h2></div>
+    <div class="two">
+      <div class="frame">
+        <div class="pane">
+          <svg viewBox="0 0 520 190" aria-label="a vehicle's tag pressed, with a chooser of its streams">
+            <rect width="520" height="190" fill="var(--ground)"/>
+            <rect x="394" y="133" width="13" height="13" rx="3" class="f3 hd"/>
+            <polyline class="ldr" points="394,140 374,140"/>
+            <rect x="170" y="130" width="204" height="20" class="tagbg pinned"/><rect x="180" y="136" width="8" height="8" rx="2" class="f3"/><text class="tag" x="194" y="144">Ofc. Marsh <tspan class="dim">vehicle</tspan></text><rect x="318" y="132" width="50" height="16" class="spdbg"/><text class="spdtag" x="343" y="143" text-anchor="middle">38 mph</text>
+            <!-- the chooser, a small card under the tag -->
+            <rect x="170" y="156" width="204" height="30" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+            <rect x="178" y="162" width="60" height="18" rx="4" fill="var(--accent-soft)"/><text class="tag" x="208" y="174" text-anchor="middle" style="fill: var(--accent)">Front</text>
+            <rect x="244" y="162" width="60" height="18" rx="4" fill="var(--surface-2)"/><text class="tag" x="274" y="174" text-anchor="middle">Cabin</text>
+            <rect x="310" y="162" width="56" height="18" rx="4" fill="var(--surface-2)"/><text class="tag" x="338" y="174" text-anchor="middle">Rear</text>
+            <text class="tag dim" x="30" y="40">A vehicle's unit records two or three streams (front, cabin, rear) that share one path file,</text>
+            <text class="tag dim" x="30" y="56">one marker and one tag. A press on its tag asks which stream to open; a second press on the</text>
+            <text class="tag dim" x="30" y="72">tag while the chooser is up closes it. A body camera's tag is one video and opens at once.</text>
+            <text class="tag dim" x="30" y="100">The tile's bar then carries the same chooser (Front · Cabin · Rear) to switch streams in place.</text>
+          </svg>
+        </div>
+      </div>
+      <div class="frame">
+        <ul class="small">
+          <li><b>With two tags per officer</b> (choice 4 as drawn) a body camera's tag is one video and opens its tile at once. Nothing to choose.</li>
+          <li><b>A vehicle's tag</b> already stands for its two or three streams, which the map draws as one marker; today a press opens the first stream with no way to the others. The press now shows a small chooser under the tag, Front · Cabin · Rear (the streams as the files name them, else "stream 1, 2, 3"), and the tile opens on the one pressed. The tile's bar carries the same chooser to switch.</li>
+          <li><b>If you preferred one merged tag</b> for an officer's body camera and vehicle, the same chooser would serve it: "Body camera · Vehicle front · Vehicle cabin". The drawing keeps two tags, since the vehicle has its own speed and its own line to its own marker.</li>
+          <li>The chooser is a press away, not a hover, so it works by touch; Escape or a press elsewhere closes it.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">For your word</span><h2>The choices this drawing makes</h2></div>
+    <div class="verdict">
+      <ol class="small" style="margin:0">
+        <li><b>Markers become plain dots</b> with no letters, 14 px (drawn); or keep the letters but only when the map is zoomed in close enough for them to fit.</li>
+        <li><b>The speed goes into the vehicle's name tag</b> and the dark speed tag goes (drawn); or keep both.</li>
+        <li><b>Names, tiles and note pips keep 12 px clear of every marker</b> (drawn); or 8 px, tighter.</li>
+        <li><b>An officer's body camera and vehicle keep two tags</b>, "vehicle" telling them apart (drawn); or one tag with two dots when both stand in the same knot.</li>
+        <li><b>Release by the hover chip or a double press</b>, and "N pinned" on the transport beside Tidy names (drawn); or the chip alone.</li>
+        <li><b>A vehicle's tag asks which stream</b> with a small chooser under it, and the tile's bar switches streams (drawn); or the tag opens the front stream and the row's ▸ lists the others.</li>
+      </ol>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
