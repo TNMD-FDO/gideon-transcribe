@@ -266,6 +266,10 @@ Asked on 2026-11-04 after v1.196.1 and drawn in `docs/spec/mockups/phase-12-map-
 
 No new kind of note: a note on all shown is copies with one mark. No larger and smaller buttons on a tile's bar (choice 5 of the fourth release: the grip alone). No map inside the Incidents tab (choice 9 of the sixth release): the map is reached, not shown there. A suggestion is never made into an incident by the app; the press is the person's. The streams of a vehicle are not named front, cabin or rear. Pinned places are not remembered across visits. An officer's body camera and vehicle keep two tags (choice 4 of the fifth release). The streams are not named front, cabin or rear: the files carry no such names, so they are numbered. No saved circle. Ticks reach no prompt and no export. A tile is not the Preview and has no caption, lead-in or note box of its own beyond the ✎. Nothing waiting is parsed into readings.
 
+### 6.7 Stacked pips (the seventh release, v1.206.0)
+
+Offered on 2026-11-04 with the knots work, drawn in `docs/spec/mockups/phase-12-map-stacked-pips.html` (figures A to C, five choices) and agreed on 2026-11-05 as drawn. A press on a spot with more than one pip under it (two or more whose hit rings hold the pressed point, the rings 6.5 drew) opens a small list beside the stack instead of the top pip's card: "N at this spot", then one line per pip in order of time with the time of day, what happened in the card's own words (a note as "Note, <who>"), and the camera's name as the lanes give it. A line's press opens that pip's card as a lone pip's press does, with one line more, "k of N at this spot", and ‹ › through the stack's others beside the camera's own previous and next. Escape, a press elsewhere, or the stack again closes the list; one pip under the press opens its card at once, as before. Worked out in the browser from the features the map already returns under a press; nothing is kept, no row is written, no request carries a position.
+
 ## 7. The Incidents tab as the day (the first release, v1.199.0)
 
 ### About

@@ -17,6 +17,17 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.206.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6, the seventh release: stacked pips on the Map tab (the drawing `docs/spec/mockups/phase-12-map-stacked-pips.html`).
+
+- **A press on a stack of pips asks which one.** Where several pips lie on one spot, a press opens a small list beside them, one line per pip in order of time with what happened and whose camera; press a line and its card opens, with "2 of 4 at this spot" and ‹ › through the others. One pip under the press opens at once, as before.
+
 ## v1.205.0, 2026-11-05
 
 ```

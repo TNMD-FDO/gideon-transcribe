@@ -423,7 +423,16 @@
       map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); if (PICK) { applyPick(); } });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
-      map.on("click", "map-events-hit", function (e) { if (S.asking) { return; } var f = e.features && e.features[0]; if (f) { selectKey(f.properties.key); } });
+      // A press on one pip opens its card; on a stack (v1.206.0) it opens
+      // the small list of what lies there.
+      map.on("click", "map-events-hit", function (e) {
+        if (S.asking) { return; }
+        var keys = [];
+        (e.features || []).forEach(function (f) { if (keys.indexOf(f.properties.key) < 0) { keys.push(f.properties.key); } });
+        if (!keys.length) { return; }
+        if (keys.length === 1) { S.stack = null; closeStack(); selectKey(keys[0]); return; }
+        openStack(keys, e.point);
+      });
       map.on("click", function (e) { if (S.asking) { placeCircle(e.lngLat); } });
       map.on("mouseenter", "map-events-hit", function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "map-events-hit", function () { map.getCanvas().style.cursor = ""; });
@@ -1243,7 +1252,7 @@
     refreshLayers(); drawStrip(); drawCard(one);
   }
   function clearSelection() {
-    S.selected = null; light(null); closeCard(); refreshLayers(); drawStrip();
+    S.selected = null; S.stack = null; light(null); closeCard(); closeStack(); refreshLayers(); drawStrip();
     if (S.asking) { S.asking = false; drawTransport(); if (map) { map.getCanvas().style.cursor = ""; } }
   }
   function stepEvent(dir) {
@@ -1261,9 +1270,29 @@
     } catch (e) { /* no street */ }
     return "";
   }
+  // Stacked pips (chapter 6, v1.206.0; the drawing
+  // phase-12-map-stacked-pips.html): a press on a spot with more than one
+  // pip under it opens a small list beside the stack, one line per pip in
+  // order of time; a line's press opens that card, which then steps
+  // through the stack's others. Nothing is kept.
+  function closeStack() { var c = el.pane && el.pane.querySelector(".map-stack"); if (c) { c.remove(); } }
+  function stackList(keys) { return allShown().filter(function (one) { return keys.indexOf(one.key) >= 0; }); }
+  function openStack(keys, point) {
+    closeStack(); closeChooser();
+    var list = stackList(keys);
+    if (list.length < 2) { S.stack = null; if (list.length) { selectKey(list[0].key); } return; }
+    var box = document.createElement("div");
+    box.className = "map-stack";
+    box.innerHTML = "<div class='h'><b>" + list.length + " at this spot</b><span class='muted'>in order of time · Escape closes</span></div>" +
+      list.map(function (one) { return "<button type='button' class='row' data-act='stack-pick' data-key='" + one.key + "' title='" + esc((one.kind === "note" ? "Note by " + (one.note.by || "") : one.words) + " · " + nameOf(one.cam)) + "'><span class='mono'>" + hms(one.moment) + "</span><span class='w'>" + esc(one.kind === "note" ? "Note, " + (one.note.by || "") : one.words) + "</span><span class='muted'>" + esc(nameOf(one.cam)) + "</span></button>"; }).join("");
+    el.pane.appendChild(box);
+    box.style.left = Math.max(8, Math.min(el.pane.clientWidth - box.offsetWidth - 8, point.x + 14)) + "px";
+    box.style.top = Math.max(8, Math.min(el.pane.clientHeight - box.offsetHeight - 8, point.y - 10)) + "px";
+    S.stack = keys;
+  }
   function closeCard() { var c = host.querySelector(".map-evcard"); if (c) { c.remove(); } }
   function drawCard(one) {
-    closeCard();
+    closeCard(); closeStack();
     var cam = one.cam, z = cam.zero.second;
     var street = streetAt(cam, one.t);
     var card = document.createElement("div");
@@ -1271,10 +1300,17 @@
     var list = allShown().filter(function (e) { return e.cam.id === cam.id; });
     var index = list.map(function (e) { return e.key; }).indexOf(one.key);
     var prev = index > 0 ? list[index - 1] : null, next = index >= 0 && index < list.length - 1 ? list[index + 1] : null;
+    // From a stack (v1.206.0): "k of N at this spot", and ‹ › through its others.
+    var stack = S.stack ? stackList(S.stack) : [], at = stack.map(function (e) { return e.key; }).indexOf(one.key), stackWords = "";
+    if (at >= 0 && stack.length > 1) {
+      stackWords = "<div class='muted small'>" + (at + 1) + " of " + stack.length + " at this spot" +
+        (at > 0 ? " <button type='button' class='tiny ghost' data-act='select' data-key='" + stack[at - 1].key + "' title='" + esc(stack[at - 1].words) + "'>‹ " + at + "/" + stack.length + "</button>" : "") +
+        (at < stack.length - 1 ? " <button type='button' class='tiny ghost' data-act='select' data-key='" + stack[at + 1].key + "' title='" + esc(stack[at + 1].words) + "'>" + (at + 2) + "/" + stack.length + " ›</button>" : "") + "</div>";
+    } else { S.stack = null; }
     var head = one.kind === "note" ? "Note · " + esc(nameOf(cam)) : esc(one.words) + " · " + esc(nameOf(cam));
     var body = one.kind === "note" ? "<div class='words'>" + esc(one.words) + "</div><span class='muted small'>" + esc(one.note.by) + (one.note.on ? " · " + esc(one.note.on) : "") + (one.note.from ? " · " + esc(one.note.from) : "") + "</span>" :
       "<span class='mono'>" + hms(one.moment) + "</span>" + (street ? " on " + esc(street) : "") + (one.until ? ", until " + hms(z + one.until) : "");
-    card.innerHTML = "<b>" + head + "</b>" + body +
+    card.innerHTML = "<b>" + head + "</b>" + body + stackWords +
       "<div class='acts'><button type='button' class='tiny primary' data-act='play-here' data-cam='" + cam.id + "'>Play here</button>" +
       (one.kind !== "note" && host.dataset.edit ? "<button type='button' class='tiny' data-act='note-event'>Add a note</button>" : "") +
       (one.kind === "note" ? "<a class='btn tiny' href='" + esc(cam.viewer_url) + "?t=" + one.t.toFixed(1) + "&note=1'>Edit</a><a class='btn tiny ghost' href='?tab=notes'>On the Notes tab</a>" : "") +
@@ -1535,6 +1571,7 @@
         case "play-here": if (cam) { select(cam); openPreview(cam); } return;
         case "own": if (cam) { if (cam.own !== undefined) { delete cam.own; var mk = markers[cam.id]; if (mk) { mk.getElement().classList.add("before"); } } else { cam.own = 0; } drawList(); tick(); if (cam.own !== undefined) { flyTo(cam); } } return;
         case "select": selectKey(b.dataset.key); return;
+        case "stack-pick": selectKey(b.dataset.key); return;
         case "clear": clearSelection(); return;
         case "note": { var target = S.selected ? S.selected.cam : (S.lit ? S.byId[S.lit] : null); if (!target) { toast("Choose a camera first: press its row or its marker.", true); return; } if (!target.onClock) { toast("That camera is not on the clock.", true); return; } noteOn(target, Math.max(0, now() - target.zero.second), ""); return; }
         case "note-event": if (S.selected) { noteOn(S.selected.cam, S.selected.t, S.selected.words.toLowerCase() + " event"); } return;
@@ -1574,7 +1611,7 @@
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
-    else if (e.key === "Escape") { if (el.pane && el.pane.querySelector(".map-chooser")) { closeChooser(); } else if (S.selected || S.asking) { clearSelection(); } else if (S.circle) { clearCircle(); } }
+    else if (e.key === "Escape") { if (el.pane && el.pane.querySelector(".map-stack")) { closeStack(); S.stack = null; } else if (el.pane && el.pane.querySelector(".map-chooser")) { closeChooser(); } else if (S.selected || S.asking) { clearSelection(); } else if (S.circle) { clearCircle(); } }
   });
 
   // Save a picture (Phase 12 chapter 5) --------------------------------------------

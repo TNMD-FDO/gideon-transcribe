@@ -830,6 +830,10 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert ".inc-desk.folded {" in css and ".inc-desk.folded .inc-work.over {" in css
     assert ".inc-film .inc-tile { flex: 1 1 0;" in css
     assert '.inc-desk.many:not([data-layout="focus"]) .inc-tile .inc-lines' in css
+    # Stacked pips (v1.206.0): a press on a stack opens the list, and the
+    # card steps through the stack.
+    assert "function openStack(keys, point)" in script and "at this spot" in script
+    assert "data-act='stack-pick'" in script and ".map-stack {" in css
     # The two tools and the streams as one (v1.205.0).
     assert "data-act='tick-running'" in strip and "data-act='tick-near'" in strip
     assert "function tickMany(ids)" in strip and "function streamsOf(bars)" in strip

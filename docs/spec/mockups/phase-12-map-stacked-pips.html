@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stacked pips on the map</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3; --label: #6b7480; --well: #000000; --well-ink: #ffffff;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d; --label: #98a4b1;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--ground); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .ro { fill: var(--road); stroke: var(--road-edge); stroke-width: 1; }
+  .pt { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .p1 { stroke: var(--c1); } .p2 { stroke: var(--c2); } .p3 { stroke: var(--c3); }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .pip { stroke: var(--surface); stroke-width: 1.2; }
+  .pip.note { fill: var(--accent); } .pip.lights { fill: var(--warn); } .pip.siren { fill: var(--bad); } .pip.mic { fill: var(--text); }
+  .knot { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .tag { font: 600 10px var(--font); fill: var(--text); }
+  .tagbg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .road-name { font: 600 9px var(--font); fill: var(--label); letter-spacing: .12em; }
+  .box { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .box.card { stroke: var(--accent); }
+  .row { fill: transparent; }
+  .row.lit { fill: var(--accent-soft); }
+  .t { font: 500 10px var(--mono); fill: var(--muted); }
+  .w { font: 500 10px var(--font); fill: var(--text); }
+  .who { font: 400 10px var(--font); fill: var(--muted); }
+  .hdr { font: 600 10px var(--font); fill: var(--text); }
+  .sub { font: 400 9px var(--font); fill: var(--muted); }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .btntxt { font: 600 9px var(--font); fill: var(--text); }
+  .btntxt.primary { fill: var(--accent-ink); }
+  .cursor { fill: var(--text); stroke: var(--surface); stroke-width: 1; }
+  .lane { fill: var(--surface-2); }
+  .lanebar { stroke-width: 6; stroke-linecap: round; }
+  .mk { stroke: var(--surface); stroke-width: 1; }
+  .lanehead { font: 600 10px var(--font); fill: var(--text); }
+  .ruler { font: 500 9px var(--mono); fill: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 amended · a drawing for the maintainer's word · 2026-11-05</span>
+    <h1>Stacked pips on the map: a press that asks which one</h1>
+    <p class="lede">Offered on 2026-11-04 with the knots work and never asked for. A camera's pips mark where something happened on its path: a note, the lights, the siren, the mic, a bookmark. Where a camera stood still, or several stood together, the pips land on one spot. Today a press on the stack opens the top one alone. The drawing gives the press a small list to choose from, the same small-list idiom a vehicle's name tag already has. Three figures and five choices. The fictional office throughout; no real place, name or time.</p>
+  </header>
+
+  <!-- Figure A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today: a stack of pips in the car park, and the press opens the top one</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="A map with three camera paths meeting in a car park, where four pips lie on one spot">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--ground)"/>
+        <rect class="ro" x="0" y="130" width="1000" height="34"/>
+        <rect class="ro" x="640" y="0" width="30" height="300"/>
+        <text class="road-name" x="40" y="152">HARBOUR STREET</text>
+        <text class="road-name" x="680" y="22">QUAY ROAD</text>
+        <rect class="ro" x="700" y="190" width="200" height="90" rx="4"/>
+        <text class="road-name" x="712" y="268">HARBOUR CAR PARK</text>
+        <path class="pt p1" d="M 60 147 L 620 147 L 655 150 L 655 200 L 760 230"/>
+        <path class="pt p2" d="M 655 20 L 655 120 L 655 205 L 770 236"/>
+        <path class="pt p3" d="M 950 147 L 672 150 L 672 215 L 780 232"/>
+        <circle class="f1 hd" cx="760" cy="230" r="7"/>
+        <rect class="f2 hd" x="763" y="229" width="14" height="14" rx="2"/>
+        <circle class="f3 hd" cx="780" cy="232" r="7"/>
+        <!-- the stack of pips a little west of the markers -->
+        <circle class="knot" cx="716" cy="226" r="16"/>
+        <circle class="pip note" cx="712" cy="223" r="5"/>
+        <polygon class="pip lights" points="719,219 725,225 719,231 713,225"/>
+        <polygon class="pip siren" points="716,222 722,232 710,232"/>
+        <circle class="pip mic" cx="714" cy="229" r="4"/>
+        <!-- name tags with leaders, kept clear -->
+        <path class="ldr" d="M 760 223 L 790 196"/>
+        <rect class="tagbg" x="792" y="186" width="66" height="18"/><text class="tag" x="800" y="198">Ofc. Pell</text>
+        <path class="ldr" d="M 777 243 L 812 262"/>
+        <rect class="tagbg" x="814" y="252" width="80" height="18"/><text class="tag" x="822" y="264">Unit 9082</text>
+        <path class="ldr" d="M 787 232 L 870 214"/>
+        <rect class="tagbg" x="872" y="204" width="72" height="18"/><text class="tag" x="880" y="216">Ofc. Amari</text>
+        <!-- the press -->
+        <polygon class="cursor" points="724,236 724,254 729,249 733,257 736,255 732,247 739,247"/>
+        <!-- today's card: the top pip alone -->
+        <rect class="box card" x="60" y="190" width="300" height="78"/>
+        <text class="hdr" x="72" y="208">Mic on · 20:27:14</text>
+        <text class="sub" x="72" y="222">Ofc. Pell, by the camera's file · Harbour car park</text>
+        <text class="sub" x="72" y="236">The three pips under it are not reached by a press.</text>
+        <rect class="btn primary" x="72" y="244" width="58" height="16"/><text class="btntxt primary" x="80" y="255">Play here</text>
+        <rect class="btn" x="136" y="244" width="110" height="16"/><text class="btntxt" x="144" y="255">Offer to the chronology</text>
+        <rect class="btn" x="252" y="244" width="46" height="16"/><text class="btntxt" x="260" y="255">‹ prev</text>
+        <rect class="btn" x="304" y="244" width="46" height="16"/><text class="btntxt" x="312" y="255">next ›</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>The stack.</b> Four pips of three cameras on one spot in the car park: a note, the lights, the siren and the mic. The knots release gave every pip a 12 px hit ring, so the press lands; it opens the pip drawn on top, the mic, and the three under it can be reached only from the lanes under the map or by zooming in until they part.</p>
+      <p class="muted">The dashed ring is drawn here to show the stack; the map draws no ring. Markers, names and leaders are as the knots release left them.</p>
+    </div>
+  </section>
+
+  <!-- Figure B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Drawn: the press on a stack opens a small list, one line per pip</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The same map with a small list under the stack: four lines, each a time, what happened and the camera">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--ground)"/>
+        <rect class="ro" x="0" y="130" width="1000" height="34"/>
+        <rect class="ro" x="640" y="0" width="30" height="300"/>
+        <text class="road-name" x="40" y="152">HARBOUR STREET</text>
+        <text class="road-name" x="680" y="22">QUAY ROAD</text>
+        <rect class="ro" x="700" y="190" width="200" height="90" rx="4"/>
+        <text class="road-name" x="712" y="268">HARBOUR CAR PARK</text>
+        <path class="pt p1" d="M 60 147 L 620 147 L 655 150 L 655 200 L 760 230"/>
+        <path class="pt p2" d="M 655 20 L 655 120 L 655 205 L 770 236"/>
+        <path class="pt p3" d="M 950 147 L 672 150 L 672 215 L 780 232"/>
+        <circle class="f1 hd" cx="760" cy="230" r="7"/>
+        <rect class="f2 hd" x="763" y="229" width="14" height="14" rx="2"/>
+        <circle class="f3 hd" cx="780" cy="232" r="7"/>
+        <circle class="pip note" cx="712" cy="223" r="5"/>
+        <polygon class="pip lights" points="719,219 725,225 719,231 713,225"/>
+        <polygon class="pip siren" points="716,222 722,232 710,232"/>
+        <circle class="pip mic" cx="714" cy="229" r="4"/>
+        <path class="ldr" d="M 760 223 L 790 196"/>
+        <rect class="tagbg" x="792" y="186" width="66" height="18"/><text class="tag" x="800" y="198">Ofc. Pell</text>
+        <path class="ldr" d="M 777 243 L 812 262"/>
+        <rect class="tagbg" x="814" y="252" width="80" height="18"/><text class="tag" x="822" y="264">Unit 9082</text>
+        <path class="ldr" d="M 787 232 L 870 214"/>
+        <rect class="tagbg" x="872" y="204" width="72" height="18"/><text class="tag" x="880" y="216">Ofc. Amari</text>
+        <!-- the chooser, anchored at the stack, kept inside the pane -->
+        <path class="ldr" d="M 716 234 L 560 206"/>
+        <rect class="box card" x="300" y="150" width="262" height="112"/>
+        <text class="hdr" x="312" y="168">4 at this spot</text>
+        <text class="sub" x="400" y="168">in order of time · Escape closes</text>
+        <rect class="row" x="306" y="176" width="250" height="18"/>
+        <text class="t" x="312" y="189">20:25:40</text><text class="w" x="372" y="189">Lights on</text><text class="who" x="470" y="189">Unit 9082</text>
+        <rect class="row lit" x="306" y="196" width="250" height="18"/>
+        <text class="t" x="312" y="209">20:26:02</text><text class="w" x="372" y="209">Siren on</text><text class="who" x="470" y="209">Unit 9082</text>
+        <rect class="row" x="306" y="216" width="250" height="18"/>
+        <text class="t" x="312" y="229">20:26:30</text><text class="w" x="372" y="229">Note, Dana Reyes</text><text class="who" x="470" y="229">Ofc. Amari</text>
+        <rect class="row" x="306" y="236" width="250" height="18"/>
+        <text class="t" x="312" y="249">20:27:14</text><text class="w" x="372" y="249">Mic on</text><text class="who" x="470" y="249">Ofc. Pell</text>
+        <polygon class="cursor" points="520,214 520,232 525,227 529,235 532,233 528,225 535,225"/>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>The list.</b> A press on a spot with more than one pip under it opens a small list beside the stack: a head ("4 at this spot"), then one line per pip in order of time: the time of day, what happened in the words the card uses, and whose camera. A hover lights the line; a press opens that pip's card, Figure C. Escape, a press elsewhere, or a press on the stack again closes the list.</p>
+      <p><b>Where it sits.</b> Beside the stack on whichever side has room, kept inside the map pane as the event card is; on a phone it is a sheet at the foot, as the card is.</p>
+      <p><b>One pip under the press</b> opens its card at once, as today; the list is only for a stack. A note at a moment the camera had no fix has no pip, as before, and is reached from its lane.</p>
+    </div>
+  </section>
+
+  <!-- Figure C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>After the press: the card as today, and the lanes agree</h2></div>
+    <div class="two">
+      <div class="pane">
+        <svg viewBox="0 0 500 180" role="img" aria-label="The siren's card open, the chooser gone">
+          <rect x="0" y="0" width="500" height="180" fill="var(--ground)"/>
+          <rect class="ro" x="340" y="60" width="150" height="110" rx="4"/>
+          <polygon class="pip siren" points="366,92 372,102 360,102"/>
+          <circle class="pip note" cx="362" cy="93" r="4" opacity=".45"/>
+          <path class="ldr" d="M 362 100 L 300 98"/>
+          <rect class="box card" x="20" y="48" width="280" height="100"/>
+          <text class="hdr" x="32" y="66">Siren on · 20:26:02 to 20:28:40</text>
+          <text class="sub" x="32" y="80">Unit 9082, by the camera's file · Harbour car park</text>
+          <text class="sub" x="32" y="94">1 of 4 at this spot · ‹ › step the others</text>
+          <rect class="btn primary" x="32" y="104" width="58" height="16"/><text class="btntxt primary" x="40" y="115">Play here</text>
+          <rect class="btn" x="96" y="104" width="110" height="16"/><text class="btntxt" x="104" y="115">Offer to the chronology</text>
+          <rect class="btn" x="212" y="104" width="40" height="16"/><text class="btntxt" x="220" y="115">‹ 1/4</text>
+          <rect class="btn" x="256" y="104" width="34" height="16"/><text class="btntxt" x="264" y="115">2/4 ›</text>
+          <text class="sub" x="32" y="136">Clip from here · Add a note · the camera's previous and next</text>
+        </svg>
+      </div>
+      <div class="pane">
+        <svg viewBox="0 0 500 180" role="img" aria-label="The lanes under the map, the same four marks at the same moment">
+          <rect x="0" y="0" width="500" height="180" fill="var(--surface)"/>
+          <text class="ruler" x="110" y="22">20:24</text><text class="ruler" x="230" y="22">20:26</text><text class="ruler" x="350" y="22">20:28</text><text class="ruler" x="460" y="22">20:30</text>
+          <text class="lanehead" x="12" y="58">Ofc. Pell</text>
+          <rect class="lane" x="100" y="48" width="390" height="14" rx="4"/>
+          <line class="lanebar p1" x1="120" y1="55" x2="470" y2="55"/>
+          <circle class="pip mic" cx="306" cy="55" r="4"/>
+          <text class="lanehead" x="12" y="98">Unit 9082</text>
+          <rect class="lane" x="100" y="88" width="390" height="14" rx="4"/>
+          <line class="lanebar p2" x1="105" y1="95" x2="480" y2="95"/>
+          <polygon class="pip lights" points="212,90 217,95 212,100 207,95"/>
+          <polygon class="pip siren" points="236,90 241,100 231,100"/>
+          <text class="lanehead" x="12" y="138">Ofc. Amari</text>
+          <rect class="lane" x="100" y="128" width="390" height="14" rx="4"/>
+          <line class="lanebar p3" x1="140" y1="135" x2="460" y2="135"/>
+          <circle class="pip note" cx="264" cy="135" r="4"/>
+          <line x1="236" y1="36" x2="236" y2="160" stroke="var(--text)" stroke-width="1.5"/>
+          <text class="ruler" x="226" y="172">20:26:02</text>
+        </svg>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The card.</b> The pip chosen opens its card exactly as a lone pip does today: Play here, Offer to the chronology, Clip from here, Add a note, the camera's previous and next. One line is new: "1 of 4 at this spot", and ‹ › step through the stack's others without going back to the list. The clock moves to the pip's moment, as it does now.</p>
+      <p><b>The lanes.</b> The same four marks on the lanes under the map, the playhead at the chosen one; the lanes already reach any mark alone, and nothing there changes.</p>
+    </div>
+  </section>
+
+  <!-- The choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Five to decide</h2></div>
+    <table>
+      <tr><th>#</th><th>The choice</th><th>Drawn and recommended</th><th>The other way</th></tr>
+      <tr><td>1</td><td>What a press on a stack does</td><td>Opens the list, one line per pip</td><td>Leaves it as today, and the person zooms in until the pips part</td></tr>
+      <tr><td>2</td><td>What counts as a stack</td><td>Two or more pips whose hit rings hold the pressed point, the same rings the knots release drew</td><td>Pips within a fixed distance on the ground, say 5 m, whatever the zoom</td></tr>
+      <tr><td>3</td><td>The list's order</td><td>By time of day, earliest first, whatever the kind or the camera</td><td>By camera, then time</td></tr>
+      <tr><td>4</td><td>Stepping on the card</td><td>"1 of 4 at this spot" with ‹ › through the stack, beside the camera's own previous and next</td><td>The card as today; back to the list for another</td></tr>
+      <tr><td>5</td><td>The wearer's name on a line</td><td>The camera's name as the lanes give it (the officer as the path file names them, else the unit)</td><td>The recording's title</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">Worked out in the browser from what the map already holds: the press already asks the map what lies under it and gets every pip back; the list draws that answer instead of taking its first entry. Nothing is kept, no row is written, no request carries a position. About an hour's build, no migration, no setting, after "it stands".</p>
+  </section>
+
+</div>
+</body>
+</html>
