@@ -448,6 +448,7 @@ def test_two_cameras_that_kept_close_are_together_and_make_the_offer(person, a_c
     added(a, body_file(seconds=400, still=True), by=person)
     added(b, body_file(seconds=400, still=True), by=person)
     told = camera_paths.map_of(a_case, viewer=person)
+    assert told["most"] == 8, "the circle's list reads the cap (v1.203.0)"
     assert len(told["offer"]) == 1
     offer = told["offer"][0]
     assert sorted(offer["recordings"]) == sorted([str(a.pk), str(b.pk)])

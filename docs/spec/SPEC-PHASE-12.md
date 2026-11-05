@@ -392,9 +392,19 @@ The hidden New incident dialog kept on the case page since v1.200.0 is removed w
 
 Figure F's rings, at the maintainer's word of 2026-11-05. While cameras are ticked, the map at the foot answers, from the paths it already holds for the day, which unticked cameras were within 50 m of a ticked one at the clock line (`map.js` `tellNear`: each camera's position at the moment by its fixes, a camera with no fix then or already ended left out, a vehicle's streams answering as one, the server's 50 m), and tells the strip on an `incident-near` event after every tick and every move of the line. The strip rings the box of each such camera, its head says "· near <the ticked camera's name>", its hover and its reading in the Reader say "Within 50 m of <name> at hh:mm:ss, by their paths", and the foot's words say what a ring means while any is drawn. The marks are patched in place, so no picture is cut again for them; nothing is kept, nothing is sent to the server, and with Maps off there is no map and no ring.
 
+### The Map tab's circle under the cap (the fourth release, v1.203.0)
+
+Figure G and choice 10, at the maintainer's word of 2026-11-05. The circle's answer keeps its shape and gets the budget:
+
+- **The list.** The cameras that passed inside are in order of how long each was inside (the sum of its spells, a lone fix counting a second), the longest ticked up to "Most cameras in an incident" (`map.json` now carries `most`), each row with its tick, its name and "inside hh:mm to hh:mm · N min"; the head reads "11 cameras passed inside · 8 of 8 ticked", and a line under it says "8 is the most an incident holds. The 8 that were inside longest are ticked; untick one to swap another in" when more passed inside than the cap. At the cap the unticked boxes wait, greyed, with the reason on hover. The ticks are set afresh each time the circle is placed, moved or widened; a tick is the person's until then. "Tick these" becomes **Show these** (the map's own ticks, which draw cameras, are a different thing from the circle's, which choose).
+- **The markers.** A camera that passed inside and is not ticked is drawn with a dashed outline; a press on a marker that passed inside toggles its tick, within the budget, and says why when the budget is full. Markers outside the circle keep their presses.
+- **Make an incident from these N** takes the ticked cameras through the New incident box as before, and the box keeps the budget: "N of 8" at its head and, at the cap, the unticked boxes wait with the reason. The span is the first entry to the last exit of the ticked cameras.
+- **Build it on the Incidents tab instead** carries the ticks to the strip (`?tab=incidents&day=<day>&tick=<ids>`): the strip opens on that day with those lanes ticked, up to the cap, and the Reader as Your incident, where the span handles, the clock line and the pictures are. **Open the Map tab** on the strip's small map carries the ticked cameras back as the Map tab's shown cameras (`&show=`). Neither door makes anything without the press.
+- A vehicle's streams are one camera in the circle's list and one tick; the incident made from the map still takes the head stream alone, as before, since the server's cap counts recordings and the strip's lanes are one per stream. The streams join as one when the lanes do.
+
 ### Left to the next releases
 
-The Map tab's circle under the cap (Figure G), the wall at eight (Figures H and I), and the two tools in Your incident.
+The wall at eight (Figures H and I), and the two tools in Your incident; a vehicle's streams as one lane and one camera on the server's count.
 
 ## Appendix A. Audit rows added in Phase 12
 

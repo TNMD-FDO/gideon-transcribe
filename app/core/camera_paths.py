@@ -1658,6 +1658,9 @@ def map_of(case, *, day: str = "", viewer) -> dict:
             case, [paths[one.pk] for one in videos if one.pk in paths], zeros
         ),
         "new_incident_url": reverse("new-incident", args=[case.pk]),
+        # The cap (Phase 12 chapter 9, v1.203.0): the circle's list ticks
+        # this many, the longest inside first.
+        "most": _most_cameras(),
         "decline_url": reverse("decline-incident-offer", args=[case.pk]),
         # Offer to the chronology (chapter 3): withheld, with the reason,
         # while the Proposed events tab is off.
@@ -1972,3 +1975,10 @@ def words(path: CameraPath | None) -> str:
     if path.clock_start is not None:
         out += ", clock from its file"
     return out
+
+
+def _most_cameras() -> int:
+    """The Admin's Most cameras in an incident, read for the map's circle."""
+    from core import incidents
+
+    return incidents.most_cameras()

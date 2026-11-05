@@ -47,7 +47,7 @@
   // The address: the day and the span, so a link opens them.
   function params() {
     var p = new URLSearchParams(location.search);
-    return { day: p.get("day") || "", from: p.get("from") || "", to: p.get("to") || "" };
+    return { day: p.get("day") || "", from: p.get("from") || "", to: p.get("to") || "", tick: p.get("tick") || "" };
   }
   function setAddress(day, span) {
     // The Notes page and the Incidents tab's strip keep their own address.
@@ -124,6 +124,12 @@
       drawStrip.wired = true;
       var sizing = null;
       window.addEventListener("resize", function () { if (sizing) { window.clearTimeout(sizing); } sizing = window.setTimeout(function () { if (state.day) { columns(state.day); } }, 120); });
+    }
+    // Ticks carried from the Map tab's circle (chapter 9, v1.203.0): the
+    // lanes named in the address are ticked once, up to the cap.
+    if (d && state.askedTicks) {
+      state.askedTicks.forEach(function (id) { if (ticked().length < most() && d.bars.some(function (b) { return b.id === id; })) { ticks[id] = true; } });
+      state.askedTicks = null;
     }
     if (!d) {
       host.innerHTML = "<p class='muted small'>No video of this case is on the clock yet. A video whose clock was read places itself; the rest are placed on the Notes tab's chronology, by a drag or a typed time.</p>";
@@ -283,6 +289,9 @@
   // pick mode).
   function tellMap(d) {
     try { window.dispatchEvent(new CustomEvent("incident-ticks", { detail: { ids: ticked(), day: d ? d.date : "", at: d ? clockLine(d) : null } })); } catch (e) { /* an old browser; the map keeps its last ticks */ }
+    // The way back to the Map tab (v1.203.0) carries the ticks as shown cameras.
+    var back = document.getElementById("strip-map-open");
+    if (back && host.dataset.map) { var ids = ticked(); back.href = host.dataset.map + (d ? "&day=" + encodeURIComponent(d.date) : "") + (ids.length ? "&show=" + encodeURIComponent(ids.join(",")) : ""); }
   }
   // The clock line alone, while it is dragged: the markers follow it.
   function tellClock(at) {
@@ -1298,7 +1307,9 @@
   // the Notes tab's host, mounted first, keeps CaseChronology.
   if (stripMode) {
     window.IncidentStrip = { reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", null, true); } } };
-    // The day in the address (v1.201.0), so an incident's Details can lead back to it.
+    // The day in the address (v1.201.0), so an incident's Details can lead
+    // back to it; the ticks in it (v1.203.0) from the Map tab's circle.
+    state.askedTicks = params().tick ? params().tick.split(",").filter(Boolean) : null;
     load(params().day || "", null);
     return;
   }

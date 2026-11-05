@@ -70,6 +70,11 @@
   function rememberHidden() { if (PICK) { return; } remember("map-hidden-" + CASE, JSON.stringify(Object.keys(S.hidden))); }
   // Pick mode: the strip's ticks become the map's ticks; nothing else shows.
   S.pick = [];
+  // The circle under the cap (chapter 9, v1.203.0): which of the cameras
+  // that passed inside are in the incident the circle would make; the
+  // longest inside first, up to the Admin's Most cameras in an incident.
+  S.circleTicks = {};
+  function most() { return (S.told && S.told.most) || 8; }
   function applyPick() {
     if (!PICK || !S.loaded) { return; }
     var wanted = {}; S.pick.forEach(function (id) { wanted[id] = true; });
@@ -518,7 +523,10 @@
       // tag beside it says who, the unit is on hover and in the row.
       node.innerHTML = "<i class='badge' aria-hidden='true'></i>";
       node.title = nameOf(cam) + (cam.unit || cam.wearer ? " · " + (cam.unit || cam.title) : "");
-      node.addEventListener("click", function (e) { e.stopPropagation(); select(cam); openPreview(cam); });
+      // Under a circle (chapter 9): a press on a marker that passed inside toggles its tick.
+      node.addEventListener("click", function (e) { e.stopPropagation(); if (S.circle && S.hits && S.hits[cam.id]) { toggleCircleTick(cam); return; } select(cam); openPreview(cam); });
+      // A press on a marker is the marker's, not the circle's drag under it.
+      node.addEventListener("mousedown", function (e) { if (S.circle) { e.stopPropagation(); } });
       var marker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat([cam.fixes[0][2], cam.fixes[0][1]]).addTo(map);
       markers[cam.id] = marker;
     });
@@ -573,6 +581,8 @@
       node.classList.remove("before");
       node.classList.toggle("nofix", !!p.nofix);
       node.classList.toggle("ended", !!p.ended);
+      // Inside the circle but not ticked for its incident (chapter 9): drawn hollow.
+      node.classList.toggle("hollow", !!(S.circle && S.hits && S.hits[cam.id] && !S.circleTicks[cam.id]));
       marker.setLngLat([p.lon, p.lat]);
       var flags = flagsAt(cam, local);
       node.classList.toggle("lights", !!flags.lights);
@@ -956,6 +966,40 @@
       if (start !== null) { spells.push([start, last]); }
       if (spells.length) { S.hits[cam.id] = spells; }
     });
+    // Under the cap (chapter 9): the longest inside are ticked afresh when
+    // the circle is placed, moved or widened; a settle that moved nothing
+    // (a press on a marker inside it) keeps the person's ticks.
+    var key = S.circle.lat.toFixed(6) + "," + S.circle.lon.toFixed(6) + "," + Math.round(S.circle.radius);
+    if (key !== S.circleKey) {
+      S.circleKey = key; S.circleTicks = {};
+      circleOrder().slice(0, most()).forEach(function (c) { S.circleTicks[c.id] = true; });
+    }
+  }
+  // How long a camera was inside, over its spells; a lone fix counts a second.
+  function insideSeconds(cam) { var s = S.hits && S.hits[cam.id]; if (!s) { return 0; } return s.reduce(function (n, one) { return n + Math.max(1, one[1] - one[0]); }, 0); }
+  // The cameras that passed inside, longest inside first, then by entry.
+  function circleOrder() {
+    if (!S.hits) { return []; }
+    return dayCams().filter(function (c) { return S.hits[c.id]; }).sort(function (a, b) { return insideSeconds(b) - insideSeconds(a) || (a.zero.second + S.hits[a.id][0][0]) - (b.zero.second + S.hits[b.id][0][0]); });
+  }
+  function circleTicked() { return circleOrder().filter(function (c) { return S.circleTicks[c.id]; }); }
+  function toggleCircleTick(cam) {
+    if (!cam || !S.hits || !S.hits[cam.id]) { return; }
+    if (S.circleTicks[cam.id]) { delete S.circleTicks[cam.id]; }
+    else { if (circleTicked().length >= most()) { toast(most() + " is the most an incident holds; untick one to swap another in.", true); return; } S.circleTicks[cam.id] = true; }
+    drawList(); tick();
+  }
+  // A row of the circle's list: the tick for the incident, the name, how
+  // long it was inside; dashed and still when the cap is reached.
+  function circleRow(cam, full) {
+    var on = !!S.circleTicks[cam.id], s = S.hits[cam.id], open = S.open === cam.id;
+    var words = "inside " + hm(cam.zero.second + s[0][0]) + " to " + hm(cam.zero.second + s[s.length - 1][1]) + " · " + elapsed(insideSeconds(cam));
+    return "<div class='map-row " + (on ? "" : "dim ") + (S.lit === cam.id ? "lit " : "") + (open ? "open" : "") + "' data-cam='" + cam.id + "'>" +
+      "<input type='checkbox' class='tk' data-ctick='" + cam.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled title='" + most() + " is the most an incident holds; untick one to swap another in'" : " title='Ticked: in the incident made from the circle'") + ">" +
+      "<span class='dot " + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></span>" +
+      "<span class='nm' title='Press: show this camera alone. Shift: add it.'>" + nameHtml(cam) + " <small class='muted mono'>" + words + "</small></span>" +
+      "<span class='tail'><span class='spd mono small muted'></span><button type='button' class='tiny ghost more' data-act='open' data-cam='" + cam.id + "' title='" + (open ? "Fold" : "The camera, its clock and its actions") + "'>" + (open ? "▾" : "▸") + "</button></span>" +
+      "</div>" + (open ? openOf(cam) : "");
   }
   // The span the circle's cameras were inside: the first entry to the last exit.
   function circleSpan(cams) {
@@ -979,6 +1023,7 @@
   // own door makes it and the page lands on the incident.
   function incidentBox(ticked, span, nameWords) {
     if (!S.told.new_incident_url) { return; }
+    var cap = most();
     var tickedIds = {}; ticked.forEach(function (c) { tickedIds[c.id] = true; });
     var others = dayCams().filter(function (c) { return !tickedIds[c.id]; });
     // The name offered: the street under the circle when the basemap names
@@ -989,10 +1034,18 @@
     layer.className = "map-layer";
     layer.innerHTML = "<div class='map-layer-card'><div class='h'><b>New incident from the map</b><button type='button' class='tiny ghost' data-act='layer-close'>Cancel</button></div>" +
       "<label class='small'>Name<input type='text' class='small' id='map-inc-name' maxlength='200' value='" + esc(name) + "' style='width: 100%'></label>" +
-      "<div class='small'>Cameras</div><div class='map-inc-cams'>" + ticked.map(function (c) { return row(c, true); }).join("") + others.map(function (c) { return row(c, false); }).join("") + "</div>" +
+      "<div class='small'>Cameras <span class='pill small acc' id='map-inc-count'></span></div><div class='map-inc-cams'>" + ticked.map(function (c) { return row(c, true); }).join("") + others.map(function (c) { return row(c, false); }).join("") + "</div>" +
       "<p class='muted small' style='margin: 0'>From " + hms(span[0]) + " to " + hms(span[1]) + (S.day ? " on " + esc(dayWords(S.day)) : "") + ": the first entry to the last exit, where the incident's clock opens. The recordings go in whole, synced by the clocks they already have.</p>" +
       "<div class='acts'><button type='button' class='small' data-act='layer-close'>Cancel</button><button type='button' class='small primary' data-act='layer-make'>Make the incident</button></div></div>";
     document.body.appendChild(layer);
+    // The box keeps the same budget (chapter 9, v1.203.0): at the cap the
+    // unticked boxes wait with the reason.
+    function budget() {
+      var boxes = layer.querySelectorAll("input[name=recordings]"), n = layer.querySelectorAll("input[name=recordings]:checked").length;
+      layer.querySelector("#map-inc-count").textContent = n + " of " + cap;
+      boxes.forEach(function (b) { if (!b.checked) { b.disabled = n >= cap; b.title = n >= cap ? cap + " is the most an incident holds; untick one to swap another in" : ""; } });
+    }
+    layer.addEventListener("change", budget); budget();
     layer.addEventListener("click", function (e) {
       var b = e.target.closest("[data-act]"); if (!b) { return; }
       if (b.dataset.act === "layer-close") { layer.remove(); return; }
@@ -1023,7 +1076,7 @@
     return { lat: lat, lon: lon, radius: Math.max(NEAR, Math.min(5000, far + 20)) };
   }
   function clearCircle() {
-    S.circle = null; S.hits = null; S.asking = false;
+    S.circle = null; S.hits = null; S.asking = false; S.circleTicks = {}; S.circleKey = null;
     if (circleMarkers) { circleMarkers.centre.remove(); circleMarkers.handle.remove(); circleMarkers = null; }
     if (map && mapReady) { ["map-circle-line", "map-circle-fill"].forEach(function (id) { if (map.getLayer(id)) { map.removeLayer(id); } }); if (map.getSource("map-circle")) { map.removeSource("map-circle"); } map.getCanvas().style.cursor = ""; }
     drawTransport(); drawList(); drawStrip();
@@ -1038,15 +1091,22 @@
     var html;
     if (S.circle && S.hits) {
       // The circle's answer (chapter 6): who passed inside, with their spans, then the rest.
-      var inside = today.filter(function (c) { return S.hits[c.id]; }), never = today.filter(function (c) { return !S.hits[c.id]; });
-      inside.sort(function (a, b) { return (a.zero.second + S.hits[a.id][0][0]) - (b.zero.second + S.hits[b.id][0][0]); });
-      html = "<div class='h'><span><b class='acc'>" + plural(inside.length, "camera") + "</b> passed inside the circle</span><span class='acts'>" + (inside.length ? "<button type='button' class='tiny' data-act='tick-inside' title='Tick these cameras alone'>Tick these</button>" : "") + fold + "</span></div>";
-      inside.forEach(function (c) { html += rowOf(c, !shown(c)); });
-      // An incident from the circle (v1.197.0): the cameras that passed inside,
-      // from the first entry to the last exit, through the Incidents tab's door.
-      if (inside.length && S.told.new_incident_url && host.dataset.edit) {
-        var span = circleSpan(inside);
-        html += "<div class='map-circle-make'><button type='button' class='small primary' data-act='circle-incident'>Make an incident from the circle</button><p class='muted small'>" + plural(inside.length, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + (streetWords() ? ", named for " + esc(streetWords()) : "") + ".</p></div>";
+      // Under the cap (chapter 9, v1.203.0): the cameras in order of how
+      // long each was inside, the longest ticked up to the cap, the rest
+      // with dashed boxes and the reason; a marker's press toggles a tick.
+      var cap = most(), inside = circleOrder(), never = today.filter(function (c) { return !S.hits[c.id]; });
+      var chosen = circleTicked(), n = chosen.length, full = n >= cap;
+      html = "<div class='h'><span><b class='acc'>" + plural(inside.length, "camera") + "</b> passed inside" + (inside.length ? " · <b>" + n + " of " + cap + "</b> ticked" : "") + "</span><span class='acts'>" + (inside.length ? "<button type='button' class='tiny' data-act='tick-inside' title='Show these cameras alone on the map'>Show these</button>" : "") + fold + "</span></div>";
+      if (inside.length > cap) { html += "<p class='muted small map-budget'>" + cap + " is the most an incident holds. The " + cap + " that were inside longest are ticked; untick one to swap another in.</p>"; }
+      inside.forEach(function (c) { html += circleRow(c, full); });
+      // An incident from the circle (v1.197.0): the ticked cameras, from the
+      // first entry to the last exit, through the Incidents tab's door; or
+      // the ticks carried to the strip, where the span handles, the clock
+      // line and the pictures are.
+      if (n && S.told.new_incident_url && host.dataset.edit) {
+        var span = circleSpan(chosen), ids = chosen.map(function (c) { return c.id; });
+        html += "<div class='map-circle-make'><button type='button' class='small primary' data-act='circle-incident'>Make an incident from these " + n + "</button><p class='muted small'>" + plural(n, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + (streetWords() ? ", named for " + esc(streetWords()) : "") + ".</p>" +
+          "<a class='btn small ghost' href='" + esc(location.pathname + "?tab=incidents&day=" + S.day + "&tick=" + ids.join(",")) + "' title='The strip opens with these cameras ticked: the span handles, the clock line and the pictures are there'>Build it on the Incidents tab instead</a></div>";
       }
       if (never.length) { html += "<details class='map-fold' open><summary>Never inside: " + plural(never.length, "camera") + "</summary>" + never.map(function (c) { return rowOf(c, true); }).join("") + "</details>"; }
     } else {
@@ -1085,6 +1145,7 @@
   function onChange(e) {
     var t = e.target;
     if (t.dataset && t.dataset.tick) { setHidden(S.byId[t.dataset.tick], !t.checked); return; }
+    if (t.dataset && t.dataset.ctick) { toggleCircleTick(S.byId[t.dataset.ctick]); return; }
     if (t.id === "map-tick-all") { tickAll(t.checked); return; }
     if (t.dataset && t.dataset.addOne) { if (t.files[0]) { addOne(t.dataset.addOne, t.files[0], false); } return; }
     if (t.dataset && t.dataset.replaceOne) { if (t.files[0]) { addOne(t.dataset.replaceOne, t.files[0], true); } return; }
@@ -1461,7 +1522,7 @@
         case "waiting-remove": waitingAct(b.dataset.url, "Waiting file removed.", ""); return;
         case "waiting-add-anyway": waitingAct(b.dataset.url, "Path file added.", ""); return;
         case "waiting-remove-all": waitingAct(S.told.waiting_remove_all_url, "Waiting files removed.", "Remove every waiting path file?"); return;
-        case "circle-incident": { if (!S.hits) { return; } var inside = dayCams().filter(function (c) { return S.hits[c.id]; }); incidentBox(inside, circleSpan(inside), streetWords()); return; }
+        case "circle-incident": { if (!S.hits) { return; } var chosen = circleTicked(); if (!chosen.length) { return; } incidentBox(chosen, circleSpan(chosen), streetWords()); return; }
         case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
         case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;

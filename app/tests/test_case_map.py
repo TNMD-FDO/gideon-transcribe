@@ -441,7 +441,8 @@ def test_within_a_circle_is_answered_in_the_browser_and_kept_nowhere():
     script = static("map.js")
     assert "data-act='circle'" in script and "Within a circle" in script
     assert "draggable: true" in script and "function radiusWords()" in script
-    assert "data-act='tick-inside'" in script and "passed inside the circle" in script
+    # The head reads "N cameras passed inside · N of 8 ticked" (v1.203.0).
+    assert "data-act='tick-inside'" in script and "passed inside" in script
     assert "class='in'" in script  # the lanes' inside bands
     start = script.index("function placeCircle")
     circle = script[start : script.index("function clearCircle")]
@@ -804,5 +805,14 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "function tellNear()" in script and "incident-near" in script
     assert "function nearMarks()" in strip and "data-near-words" in strip
     assert ".chron .lane-row.near .lane-name input.tk {" in css
+    # The circle under the cap (v1.203.0): the longest inside ticked up to
+    # the cap, hollow markers, a marker's press toggling, the box's budget,
+    # and the ticks carried to the strip.
+    assert "function circleOrder()" in script and "data-ctick='" in script
+    assert "function toggleCircleTick(cam)" in script and '"hollow"' in script
+    assert "?tab=incidents&day=" in script and "&tick=" in script
+    assert "function budget()" in script and "#map-inc-count" in script
+    assert "state.askedTicks" in strip and 'getElementById("strip-map-open")' in strip
+    assert 'id="strip-map-open"' in page and ".map-head.hollow {" in css
     # The hidden New incident dialog left the page (v1.201.0).
     assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")

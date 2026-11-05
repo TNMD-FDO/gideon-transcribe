@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.203.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9, the builder's fourth release: the Map tab's circle under the cap (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, Figure G).
+
+- **The circle's list has the budget.** The cameras that passed inside are in order of how long each was inside, the longest ticked up to Most cameras in an incident, with "8 of 8 ticked" at the head and the reason on the boxes that wait. A camera inside but not ticked is drawn with a dashed outline on the map; a press on its marker ticks it, within the budget. **Make an incident from these N** takes the ticked ones through the New incident box, which keeps the same budget.
+- **Build it on the Incidents tab instead** carries the ticks to the strip, where the span handles, the clock line and the pictures are; **Open the Map tab** on the strip's small map carries the ticked cameras back.
+
 ## v1.202.0, 2026-11-05
 
 ```

@@ -392,6 +392,8 @@
             <div class="strip-map" id="strip-map">
               {% include "map-host.html" with map_clock="" map_pick="1" %}
               <p class="map-pick-empty muted small" id="map-pick-empty">Pick a camera on the strip and its path appears here.</p>
+              {% comment %}The way back to the Map tab (Phase 12 chapter 9, v1.203.0): with the ticked cameras shown there.{% endcomment %}
+              <a class="btn tiny ghost strip-map-open" id="strip-map-open" href="{% url 'case' case.pk %}?tab=map" title="The Map tab, with the cameras you ticked shown">Open the Map tab</a>
             </div>
           {% endif %}
         {% elif tab == "map" %}

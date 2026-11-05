@@ -4053,6 +4053,11 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-head.before { display: none; }
 .map-head.nofix { opacity: 0.45; }
 .map-head.ended { background: var(--surface); border-color: var(--cam); }
+/* Inside the circle but not ticked for its incident (v1.203.0): dashed. */
+.map-head.hollow { background: transparent; border: 2px dashed var(--cam); box-shadow: none; }
+.map-row input.tk:disabled { opacity: 0.4; cursor: not-allowed; }
+.map-budget { margin: 2px 4px 4px; }
+.strip-map .strip-map-open { position: absolute; right: 10px; top: 10px; z-index: 2; }
 .map-head .badge { display: none; position: absolute; right: -5px; top: -5px; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--surface); background: var(--warn); }
 .map-head.lights .badge { display: block; } .map-head.siren .badge { display: block; background: var(--danger); }
 .map-list { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 10px; background: var(--surface); display: flex; flex-direction: column; gap: 2px; font-size: var(--t-small); max-height: clamp(360px, 56vh, 640px); overflow: auto; }
