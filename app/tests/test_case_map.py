@@ -162,7 +162,9 @@ def test_the_tab_is_one_bar_over_one_frame_that_grows_with_the_window():
     script = static("map.js")
     for wanted in (
         "function sizeFrame()",
-        "window.innerHeight - top - 12",
+        "var room = window.innerHeight - top - 12;",
+        "var PANE_LEAST = 320;",
+        "el.pane.style.height = wanted",
         'window.addEventListener("resize"',
         "class='map-frame' id='map-wrap'",
         "class='map-showbox' id='map-showbox'",

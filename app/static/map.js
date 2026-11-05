@@ -308,12 +308,19 @@
   // The frame takes what the window leaves under the bar, measured again on
   // every resize; never the screen's size, only the window's. In full
   // screen the stylesheet has it; the strip's small map keeps its own.
+  // The map's own height is what is set (v1.208.1): the window's room less
+  // the strip and the slim bar, never under 320, so a tall strip (Show all
+  // on a day of many cameras) pushes the page down rather than crushing
+  // the map. Measured again whenever the strip is drawn.
+  var PANE_LEAST = 320;
   function sizeFrame() {
-    if (INC || PICK || !el.wrap) { return; }
-    if (host.classList.contains("full")) { el.wrap.style.height = ""; return; }
+    if (INC || PICK || !el.wrap || !el.pane) { return; }
+    if (host.classList.contains("full")) { el.pane.style.height = ""; return; }
     var top = el.wrap.getBoundingClientRect().top + window.scrollY;
-    var wanted = Math.max(360, Math.round(window.innerHeight - top - 12));
-    el.wrap.style.height = wanted + "px";
+    var room = window.innerHeight - top - 12;
+    var taken = (el.strip ? el.strip.offsetHeight : 0) + (el.bar ? el.bar.offsetHeight : 0) + 2;
+    var wanted = Math.max(PANE_LEAST, Math.round(room - taken));
+    el.pane.style.height = wanted + "px";
     if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } }
   }
   function readerShown() { return !!el.reader && getComputedStyle(el.reader).display !== "none"; }
@@ -1279,6 +1286,7 @@
     el.strip.innerHTML = html;
     wireStrip(range);
     movePlayhead(now());
+    sizeFrame();
   }
   function movePlayhead(m) {
     var ph = host.querySelector("#map-playhead"); if (!ph) { return; }

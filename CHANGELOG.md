@@ -17,6 +17,15 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.208.1, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+- **The map is never crushed by the strip.** On the office's own server the Map tab opened with the map a sliver over a tall strip. The map's own height is now what is set: the window's room under the bar less the strip, never under 320 px, measured again whenever the strip is drawn; a tall strip (Show all on a day of many cameras) pushes the page down instead of squeezing the map.
+
 ## v1.208.0, 2026-11-05
 
 ```
