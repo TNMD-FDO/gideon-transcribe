@@ -5,12 +5,14 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page roomy workbench" data-case="{{ case.pk }}">
+  <div class="page roomy workbench{% if tab == "map" %} map-tab-page{% endif %}" data-case="{{ case.pk }}">
     <header class="page-head">
       <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
       <div class="line">
         <h1 id="case-name">{{ case.name }}</h1>
         {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
+        {% comment %}On the Map tab the head is a band (v1.209.0): the state pills and the One reading card wait behind this press, and the map takes the room.{% endcomment %}
+        {% if tab == "map" %}<button type="button" class="pill small{% if pills %} warn{% endif %}" id="head-fold" aria-expanded="false" title="The case's state and the One reading card">{% if pills %}{{ pills|length }} need you{% else %}the case's state{% endif %} ▾</button>{% endif %}
       </div>
       <div class="acts">
         {# The head's Notes page door (v1.121.1) went in v1.173.0: the Page shape is in the Notes tab's toggle. #}

@@ -150,67 +150,81 @@ def test_the_events_show_control_and_larger_map_are_remembered_per_person():
     # Larger map left the tab (v1.208.0): the frame has the window; what is
     # remembered now is the list panel's fold and the Show box.
     assert 'remember("map-large"' not in script
-    assert 'remember("map-list-folded"' in script
-    assert 'remember("map-show-open"' in script
+    assert 'remember("map-lanes-w"' in script
     assert "maplibregl.FullscreenControl" in script
     assert 'data-act="note"' in script.replace("'", '"')
 
 
-def test_the_tab_is_one_bar_over_one_frame_that_grows_with_the_window():
-    """Chapter 6.8 (v1.208.0; the drawing phase-12-map-space.html, Direction
-    1): the window decides, never the monitor."""
+def test_the_map_takes_the_window_and_the_lanes_carry_the_names():
+    """Chapter 6.9 (v1.209.0; the drawing phase-12-map-page.html, Direction A
+    amended twice): the case head folds to a band on the Map tab, the band
+    on the map's top edge holds the play controls and Show for good, the
+    lanes column beside the map carries every camera as a lane whose head
+    is its row, and the map's height is the window's."""
     script = static("map.js")
     for wanted in (
         "function sizeFrame()",
-        "var room = window.innerHeight - top - 12;",
         "var PANE_LEAST = 320;",
         "el.pane.style.height = wanted",
+        "el.lanes.style.height = wanted",
         'window.addEventListener("resize"',
         "class='map-frame' id='map-wrap'",
-        "class='map-showbox' id='map-showbox'",
-        "class='map-list' id='map-list'",
+        "class='map-top' id='map-top'",
+        "class='map-show' id='map-showrow'",
+        "class='map-split' id='map-split'",
+        "class='map-lanes' id='map-lanes'",
+        "class='map-lanes-head' id='map-lanes-head'",
+        "class='map-folds' id='map-list'",
         "class='menu map-more' id='map-more'",
+        "class='menu map-days-menu'",
         "function helpHtml()",
         'getElementById("map-help-words")',
-        "<aside class='map-reader' id='map-reader'",
-        "function readerShown()",
-        "function drawReader()",
-        "var STRIP_SHOWN = 6;",
-        "data-act='strip-all'",
-        'if (days.length < 2) { return ""; }',
+        "function laneCams()",
+        "function laneHead(cam)",
+        "function drawCamCard()",
+        "function foldHead()",
+        'getElementById("head-fold")',
     ):
         assert wanted in script, wanted
-    # The bar's More holds the occasional presses; the tab's transport no
-    # longer offers Larger map (the incident page's panel keeps its own).
+    # Gone with the names panel, the Show box and the lane limit.
+    for gone in (
+        "map-showbox",
+        "STRIP_SHOWN",
+        "map-reader",
+        "data-act='fold'",
+        "data-act='strip-all'",
+    ):
+        assert gone not in script, gone
     bar = script.split("function drawTransport()")[1].split("function helpHtml()")[0]
     assert "data-act='large'" not in bar.split("var scope = ")[1]
     assert "Note here" in bar and "Save a picture" in bar and "Tidy names" in bar
-    assert "Smaller map" in bar.split("var scope = ")[0]
     css = static("app.css")
     for wanted in (
         ".map-frame {",
-        ".map-frame .map-pane {",
-        ".map-frame .map-strip {",
-        ".map-frame .map-list {",
-        ".map-tab.folded .map-list {",
-        ".map-showbox {",
-        ".map-more .menu-body {",
-        ".map-help {",
-        ".map-reader { display: none; }",
-        "@media (min-width: 2200px) {",
+        '"pane split lanes"',
+        ".map-frame .map-lanes {",
+        ".map-frame .map-split {",
+        ".map-lanes-head {",
+        ".map-lanes .map-strip .map-lane .head .tk {",
+        ".map-top {",
+        ".map-camcard {",
+        ".map-days-menu .menu-body",
+        ".map-tab-page .page-head .eyebrow { display: none; }",
+        ".map-tab-page:not(.head-open) #dashboard-line",
         ".map-tab.full .map-frame {",
     ):
         assert wanted in css, wanted
-    assert ".map-tab.large .map-wrap" not in css
-    assert ".map-tab.large .map-list" not in css
+    for gone in (".map-showbox", ".map-reader", ".map-tab.folded", "min-width: 2200px"):
+        assert gone not in css, gone
     page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
-    assert 'id="map-help-words"' in page
+    assert 'id="map-help-words"' in page and 'id="head-fold"' in page
+    assert " map-tab-page{% endif %}" in page
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
-    assert "the list a panel inside the map's edge" in glossary
+    assert "the lanes column" in glossary
     guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
-    assert "**The tab's space**" in guide and "**More**" in guide
+    assert "**The map takes the window**" in guide and "**More**" in guide
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-12.md").read_text(encoding="utf-8")
-    assert "### 6.8 The tab's space" in spec
+    assert "### 6.9 The map takes the window" in spec
 
 
 def test_the_vendored_map_files_match_the_hashes_the_readme_records():
@@ -443,7 +457,7 @@ def test_the_list_ticks_cameras_and_remembers_them_per_person_per_case():
     assert 'remember("map-hidden-" + CASE' in script
     assert "function shown(cam) { return INC || !S.hidden[cam.id]; }" in script
     # The strip, the events and Fit shown follow the ticks; the clock's span does not.
-    assert "var range = span(), cams = shownCams(), hidden = 0;" in script
+    assert "var range = span(), cams = laneCams();" in script
     assert "shownCams().forEach(function (cam) {" in script
     assert "Fit shown" in script
     assert "data-act='tick-all'" in script and "data-act='tick-none'" in script
@@ -457,7 +471,8 @@ def test_the_rows_say_the_name_first_and_open_to_the_rest():
     assert "function openOf(cam)" in script and "data-act='open'" in script
     assert "class='map-open'" in script
     # The lane heads say the same names as the rows.
-    assert "\"'>\" + nameHtml(cam) + \"</span><span class='spd mono'>" in script
+    # The lane's head is the camera's row (v1.209.0): the name and the speed.
+    assert "nameHtml(cam) + words + \"</span><span class='spd mono'>" in script
     # The ⋯ menu went with the row's facts into the opened part.
     assert "function more(" not in script and "data-replace-one='" in script
     assert "function whereWords(cam, local, p)" in script

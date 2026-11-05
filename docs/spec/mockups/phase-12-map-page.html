@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Map tab: the map takes the window</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #ad1457;
+    --ground: #eef1ea; --road: #ffffff; --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .press { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 6px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin: 0 0 12px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .measure { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .measure div { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+  .measure b { display: block; font-size: 20px; }
+  /* the frames */
+  .win { fill: var(--bg); }
+  .surf { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .surf2 { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .ground { fill: var(--ground); }
+  .road { stroke: var(--road); stroke-width: 7; stroke-linecap: round; fill: none; }
+  .roadname { font: 600 10px var(--font); fill: var(--muted); letter-spacing: .12em; }
+  .t { font: 500 11px var(--font); fill: var(--text); }
+  .t.b { font-weight: 600; } .t.m { fill: var(--muted); } .t.s { font-size: 10px; } .t.mono { font-family: var(--mono); }
+  .t.big { font: 600 16px var(--mono); fill: var(--text); }
+  .t.ttl { font: 700 17px var(--font); }
+  .t.eye { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .08em; }
+  .t.tab { font: 500 11px var(--font); fill: var(--muted); } .t.tab.on { fill: var(--text); font-weight: 600; }
+  .t.acc { fill: var(--accent); font-weight: 600; }
+  .t.ink { fill: var(--accent-ink); font-weight: 600; }
+  .tabline { stroke: var(--accent); stroke-width: 2; }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .pill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .pill.acc { fill: var(--accent-soft); stroke: var(--accent); }
+  .pill.warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .seg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .seg.on { fill: var(--accent-soft); }
+  .check { fill: var(--accent); rx: 2; }
+  .uncheck { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 2; }
+  .lane { fill: var(--surface-2); }
+  .pt { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .pt.faint { opacity: .3; }
+  .mk { stroke: var(--surface); stroke-width: 2; }
+  .mk.sq { rx: 2; }
+  .c1 { stroke: var(--c1); } .c2 { stroke: var(--c2); } .c3 { stroke: var(--c3); } .c4 { stroke: var(--c4); } .c5 { stroke: var(--c5); }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .bar { stroke-width: 8; stroke-linecap: round; }
+  .clk { stroke: var(--text); stroke-width: 2; }
+  .fold { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 8 6; }
+  .foldtxt { font: 700 11px var(--font); fill: var(--bad); }
+  .fault { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; rx: 4; }
+  .faulttxt { font: 600 11px var(--font); fill: var(--bad); }
+  .card { fill: var(--surface); stroke: var(--accent); stroke-width: 1; rx: 6; }
+  .over { fill: var(--surface); fill-opacity: .94; stroke: var(--line); stroke-width: 1; rx: 6; }
+  .scroll { fill: var(--line); rx: 2; }
+  .ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .num { fill: var(--warn); }
+  .numtxt { font: 700 11px var(--font); fill: var(--accent-ink); }
+  .note { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+
+  /* The frames are drawn at the maintainer's own window, 1912 by 1034, so the
+     type is set larger than the earlier drawing's. */
+  .big .t { font-size: 15px; } .big .t.s { font-size: 13px; } .big .t.big { font-size: 22px; }
+  .big .t.ttl { font-size: 24px; } .big .t.tab { font-size: 15px; } .big .t.eye { font-size: 12px; }
+  .big .roadname { font-size: 14px; } .big .foldtxt { font-size: 16px; } .big .faulttxt { font-size: 16px; }
+  .meas { fill: var(--accent); fill-opacity: .12; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .meastxt { font: 700 16px var(--font); fill: var(--accent); }
+  .veil { fill: var(--surface); fill-opacity: .88; }
+  .rowline { stroke: var(--line); stroke-width: 1; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 (the Map tab) · a drawing for the maintainer's word · 2026-11-05</span>
+    <h1>The map is too important to squish: three ways to give it the window</h1>
+    <p class="lede">After v1.208.1 the Map tab still shares its height with everything above it: the case head, the state pills, the One reading card, the tab bar, the bar, and the strip under the map. On an office case, in the maintainer's window of 1912 by 1034, that leaves the map under half the height. Every figure here is drawn at that window with an office-shaped case (four days of path files, two state pills, the One reading card), and each says in one number how tall the map becomes. The window still decides every shape, never the monitor. Fictional office throughout.</p>
+  </header>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today at 1912 by 1034: the map gets 451 of the 1034</h2></div>
+    <div class="pane"><svg id="fig-a" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The Map tab as v1.208.1 draws it in a 1912 by 1034 window on an office case: the case head and the bar take the top 440 pixels, the strip 130 at the foot, the map 451 between"></svg></div>
+    <div class="measure">
+      <div><b>40 + 100 + 44 + 50</b>the app bar, the case head with its pills, the One reading card, the tab bar: 234 px before the tab begins</div>
+      <div><b>42 + 30</b>the bar, and a second row when a case has days enough for chips to wrap</div>
+      <div><b>128</b>the strip at six lanes; 320 is the least the map may have, which is what it is reduced to on a short window</div>
+      <div><b>451</b>for the map, out of 1034. The thing the tab is for gets less than half the window.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A · the map is the page while you are on it</span><h2>The case head folds to one band on the Map tab; the bar and the strip ride on the map: 918 for the map</h2></div>
+    <div class="pane"><svg id="fig-b" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction A: the app bar, then one slim band with the case name, the tabs and the folded pills, then the map to the window's foot; the bar rides along the map's top edge, the strip along its foot, the list panel inside its right edge"></svg></div>
+    <div class="caption">
+      <p><b>The band.</b> On the Map tab alone, the case head, its state pills and the One reading card fold into one 44 px band: the case name, the tabs as they are, and "2 need you ▾" for the pills; a press on the band opens the full head over the map, and every other tab keeps the head as it is today. Nothing is lost, it is one press further on this tab only.</p>
+      <p><b>The bar rides on the map</b>, a translucent strip along the map's top edge, with the same controls as today: Play, the steps, Speed, the clock, Fit shown, More, Day (a menu now, never chips that wrap), and the ?. The Show box sits under it in the corner as today.</p>
+      <p><b>The strip rides on the map's foot</b>, a translucent band of six compact lanes with the ruler and the playhead, and <b>Lanes ▾</b> folds it to the ruler alone (26 px) when the ground matters more; Show all opens the rest over the map, scrolling inside the band. The list panel is the one of v1.208.0, inside the right edge.</p>
+      <p><b>What it costs:</b> the markers under the bands are seen through them (88 % surface), and a long strip scrolls inside its band rather than pushing the page. The map's own height is the window's, 918 here, 666 on the laptop (Figure E).</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A, amended 2026-11-05 · Show always in view, the lanes carry the names</span><h2>Show and the Events ticks sit under the play controls for good, and the strip's lane heads are the list: one place for the cameras, 836 for the map</h2></div>
+    <div class="pane"><svg id="fig-f" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction A amended: the band, then on the map's top edge two rows, the play controls and the Show choice with the Events ticks; on the map's foot the strip whose lane heads carry the tick, the colour, the name, the speed and the disclosure, with the folds as rows under the lanes; no separate list panel"></svg></div>
+    <div class="caption">
+      <p><b>Show, always.</b> The top band on the map is two rows: the play controls, then <b>Show</b> (Markers only, Trails, Whole paths, faint paths under) and the <b>Events</b> ticks, in view for good; the box in the map's corner goes. The second row costs 32 px.</p>
+      <p><b>One place for the cameras.</b> The names panel goes; the strip's lane heads are the list: the tick (ticked is drawn), the colour dot, the officer's name as the path file gives it, a vehicle's speed while it moves, and the ▸ that opens the camera's reading (unit, kind, the clock's surety, Open a tile, Play here, Fly to, Readings, Open the recording, Replace file, Remove), which opens as a card over the map beside the lane. A camera out of view reads faint on its head; the band's own line says "22 of 22 shown · 9 in view · all · none". The folds (Not on the clock, Other days, No path file, Waiting for their video) are rows under the lanes, closed until pressed. The circle's answer takes the same lanes: the cameras that passed inside come to the top with their spans marked.</p>
+      <p><b>The band's height.</b> Six lanes of 20 px, the ruler, the heads' line and the folds' line: 172 px on the map's foot, scrolling inside when Show all opens the rest; <b>Lanes ▾</b> folds it to the ruler. The map keeps 836 of the window and the ground under the bands shows through them.</p>
+      <p><b>On the laptop</b> the same shape gives the map 584, against 255 today.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A, amended again 2026-11-05 · the whole timeline in view</span><h2>Every lane, always: the lanes stand beside the map in a column of their own, the map keeps the window's height</h2></div>
+    <div class="pane"><svg id="fig-g" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The lanes column: on the right of the map, every camera of the day as a lane with its head (tick, colour, name, speed, disclosure), the ruler at the top with the playhead running down all lanes, the folds under; the map on the left at the full height with the two-row band on its top edge"></svg></div>
+    <div class="caption">
+      <p><b>The column.</b> The timeline leaves the map's foot and stands beside it: every camera of the day as a lane, all of them, the ruler across the top and the playhead running down through every lane, the heads as the list (tick, colour, name, speed, ▸), the folds as rows under the last lane, and the band's line ("22 of 22 shown · 9 in view · all · none") at its head. Nothing is folded, nothing scrolls until a day has more lanes than the window has height (over forty at 1034), and then the column scrolls inside itself with the ruler held at its top.</p>
+      <p><b>The split follows the window.</b> The column takes 36 % of the width (690 px here, 2 px short of 1,000 on a maximised ultrawide), and its edge drags, remembered per person. The map takes the rest at the full height of the window: 1,030 by 918 here, with only the two-row band on its top edge. A press on a lane or a head lights the camera on the map as the list's rows do today.</p>
+      <p><b>On the laptop</b> (Figure I) the column is 480 wide: the day's six hours at 50 px an hour, which still shows every span, gap and event mark; the map keeps 700 by 666.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The other way · every lane under the map</span><h2>The band at the map's foot grows to hold every lane at 16 px, over the map</h2></div>
+    <div class="pane"><svg id="fig-h" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The other way: the band on the map's foot holding all twenty-two lanes at sixteen pixels each, covering the lower half of the map"></svg></div>
+    <div class="caption">
+      <p><b>What it gives:</b> the timeline at the map's full width, so an hour is 230 px. <b>What it costs:</b> twenty-two lanes at 16 px with the ruler and the folds take 430 px of the map's foot, over the ground; the names run at the smallest size the stylesheet allows and the rows nearly touch, which is the bunching the maintainer ruled out; and a day of forty cameras covers the map entirely. Drawn so the choice is seen, not recommended.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure I · the lanes column on the laptop</span><h2>At 1366 by 768: the column 480 wide, the map 700 by 666</h2></div>
+    <div class="pane"><svg id="fig-i" viewBox="0 0 1366 768" role="img" aria-label="The lanes column in a 1366 by 768 window beside the map"></svg></div>
+    <div class="caption">
+      <p><b>Every lane still in view</b>: twenty-two at 20 px fill 440 of the 666; the folds sit under them. The two-row band on the map's top edge is the same.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction B · a page of its own</span><h2>The map opens on its own page, as an incident does: 978 for the map</h2></div>
+    <div class="pane"><svg id="fig-c" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction B: a 44 pixel head with Back to the case, the case name and Map, and the whole rest of the window as the map with the same bands"></svg></div>
+    <div class="caption">
+      <p><b>The page.</b> The Map tab stays in the case bar and opens a page of its own, as Incidents open an incident: a 44 px head with ‹ Back to the case, the case name, and the count of cameras; everything under it is the map with Direction A's bands. The rail stays.</p>
+      <p><b>What it gives:</b> the most height of the three, and a page that can live in a second browser window beside the case on a wide desk. <b>What it costs:</b> the case's tabs are a press away rather than in view, and On the map from a note or a hit lands on a page instead of a tab (the address keeps working).</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction C · keep the page, fold what is not the map</span><h2>The One reading card and the pills fold to a line, the strip to a drawer: 724 for the map</h2></div>
+    <div class="pane"><svg id="fig-d" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction C: the case head kept, the One reading card and the pills folded into one line, the bar above the frame, the strip folded to its ruler at the frame's foot with Lanes to open it"></svg></div>
+    <div class="caption">
+      <p><b>The least change.</b> The case page keeps its head and tabs. On the Map tab the One reading card and the state pills fold into one line ("One reading · 0.7 of 120 hours · 2 need you ▾", 24 px), the bar stays above the frame with Day as a menu, and the strip becomes a drawer: the ruler alone at the frame's foot with the playhead, <b>Lanes ▾</b> sliding the six lanes up over the map's foot when wanted.</p>
+      <p><b>What it gives:</b> 724 here, with the page looking as it does on every other tab. <b>What it costs:</b> the lanes are hidden until asked for, so the camera's span and events are a press away, and the map is still 200 short of Direction A.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure E · Direction A on the laptop</span><h2>At 1366 by 768 the same shape gives the map 666</h2></div>
+    <div class="pane"><svg id="fig-e" viewBox="0 0 1366 768" role="img" aria-label="Direction A in a 1366 by 768 window: the band, then the map to the foot with the bar and the strip riding on it"></svg></div>
+    <div class="caption">
+      <p><b>The window decides.</b> The band and the bands cost the same at every width; the map takes the rest. On the laptop that is 666 against 255 today.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Seven to decide, in one table</h2></div>
+    <table>
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn</th><th>The other way</th></tr>
+      <tr><td>1</td><td>The direction</td><td>A: the case head folds to a band on the Map tab, the bar and the strip ride on the map</td><td>B: a page of its own; C: the card and the pills fold to a line, the strip to a drawer</td></tr>
+      <tr><td>2</td><td>The strip and the list</td><td>One column beside the map, every lane of the day in view, the lane heads as the list (tick, colour, name, speed, ▸ to the reading), the folds as rows under the lanes, the column's edge draggable and remembered; no names panel and no Show all (the maintainer's asks of 2026-11-05)</td><td>A band on the map's foot: six lanes and Show all, or every lane at 16 px over the ground</td></tr>
+      <tr><td>3</td><td>The bar and Show</td><td>Two rows on the map's top edge: the play controls, then Show and the Events ticks always in view (the maintainer's ask of 2026-11-05)</td><td>Show as a folding box in the map's corner, as v1.208.0</td></tr>
+      <tr><td>4</td><td>The days</td><td>A Day ▾ menu on the bar, so the bar is always one row</td><td>Chips, wrapping when many</td></tr>
+      <tr><td>5</td><td>The folded head</td><td>One band: the case name, the tabs, "N need you ▾"; a press opens the full head over the map</td><td>The head kept whole, as every other tab</td></tr>
+      <tr><td>6</td><td>Remembering</td><td>Lanes folded or open is remembered per person, as the list panel's fold is</td><td>Open every time</td></tr>
+      <tr><td>7</td><td>Elsewhere</td><td>The incident page's Map panel and the Incidents tab's small map keep their shapes</td><td>The same bands there</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">The build's recommendation is Direction A as amended twice: Show under the play controls for good, the lanes carrying the names, and every lane in view in a column beside the map, so the map never shares its height with the timeline and the timeline never covers the ground. It keeps the Map a tab of the case, with the case's tabs in view, and gives the map all but 100 px of the window at every size; everything the map needs rides on the map, as it does in any map application the office already knows, and the case head is one press away on this tab only. Direction B gives 60 px more for a page that leaves the case; Direction C keeps today's page and gives 200 px less. No migration, no setting; the bands are the same pieces positioned over the map; the band is a class on the case page while the Map tab is open.</p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(svg, name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] !== null && attrs[k] !== undefined) { e.setAttribute(k, attrs[k]); } }
+    if (text !== undefined) { e.textContent = text; }
+    svg.appendChild(e);
+    return e;
+  }
+  function rect(s, x, y, w, h, cls, rx) { return el(s, "rect", { x: x, y: y, width: w, height: h, "class": cls, rx: rx === undefined ? 6 : rx }); }
+  function text(s, x, y, words, cls, anchor) { return el(s, "text", { x: x, y: y, "class": cls, "text-anchor": anchor || null }, words); }
+  function line(s, x1, y1, x2, y2, cls) { return el(s, "line", { x1: x1, y1: y1, x2: x2, y2: y2, "class": cls }); }
+  function btn(s, x, y, w, words, primary) {
+    rect(s, x, y, w, 26, "btn" + (primary ? " primary" : ""), 4);
+    text(s, x + w / 2, y + 17, words, "t b" + (primary ? " ink" : ""), "middle");
+    return x + w + 6;
+  }
+  function pill(s, x, y, words, cls, w) {
+    w = w || words.length * 6.2 + 16;
+    rect(s, x, y, w, 20, "pill " + (cls || ""), 10);
+    text(s, x + w / 2, y + 14, words, "t s" + (cls === "acc" ? " acc" : ""), "middle");
+    return x + w + 6;
+  }
+  function tick(s, x, y, on) { rect(s, x, y, 11, 11, on ? "check" : "uncheck", 2); }
+  function dot(s, x, y, n, sq) { if (sq) { rect(s, x - 5, y - 5, 10, 10, "mk sq f" + n, 2); } else { el(s, "circle", { cx: x, cy: y, r: 5, "class": "mk f" + n }); } }
+  var CAMS = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true },
+    { n: 2, name: "Lee Fox", tail: "" },
+    { n: 3, name: "Ash Kim", tail: "" },
+    { n: 4, name: "Kit Vale", tail: "" },
+    { n: 5, name: "Jo Marsh", tail: "" }
+  ];
+
+  // The case page's top: the app bar, the rail, the case head, the One reading card, the tab bar.
+  function pageTop(s, W, scale, tabsOnly) {
+    var k = scale || 1;
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40 * k, "surf", 0);
+    text(s, 24, 25 * k, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25 * k, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40 * k, 160 * k, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) {
+      if (w) { text(s, 20, (70 + i * 26) * k, w, w === "Cases" ? "t acc" : "t m"); }
+    });
+    var x0 = 180 * k;
+    text(s, x0, 60 * k, "CASES", "t eye");
+    text(s, x0, 82 * k, "Harbour Street stop", "t ttl");
+    var px = x0; px = pill(s, px, 92 * k, "2 incidents not synced", "warn"); px = pill(s, px, 92 * k, "1 proposed event waiting", "warn"); px = pill(s, px, 92 * k, "6 cameras on the map"); pill(s, px, 92 * k, "shared with 1");
+    btn(s, W - 290 * k, 50 * k, 110, "Add path files"); btn(s, W - 170 * k, 50 * k, 130, "Add recordings", true);
+    rect(s, x0, 120 * k, W - x0 - 24 * k, 44 * k, "surf", 6);
+    text(s, x0 + 12, 138 * k, "One reading · 0.7 of 120 hours", "t b"); text(s, x0 + 12, 156 * k, "5 transcripts, 3 not ready yet · a question reads every transcript whole at one go, in under a minute.", "t s m");
+    pill(s, W - 100 * k, 128 * k, "room", "acc", 60);
+    var tabs = ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"];
+    var tx = x0; var ty = 190 * k;
+    tabs.forEach(function (w) { var on = w === "Map 6"; text(s, tx, ty, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, ty + 8, tx + w.length * 6.6, ty + 8, "tabline"); } tx += w.length * 6.6 + 22; });
+    line(s, x0, ty + 9, W - 24 * k, ty + 9, "surf2");
+    return { x: x0, y: ty + 20 };
+  }
+
+  function ground(s, x, y, w, h) {
+    rect(s, x, y, w, h, "ground", 0);
+    // fictional streets, drawn as blocks
+    var roads = [
+      [[x + 40, y + h * .55], [x + w - 40, y + h * .5]],
+      [[x + w * .3, y + 20], [x + w * .32, y + h - 20]],
+      [[x + w * .62, y + 20], [x + w * .6, y + h - 20]],
+      [[x + 40, y + h * .22], [x + w * .62, y + h * .2]]
+    ];
+    roads.forEach(function (r) { line(s, r[0][0], r[0][1], r[1][0], r[1][1], "road"); });
+    text(s, x + w * .45, y + h * .53, "HARBOUR STREET", "roadname");
+    text(s, x + w * .33, y + h * .8, "QUAY LANE", "roadname");
+    text(s, x + w * .12, y + h * .19, "MILL ROAD", "roadname");
+    text(s, x + 10, y + h - 10, "300 ft", "t s mono m");
+    text(s, x + w - 10, y + h - 10, "© OpenStreetMap contributors · Protomaps", "t s m", "end");
+    text(s, x + w - 14, y + 22, "N", "t b", "end");
+    rect(s, x + w - 32, y + 34, 22, 44, "surf", 4); text(s, x + w - 21, y + 50, "+", "t b", "middle"); text(s, x + w - 21, y + 72, "−", "t b", "middle");
+    rect(s, x + w - 32, y + 86, 22, 22, "surf", 4); text(s, x + w - 21, y + 101, "⤢", "t b", "middle");
+  }
+  function paths(s, x, y, w, h, now) {
+    var P = [
+      { n: 1, pts: [[.05, .56], [.3, .54], [.31, .3], [.6, .28], [.61, .5]], sq: true },
+      { n: 2, pts: [[.33, .52], [.36, .62], [.4, .7]] },
+      { n: 3, pts: [[.3, .52], [.28, .66]] },
+      { n: 4, pts: [[.6, .5], [.63, .35], [.7, .33]] },
+      { n: 5, pts: [[.62, .52], [.66, .62], [.72, .6]] }
+    ];
+    P.forEach(function (p) {
+      var d = p.pts.map(function (q, i) { return (i ? "L" : "M") + (x + q[0] * w) + " " + (y + q[1] * h); }).join(" ");
+      el(s, "path", { d: d, "class": "pt c" + p.n });
+      var last = p.pts[p.pts.length - 1];
+      dot(s, x + last[0] * w, y + last[1] * h, p.n, p.sq);
+      var lab = CAMS[p.n - 1].name;
+      rect(s, x + last[0] * w + 8, y + last[1] * h - 8, lab.length * 6.4 + 10, 16, "over", 8);
+      text(s, x + last[0] * w + 13, y + last[1] * h + 4, lab, "t s b");
+    });
+  }
+  function showOverlay(s, x, y, open) {
+    if (!open) { rect(s, x, y, 150, 22, "over", 4); text(s, x + 8, y + 15, "Show: Trails · 6 kinds of event ▸", "t s"); return; }
+    rect(s, x, y, 300, 58, "over", 4);
+    text(s, x + 8, y + 15, "Show", "t s m");
+    var sx = x + 44; ["Markers only", "Trails", "Whole paths"].forEach(function (w, i) { var ww = w.length * 6 + 14; rect(s, sx, y + 4, ww, 18, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 16, w, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    text(s, x + 8, y + 42, "Events", "t s m");
+    var ex = x + 48; ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (w) { tick(s, ex, y + 33, true); text(s, ex + 15, y + 42, w, "t s"); ex += w.length * 5.6 + 24; });
+  }
+  function bar(s, x, y, w, withDays) {
+    var bx = x;
+    bx = btn(s, bx, y, 60, "▶ Play", true);
+    bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s");
+    bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›");
+    bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 27, "UTC · 6 Nov 2025", "t s m"); bx += 100;
+    bx = btn(s, bx, y, 76, "Fit shown");
+    bx = btn(s, bx, y, 66, "More ▾");
+    if (withDays) { bx += 8; text(s, bx, y + 17, "Days", "t s m"); bx += 32; bx = pill(s, bx, y + 3, "06 Nov 2025 · 6 cameras · 6 incidents", "acc"); bx = pill(s, bx, y + 3, "07 Nov 2025 · 2 cameras"); }
+    rect(s, x + w - 26, y, 26, 26, "btn", 13); text(s, x + w - 13, y + 17, "?", "t b", "middle");
+    return y + 26;
+  }
+  function listPanel(s, x, y, w, h, tall) {
+    rect(s, x, y, w, h, "over", 6);
+    tick(s, x + 10, y + 10, true); text(s, x + 26, y + 20, "5 of 5 shown · 5 in view", "t b");
+    text(s, x + w - 10, y + 20, "all · none · fold ›", "t s acc", "end");
+    var ry = y + 34;
+    CAMS.forEach(function (c) {
+      tick(s, x + 10, ry + 4, true); dot(s, x + 32, ry + 9, c.n, c.sq); text(s, x + 44, ry + 13, c.name, "t b");
+      if (c.tail) { text(s, x + 44 + c.name.length * 6.6 + 6, ry + 13, c.tail, "t s m"); }
+      text(s, x + w - 10, ry + 13, "▸", "t m", "end");
+      ry += 24;
+    });
+    ry += 6;
+    var folds = ["Never inside: 2 cameras", "Not on the clock: 1 camera", "Other days: 2 cameras", "No path file: 1 video", "Waiting for their video: 105 path files · kept on the case"];
+    folds.forEach(function (f, i) {
+      text(s, x + 10, ry + 13, (tall && i < 2 ? "▾ " : "▸ ") + f, "t s m");
+      ry += 20;
+      if (tall && i < 2) {
+        ["Pat Lane", "Ro Dell"].forEach(function (nm) { tick(s, x + 24, ry + 2, false); dot(s, x + 44, ry + 7, 3); text(s, x + 56, ry + 11, nm, "t s m"); ry += 18; });
+        ry += 2;
+      }
+    });
+  }
+  function strip(s, x, y, w, h, headW, lanes, nowX) {
+    rect(s, x, y, w, h, "surf", 0);
+    var tx = x + headW; var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { var px = tx + (w - headW - 20) * (i / (ticks.length - 1)); text(s, px, y + 13, t, "t s mono m", "middle"); });
+    var laneH = Math.min(22, (h - 20) / lanes.length);
+    lanes.forEach(function (c, i) {
+      var ly = y + 22 + i * laneH;
+      rect(s, tx, ly + laneH / 2 - 3, w - headW - 20, 6, "lane", 3);
+      var from = tx + (w - headW - 20) * (c.n === 1 ? .0 : .97), to = tx + (w - headW - 20) * (c.n === 1 ? .99 : 1);
+      line(s, from, ly + laneH / 2, to, ly + laneH / 2, "bar c" + c.n);
+      if (c.head) { tick(s, x + 8, ly + laneH / 2 - 5, true); dot(s, x + 30, ly + laneH / 2, c.n, c.sq); text(s, x + 42, ly + laneH / 2 + 4, c.name, "t s b" + (c.faint ? " m" : "")); if (c.tail) { text(s, x + 42 + c.name.length * 7 + 8, ly + laneH / 2 + 4, c.tail, "t s m"); } text(s, x + headW - 8, ly + laneH / 2 + 4, "▸", "t s m", "end"); }
+      else { dot(s, x + 12, ly + laneH / 2, c.n, c.sq); text(s, x + 24, ly + laneH / 2 + 4, c.name, "t s"); }
+    });
+    var cx = tx + (w - headW - 20) * (nowX === undefined ? .02 : nowX);
+    line(s, cx, y + 16, cx, y + h, "clk");
+    rect(s, cx - 24, y + 2, 48, 14, "btn primary", 3); text(s, cx, y + 13, "14:20:00", "t s ink mono", "middle");
+    return laneH;
+  }
+  function camCard(s, x, y, w) {
+    rect(s, x, y, w, 150, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 90, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 190, y + 32, "Clear", "acc", 44);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    text(s, x + 12, y + 80, "Lights off · mic on since 14:21:04 · 30 m from Sam Roe", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 96, 70, "Play here", true); bx = btn(s, bx, y + 96, 80, "On its own"); bx = btn(s, bx, y + 96, 100, "Replace path file");
+    text(s, x + 12, y + 140, "Readings: mic on 14:21:04 · muted 14:40 to 14:44 · stood still 14:31 to 14:36", "t s m");
+  }
+  function evCard(s, x, y, w) {
+    rect(s, x, y, w, 110, "card", 6);
+    dot(s, x + 16, y + 18, 1, true); text(s, x + 28, y + 22, "Lights on · Sam Roe", "t b");
+    text(s, x + 12, y + 42, "14:22:08 until 14:31:40 · on Harbour Street near Quay Lane", "t s");
+    text(s, x + 12, y + 60, "The in-car camera's own reading, from its path file", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 74, 70, "Play here", true); bx = btn(s, bx, y + 74, 130, "Offer to the chronology"); bx = btn(s, bx, y + 74, 28, "‹"); btn(s, bx, y + 74, 28, "›");
+  }
+
+
+  // An office-shaped head: four days of path files make the bar's chips wrap.
+  function officeBar(s, x, y, w) {
+    var yy = bar(s, x, y, w, false);
+    text(s, x, yy + 22, "Days", "t s m");
+    var cx = x + 44; ["04 Nov 2025 · 3 cameras", "05 Nov 2025 · 9 cameras · 2 incidents", "06 Nov 2025 · 22 cameras · 4 incidents", "07 Nov 2025 · 5 cameras"].forEach(function (d, i) { cx = pill(s, cx, yy + 8, d, i === 2 ? "acc" : "", d.length * 7 + 18); });
+    return yy + 30;
+  }
+  function measure(s, x, y, h, words) {
+    rect(s, x - 70, y, 60, h, "meas", 4);
+    line(s, x - 40, y, x - 40, y + h, "ldr");
+    text(s, x - 40, y + h / 2 + 6, words, "meastxt", "middle");
+  }
+  function overlayBar(s, x, y, w) {
+    rect(s, x, y, w, 46, "veil", 0);
+    var bx = x + 10; var yy = y + 10;
+    bx = btn(s, bx, yy, 60, "▶ Play", true); bx = btn(s, bx, yy, 52, "−10 s"); bx = btn(s, bx, yy, 52, "+10 s");
+    bx = btn(s, bx, yy, 62, "‹ event"); bx = btn(s, bx, yy, 62, "event ›"); bx = btn(s, bx, yy, 78, "Speed 4× ▾");
+    text(s, bx + 6, yy + 15, "14:20:00", "t big"); text(s, bx + 6, yy + 30, "UTC · 6 Nov 2025", "t s m"); bx += 110;
+    bx = btn(s, bx, yy, 76, "Fit shown"); bx = btn(s, bx, yy, 66, "More ▾"); bx = btn(s, bx, yy, 150, "Day: 06 Nov 2025 ▾");
+    rect(s, x + w - 36, yy, 26, 26, "btn", 13); text(s, x + w - 23, yy + 17, "?", "t b", "middle");
+    return y + 46;
+  }
+  function overlayStrip(s, x, y, w, folded) {
+    var h = folded ? 26 : 128;
+    rect(s, x, y - h, w, h, "veil", 0);
+    if (folded) {
+      text(s, x + 10, y - 9, "Lanes ▸", "t s acc");
+      var tx = x + 90; ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"].forEach(function (t, i) { text(s, tx + (w - 120) * (i / 7), y - 9, t, "t s mono m", "middle"); });
+      line(s, tx + 8, y - h, tx + 8, y, "clk");
+      return;
+    }
+    text(s, x + 10, y - h + 16, "Lanes ▾", "t s acc");
+    strip(s, x + 70, y - h + 2, w - 80, h - 4, 110, CAMS, .02);
+    text(s, x + w - 12, y - h + 16, "and 16 more cameras · Show all", "t s m", "end");
+  }
+  function slimBand(s, W, words) {
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40, "surf", 0);
+    text(s, 24, 25, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40, 160, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) { if (w) { text(s, 20, 70 + i * 26, w, w === "Cases" ? "t acc" : "t m"); } });
+    rect(s, 160, 40, W - 160, 44, "surf", 0);
+    var x = 180;
+    text(s, x, 68, words.left, "t b");
+    var tx = x + words.left.length * 8 + 30;
+    (words.tabs || []).forEach(function (w) { var on = w === "Map 6"; text(s, tx, 68, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, 76, tx + w.length * 8, 76, "tabline"); } tx += w.length * 8 + 22; });
+    if (words.right) { pill(s, W - 24 - (words.right.length * 7 + 18), 52, words.right, "warn", words.right.length * 7 + 18); }
+    return 84;
+  }
+
+  // ---- Figure A: today in the maintainer's window ----
+  (function () {
+    var s = document.getElementById("fig-a"); var W = 1912;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    y = officeBar(s, x, y, W - x - 24) + 10;
+    var fx = x, fy = y, fw = W - x - 24, mapH = 451, stripH = 128;
+    rect(s, fx, fy, fw, mapH + stripH + 2, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw - 320, mapH);
+    showOverlay(s, fx + 10, fy + 10, false);
+    listPanel(s, fx + fw - 310, fy + 34, 300, mapH - 44);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH, 130, CAMS, .02);
+    text(s, fx + fw - 12, fy + mapH + 15, "and 16 more cameras · Show all", "t s m", "end");
+    measure(s, fx, 0, fy, "440");
+    measure(s, fx, fy, mapH, "451");
+    measure(s, fx, fy + mapH, stripH, "128");
+    rect(s, fx - 6, fy - 4, fw + 12, mapH + 8, "fault"); text(s, fx + fw / 2, fy - 10, "the map: 451 of 1034", "faulttxt", "middle");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- Direction A ----
+  (function () {
+    var s = document.getElementById("fig-b"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 10, fw = W - 172 - 24, fh = 1034 - fy - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx, fy + 40, fw - 320, fh - 160);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showOverlay(s, fx + 10, by + 10, false);
+    listPanel(s, fx + fw - 310, by + 10, 300, fh - 46 - 128 - 20);
+    overlayStrip(s, fx + 1, fy + fh - 1, fw - 2, false);
+    measure(s, fx, 0, fy, "94");
+    measure(s, fx, fy, fh, "918");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // The Show row under the play controls, always in view.
+  function showRow(s, x, y, w) {
+    rect(s, x, y, w, 32, "veil", 0);
+    text(s, x + 12, y + 21, "Show", "t s m");
+    var sx = x + 54; ["Markers only", "Trails", "Whole paths"].forEach(function (wd, i) { var ww = wd.length * 7 + 16; rect(s, sx, y + 5, ww, 22, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 20, wd, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    sx += 14; tick(s, sx, y + 11, true); text(s, sx + 16, y + 21, "faint paths under", "t s m"); sx += 150;
+    text(s, sx, y + 21, "Events", "t s m"); sx += 56;
+    ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (wd) { tick(s, sx, y + 11, true); text(s, sx + 16, y + 21, wd, "t s"); sx += wd.length * 7 + 30; });
+    return y + 32;
+  }
+  // The strip whose heads are the list: the tick, the colour, the name, the speed, the disclosure.
+  var OFFICE = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true, head: true },
+    { n: 2, name: "Lee Fox", tail: "", head: true },
+    { n: 3, name: "Ash Kim", tail: "", head: true },
+    { n: 4, name: "Kit Vale", tail: "", head: true },
+    { n: 5, name: "Jo Marsh", tail: "out of view", head: true, faint: true },
+    { n: 2, name: "Pat Lane", tail: "", head: true }
+  ];
+  function namesStrip(s, x, y, w) {
+    var h = 172;
+    rect(s, x, y - h, w, h, "veil", 0);
+    text(s, x + 10, y - h + 17, "Lanes ▾", "t s acc");
+    text(s, x + 80, y - h + 17, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 290, y - h + 17, "all · none", "t s acc");
+    text(s, x + w - 12, y - h + 17, "and 16 more cameras · Show all", "t s m", "end");
+    var lanes = OFFICE.map(function (c) { return Object.assign({}, c); });
+    var laneH = strip(s, x + 4, y - h + 22, w - 8, 128, 230, lanes, .02);
+    // the faint head for a camera out of view
+    rect(s, x + 4, y - h + 22 + 22 + 4 * 20, 226, 20, "veil", 0);
+    text(s, x + 10, y - 8, "▸ Not on the clock: 1 camera   ▸ Other days: 3 cameras   ▸ No path file: 2 videos   ▸ Waiting for their video: 105 path files, kept on the case", "t s m");
+  }
+  function camCardOver(s, x, y) {
+    rect(s, x, y, 360, 130, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 100, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 220, y + 32, "Clear", "acc", 50);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 78, 74, "Open a tile", true); bx = btn(s, bx, y + 78, 70, "Play here"); bx = btn(s, bx, y + 78, 54, "Fly to"); bx = btn(s, bx, y + 78, 70, "Readings");
+    text(s, x + 12, y + 122, "Open the recording · Replace file · Remove", "t s acc");
+  }
+
+  // ---- Direction A, amended ----
+  (function () {
+    var s = document.getElementById("fig-f"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 10, fw = W - 172 - 24, fh = 1034 - fy - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx, fy + 70, fw - 60, fh - 240);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    by = showRow(s, fx + 1, by, fw - 2);
+    namesStrip(s, fx + 1, fy + fh - 1, fw - 2);
+    camCardOver(s, fx + 420, fy + fh - 172 - 140);
+    text(s, fx + 790, fy + fh - 172 - 60, "Lee Fox's ▸ pressed: her reading opens beside her lane", "t s m");
+    measure(s, fx, 0, fy, "94");
+    measure(s, fx, fy, fh, "918");
+    measure(s, fx + fw + 70, fy + 78, fh - 78 - 172, "clear 668");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // The day's cameras, a fictional office's worth, for the whole-timeline figures.
+  var MANY = (function () {
+    var names = ["Sam Roe", "Lee Fox", "Ash Kim", "Kit Vale", "Jo Marsh", "Pat Lane", "Ro Dell", "Max Hale", "Dee Nash", "Val Oak", "Ty Brook", "Cam Rhys", "Bea Lund", "Gil Ford", "Ira Moss", "Nia Cole", "Oli Tate", "Rae Finn", "Sol Kerr", "Uma Vos", "Wes Lamb", "Zed Pike"];
+    return names.map(function (n, i) { return { n: (i % 5) + 1, name: n, tail: i === 0 ? "vehicle · 12 mph" : "", sq: i === 0, head: true, faint: i % 7 === 6, from: 0.05 + (i * 0.037) % 0.6, to: 0.2 + (i * 0.053) % 0.7 }; });
+  })();
+  function lanesColumn(s, x, y, w, h, laneH, lanes) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 230, y + 20, "all · none", "t s acc");
+    text(s, x + w - 12, y + 20, "the day's six hours · drag the edge", "t s m", "end");
+    var headW = 200, tx = x + headW, tw = w - headW - 16;
+    var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { text(s, tx + tw * (i / 7), y + 42, t, "t s mono m", "middle"); });
+    line(s, x + 8, y + 48, x + w - 8, y + 48, "rowline");
+    lanes.forEach(function (c, i) {
+      var ly = y + 54 + i * laneH, cy = ly + laneH / 2;
+      rect(s, tx, cy - 3, tw, 6, "lane", 3);
+      var a = tx + tw * Math.min(c.from, 0.9), b = tx + tw * Math.max(Math.min(c.to, 0.98), Math.min(c.from, 0.9) + 0.04);
+      line(s, a, cy, b, cy, "bar c" + c.n);
+      dot(s, a + (b - a) * 0.5, cy, c.n, false);
+      tick(s, x + 10, cy - 5, true); dot(s, x + 32, cy, c.n, c.sq);
+      text(s, x + 44, cy + 4, c.name, "t s b" + (c.faint ? " m" : ""));
+      if (c.tail) { text(s, x + 44 + c.name.length * 7 + 8, cy + 4, c.tail, "t s m"); }
+      text(s, x + headW - 8, cy + 4, "▸", "t s m", "end");
+    });
+    var cx = tx + tw * 0.02;
+    line(s, cx, y + 30, cx, y + 54 + lanes.length * laneH, "clk");
+    rect(s, cx - 26, y + 24, 52, 15, "btn primary", 3); text(s, cx, y + 36, "14:20:00", "t s ink mono", "middle");
+    var fy = y + 60 + lanes.length * laneH;
+    ["▸ Not on the clock: 1 camera", "▸ Other days: 3 cameras", "▸ No path file: 2 videos", "▸ Waiting for their video: 105 path files, kept on the case"].forEach(function (f, i) { text(s, x + 12, fy + 16 + i * 20, f, "t s m"); });
+  }
+
+  // ---- Direction A, amended again: the lanes column ----
+  (function () {
+    var s = document.getElementById("fig-g"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 10, fh = 1034 - fy - 12, colW = 690, fw = W - 172 - 24 - colW - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx + 20, fy + 90, fw - 60, fh - 140);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showRow(s, fx + 1, by, fw - 2);
+    lanesColumn(s, fx + fw + 12, fy, colW, fh, 20, MANY);
+    rect(s, fx + fw + 4, fy + fh / 2 - 24, 8, 48, "btn", 4);
+    measure(s, fx, 0, fy, "94");
+    measure(s, fx, fy, fh, "918");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- The other way: every lane under the map ----
+  (function () {
+    var s = document.getElementById("fig-h"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 10, fw = W - 172 - 24, fh = 1034 - fy - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx, fy + 60, fw - 60, fh - 440);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showRow(s, fx + 1, by, fw - 2);
+    var bandH = 430;
+    rect(s, fx + 1, fy + fh - 1 - bandH, fw - 2, bandH, "veil", 0);
+    text(s, fx + 10, fy + fh - bandH + 16, "Lanes ▾", "t s acc");
+    text(s, fx + 80, fy + fh - bandH + 16, "22 of 22 shown · 9 in view · all · none", "t s b");
+    var lanes = MANY.map(function (c) { return Object.assign({}, c, { tail: "" }); });
+    strip(s, fx + 4, fy + fh - bandH + 22, fw - 8, 16 * 22 + 20, 200, lanes, .02);
+    text(s, fx + 10, fy + fh - 10, "▸ Not on the clock: 1 camera   ▸ Other days: 3 cameras   ▸ No path file: 2 videos   ▸ Waiting for their video: 105 path files", "t s m");
+    rect(s, fx - 6, fy + fh - bandH - 4, fw + 12, bandH + 8, "fault"); text(s, fx + fw / 2, fy + fh - bandH - 10, "430 px of the map's foot under the band; the rows at 16 px", "faulttxt", "middle");
+    measure(s, fx, fy, fh - bandH, "clear 488");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- Figure I: the lanes column on the laptop ----
+  (function () {
+    var s = document.getElementById("fig-i"); var W = 1366;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 6, fh = 768 - fy - 12, colW = 480, fw = W - 172 - 24 - colW - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx + 10, fy + 90, fw - 40, fh - 140);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showRow(s, fx + 1, by, fw - 2);
+    lanesColumn(s, fx + fw + 12, fy, colW, fh, 20, MANY);
+    measure(s, fx, fy, fh, "666");
+    line(s, 0, 768, W, 768, "fold"); text(s, W - 30, 760, "the window's foot at 768", "foldtxt", "end");
+  })();
+
+  // ---- Direction B ----
+  (function () {
+    var s = document.getElementById("fig-c"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "‹ Back to the case · Harbour Street stop · Map · 6 cameras, 6 with a path file", tabs: [], right: "" });
+    var fx = 172, fy = y0 - 40, fw = W - 172 - 24, fh = 1034 - fy - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx, fy + 40, fw - 320, fh - 160);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showOverlay(s, fx + 10, by + 10, true);
+    listPanel(s, fx + fw - 310, by + 10, 300, fh - 46 - 26 - 20, true);
+    overlayStrip(s, fx + 1, fy + fh - 1, fw - 2, true);
+    measure(s, fx, 0, fy, "44");
+    measure(s, fx, fy, fh, "978");
+    text(s, fx + 10, fy + fh + 10, "", "t s m");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034 · the lanes folded to the ruler here, to show the fold", "foldtxt", "end");
+  })();
+
+  // ---- Direction C ----
+  (function () {
+    var s = document.getElementById("fig-d"); var W = 1912;
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40, "surf", 0); text(s, 24, 25, "Gideon Transcribe", "t b"); text(s, W - 24, 25, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40, 160, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) { if (w) { text(s, 20, 70 + i * 26, w, w === "Cases" ? "t acc" : "t m"); } });
+    var x = 180;
+    text(s, x, 60, "CASES", "t eye"); text(s, x, 84, "Harbour Street stop", "t ttl");
+    btn(s, W - 290, 50, 110, "Add path files"); btn(s, W - 170, 50, 130, "Add recordings", true);
+    text(s, x, 112, "One reading · 0.7 of 120 hours · 2 incidents not synced · 1 proposed event waiting · 6 cameras on the map · shared with 1  ▾", "t s m");
+    var tabs = ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"];
+    var tx = x; tabs.forEach(function (w) { var on = w === "Map 6"; text(s, tx, 146, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, 154, tx + w.length * 8, 154, "tabline"); } tx += w.length * 8 + 22; });
+    line(s, x, 155, W - 24, 155, "surf2");
+    var y = 166; var bx = x;
+    bx = btn(s, bx, y, 60, "▶ Play", true); bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s"); bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›"); bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 30, "UTC · 6 Nov 2025", "t s m"); bx += 110;
+    bx = btn(s, bx, y, 76, "Fit shown"); bx = btn(s, bx, y, 66, "More ▾"); bx = btn(s, bx, y, 150, "Day: 06 Nov 2025 ▾");
+    rect(s, W - 24 - 26, y, 26, 26, "btn", 13); text(s, W - 24 - 13, y + 17, "?", "t b", "middle");
+    var fx = x - 8, fy = y + 38, fw = W - x - 16, fh = 1034 - fy - 12, rulerH = 26, mapH = fh - rulerH;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw - 320, mapH);
+    showOverlay(s, fx + 10, fy + 10, false);
+    listPanel(s, fx + fw - 310, fy + 34, 300, mapH - 44);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    text(s, fx + 10, fy + mapH + 18, "Lanes ▸", "t s acc");
+    var tx2 = fx + 90; ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"].forEach(function (t, i) { text(s, tx2 + (fw - 120) * (i / 7), fy + mapH + 18, t, "t s mono m", "middle"); });
+    line(s, tx2 + 8, fy + mapH + 2, tx2 + 8, fy + fh, "clk");
+    measure(s, fx, 0, fy, "204");
+    measure(s, fx, fy, mapH, "724");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- Figure E: Direction A on the laptop ----
+  (function () {
+    var s = document.getElementById("fig-e"); var W = 1366;
+    var y0 = slimBand(s, W, { left: "Harbour Street stop", tabs: ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"], right: "2 need you ▾" });
+    var fx = 172, fy = y0 + 6, fw = W - 172 - 24, fh = 768 - fy - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, fh - 2); paths(s, fx, fy + 40, fw - 320, fh - 160);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showOverlay(s, fx + 10, by + 10, false);
+    listPanel(s, fx + fw - 310, by + 10, 300, fh - 46 - 128 - 20);
+    overlayStrip(s, fx + 1, fy + fh - 1, fw - 2, false);
+    measure(s, fx, fy, fh, "666");
+    line(s, 0, 768, W, 768, "fold"); text(s, W - 30, 760, "the window's foot at 768", "foldtxt", "end");
+  })();
+
+})();
+</script>
+</body>
+</html>

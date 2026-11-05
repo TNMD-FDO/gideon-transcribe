@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.209.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6.9: the map takes the window (the drawing `docs/spec/mockups/phase-12-map-page.html`, Direction A amended twice, agreed 2026-11-05). On the office's own cases the Map tab of v1.208.1 still left the map under half the window; now the map is the page while the tab is open.
+
+- **The case head folds to a band** on the Map tab alone: the case name, the tabs, and "N need you ▾" for the state pills and the One reading card, which open again on a press; every other tab keeps the head as it is.
+- **The map takes the window's height** under the band, measured again on every resize, with a two-row band on its top edge: the play controls (Play, the steps, Speed, the clock, Fit shown, More, Day as a menu when the case has more than one day, the ?), then **Show** and the **Events** ticks, always in view. The folding Show box is gone.
+- **The lanes carry the names.** The names panel is gone; the lanes column stands beside the map with every camera of the day as a lane, its head the row (the tick, the colour, the name, the speed while it moves, the ▸ that opens the camera's reading as a card over the map), the folds (Not on the clock, Other days, No path file, Waiting for their video) as rows under the lanes, and "N of N shown · M in view · all · none" at its head. A camera out of view reads faint. The column's edge drags, remembered per person; the column scrolls inside itself when a day has more lanes than the window has height, the ruler held at the top. The circle's answer takes the same lanes, the cameras that passed inside first with their ticks.
+- The Incidents tab's small map and the incident page's Map panel are unchanged.
+
 ## v1.208.1, 2026-11-05
 
 ```

@@ -4019,7 +4019,7 @@ nav.rail { view-transition-name: rail; }
 .reader .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
 .reader .sit.over i { background: var(--danger); } .reader .sit.near i { background: var(--warn); }
 .strip-map { position: relative; margin-top: 12px; }
-.strip-map .map-tab.map-pick .map-lead, .strip-map .map-tab.map-pick .map-list, .strip-map .map-tab.map-pick .map-strip, .strip-map .map-tab.map-pick .map-bar, .strip-map .map-tab.map-pick .map-showbox, .strip-map .map-tab.map-pick .map-reader { display: none; }
+.strip-map .map-tab.map-pick .map-lead, .strip-map .map-tab.map-pick .map-list, .strip-map .map-tab.map-pick .map-strip, .strip-map .map-tab.map-pick .map-bar, .strip-map .map-tab.map-pick .map-top, .strip-map .map-tab.map-pick .map-split, .strip-map .map-tab.map-pick .map-lanes { display: none; }
 .strip-map .map-tab.map-pick .map-frame { display: block; min-height: 0; border: 0; border-radius: 0; background: transparent; }
 .strip-map .map-tab.map-pick .map-pane { height: clamp(220px, 32vh, 360px); }
 .strip-map .map-pick-empty { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; padding: 4px 10px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); pointer-events: none; }
@@ -4098,43 +4098,57 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 
 /* The Map tab (Phase 12 chapter 1; the drawing phase-12-map.html): the map,
    the cameras beside it, the clock under, the street map or plain ground. */
-.map-tab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.map-tab { display: block; }
 .map-lead { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-/* The tab's space (chapter 6.8, v1.208.0; the drawing phase-12-map-space.html,
-   Direction 1): one bar; one frame as tall as the window leaves (map.js
-   measures it, never the screen), the map filling it with the Show box in
-   its corner and the list as a panel inside its right edge, the strip as
-   its foot; the cards in a column of their own from 2200 wide. */
-.map-frame { position: relative; display: flex; flex-direction: column; min-height: 360px; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
-.map-frame .map-pane { flex: none; min-height: 320px; height: 480px; border: 0; border-radius: 0; }
-.map-frame .map-strip { flex: none; padding: 4px 10px 6px; gap: 2px 10px; border-top: 1px solid var(--line); background: var(--surface); }
-.map-frame .map-strip .map-lane .head, .map-frame .map-strip .map-lane .track { height: 16px; }
-.map-frame .map-list { position: absolute; right: 10px; top: 32px; width: 300px; max-height: calc(100% - 44px); z-index: 3; background: color-mix(in srgb, var(--surface) 92%, transparent); }
-.map-tab.folded .map-list { width: auto; max-height: none; padding: 4px 10px; }
-.map-tab.folded .map-list .h { padding-bottom: 0; }
-.map-tab.folded .map-list .map-row, .map-tab.folded .map-list .map-fold, .map-tab.folded .map-list .map-budget, .map-tab.folded .map-list .map-circle-make { display: none; }
-.map-showbox { position: absolute; left: 10px; top: 10px; z-index: 3; max-width: calc(100% - 340px); background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--t-small); }
-.map-showbox > summary { list-style: none; cursor: pointer; padding: 3px 10px; color: var(--muted); white-space: nowrap; }
-.map-showbox > summary::-webkit-details-marker { display: none; }
-.map-showbox[open] > summary { color: var(--text); }
-.map-showbox .map-show { padding: 2px 10px 8px; }
-.map-strip .strip-more { grid-column: 1 / -1; padding: 2px 0 0; }
-.map-more .menu-body { top: calc(100% + 4px); min-width: 190px; display: flex; flex-direction: column; gap: 4px; padding: 6px; }
-.map-more .menu-body button { justify-content: flex-start; text-align: left; }
+/* The map takes the window (chapter 6.9, v1.209.0; the drawing
+   phase-12-map-page.html, Direction A amended twice): the frame is the
+   map, as tall as the window leaves (map.js measures it, never the
+   screen), with the two-row band on its top edge; beside it the lanes
+   column, every camera of the day as a lane whose head is its row, the
+   folds under, its edge draggable; the case page's head folds to a band
+   while the tab is open. */
+.map-frame { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 8px var(--lanes, 40%); grid-template-areas: "pane split lanes" "bar bar bar"; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+.map-frame .map-pane { grid-area: pane; height: 480px; min-height: 320px; border: 0; border-radius: 0; }
+.map-frame .map-split { grid-area: split; cursor: col-resize; background: var(--surface-2); border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.map-frame .map-split:hover { background: var(--accent-soft); }
+.map-frame .map-lanes { grid-area: lanes; height: 480px; overflow: auto; display: flex; flex-direction: column; min-width: 0; font-size: var(--t-small); background: var(--surface); scrollbar-width: thin; }
+.map-frame .map-bar { grid-area: bar; }
+.map-lanes-head { position: sticky; top: 0; z-index: 4; background: var(--surface); padding: 6px 10px 4px; border-bottom: 1px solid var(--line); }
+.map-lanes-head .h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); }
+.map-lanes-head .h label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.map-lanes-head .h .acts { display: inline-flex; gap: 2px; }
+.map-lanes-head .h .acc { color: var(--accent); }
+.map-lanes .map-strip { --head: 230px; padding: 4px 10px 6px; gap: 2px 8px; }
+.map-lanes .map-strip .ruler .head, .map-lanes .map-strip .ruler .ticks { position: sticky; top: 33px; z-index: 3; background: var(--surface); }
+.map-lanes .map-strip .map-lane .head { height: 20px; gap: 5px; border-radius: 4px; padding: 0 2px; }
+.map-lanes .map-strip .map-lane .track { height: 20px; }
+.map-lanes .map-strip .map-lane .head .tk { margin: 0; width: 14px; height: 14px; flex: none; cursor: pointer; }
+.map-lanes .map-strip .map-lane .head .tk:disabled { opacity: 0.4; cursor: not-allowed; }
+.map-lanes .map-strip .map-lane .head .tk-gap { width: 14px; flex: none; }
+.map-lanes .map-strip .map-lane .head .nm { cursor: pointer; }
+.map-lanes .map-strip .map-lane .head .more { min-height: 18px; padding: 0 5px; color: var(--muted); margin-left: auto; flex: none; }
+.map-lanes .map-strip .map-lane .head .spd { margin-left: 0; }
+.map-lanes .map-strip .map-lane.dim .head, .map-lanes .map-strip .map-lane.dim .track { opacity: 0.5; }
+.map-lanes .map-strip .map-lane.away .head .nm { color: var(--muted); }
+.map-lanes .map-strip .map-lane.lit .head, .map-lanes .map-strip .map-lane.open .head, .map-lanes .map-strip .map-lane .head:hover { background: var(--accent-soft); }
+.map-lanes .map-strip .playhead b { top: 0; }
+.map-folds { padding: 2px 10px 10px; }
+.map-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; background: color-mix(in srgb, var(--surface) 88%, transparent); border-bottom: 1px solid var(--line); padding: 6px 10px 5px; display: flex; flex-direction: column; gap: 4px; }
+.map-top .map-show { gap: 8px; }
+.map-frame .map-pane .map-north { top: 90px; }
+.map-camcard { width: 380px; max-height: calc(100% - 104px); overflow: auto; }
+.map-camcard .map-open { padding: 4px 0 0; background: transparent; }
+.map-more .menu-body, .map-days-menu .menu-body { top: calc(100% + 4px); min-width: 190px; display: flex; flex-direction: column; gap: 4px; padding: 6px; }
+.map-more .menu-body button, .map-days-menu .menu-body button { justify-content: flex-start; text-align: left; }
+.map-days-menu .menu-body button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .map-help { position: relative; margin-left: auto; }
 .map-help > div { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(560px, 80vw); padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.map-reader { display: none; }
-@media (min-width: 2200px) {
-  .map-tab:not(.map-pick):not(.map-inc) { grid-template-columns: minmax(0, 1fr) 380px; grid-template-areas: "lead lead" "frame reader"; }
-  .map-tab:not(.map-pick):not(.map-inc) .map-lead { grid-area: lead; }
-  .map-tab:not(.map-pick):not(.map-inc) .map-frame { grid-area: frame; }
-  .map-tab:not(.map-pick):not(.map-inc) .map-reader { grid-area: reader; display: flex; flex-direction: column; gap: 10px; align-self: start; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: var(--t-small); }
-  .map-reader .map-evcard { position: static; width: auto; box-shadow: none; }
-  .map-reader .map-reader-cam .h { display: flex; gap: 8px; align-items: center; padding: 0 4px 6px; }
-  .map-reader .map-reader-cam .h .dot { width: 10px; height: 10px; border-radius: 50%; display: block; }
-  .map-reader .map-reader-cam .h .dot.sq { border-radius: 2px; }
-  .map-reader .map-open { padding-left: 4px; background: transparent; }
-}
+/* The case page's head on the Map tab: a band, with the state pills and the One reading card behind "N need you". */
+.map-tab-page .page-head { margin: 0 0 4px; }
+.map-tab-page .page-head .eyebrow { display: none; }
+.map-tab-page .page-head .line h1 { font-size: var(--t-title); }
+.map-tab-page:not(.head-open) #dashboard-line, .map-tab-page:not(.head-open) #one-reading { display: none; }
+.map-tab-page .case-tabs { margin-top: 2px; }
 .map-lead-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .map-show { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .map-tab .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -4161,6 +4175,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-north { position: absolute; right: 10px; top: 8px; font-weight: 700; font-size: var(--t-small); color: var(--text); z-index: 2; pointer-events: none; }
 .map-pane .maplibregl-ctrl-top-right { top: 24px; }
 .map-frame .map-pane .maplibregl-ctrl-bottom-right { bottom: 8px; }
+.map-frame .map-pane .maplibregl-ctrl-bottom-left { bottom: 8px; }
 .map-pane .maplibregl-ctrl-group { background: var(--surface); border: 1px solid var(--line); box-shadow: none; }
 .map-pane .maplibregl-ctrl-group button { color: var(--text); }
 .map-pane .maplibregl-ctrl-group button + button { border-top-color: var(--line); }
@@ -4313,8 +4328,8 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .inc-stage > .map-tab.map-inc .map-pane { height: clamp(360px, calc(100vh - 420px), 820px); }
 .inc-desk.inc-map-large .inc-wall { display: none; }
 .inc-map-away { margin: 8px 0; }
-.map-tab.full .map-frame { background: var(--bg); height: 100vh; border-radius: 0; }
-.map-tab.full .map-frame .map-pane { flex: 1 1 auto; height: auto; min-height: 0; }
+.map-tab.full .map-frame { background: var(--bg); height: 100vh; border-radius: 0; grid-template-rows: minmax(0, 1fr) auto; }
+.map-tab.full .map-frame .map-pane, .map-tab.full .map-frame .map-lanes { height: auto; min-height: 0; }
 .map-tab.full .map-bar { display: flex; gap: 10px; align-items: center; height: 44px; padding: 0 12px; background: var(--surface); border-top: 1px solid var(--line); }
 @media (max-width: 1023px) {
   .map-wrap { grid-template-columns: minmax(0, 1fr); }
