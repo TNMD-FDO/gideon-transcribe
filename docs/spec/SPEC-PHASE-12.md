@@ -413,9 +413,16 @@ Figures H and I and choices 11 to 14, at the maintainer's word of 2026-11-05. Th
 - **Layout** on the bar says "Grid, 4 across shows all 8" beside the chooser while the wall holds seven or more and another layout is chosen. The layout setting's default stays Focus; the page suggests nothing else.
 - The strip under the wall still shows every camera, Follow and the clock are untouched, and the One reading measure counts cameras as before.
 
+### The two tools, and a vehicle's streams as one (the sixth release, v1.205.0)
+
+Choice 1 and the vehicle rule of Figures B, F and G, at the maintainer's word of 2026-11-05, built as one release since both live in the strip's lanes.
+
+- **The two tools** sit under Your incident's camera lines: **Tick everyone running at hh:mm:ss** ticks every lane whose camera was running at the clock line, longest overlap first, up to the cap; **Tick the cameras within 50 m on the map** ticks the lanes the near marks ring (the map's answer from the paths at the clock line), up to the cap. Each is greyed with the reason when there is nothing to tick or the cap is reached, and "Both only tick; you can untick any of them" stands under them. No list of the app's own ideas sits on the tab.
+- **A vehicle's streams are one camera.** Where the streams of an in-car unit both carry a path file, the app already knows them as twins (`camera_paths._twins`); `camera_paths.stream_heads(case)` gives each later stream's recording its first stream's id, and from it: `incidents.units_of`, `unit_count` and `within_cap` make the cap count units, so `incidents.make` and `add_cameras` keep a vehicle's streams together and count them once; `wall_of` counts units too, so a vehicle's streams are its tiles and a full incident may show more pictures than cameras; the incident page's head says "8 cameras, 10 pictures" when they differ (`pictures` in the state); the strip folds a unit's bars into one lane (`case_chronology._merge_streams`: the head's bar with the span as the union, the notes summed and `streams` the ids, the head first), the lane's head reads "2 streams" at rest and its hover "2 streams, one camera", the Reader's camera line says so, one tick ticks the unit, and Make the incident, the Map tab's box and the hand-off carry every stream. A vehicle whose streams carry no path file stays as separate cameras, since nothing says they belong together.
+
 ### Left to the next releases
 
-The two tools in Your incident; a vehicle's streams as one lane and one camera on the server's count, with "8 cameras, 10 pictures" on the incident page when a unit brings more than one stream.
+Nothing of the builder's drawing. The chronology's own surety pills and the recordings list keep their words until looked at in their own turn.
 
 ## Appendix A. Audit rows added in Phase 12
 

@@ -1050,7 +1050,9 @@
       var b = e.target.closest("[data-act]"); if (!b) { return; }
       if (b.dataset.act === "layer-close") { layer.remove(); return; }
       if (b.dataset.act === "layer-make") {
-        var ids = Array.prototype.map.call(layer.querySelectorAll("input[name=recordings]:checked"), function (i) { return i.value; });
+        // Every stream of a ticked vehicle goes in (v1.205.0); the server counts them as one camera.
+        var ids = [];
+        Array.prototype.forEach.call(layer.querySelectorAll("input[name=recordings]:checked"), function (i) { ids.push(i.value); var c = S.byId[i.value]; if (c) { c.streams.forEach(function (s) { ids.push(s.id); }); } });
         if (!ids.length) { toast("Tick at least one camera.", true); return; }
         var form = document.createElement("form");
         form.method = "post"; form.action = S.told.new_incident_url;

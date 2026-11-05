@@ -258,7 +258,9 @@
   function drawHead() {
     var count = S.incident.count;
     var events = keptEvents().length;
-    facts.textContent = count + " camera" + (count === 1 ? "" : "s") + " · " + S.incident.span_words +
+    // A vehicle's streams are one camera and several pictures (v1.205.0).
+    var pictures = S.incident.pictures || count;
+    facts.textContent = count + " camera" + (count === 1 ? "" : "s") + (pictures !== count ? ", " + pictures + " pictures" : "") + " · " + S.incident.span_words +
       " · " + events + " event" + (events === 1 ? "" : "s");
     dateBox.textContent = S.incident.has_clock ? S.incident.clock_date + (S.incident.clock_checked ? "" : " (clock read once, unchecked)") : "no camera clock; times are from the first camera";
   }

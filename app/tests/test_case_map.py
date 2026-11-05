@@ -830,5 +830,10 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert ".inc-desk.folded {" in css and ".inc-desk.folded .inc-work.over {" in css
     assert ".inc-film .inc-tile { flex: 1 1 0;" in css
     assert '.inc-desk.many:not([data-layout="focus"]) .inc-tile .inc-lines' in css
+    # The two tools and the streams as one (v1.205.0).
+    assert "data-act='tick-running'" in strip and "data-act='tick-near'" in strip
+    assert "function tickMany(ids)" in strip and "function streamsOf(bars)" in strip
+    assert "c.streams.forEach(function (s) { ids.push(s.id); })" in script
+    assert "S.incident.pictures" in incident_js
     # The hidden New incident dialog left the page (v1.201.0).
     assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")

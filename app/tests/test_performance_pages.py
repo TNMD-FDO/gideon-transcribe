@@ -476,7 +476,8 @@ def test_the_incident_state_asks_a_handful_and_the_busy_form_three(
     assert told["cameras"][0]["clock_reading"] is False
     # v1.168.0 reads the Proposal table twice more (the rows waiting and
     # their count), and nothing per camera.
-    assert count < 42, count
+    # One more since v1.205.0: the vehicles' streams, read once for the state.
+    assert count < 43, count
     with CaptureQueriesContext(connection) as asked:
         busy = incident_pages.busy_json(incident)
     assert busy == {"busy": False} and len(asked) <= 3, len(asked)

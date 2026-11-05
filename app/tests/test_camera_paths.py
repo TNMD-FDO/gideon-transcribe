@@ -1029,3 +1029,50 @@ def test_the_strip_lists_the_cameras_together_by_their_paths(person, a_case):
     a_case.refresh_from_db()
     assert camera_paths.strip_suggestions(a_case, date) == []
     assert camera_paths.strip_suggestions(a_case, "1999-01-01") == []
+
+
+def test_a_vehicles_streams_are_one_camera_on_the_cap_the_wall_and_the_page(
+    person, a_case, client
+):
+    """A vehicle's streams as one camera (Phase 12 chapter 9, v1.205.0): the
+    cap and the wall count units, the page says cameras and pictures, and
+    the strip folds the streams into one lane."""
+    from core import case_chronology, incidents, settings_store
+    from django.urls import reverse
+    from tests.helpers import signed_in
+
+    front = video(person, a_case, "Dash-4 front")
+    cabin = video(person, a_case, "Dash-4 cabin")
+    body = video(person, a_case, "BWC2-1")
+    other = video(person, a_case, "BWC3-1")
+    added(front, car_file(), by=person)
+    added(cabin, car_file(), by=person)
+    assert camera_paths.stream_heads(a_case) == {str(cabin.pk): str(front.pk)}
+    assert [len(group) for group in incidents.units_of([front, cabin, body])] == [2, 1]
+    settings_store.set_to("incidents_most_cameras", 2)
+    incident = incidents.make(
+        a_case, "Unit and one", [front, cabin, body, other], by=person
+    )
+    titles = sorted(one.recording.title for one in incident.cameras.all())
+    assert titles == ["BWC2-1", "Dash-4 cabin", "Dash-4 front"], "two units, 3 pictures"
+    assert incidents.add_cameras(incident, [other], by=person) == 0, "no room left"
+    settings_store.set_to("incidents_most_cameras", 8)
+    assert incidents.add_cameras(incident, [other], by=person) == 1
+    for camera in incident.cameras.all():
+        incidents._placed(
+            camera, incidents.HAND, 0.0, by=person, request=None, quietly=True
+        )
+    settings_store.set_to("incidents_wall", 2)
+    on_wall = sorted(one.recording.title for one in incidents.wall_of(incident))
+    assert len(on_wall) == 3 and "Dash-4 cabin" in on_wall, "the wall counts units"
+    settings_store.set_to("incidents_wall", 8)
+    signed_in(client, person)
+    told = client.get(reverse("incident-state", args=[a_case.pk, incident.pk])).json()
+    assert told["incident"]["count"] == 3 and told["incident"]["pictures"] == 4
+    # The strip: one lane for the unit, its streams the head first.
+    case_chronology.place(front, dt.date(2025, 11, 6), 50000.0, by=person)
+    case_chronology.place(cabin, dt.date(2025, 11, 6), 50000.0, by=person)
+    reading = case_chronology.day_of(a_case, dt.date(2025, 11, 6), strip=True)
+    lanes = {bar["id"]: bar for bar in reading["bars"]}
+    assert str(cabin.pk) not in lanes
+    assert lanes[str(front.pk)]["streams"] == [str(front.pk), str(cabin.pk)]

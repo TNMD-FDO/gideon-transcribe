@@ -597,12 +597,49 @@ def decline(case, key: str) -> None:
 # Making and changing an Incident ------------------------------------------------
 
 
+def units_of(recordings, case=None, heads: dict | None = None) -> list[list]:
+    """A vehicle's streams as one camera (Phase 12 chapter 9, v1.205.0): the
+    recordings grouped by the first stream they belong to, in order of first
+    appearance; a recording with no twin is a unit of its own. `heads` is
+    the case's stream_heads when the caller read them already."""
+    from core import camera_paths
+
+    recordings = list(recordings)
+    if not recordings:
+        return []
+    if heads is None:
+        heads = camera_paths.stream_heads(case or recordings[0].case)
+    groups: dict = {}
+    order = []
+    for one in recordings:
+        key = heads.get(str(one.pk), str(one.pk))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(one)
+    return [groups[key] for key in order]
+
+
+def unit_count(recordings, case=None, heads: dict | None = None) -> int:
+    return len(units_of(recordings, case, heads))
+
+
+def within_cap(recordings, case=None, room: int | None = None) -> list:
+    """The recordings whose units fit the cap (or the room given), whole
+    units first, so a vehicle's streams count as one camera."""
+    limit = most_cameras() if room is None else room
+    out = []
+    for group in units_of(recordings, case)[: max(0, limit)]:
+        out.extend(group)
+    return out
+
+
 def make(
     case, name: str, recordings, *, by, how: str = BY_HAND, request=None, details=None
 ):
     """A new Incident with these videos, the clocked ones placed at once.
     `details` go on the audit row (the chronology's day and span)."""
-    recordings = list(recordings)[: most_cameras()]
+    recordings = within_cap(recordings, case)
     with transaction.atomic():
         incident = Incident.objects.create(
             case=case,
@@ -851,8 +888,9 @@ def add_cameras(incident: Incident, recordings, *, by, request=None) -> int:
         for one in recordings
         if not IncidentCamera.objects.filter(incident=incident, recording=one).exists()
     ]
-    room = most_cameras() - incident.cameras.count()
-    recordings = recordings[: max(0, room)]
+    already = [one.recording for one in incident.cameras.select_related("recording")]
+    room = most_cameras() - unit_count(already, incident.case)
+    recordings = within_cap(recordings, incident.case, room)
     if not recordings:
         return 0
     _add(incident, recordings, by=by)
@@ -1454,7 +1492,9 @@ def links_in(case) -> dict:
     return links
 
 
-def wall_of(incident: Incident, cameras=None) -> list[IncidentCamera]:
+def wall_of(
+    incident: Incident, cameras=None, heads: dict | None = None
+) -> list[IncidentCamera]:
     """The cameras on the Wall, in the person's order or the clock's;
     `cameras` is the incident's list when the page loaded it (v1.134.0)."""
     if cameras is None:
@@ -1468,7 +1508,20 @@ def wall_of(incident: Incident, cameras=None) -> list[IncidentCamera]:
     for one in placed:
         if one not in chosen:
             chosen.append(one)
-    return chosen[: wall_size()]
+    # The wall counts units (v1.205.0): a vehicle's streams are its tiles.
+    from core import camera_paths
+
+    if heads is None:
+        heads = camera_paths.stream_heads(incident.case)
+    out: list[IncidentCamera] = []
+    units: set = set()
+    for one in chosen:
+        key = heads.get(str(one.recording_id), str(one.recording_id))
+        if key not in units and len(units) >= wall_size():
+            continue
+        units.add(key)
+        out.append(one)
+    return out
 
 
 def set_wall(incident: Incident, camera_ids: list[str]) -> None:

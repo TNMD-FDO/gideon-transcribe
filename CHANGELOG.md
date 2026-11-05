@@ -17,6 +17,18 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.205.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9, the builder's sixth release: the two tools, and a vehicle's streams as one camera (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, choice 1 and Figures B, F and G).
+
+- **Two tools under Your incident.** **Tick everyone running at** the clock line, and **Tick the cameras within 50 m on the map** (the ones the near marks ring). Both only tick, up to the cap, and you can untick any of them.
+- **A vehicle's streams are one camera.** Where an in-car unit's streams carry path files, the strip shows them as one lane with one tick ("2 streams"), the cap and the wall count them once, Make the incident takes every stream, and the incident page says "8 cameras, 10 pictures" when a unit brings more than one.
+
 ## v1.204.0, 2026-11-05
 
 ```

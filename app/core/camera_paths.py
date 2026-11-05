@@ -443,6 +443,19 @@ def count(case) -> int:
     return CameraPath.objects.filter(recording__case=case).count()
 
 
+def stream_heads(case) -> dict:
+    """A vehicle's streams as one camera (Phase 12 chapter 9, v1.205.0): each
+    later stream's recording id to its first stream's, as strings, the same
+    twins the map draws as one marker; a recording with no twin is absent.
+    Known only where both streams carry a path file."""
+    if not on():
+        return {}
+    paths = list(
+        CameraPath.objects.filter(recording__case=case).order_by("recording__created")
+    )
+    return {str(key): str(value) for key, value in _twins(paths).items()}
+
+
 def names_of(case) -> dict:
     """The officers' names for the Incidents tab's lanes (Phase 12 chapter
     7): by recording id, the wearer or driver as the path file gives them

@@ -176,6 +176,8 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     assert told["counts"]["on_clock"] == 3
     assert told["incidents_all"] == []
     assert told["day"]["bars"][0]["name"] and "on_map" in told["day"]["bars"][0]
+    # Every lane names its streams (v1.205.0): a camera alone is its own.
+    assert told["day"]["bars"][0]["streams"] == [told["day"]["bars"][0]["id"]]
     # No table of every video under the incidents (v1.180.1): the recordings
     # list carries the clock columns. New incident's dialog and its tick list
     # left the page in v1.201.0: the strip is New incident.

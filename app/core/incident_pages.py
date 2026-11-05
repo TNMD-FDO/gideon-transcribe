@@ -311,7 +311,11 @@ def state_json(incident: Incident, user) -> dict:
     unplaced = [one for one in cameras if not one.is_placed()]
     ordered = placed + unplaced
     colours = {str(one.pk): colour_for(index) for index, one in enumerate(ordered)}
-    on_wall = [str(one.pk) for one in incidents.wall_of(incident, cameras)]
+    # The vehicles' streams, read once for the wall and the count (v1.205.0).
+    from core import camera_paths
+
+    heads = camera_paths.stream_heads(incident.case)
+    on_wall = [str(one.pk) for one in incidents.wall_of(incident, cameras, heads)]
     wall = set(on_wall)
     low, high = incidents.span_of(incident, cameras)
     placed_words, placed_tone = incidents.placed_words(incident, cameras)
@@ -330,7 +334,12 @@ def state_json(incident: Incident, user) -> dict:
             "span_words": incidents.span_words(incident, cameras),
             "placed_words": placed_words,
             "placed_tone": placed_tone,
-            "count": len(cameras),
+            # Cameras as units (v1.205.0): a vehicle's streams are one camera
+            # and several pictures.
+            "count": incidents.unit_count(
+                [one.recording for one in cameras], incident.case, heads
+            ),
+            "pictures": len(cameras),
             "wall_size": incidents.wall_size(),
             "most": incidents.most_cameras(),
             "sound_match": incidents.sound_match_on(),

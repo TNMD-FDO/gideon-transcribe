@@ -320,6 +320,15 @@
     });
     var words = host.querySelector("[data-near-words]");
     if (words) { words.hidden = !host.querySelector(".lane-row.near"); }
+    // The near tool in Your incident (v1.205.0) follows the answer too, since
+    // the Reader is drawn before the map answers.
+    var tool = document.querySelector((host.dataset.reader || "#strip-reader") + " [data-act='tick-near']");
+    if (tool && state.day) {
+      var ids = state.day.bars.filter(function (b) { return !ticks[b.id] && state.near[b.id]; }).map(function (b) { return b.id; });
+      var full = ticked().length >= most();
+      tool.dataset.ids = ids.join(" "); tool.disabled = !ids.length || full;
+      tool.title = full ? most() + " is the most an incident holds" : ids.length ? "Tick the cameras within 50 m of a ticked one at the clock line, by their paths" : "No other camera was within 50 m of a ticked one at the clock line, by the paths the map holds";
+    }
   }
   // The lanes (Phase 12 chapter 7, v1.199.0): one row per camera on the
   // day, named by the officer as the path file gives them, else the unit,
@@ -338,10 +347,21 @@
       return a.from - b.from;
     });
   }
+  // A lane's notes: the entries on any of its streams (v1.205.0).
   function notesOf(d, id) {
-    var out = [];
-    (d.spells || []).forEach(function (g) { (g.entries || []).forEach(function (e) { if (e.recording === id) { out.push(e); } }); });
+    var out = [], bar = d.bars.filter(function (b) { return b.id === id; })[0];
+    var ids = bar && bar.streams ? bar.streams : [id];
+    (d.spells || []).forEach(function (g) { (g.entries || []).forEach(function (e) { if (ids.indexOf(e.recording) >= 0) { out.push(e); } }); });
     return out;
+  }
+  // The recordings a set of lanes stands for: every stream of each.
+  function streamsOf(bars) { var out = []; bars.forEach(function (b) { (b.streams || [b.id]).forEach(function (id) { out.push(id); }); }); return out; }
+  function streamWords(b) { var n = (b.streams || [b.id]).length; return n > 1 ? n + " streams" : ""; }
+  // Several ticks at once (the two tools, v1.205.0), up to the cap.
+  function tickMany(ids) {
+    ids.forEach(function (id) { if (ticked().length < most()) { ticks[id] = true; } });
+    state.sel = null;
+    draw();
   }
   function selected(kind, id) { return !!state.sel && state.sel.kind === kind && (state.sel.id === id || state.sel.key === id); }
   function lanes(d) {
@@ -358,7 +378,7 @@
       // The head's small words: the unit at rest; while building, how long
       // the camera ran inside the span, the incident it is in already, and
       // (v1.202.0) near whom it was at the clock line.
-      var base = b.unit && b.unit !== b.name ? b.unit : "";
+      var base = [b.unit && b.unit !== b.name ? b.unit : "", streamWords(b)].filter(Boolean).join(" · ");
       if (building) { base = (ran ? minutesWords(ran) : "no overlap") + (inInc[b.id] ? " · in " + inInc[b.id] : ""); }
       var small = base + (near ? " · near " + near : "");
       // The picture at the clock (the filmstrip): cut when the lane is drawn,
@@ -371,7 +391,7 @@
           : "<span class='film off' title='" + esc(shortName(b)) + " was not running at " + hms(at) + "'></span>";
       }
       html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + (building && !on && !ran ? " none" : "") + (near ? " near" : "") + "' data-lane='" + b.id + "'>" +
-        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small data-base='" + esc(base) + "'>" + esc(small) + "</small>" : "") + "</label>" +
+        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (streamWords(b) ? " · " + streamWords(b) + ", one camera" : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small data-base='" + esc(base) + "'>" + esc(small) + "</small>" : "") + "</label>" +
         "<div class='bar'>" + barPiece(b, d, true) + marks + "</div>" + film + "</div>";
     });
     html += "<div class='cols' id='chron-cols' aria-hidden='false'></div></div>";
@@ -507,6 +527,7 @@
     box.querySelectorAll("[data-back]").forEach(function (b) { b.addEventListener("click", function () { select(null); }); });
     box.querySelectorAll("[data-untick]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.untick, false); }); });
     box.querySelectorAll("[data-act='clear-ticks']").forEach(function (b) { b.addEventListener("click", function () { clearTicks(); }); });
+    box.querySelectorAll("[data-act='tick-running'], [data-act='tick-near']").forEach(function (b) { b.addEventListener("click", function () { tickMany((b.dataset.ids || "").split(" ").filter(Boolean)); }); });
     box.querySelectorAll("[data-act='make']").forEach(function (b) { b.addEventListener("click", function () { makeIncident(box); }); });
     box.querySelectorAll("[data-play]").forEach(function (b) { b.addEventListener("click", function () { open(b.dataset.play, playAt(b.dataset.play, d)); }); });
     box.querySelectorAll("[data-tick-one]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.tickOne, true); }); });
@@ -568,10 +589,17 @@
     if (both.length) { html += "<p class='small muted'>" + esc(both.map(function (b) { return (b.name || shortName(b)) + " is already in " + inInc[b.id]; }).join("; ")) + (both.length === 1 ? ". It will be in both." : ". Each will be in both.") + "</p>"; }
     // The pictures are each camera at the clock line.
     bars.forEach(function (b) {
-      html += "<div class='cam-row'>" + stillHtml(b, at, true) + "<div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc((b.unit && b.unit !== b.name ? b.unit + " · " : "") + hm(b.from) + " to " + hm(b.to) + " · " + (b.why_short || b.placed)) + "</small></div><button type='button' class='tiny ghost' data-untick='" + b.id + "'>untick</button></div>";
+      html += "<div class='cam-row'>" + stillHtml(b, at, true) + "<div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc((b.unit && b.unit !== b.name ? b.unit + " · " : "") + (streamWords(b) ? streamWords(b) + " · " : "") + hm(b.from) + " to " + hm(b.to) + " · " + (b.why_short || b.placed)) + "</small></div><button type='button' class='tiny ghost' data-untick='" + b.id + "'>untick</button></div>";
     });
     html += "<p class='muted tiny'>The pictures are each camera at " + hms(at) + ". Drag the line on the strip to move the clock; drag the handles at the bright column's edges to narrow the span.</p>";
     if (n >= cap) { html += "<div class='cap-note'>" + cap + " is the most an incident holds; untick one to swap another in.</div>"; }
+    // The two tools (chapter 9, v1.205.0): both only tick, up to the cap.
+    var running = d.bars.filter(function (b) { return !ticks[b.id] && at >= b.from && at <= b.to; }).sort(function (a, b) { return overlap(b, span) - overlap(a, span); });
+    var nearIds = d.bars.filter(function (b) { return !ticks[b.id] && state.near[b.id]; }).map(function (b) { return b.id; });
+    html += "<div class='rd-head'>Tools</div><div class='acts'>" +
+      "<button type='button' class='tiny' data-act='tick-running' data-ids='" + running.map(function (b) { return b.id; }).join(" ") + "'" + (running.length && n < cap ? "" : " disabled") + " title='" + (n >= cap ? cap + " is the most an incident holds" : running.length ? "Tick every camera running at the clock line, up to the cap" : "No other camera is running at the clock line") + "'>Tick everyone running at " + hms(at) + "</button>" +
+      "<button type='button' class='tiny' data-act='tick-near' data-ids='" + nearIds.join(" ") + "'" + (nearIds.length && n < cap ? "" : " disabled") + " title='" + (n >= cap ? cap + " is the most an incident holds" : nearIds.length ? "Tick the cameras within 50 m of a ticked one at the clock line, by their paths" : "No other camera was within 50 m of a ticked one at the clock line, by the paths the map holds") + "'>Tick the cameras within 50 m on the map</button></div>" +
+      "<p class='muted tiny'>Both only tick; you can untick any of them.</p>";
     html += "<p class='small muted' data-most='" + cap + "'><span data-sitting data-sitting-for='" + bars.map(function (b) { return b.id; }).join(" ") + "'></span></p>";
     html += "<div class='acts'><button type='button' class='small primary' data-act='make'>Make the incident</button><button type='button' class='small ghost' data-act='clear-ticks'>Clear the ticks</button></div>" +
       "<p class='muted tiny'>Made in your name, from the cameras you ticked. It opens on its own page.</p>";
@@ -588,7 +616,9 @@
     var span = state.day ? spanOf(state.day) : null;
     var fields = [["csrfmiddlewaretoken", cookie("csrftoken")], ["how", "strip"], ["name", nameBox ? nameBox.value.trim() : ""]];
     if (span) { fields.push(["date", state.day.date], ["from", String(Math.round(span[0]))], ["to", String(Math.round(span[1]))]); }
-    fields.concat(ids.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
+    // Every stream of a ticked vehicle goes in (v1.205.0); the server counts them as one camera.
+    var recordings = state.day ? streamsOf(tickedBars(state.day)) : ids;
+    fields.concat(recordings.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
     document.body.appendChild(form); form.submit();
   }
   function readerIncident(one, d) {

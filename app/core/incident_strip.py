@@ -179,12 +179,15 @@ def counts(case, strip_days: list[dict], unclocked_rows: list | None = None) -> 
     """The lead's counts (Phase 12 chapter 8): the cameras on the clock over
     every day, the incidents built, the videos not on the clock, and the
     most an incident holds. The app suggests nothing (v1.200.0)."""
-    from core import clock_match
+    from core import camera_paths, clock_match
 
     if unclocked_rows is None:
         unclocked_rows = clock_match.rows_of(case)
+    # A vehicle's streams count once (v1.205.0): its later streams, which
+    # carry a path clock and so are on the clock, come off the count.
+    streams = len(camera_paths.stream_heads(case))
     return {
-        "on_clock": sum(day["recordings"] for day in strip_days),
+        "on_clock": max(0, sum(day["recordings"] for day in strip_days) - streams),
         "incidents": case.incidents.count(),
         "unclocked": len(unclocked_rows),
         "most": incidents.most_cameras(),

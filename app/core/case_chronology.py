@@ -486,6 +486,9 @@ def day_of(
                 ),
             }
         )
+    # A vehicle's streams as one lane (Phase 12 chapter 9, v1.205.0).
+    if strip and bars:
+        bars = _merge_streams(bars, camera_paths.stream_heads(case))
     entries.sort(key=lambda row: (row["seconds"], row["recording"]))
     for number, row in enumerate(entries, start=1):
         row["number"] = number
@@ -890,6 +893,29 @@ def placed_short(recording) -> str:
     if how == NAME:
         return "the minute in its file name"
     return "not on the clock"
+
+
+def _merge_streams(bars: list[dict], heads: dict) -> list[dict]:
+    """A vehicle's streams as one lane (Phase 12 chapter 9, v1.205.0): the
+    bars of one unit folded into its first stream's, the span the union,
+    the notes summed, and `streams` every id with the head first. Every
+    other bar carries itself as its one stream."""
+    out: list[dict] = []
+    by_head: dict = {}
+    for bar in bars:
+        head = heads.get(bar["id"], bar["id"])
+        if head in by_head:
+            one = by_head[head]
+            one["from"] = min(one["from"], bar["from"])
+            one["to"] = max(one["to"], bar["to"])
+            one["notes"] += bar["notes"]
+            one["streams"].append(bar["id"])
+            continue
+        bar = dict(bar)
+        bar["streams"] = [bar["id"]]
+        by_head[head] = bar
+        out.append(bar)
+    return out
 
 
 def _lane_name(recording, given: dict | None) -> str:
