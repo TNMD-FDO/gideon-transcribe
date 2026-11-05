@@ -230,7 +230,7 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert "Make them an incident?" not in page and "Clock in the picture" not in page
     page = client.get(f"/case/{a_case.pk}?tab=incidents").content.decode()
     # The clocks' offer is read in the strip's Reader (Phase 12 chapter 7).
-    assert "Tick cameras on the strip" in page and "No incident built yet" in page
+    assert "tick cameras on the strip" in page and "No incident built yet" in page
     told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
     assert told["day"]["offers"] == []  # the app suggests nothing (v1.200.0)
     # The stamp's words were the New incident dialog's (gone in v1.201.0);

@@ -17,6 +17,23 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.207.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9 amended: the Incidents tab and the incident page tidied (the drawing `docs/spec/mockups/phase-12-incidents-tidy.html`, a walk press by press, eighteen choices, agreed 2026-11-05).
+
+- **The ruler fits the cameras.** At rest it runs from the first camera's start to the last camera's end, and a stretch of more than an hour with no camera running folds to a short break that says its length and opens on a press. With a span it zooms to the span with a little either side, and a thin day line above shows where you are, its window draggable to move the span.
+- **Set a span by hand.** Type two times in the lead's span box and press Set, or drag across the ruler's track. The lanes sort by how long each camera ran inside it, cameras that never did sink and fade, and the Reader becomes **Your span**: the cameras that ran in it with their minutes and ticks, **Tick all** (or the longest eight), and Clear the span. A span you set holds as you tick; the handles and the window move it.
+- **The Reader stays put.** The map sits under the strip in the left column, and the Reader has the right column to itself, sticky and scrolling inside its own box. On an ultrawide monitor the tab is three columns: the strip, the map beside it, the Reader.
+- **Plain words only.** No surety word on the tab: a bar wide enough carries its span, the rest carry nothing. A lane's head carries one fact; the long explanations sit behind help marks on the strip's foot and in the Reader.
+- **Where the incidents built are.** "N incidents built" in the lead is a button listing every incident of the case with Open and On map, at any moment of the build; an incident's reading offers **Add the ticked cameras to it**.
+- **A video with no clock** can be ticked into your incident from the Not on the clock row; it goes in unplaced, counted against the cap, and is synced on the incident page.
+- **On the incident page, a note is a row like any other**: the camera's colour dot, a small note mark, the words, and a quiet line under them saying who, which camera and where from, never cut; the grey "Note by…" pill is gone from every row and from the Word export and the timeline report. A note written on several cameras at once is one row. The marks on the strip's Events lane take their camera's colour, a note's as a small flag, and sit on the camera's own lane too. The card says how far into the camera's video the event falls ("2 min 14 s into BWC-2's video") and **Open the recording** opens it there; the row's time says the same on hover. Notes on a camera not yet synced wait in a line under the chronology with Sync it.
+
 ## v1.206.0, 2026-11-05
 
 ```

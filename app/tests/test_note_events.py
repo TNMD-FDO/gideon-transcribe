@@ -321,9 +321,10 @@ def test_the_exports_and_the_assistant_read_a_note_event_as_the_offices_own(
     notes.set_note(gun_line(first), "Check the footage.", by=person)
     assert incident_assistant.events_signature(incident) != before
     text = docx_text(chronology.word(incident, None, "asker"))
-    assert "Note by asker, BWC2-1" in text and chronology.NOTE_LEGEND in text
+    # The source reads as the row's quiet line (v1.207.0), not the pill.
+    assert "asker · BWC2-1" in text and chronology.NOTE_LEGEND in text
     sheet = chronology.spreadsheet(incident).decode("utf-8-sig")
-    assert "Note by asker, BWC2-1" in sheet
+    assert "asker · BWC2-1" in sheet
     lines, numbers = incident_assistant._chronology_lines(incident)
     assert lines[1] == (
         "Event 2, 21:56:47, Check the footage.; seen on BWC2-1; the office's own "

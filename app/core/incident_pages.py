@@ -206,6 +206,31 @@ def _asked_moment(request, incident: Incident, state: dict) -> float:
     return float(low) if low is not None else 0.0
 
 
+def _waiting_notes(cameras) -> list[dict]:
+    """For each camera not yet synced (guessed, or off the clock), how many
+    notes sit on its recording: on lines and at moments. They become events
+    only once the camera is synced, so the page says they wait."""
+    from core.jobs import Segment
+    from core.notes import MomentNote
+
+    out = []
+    for camera in cameras:
+        recording_id = camera.recording_id
+        count = (
+            Segment.objects.filter(
+                transcript__recording_id=recording_id, same_as_other_side=False
+            )
+            .exclude(note="")
+            .count()
+            + MomentNote.objects.filter(recording_id=recording_id).count()
+        )
+        if count:
+            out.append(
+                {"camera": str(camera.pk), "name": camera.camera_id(), "count": count}
+            )
+    return out
+
+
 def _others(case, incident: Incident, cameras=None) -> list[dict]:
     """The case's videos not in this Incident, for Add cameras; `cameras`
     is the incident's list when the page loaded it (v1.134.0)."""
@@ -334,6 +359,12 @@ def state_json(incident: Incident, user) -> dict:
             "span_words": incidents.span_words(incident, cameras),
             "placed_words": placed_words,
             "placed_tone": placed_tone,
+            # Notes on a camera not yet synced (v1.207.0): a note becomes an
+            # event only once its camera is synced, so on a guessed or
+            # unplaced camera it waits, and the chronology says so.
+            "waiting_notes": _waiting_notes(
+                [one for one in cameras if not one.is_synced()]
+            ),
             # Cameras as units (v1.205.0): a vehicle's streams are one camera
             # and several pictures.
             "count": incidents.unit_count(

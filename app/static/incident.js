@@ -210,6 +210,7 @@
     sayClocksRead(state);
     S = state;
     S.events = S.events || [];
+    decorateEvents();
     S.proposals = S.proposals || {};
     S.memo = S.memo || {};
     S.clips = S.clips || [];
@@ -1187,15 +1188,32 @@
   // nothing overlaps at any zoom; its words are on the Event card, light on
   // hover or focus and whole on a press. Each mark takes keyboard focus in
   // time order. (shortLabel stays for the strip's picture.)
+  // The marks (v1.207.0): in the camera's colour, a note's as a small
+  // flag, a person's event or a watch hit grey; on the Events lane, and on
+  // the camera's own lane at the moment.
+  function markHtml(one, shown, colours) {
+    var cls = (one.proposed ? " proposed" : "") + (one.source === "note" ? " note" : "") + (one.id === currentEventId ? " here" : "") + (one.source === "person" || one.source === "watch" || one.source === "report" ? " plain" : "");
+    var wide = one.until && one.until > one.at ? ((Math.min(one.until, shown[1]) - one.at) / (shown[1] - shown[0])) * 100 : 0;
+    var colour = colours[one.camera] || "";
+    return "<span class='mk-ev" + cls + "' data-event='" + one.id + "' data-event-card='" + one.id + "' tabindex='0' role='button'" +
+      " aria-label='" + quoted(timeOfDay(one.at) + ", " + (one.line || one.text) + (one.source_line ? ", " + one.source_line : "") + (one.video_words ? ", " + one.video_words + " into the video" : "")) + "'" +
+      " title='" + quoted((one.line || one.text) + (one.video_words ? " · " + one.video_words + " into " + (one.camera_name || "the camera") + "'s video" : "")) + "'" +
+      " style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + (colour ? "; --speaker: " + escape(colour) : "") + "'></span>";
+  }
   function eventMarks(shown) {
-    var html = "";
+    decorateEvents();
+    var html = "", colours = colourMap();
     S.events.slice().sort(function (a, b) { return a.at - b.at; }).forEach(function (one) {
       if (one.at < shown[0] || one.at > shown[1]) { return; }
-      var cls = (one.proposed ? " proposed" : "") + (one.source === "note" ? " note" : "") + (one.id === currentEventId ? " here" : "");
-      var wide = one.until && one.until > one.at ? ((Math.min(one.until, shown[1]) - one.at) / (shown[1] - shown[0])) * 100 : 0;
-      html += "<span class='mk-ev" + cls + "' data-event='" + one.id + "' data-event-card='" + one.id + "' tabindex='0' role='button'" +
-        " aria-label='" + quoted(timeOfDay(one.at) + ", " + (one.line || one.text) + (one.source_words ? ", " + one.source_words : "")) + "'" +
-        " style='left: " + percent(one.at, shown) + (wide ? "; width: " + wide + "%" : "") + "'></span>";
+      html += markHtml(one, shown, colours);
+    });
+    return html;
+  }
+  function laneMarks(cam, shown, colours) {
+    var html = "";
+    S.events.forEach(function (one) {
+      if (one.camera !== cam.id || one.at < shown[0] || one.at > shown[1]) { return; }
+      html += markHtml(one, shown, colours);
     });
     return html;
   }
@@ -1208,7 +1226,8 @@
       ticks += "<span>" + timeOfDay(shown[0] + ((shown[1] - shown[0]) * i) / count) + "</span>";
     }
     ticksBox.innerHTML = ticks;
-    var html = "";
+    var html = "", laneColours = colourMap();
+    decorateEvents();
     S.cameras.forEach(function (cam) {
       var placed = cam.starts_at !== null && cam.placed;
       var start = placed ? cam.starts_at : (S.incident.span_low || 0);
@@ -1222,6 +1241,7 @@
         "<div class='head' title='" + quoted(cam.title + ", " + cam.placed_words) + "'><span class='dot'></span><span class='name'>" + escape(cam.camera_id) + "</span>" +
         (placed && !cam.on_wall ? "<button type='button' class='tiny swap' data-swap='" + cam.id + "' title='Onto the wall, and to the front'>Swap in</button>" : "") + "</div>" +
         "<div class='track'><i class='" + (cam.on_wall ? "" : "thin") + (placed ? "" : " ghost") + "' draggable='false' style='left: " + percent(barFrom, shown) + "; width: " + (width ? Math.max(0.3, width) : 0) + "%" + (width ? "" : "; display: none") + "' title='" + timeOfDay(start) + " to " + timeOfDay(start + cam.length) + "'></i>" +
+        (placed ? laneMarks(cam, shown, laneColours) : "") +
         "<span class='playhead'></span></div></div>";
     });
     html += "<div class='lane events'><div class='head'><span class='name muted'>Events</span></div><div class='track'>" + eventMarks(shown) + "<span class='playhead'></span></div></div>";
@@ -1391,9 +1411,52 @@
     return "rests on <a class='cite doc' href='" + escape(doc.url + "?page=" + found[2] + "&para=" + found[3]) + "' data-para-card='1' data-doc-url='" + escape(doc.url) + "' data-page='" + found[2] + "' data-para='" + found[3] + "' data-title='" + escape(doc.title) + "' data-text='" + quoted(found[4]) + "'>page " + found[2] + ", para " + found[3] + "</a>";
   }
 
+  // A note written on several cameras at once (v1.207.0) is one row: its
+  // copies share a group; the earliest copy carries the others.
+  function decorateEvents() {
+    var byGroup = {};
+    (S.events || []).forEach(function (one) { if (one.source === "note" && one.group) { (byGroup[one.group] = byGroup[one.group] || []).push(one); } });
+    (S.events || []).forEach(function (one) {
+      var mates = one.group ? byGroup[one.group] : null;
+      one.others = mates && mates.length > 1 ? mates.filter(function (m) { return m.id !== one.id; }) : [];
+      one.group_words = one.others.length ? "also on " + one.others.map(function (m) { return m.camera_name + (m.video_words ? " at " + m.video_words : ""); }).join(", ") : "";
+    });
+  }
+  function groupedEvents(kept) {
+    var seen = {}, out = [];
+    kept.forEach(function (one) {
+      var g = one.source === "note" && one.group ? one.group : "";
+      if (!g) { out.push(one); return; }
+      if (seen[g]) { return; }
+      seen[g] = true; out.push(one);
+    });
+    return out;
+  }
+  function colourMap() { var out = {}; (S.cameras || []).forEach(function (cam) { out[cam.id] = cam.colour; }); return out; }
+  // The row's head (v1.207.0): the camera's colour dot, the note mark on a
+  // note's row, and the words; the quiet source line goes under them.
+  function eventHeadHtml(one, colours) {
+    var ids = [one.camera].concat((one.others || []).map(function (m) { return m.camera; })).filter(Boolean);
+    var dots = ids.map(function (id) { return colours[id] ? "<span class='ev-dot' style='background: " + escape(colours[id]) + "'></span>" : ""; }).join("");
+    var mark = one.source === "note" ? "<svg class='i ev-note' aria-hidden='true'><use href='#i-note'></use></svg>" : "";
+    return dots + mark;
+  }
+  function sourceLineHtml(one) {
+    var words = one.source_line || one.source_words || "";
+    if (one.others && one.others.length) {
+      // The note's own origin words already count its cameras ("from the
+      // map, on 4 cameras"); otherwise say how many rows were folded here.
+      var n = one.others.length + 1, came = (one.source_line || "").split(" · ").slice(2).join(" · ");
+      words = (one.note_by || "a person") + " · " + (came && /cameras/.test(came) ? came : "on " + n + " cameras" + (came ? ", " + came : ""));
+    }
+    var hover = one.video_words ? (one.video_words + " into " + (one.camera_name || "the camera") + "'s video" + (one.group_words ? "; " + one.group_words : "")) : "";
+    return "<div class='src-line muted small'" + (hover ? " title='" + quoted(hover) + "'" : "") + ">" + escape(words) + "</div>";
+  }
   function drawChronology() {
     var box = document.getElementById("panel-chronology");
+    decorateEvents();
     var kept = keptEvents();
+    var colours = colourMap();
     var proposed = S.events.filter(function (one) { return one.proposed; });
     var P = S.proposals || {};
     var M = S.memo || {};
@@ -1422,19 +1485,19 @@
       html += drawTimeline(kept);
     } else if (kept.length) {
       html += "<table class='inc-events'><tbody>";
-      kept.forEach(function (one) {
-        // The row says what happened (Phase 8 chapter 11): the time, the line
-        // as a press that opens the Event card, the To check pill, a small
-        // source pill, and a word when a note sits under it. Everything else
-        // about the event is on the card; the controls behind the row's menu.
+      groupedEvents(kept).forEach(function (one) {
+        // The row says what happened (Phase 8 chapter 11; redrawn in Phase 12
+        // chapter 9, v1.207.0): the time, the camera's colour dot, the note
+        // mark on a note, the line as a press that opens the Event card, the
+        // To check pill, and the quiet source line under the words. Everything
+        // else about the event is on the card; the controls behind the menu.
         var isNote = one.source === "note";
-        html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "'>" + timeOfDay(one.at) + "</a>" +
+        html += "<tr data-event='" + one.id + "'><td class='t'><a class='cite' href='#' data-at='" + one.at + "' title='" + quoted(one.video_words ? one.video_words + " into " + (one.camera_name || "the camera") + "'s video" : "Play every camera from here") + "'>" + timeOfDay(one.at) + "</a>" +
           (one.until ? "<div class='muted small'>to " + timeOfDay(one.until) + "</div>" : "") + "</td>" +
-          "<td><div class='what'><button type='button' class='line' data-event-card='" + one.id + "' title='Everything about this event'>" + escape(one.line || one.text) + "</button>" +
+          "<td><div class='what'>" + eventHeadHtml(one, colours) + "<button type='button' class='line' data-event-card='" + one.id + "' title='Everything about this event'>" + escape(one.line || one.text) + "</button>" +
           (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") +
-          " <span class='pill src src-" + escape(one.source) + "' title='" + quoted(one.source_words) + "'>" + escape(one.source_words) + "</span>" +
-          (one.note ? "<span class='muted small tell'>note</span>" : "") +
-          (one.clips ? "<span class='muted small tell'>" + escape(one.clips_words) + "</span>" : "") + "</div></td>" +
+          (one.note && !isNote ? "<span class='muted small tell'>note</span>" : "") +
+          (one.clips ? "<span class='muted small tell'>" + escape(one.clips_words) + "</span>" : "") + "</div>" + sourceLineHtml(one) + "</td>" +
           "<td class='acts nowrap'><details class='row-menu'><summary class='tiny ghost' title='Edit, note, clip, remove'>&middot;&middot;&middot;</summary><div class='menu'>" +
           "<button type='button' data-edit='" + one.id + "'>Edit</button>" +
           (isNote ? "" : "<button type='button' data-note='" + one.id + "'>" + (one.note ? "Edit the note" : "Add a note") + "</button>") +
@@ -1444,8 +1507,13 @@
       });
       html += "</tbody></table>";
     }
+    // Notes on a camera not yet synced (v1.207.0) wait here, in view.
+    (S.incident.waiting_notes || []).forEach(function (w) {
+      html += "<div class='inc-waiting'><span class='ev-dot' style='background: " + escape(colours[w.camera] || "var(--muted)") + "'></span><b>Waiting for " + escape(w.name) + " to be synced · " + w.count + " note" + (w.count === 1 ? "" : "s") + "</b><span class='muted small'>they join the chronology at their moments the instant it is placed</span><button type='button' class='tiny' data-sync-camera='" + w.camera + "'>Sync it</button></div>";
+    });
     html += "<p class='muted small' style='margin: 10px 0 0'>A time on this list plays every camera from there and brings the event's camera to the front; press an event's line for its card. E adds an event at the moment being watched.</p>";
     box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll("[data-sync-camera]"), function (b) { b.addEventListener("click", function () { openSync(b.dataset.syncCamera); }); });
     currentEventId = null;
     markCurrentEvent(now());
   }
@@ -1502,7 +1570,7 @@
           "<button type='button' class='line' data-event-card='" + one.id + "' title='Everything about this event'>" + escape(one.line || one.text) + "</button>" +
           (one.to_check ? " <span class='pill warn small' title='The office has not settled this'>To check</span>" : "") +
           (one.until ? "<span class='muted small mono'>to " + timeOfDay(one.until) + "</span>" : "") + "</div>" +
-          "<div class='tl-under'><span class='pill src src-" + escape(one.source) + "' title='" + quoted(one.source_words) + "'>" + escape(one.source_words) + "</span>" +
+          "<div class='tl-under'>" + sourceLineHtml(one) +
           (one.note && !isNote ? "<span class='muted small tell'>note</span>" : "") +
           (one.clips ? "<span class='muted small tell'>" + escape(one.clips_words) + "</span>" : "") + "</div></div></div>";
       });
@@ -2566,7 +2634,10 @@
         }
         if (mayClip(ev)) { acts.push({ words: "Clip this event", act: function () { openClipBox(ev); } }); }
         else if (S.incident.clips) { acts.push({ words: "Clip this event", disabled: true, title: "Sync a camera first" }); }
-        if (ev.source === "note" && ev.line_url) { acts.push({ words: "Open the line", href: ev.line_url }); }
+        // Where the event lands on its video (v1.207.0): the recording's page at that second.
+        if (ev.video_url) { acts.push({ words: "Open the recording", href: ev.video_url, title: ev.video_words ? ev.video_words + " into " + (ev.camera_name || "the camera") + "'s video" : "" }); }
+        (ev.others || []).forEach(function (m) { if (m.video_url) { acts.push({ words: "Open " + m.camera_name, href: m.video_url, title: m.video_words ? m.video_words + " into " + m.camera_name + "'s video" : "" }); } });
+        if (!ev.video_url && ev.source === "note" && ev.line_url) { acts.push({ words: "Open the line", href: ev.line_url }); }
         acts.push({ words: "Remove", danger: true, act: function () { askToRemove(ev); } });
         if (from !== "row") { acts.push({ words: "Go to the row", act: function () { goToRow(ev.id); } }); }
         return acts;

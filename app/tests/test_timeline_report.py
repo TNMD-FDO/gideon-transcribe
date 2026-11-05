@@ -136,7 +136,7 @@ def test_the_report_prints_the_chronology_with_stills_and_words(
     assert "Said on BWC2-1" in cells and "Hands where I can see them." in cells
     assert "Camera: " in cells and "grey jacket" in cells
     assert "Said on BWC2-2" in cells and "Stay in the car, please." in cells
-    assert "Added by asker" in cells
+    assert "added by asker" in cells
     # The band, then one still per event, cut at the setting's height from
     # each event's own camera at its moment.
     assert len(document.inline_shapes) == 3

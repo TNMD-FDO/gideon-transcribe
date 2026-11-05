@@ -209,7 +209,7 @@ def test_the_three_exports_come_back_in_their_shapes(person, a_case, incident, c
     assert sheet.status_code == 200 and sheet["Content-Type"].startswith("text/csv")
     text = sheet.content.decode("utf-8-sig")
     assert text.splitlines()[0].startswith("Number,Time,Seconds into the incident")
-    assert "1,21:56:47,30.0,,Vehicle stopped,,Added by asker" in text
+    assert "1,21:56:47,30.0,,Vehicle stopped,,added by asker" in text
     assert "2,22:02:57,400.0,22:03:07,Pat-down" in text
 
     # The Word document is a plain link (Phase 8 chapter 12): the chronology

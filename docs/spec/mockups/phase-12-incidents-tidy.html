@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab and the incident page tidied</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #ad1457;
+    --ground: #eef1ea; --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .press { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 6px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin: 0 0 12px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .lbl { font: 500 10px var(--font); fill: var(--text); }
+  .lbl.b { font-weight: 600; }
+  .mut { font: 400 10px var(--font); fill: var(--muted); }
+  .tk { font: 500 9px var(--mono); fill: var(--muted); }
+  .bar { stroke-width: 10; stroke-linecap: round; }
+  .b1 { stroke: var(--c1); } .b2 { stroke: var(--c2); } .b3 { stroke: var(--c3); } .b4 { stroke: var(--c4); } .b5 { stroke: var(--c5); } .b6 { stroke: var(--c6); }
+  .dim { opacity: .3; }
+  .lane { fill: var(--surface-2); }
+  .col { fill: var(--accent); fill-opacity: .16; stroke: var(--accent); stroke-width: 2; }
+  .col.inc { fill-opacity: .12; stroke-width: 1.5; stroke-opacity: .6; }
+  .col.set { stroke-dasharray: 4 3; }
+  .tag { font: 600 9px var(--font); fill: var(--accent-ink); }
+  .tagbg { fill: var(--accent); rx: 3; }
+  .tagbg.inc { fill: var(--accent-soft); } .tag.inc { fill: var(--accent); }
+  .box { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .box.acc { stroke: var(--accent); }
+  .ghost { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .fault { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; rx: 4; }
+  .faulttxt { font: 600 10px var(--font); fill: var(--bad); }
+  .fold { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .foldtxt { font: 600 10px var(--mono); fill: var(--muted); }
+  .win { fill: var(--accent); fill-opacity: .18; stroke: var(--accent); stroke-width: 1; }
+  .sel { fill: var(--accent); fill-opacity: .35; }
+  .line { stroke: var(--text); stroke-width: 1.5; }
+  .time { font: 600 9px var(--mono); fill: var(--accent-ink); }
+  .pill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 8; }
+  .pill.acc { fill: var(--accent-soft); stroke: var(--accent); }
+  .pilltxt { font: 500 9px var(--font); fill: var(--text); }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .btn.off { opacity: .45; }
+  .btntxt { font: 600 9px var(--font); fill: var(--text); }
+  .btntxt.primary { fill: var(--accent-ink); }
+  .field { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 3; }
+  .fieldtxt { font: 500 9px var(--mono); fill: var(--text); }
+  .still { fill: var(--ground); stroke: var(--line); stroke-width: 1; rx: 3; }
+  .check { fill: var(--accent); rx: 2; }
+  .uncheck { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 2; }
+  .cursor { fill: var(--text); stroke: var(--surface); stroke-width: 1; }
+  .hdl { fill: var(--accent); stroke: var(--surface); stroke-width: 1; rx: 2; }
+  .clk { stroke: var(--text); stroke-width: 2; }
+  .clktxt { font: 600 9px var(--mono); fill: var(--text); }
+  .num { fill: var(--warn); }
+  .numtxt { font: 700 10px var(--font); fill: var(--accent-ink); }
+  /* the notes figures */
+  .t { font: 500 10px var(--mono); fill: var(--accent); }
+  .w { font: 500 11px var(--font); fill: var(--text); }
+  .src { font: 400 9.5px var(--font); fill: var(--muted); }
+  .hdr { font: 600 11px var(--font); fill: var(--text); }
+  .rowline { stroke: var(--line); stroke-width: 1; }
+  .dot { stroke: var(--surface); stroke-width: 1; }
+  .d1 { fill: var(--c1); } .d2 { fill: var(--c2); } .d3 { fill: var(--c3); } .d4 { fill: var(--c4); }
+  .ico { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-linejoin: round; }
+  .menu { font: 700 10px var(--font); fill: var(--muted); }
+  .lanehead { font: 600 10px var(--font); fill: var(--text); }
+  .mk { fill: var(--muted); }
+  .mk.note { stroke: var(--surface); stroke-width: 1; }
+  .card { fill: var(--surface); stroke: var(--accent); stroke-width: 1; rx: 6; }
+  .said { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .lit { fill: var(--now); }
+  .littxt { fill: var(--now-ink); }
+  .who { font: 600 10px var(--font); }
+  /* the whole tab */
+  .road-name { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .12em; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+
+  .tabtxt { font: 500 11px var(--font); fill: var(--muted); }
+  .tabtxt.on { fill: var(--text); font-weight: 600; }
+  .tabline { stroke: var(--accent); stroke-width: 2; }
+  .ttl { font: 700 16px var(--font); fill: var(--text); }
+  .eyeb { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .08em; }
+  .ring { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+  .ro { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .pt { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .hd { stroke: var(--surface); stroke-width: 2; }
+  .tagbg2 { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 8; }
+  .tag2 { font: 600 9px var(--font); fill: var(--text); }
+  .scroll { fill: var(--line); rx: 2; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 9 amended · a drawing for the maintainer's word · 2026-11-05</span>
+    <h1>The Incidents tab and the incident page tidied: one walk, press by press</h1>
+    <p class="lede">Five asks after the builder went on the server: the strip's ruler should span only the time needed; the Reader grows with the ticks and pushes the map down; "Clear" still sits on the bars; the person should be able to set a span by hand and see the cameras that ran in it; and on the incident page the notes do not blend in. One walk through both pages, each figure the page after one press, with the press named in the amber line above it. Drawn for the office's laptops at 1366 wide and for the large ultrawide monitors they dock to; there is no phone or tablet shape to keep. The fictional office throughout.</p>
+  </header>
+
+  <!-- Figure A: today -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today, for the record: what the three faults look like at 1366 wide</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 240" role="img" aria-label="The tab as it stands: a six-hour ruler, a tall Reader, Clear on a bar">
+        <rect x="0" y="0" width="1000" height="240" fill="var(--surface)"/>
+        <text class="tk" x="130" y="30">14:20</text><text class="tk" x="230" y="30">15:23</text><text class="tk" x="330" y="30">16:26</text><text class="tk" x="430" y="30">17:30</text><text class="tk" x="530" y="30">18:33</text><text class="tk" x="630" y="30">19:36</text><text class="tk" x="700" y="30">20:40</text>
+        <text class="lbl b" x="16" y="54">Ofc. Pell</text><rect class="lane" x="130" y="46" width="590" height="10" rx="4"/><line class="bar b1" x1="690" y1="51" x2="714" y2="51"/>
+        <text class="lbl b" x="16" y="78">Ofc. Amari</text><rect class="lane" x="130" y="70" width="590" height="10" rx="4"/><line class="bar b2" x1="692" y1="75" x2="712" y2="75"/>
+        <text class="lbl b" x="16" y="102">Unit 9082</text><rect class="lane" x="130" y="94" width="590" height="10" rx="4"/><line class="bar b3" x1="134" y1="99" x2="152" y2="99"/><line class="bar b3" x1="692" y1="99" x2="712" y2="99"/>
+        <text class="lbl b" x="16" y="126">Ofc. Ruiz</text><rect class="lane" x="130" y="118" width="590" height="10" rx="4"/>
+        <rect x="134" y="113" width="30" height="10" rx="4" fill="var(--c5)"/><text x="138" y="121" style="font: 600 7px var(--font); fill: var(--accent-ink)">Clear</text>
+        <rect class="fault" x="126" y="108" width="46" height="20"/><text class="faulttxt" x="180" y="122">a surety word on the bar</text>
+        <rect class="fault" x="160" y="18" width="520" height="16"/><text class="faulttxt" x="330" y="14">five empty hours; the stop is an inch wide</text>
+        <rect class="box acc" x="740" y="10" width="244" height="220"/><text class="lbl b" x="752" y="28">Your incident</text>
+        <text class="mut" x="752" y="46">three cameras ticked and the box is</text><text class="mut" x="752" y="60">already twice the strip's height…</text>
+        <rect class="fault" x="734" y="4" width="256" height="232"/>
+        <rect class="ghost" x="16" y="196" width="704" height="30"/><text class="mut" x="28" y="215">the map at the foot, pushed below the fold</text>
+        <text class="faulttxt" x="300" y="170">the map moves down as the Reader grows</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Step 1 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 1</span><h2>The tab opens: the ruler fits the cameras, the map sits under the strip, the Reader reads the day</h2></div>
+    <p class="press">Nothing pressed yet. Six cameras on the clock; one ran at lunchtime, the rest at the evening stop.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 330" role="img" aria-label="The tab at rest: the strip with a folded gap, the map under it, the Reader beside">
+        <rect x="0" y="0" width="1000" height="330" fill="var(--surface)"/>
+        <!-- lead -->
+        <rect class="pill" x="16" y="10" width="128" height="16"/><text class="pilltxt" x="24" y="21">6 cameras on the clock</text>
+        <rect class="pill" x="150" y="10" width="100" height="16"/><text class="pilltxt" x="158" y="21">2 incidents built</text>
+        <text class="mut" x="262" y="21">Span</text><rect class="field" x="290" y="10" width="40" height="16"/><text class="fieldtxt" x="296" y="21">from</text>
+        <text class="mut" x="336" y="21">to</text><rect class="field" x="350" y="10" width="40" height="16"/><text class="fieldtxt" x="356" y="21">to</text>
+        <rect class="btn" x="396" y="10" width="28" height="16"/><text class="btntxt" x="403" y="21">Set</text>
+        
+        <text class="mut" x="600" y="21">Tick cameras on the strip to build an incident</text>
+        <!-- day line -->
+        <text class="tk" x="16" y="46">the day</text>
+        <rect class="lane" x="130" y="40" width="590" height="6" rx="3"/>
+        <line class="bar b3" style="stroke-width: 4" x1="134" y1="43" x2="146" y2="43"/><line class="bar b1" style="stroke-width: 4" x1="660" y1="43" x2="700" y2="43"/>
+        <!-- fitted ruler with the fold -->
+        <text class="tk" x="130" y="66">14:20</text><text class="tk" x="190" y="66">14:30</text>
+        <rect class="fold" x="236" y="56" width="26" height="150" rx="4"/><text class="foldtxt" x="241" y="70">5 h</text><text class="foldtxt" x="245" y="140">⋯</text>
+        <text class="tk" x="270" y="66">20:20</text><text class="tk" x="360" y="66">20:25</text><text class="tk" x="450" y="66">20:30</text><text class="tk" x="540" y="66">20:35</text><text class="tk" x="630" y="66">20:40</text><text class="tk" x="700" y="66">20:45</text>
+        <rect class="lane" x="130" y="72" width="590" height="8" rx="4"/><text class="mut" x="340" y="79" style="font-size: 8px">drag across here to set a span</text>
+        <g>
+          <text class="lbl b" x="16" y="98">Ofc. Pell</text><text class="mut" x="72" y="98">BWC1-1</text>
+          <rect class="uncheck" x="4" y="90" width="9" height="9"/>
+          <rect class="lane" x="130" y="90" width="104" height="10" rx="4"/><rect class="lane" x="264" y="90" width="456" height="10" rx="4"/>
+          <line class="bar b1" x1="364" y1="95" x2="590" y2="95"/><text class="time" x="372" y="98">20:25 to 20:38</text>
+          <text class="lbl b" x="16" y="122">Ofc. Amari</text><text class="mut" x="72" y="122">BWC2-1</text>
+          <rect class="uncheck" x="4" y="114" width="9" height="9"/>
+          <rect class="lane" x="130" y="114" width="104" height="10" rx="4"/><rect class="lane" x="264" y="114" width="456" height="10" rx="4"/>
+          <line class="bar b2" x1="368" y1="119" x2="594" y2="119"/><text class="time" x="376" y="122">20:25 to 20:38</text>
+          <text class="lbl b" x="16" y="146">Unit 9082</text><text class="mut" x="72" y="146">2 streams</text>
+          <rect class="uncheck" x="4" y="138" width="9" height="9"/>
+          <rect class="lane" x="130" y="138" width="104" height="10" rx="4"/><rect class="lane" x="264" y="138" width="456" height="10" rx="4"/>
+          <line class="bar b3" x1="134" y1="143" x2="200" y2="143"/><line class="bar b3" x1="350" y1="143" x2="610" y2="143"/><text class="time" x="358" y="146">20:24 to 20:39</text>
+          <text class="lbl b" x="16" y="170">Ofc. Dunn</text><text class="mut" x="72" y="170">BWC4-1</text>
+          <rect class="uncheck" x="4" y="162" width="9" height="9"/>
+          <rect class="lane" x="130" y="162" width="104" height="10" rx="4"/><rect class="lane" x="264" y="162" width="456" height="10" rx="4"/>
+          <line class="bar b4" x1="400" y1="167" x2="580" y2="167"/><text class="time" x="408" y="170">20:27 to 20:37</text>
+          <text class="lbl b" x="16" y="194">Ofc. Ruiz</text><text class="mut" x="72" y="194">BWC5-1</text>
+          <rect class="uncheck" x="4" y="186" width="9" height="9"/>
+          <rect class="lane" x="130" y="186" width="104" height="10" rx="4"/><rect class="lane" x="264" y="186" width="456" height="10" rx="4"/>
+          <line class="bar b5" x1="136" y1="191" x2="214" y2="191"/><text class="time" x="144" y="194">14:21 to 14:33</text>
+        </g>
+        <rect class="col inc" x="396" y="84" width="200" height="120"/><rect class="tagbg inc" x="396" y="72" width="92" height="12"/><text class="tag inc" x="400" y="81">Harbour car park</text>
+        <text class="mut" x="16" y="222">Tick a camera to build; press a name to read it.</text><rect class="btn" x="236" y="212" width="14" height="14" rx="7"/><text class="btntxt" x="240" y="222">?</text>
+        <!-- the map under the strip -->
+        <rect class="ghost" x="16" y="234" width="704" height="86"/><text class="mut" x="28" y="252">the map, under the strip and as wide as it · "Pick a camera on the strip and its path appears here"</text>
+        <!-- the Reader -->
+        <rect class="box" x="740" y="10" width="244" height="310"/>
+        <text class="lbl b" x="752" y="30">6 Nov 2025</text>
+        <text class="mut" x="752" y="46">6 cameras on the clock · 2 incidents built</text>
+        <text class="lbl b" x="752" y="72">Incidents built on this day</text>
+        <text class="lbl" x="752" y="90">Harbour car park</text><text class="mut" x="752" y="104">3 cameras · 20:27 to 20:40 · built by Dana Reyes, 4 Nov 2026</text>
+        <rect class="btn" x="752" y="110" width="36" height="14"/><text class="btntxt" x="759" y="120">Open</text>
+        <text class="lbl b" x="752" y="150">To build one</text>
+        <text class="mut" x="752" y="166">Set a span, or tick cameras on the strip.</text>
+        <text class="mut" x="752" y="180">Nothing is made for you.</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>The ruler.</b> From the first camera's start to the last camera's end, with the five empty hours between the lunchtime camera and the stop folded to a short break that says "5 h". A press on the break opens it for the day. Every bar wide enough carries its span; the surety words are gone.</p>
+      <p><b>The span box</b> sits in the lead: two time fields, Set, and "or drag across the ruler". The thin track under the ruler is the drag.</p>
+      <p><b>The page.</b> The map is under the strip, in view; the Reader has the right column to itself and reads the day.</p>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 2</span><h2>Set a span by hand: the ruler zooms to it, the cameras that ran in it come to the top, the Reader says who they are</h2></div>
+    <p class="press"><b>The press:</b> drag across the ruler's track from 20:25 to 20:40, or type 20:25 and 20:40 in the span box and press Set. The same result either way.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 330" role="img" aria-label="The strip zoomed to the set span, the lanes in order of overlap, the Reader as Your span">
+        <rect x="0" y="0" width="1000" height="330" fill="var(--surface)"/>
+        <rect class="pill" x="16" y="10" width="128" height="16"/><text class="pilltxt" x="24" y="21">6 cameras on the clock</text>
+        <rect class="pill" x="150" y="10" width="100" height="16"/><text class="pilltxt" x="158" y="21">2 incidents built</text>
+        <text class="mut" x="262" y="21">Span</text><rect class="field" x="290" y="10" width="40" height="16"/><text class="fieldtxt" x="296" y="21">20:25</text>
+        <text class="mut" x="336" y="21">to</text><rect class="field" x="350" y="10" width="40" height="16"/><text class="fieldtxt" x="356" y="21">20:40</text>
+        <rect class="btn" x="396" y="10" width="28" height="16"/><text class="btntxt" x="403" y="21">Set</text>
+        <rect class="btn" x="430" y="10" width="76" height="16"/><text class="btntxt" x="437" y="21">Clear the span</text>
+        
+        <text class="tk" x="16" y="46">the day</text>
+        <rect class="lane" x="130" y="40" width="590" height="6" rx="3"/>
+        <line class="bar b3" style="stroke-width: 4" x1="134" y1="43" x2="146" y2="43"/><line class="bar b1" style="stroke-width: 4" x1="660" y1="43" x2="700" y2="43"/>
+        <rect class="win" x="654" y="37" width="50" height="12"/><text class="tk" x="600" y="34">your window · drag it</text>
+        <text class="tk" x="130" y="66">20:22</text><text class="tk" x="248" y="66">20:26</text><text class="tk" x="366" y="66">20:30</text><text class="tk" x="484" y="66">20:34</text><text class="tk" x="602" y="66">20:38</text><text class="tk" x="700" y="66">20:43</text>
+        <rect class="lane" x="130" y="72" width="590" height="8" rx="4"/>
+        <g>
+          <text class="lbl b" x="16" y="98">Ofc. Pell</text><text class="mut" x="72" y="98">13 min in the span</text>
+          <rect class="uncheck" x="4" y="90" width="9" height="9"/>
+          <rect class="lane" x="130" y="90" width="590" height="10" rx="4"/><line class="bar b1" x1="218" y1="95" x2="602" y2="95"/><text class="time" x="226" y="98">20:25 to 20:38</text>
+          <text class="lbl b" x="16" y="122">Ofc. Amari</text><text class="mut" x="72" y="122">13 min</text>
+          <rect class="uncheck" x="4" y="114" width="9" height="9"/>
+          <rect class="lane" x="130" y="114" width="590" height="10" rx="4"/><line class="bar b2" x1="224" y1="119" x2="608" y2="119"/><text class="time" x="232" y="122">20:25 to 20:38</text>
+          <text class="lbl b" x="16" y="146">Unit 9082</text><text class="mut" x="72" y="146">14 min</text>
+          <rect class="uncheck" x="4" y="138" width="9" height="9"/>
+          <rect class="lane" x="130" y="138" width="590" height="10" rx="4"/><line class="bar b3" x1="190" y1="143" x2="632" y2="143"/><text class="time" x="198" y="146">20:24 to 20:39</text>
+          <text class="lbl b" x="16" y="170">Ofc. Dunn</text><text class="mut" x="72" y="170">10 min</text>
+          <rect class="uncheck" x="4" y="162" width="9" height="9"/>
+          <rect class="lane" x="130" y="162" width="590" height="10" rx="4"/><line class="bar b4" x1="276" y1="167" x2="572" y2="167"/><text class="time" x="284" y="170">20:27 to 20:37</text>
+          <text class="lbl b dim" x="16" y="194">Ofc. Ruiz</text><text class="mut" x="72" y="194">no overlap</text>
+          <rect class="uncheck" x="4" y="186" width="9" height="9"/>
+          <rect class="lane" x="130" y="186" width="590" height="10" rx="4"/>
+          <text class="mut" x="136" y="194" style="font-size: 8px">◂ 14:21 to 14:33, off the left</text>
+        </g>
+        <rect class="col set" x="218" y="84" width="414" height="120"/><rect class="tagbg" x="218" y="72" width="128" height="12"/><text class="tag" x="222" y="81">your span · 20:25 to 20:40</text>
+        <rect class="hdl" x="214" y="134" width="6" height="22"/><rect class="hdl" x="628" y="134" width="6" height="22"/>
+        <text class="mut" x="16" y="222">Tick a camera to build; press a name to read it.</text><rect class="btn" x="236" y="212" width="14" height="14" rx="7"/><text class="btntxt" x="240" y="222">?</text>
+        <rect class="ghost" x="16" y="234" width="704" height="86"/><text class="mut" x="28" y="252">the map: nothing drawn yet, the cameras in the span are not ticked</text>
+        <!-- Reader: Your span -->
+        <rect class="box acc" x="740" y="10" width="244" height="310"/>
+        <text class="lbl b" x="752" y="30">Your span</text><rect class="pill acc" x="820" y="19" width="80" height="14"/><text class="pilltxt" x="826" y="29">20:25 to 20:40</text>
+        <text class="mut" x="752" y="48">5 cameras ran in it; 8 is the most an incident holds.</text>
+        <rect class="btn primary" x="752" y="56" width="52" height="16"/><text class="btntxt primary" x="759" y="67">Tick all 5</text>
+        <rect class="btn" x="810" y="56" width="90" height="16"/><text class="btntxt" x="817" y="67">Tick the longest 3</text>
+        <g>
+          <rect class="uncheck" x="752" y="86" width="9" height="9"/><text class="lbl b" x="768" y="94">Ofc. Pell</text><text class="mut" x="868" y="94">13 min</text>
+          <rect class="uncheck" x="752" y="104" width="9" height="9"/><text class="lbl b" x="768" y="112">Ofc. Amari</text><text class="mut" x="868" y="112">13 min</text>
+          <rect class="uncheck" x="752" y="122" width="9" height="9"/><text class="lbl b" x="768" y="130">Unit 9082</text><text class="mut" x="868" y="130">14 min · 2 streams</text>
+          <rect class="uncheck" x="752" y="140" width="9" height="9"/><text class="lbl b" x="768" y="148">Ofc. Dunn</text><text class="mut" x="868" y="148">10 min · in an incident</text>
+        </g>
+        <text class="mut" x="752" y="176">Ofc. Ruiz ran at 14:21, outside the span.</text>
+        <rect class="btn" x="752" y="196" width="14" height="14" rx="7"/><text class="btntxt" x="756" y="206">?</text><text class="mut" x="772" y="206">how to narrow or move the span</text>
+        <rect class="btn" x="752" y="228" width="76" height="16"/><text class="btntxt" x="759" y="239">Clear the span</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>What the span does.</b> The ruler zooms to the span with a little either side; the lanes sort by how long each camera ran inside it, the minutes on the head, and a camera that never did sinks and fades; the dashed column with its handles is the span, which the handles and the day line's window move. Nothing is ticked yet, so the map draws nothing.</p>
+      <p><b>The Reader becomes Your span.</b> The cameras that ran in it, each with its minutes and its own tick, with <b>Tick all 5</b> (or, over the cap, <b>Tick the longest 8</b>), the one outside named, and Clear the span. The ticks here and on the lanes are the same ticks.</p>
+      <p><b>Three ways to set it.</b> Type the two times and Set; drag across the ruler's track; or, once zoomed, drag the window on the day line. Clear the span returns to the fitted ruler.</p>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 3</span><h2>Tick: the Reader becomes Your incident, the map draws the ticked, the span holds</h2></div>
+    <p class="press"><b>The press:</b> Tick all 5 in the Reader, or the ticks one by one on the lanes. Then untick Ofc. Dunn, who is already in an incident.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 330" role="img" aria-label="Four cameras ticked inside the set span, the map drawing them, the Reader as Your incident">
+        <rect x="0" y="0" width="1000" height="330" fill="var(--surface)"/>
+        <rect class="pill" x="16" y="10" width="128" height="16"/><text class="pilltxt" x="24" y="21">6 cameras on the clock</text>
+        <rect class="pill" x="150" y="10" width="100" height="16"/><text class="pilltxt" x="158" y="21">2 incidents built</text>
+        <rect class="pill acc" x="520" y="10" width="200" height="16"/><text class="pilltxt" x="528" y="21">Building: 3 cameras, 20:25 to 20:40 · at 20:25:00</text>
+        <text class="tk" x="16" y="46">the day</text>
+        <rect class="lane" x="130" y="40" width="590" height="6" rx="3"/><rect class="win" x="654" y="37" width="50" height="12"/>
+        <text class="tk" x="130" y="66">20:22</text><text class="tk" x="248" y="66">20:26</text><text class="tk" x="366" y="66">20:30</text><text class="tk" x="484" y="66">20:34</text><text class="tk" x="602" y="66">20:38</text><text class="tk" x="700" y="66">20:43</text>
+        <rect class="lane" x="130" y="72" width="590" height="8" rx="4"/>
+        <g>
+          <text class="lbl b" x="16" y="98">Ofc. Pell</text><text class="mut" x="72" y="98">13 min</text>
+          <rect class="check" x="4" y="90" width="9" height="9"/>
+          <rect class="lane" x="130" y="90" width="590" height="10" rx="4"/><line class="bar b1" x1="218" y1="95" x2="602" y2="95"/><text class="time" x="226" y="98">20:25 to 20:38</text>
+          <rect class="still" x="680" y="86" width="36" height="18"/>
+          <text class="lbl b" x="16" y="122">Ofc. Amari</text><text class="mut" x="72" y="122">13 min</text>
+          <rect class="check" x="4" y="114" width="9" height="9"/>
+          <rect class="lane" x="130" y="114" width="590" height="10" rx="4"/><line class="bar b2" x1="224" y1="119" x2="608" y2="119"/><text class="time" x="232" y="122">20:25 to 20:38</text>
+          <rect class="still" x="680" y="110" width="36" height="18"/>
+          <text class="lbl b" x="16" y="146">Unit 9082</text><text class="mut" x="72" y="146">14 min</text>
+          <rect class="check" x="4" y="138" width="9" height="9"/>
+          <rect class="lane" x="130" y="138" width="590" height="10" rx="4"/><line class="bar b3" x1="190" y1="143" x2="632" y2="143"/><text class="time" x="198" y="146">20:24 to 20:39</text>
+          <rect class="still" x="680" y="134" width="36" height="18"/>
+          <text class="lbl b" x="16" y="170">Ofc. Dunn</text><text class="mut" x="72" y="170">10 min</text>
+          <rect class="uncheck" x="4" y="162" width="9" height="9"/>
+          <rect class="lane" x="130" y="162" width="590" height="10" rx="4"/><line class="bar b4 dim" x1="276" y1="167" x2="572" y2="167"/>
+          <rect class="still" x="680" y="158" width="36" height="18"/>
+          <text class="lbl b dim" x="16" y="194">Ofc. Ruiz</text><text class="mut" x="72" y="194">no overlap</text>
+          <rect class="uncheck" x="4" y="186" width="9" height="9"/>
+          <rect class="lane" x="130" y="186" width="590" height="10" rx="4"/>
+        </g>
+        <rect class="col" x="218" y="84" width="414" height="120"/><rect class="tagbg" x="218" y="72" width="134" height="12"/><text class="tag" x="222" y="81">your incident · 20:25 to 20:40</text>
+        <rect class="hdl" x="214" y="134" width="6" height="22"/><rect class="hdl" x="628" y="134" width="6" height="22"/>
+        <line class="clk" x1="218" y1="84" x2="218" y2="204"/><rect class="box" x="196" y="206" width="48" height="12"/><text class="clktxt" x="200" y="215">20:25:00</text>
+        <rect class="ghost" x="16" y="234" width="704" height="86"/><text class="mut" x="28" y="252">the map: the three ticked cameras' paths, fitted, their markers at 20:25:00</text>
+        <!-- Reader: Your incident -->
+        <rect class="box acc" x="740" y="10" width="244" height="310"/>
+        <text class="lbl b" x="752" y="30">Your incident</text><rect class="pill acc" x="836" y="19" width="34" height="14"/><text class="pilltxt" x="842" y="29">3 of 8</text>
+        <text class="mut" x="752" y="48">NAME</text><rect class="field" x="752" y="52" width="220" height="16"/><text class="fieldtxt" x="758" y="63">Harbour Street stop, 20:25</text>
+        <text class="mut" x="752" y="86">3 CAMERAS, 20:25 TO 20:40 · PICTURES AT 20:25:00</text>
+        <g>
+          <rect class="still" x="752" y="94" width="44" height="26"/><text class="lbl b" x="804" y="104">Ofc. Pell</text><text class="mut" x="804" y="116">20:25 to 20:38 · the clock in its picture</text><text class="mut" x="950" y="104">untick</text>
+          <rect class="still" x="752" y="126" width="44" height="26"/><text class="lbl b" x="804" y="136">Ofc. Amari</text><text class="mut" x="804" y="148">20:25 to 20:38 · the clock in its picture</text><text class="mut" x="950" y="136">untick</text>
+          <rect class="still" x="752" y="158" width="44" height="26"/><text class="lbl b" x="804" y="168">Unit 9082</text><text class="mut" x="804" y="180">2 streams · its own clock, from its path file</text><text class="mut" x="950" y="168">untick</text>
+        </g>
+        <text class="mut" x="752" y="204">In your span, not ticked: Ofc. Dunn (in Harbour car park).</text>
+        <text class="lbl b" x="752" y="230">Tools</text>
+        <rect class="btn" x="752" y="238" width="150" height="16"/><text class="btntxt" x="759" y="249">Tick everyone running at 20:25:00</text>
+        <rect class="btn off" x="752" y="258" width="190" height="16"/><text class="btntxt" x="759" y="269">Tick the cameras within 50 m on the map</text>
+        <rect class="btn primary" x="752" y="288" width="90" height="18"/><text class="btntxt primary" x="760" y="300">Make the incident</text>
+        <rect class="btn" x="848" y="288" width="80" height="18"/><text class="btntxt" x="856" y="300">Clear the ticks</text>
+        <text class="mut" x="752" y="316" style="font-size: 8px">scrolls inside this box when it grows; the strip and the map never move</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>The span holds.</b> A span you set stays the incident's span; ticks do not widen it, and the handles and the window move it. Without a set span the column is the ticked cameras' first start to last end, as it is now, narrowed by the handles.</p>
+      <p><b>The map draws the ticked</b>, in view under the strip; the clock line sits at the span's start and the pictures on the lanes and in the Reader are cut there.</p>
+      <p><b>The Reader is Your incident</b>, the box you know, in its own column, scrolling inside itself when it grows: the name, the camera lines, who in your span is not ticked, the tools, Make the incident.</p>
+    </div>
+  </section>
+
+  <!-- Step 4 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 4</span><h2>Look before deciding: drag the clock line, the map and the pictures follow</h2></div>
+    <p class="press"><b>The press:</b> drag the clock line from 20:25:00 to 20:31:40. The markers on the map move to where each camera was then, and the pictures are cut again when you let go.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 150" role="img" aria-label="The clock line dragged to 20:31:40, the pictures recut">
+        <rect x="0" y="0" width="1000" height="150" fill="var(--surface)"/>
+        <text class="tk" x="130" y="22">20:22</text><text class="tk" x="248" y="22">20:26</text><text class="tk" x="366" y="22">20:30</text><text class="tk" x="484" y="22">20:34</text><text class="tk" x="602" y="22">20:38</text><text class="tk" x="700" y="22">20:43</text>
+        <g>
+          <rect class="check" x="4" y="38" width="9" height="9"/><text class="lbl b" x="16" y="46">Ofc. Pell</text>
+          <rect class="lane" x="130" y="38" width="590" height="10" rx="4"/><line class="bar b1" x1="218" y1="43" x2="602" y2="43"/><rect class="still" x="680" y="34" width="36" height="18"/>
+          <rect class="check" x="4" y="62" width="9" height="9"/><text class="lbl b" x="16" y="70">Ofc. Amari</text>
+          <rect class="lane" x="130" y="62" width="590" height="10" rx="4"/><line class="bar b2" x1="224" y1="67" x2="608" y2="67"/><rect class="still" x="680" y="58" width="36" height="18"/>
+          <rect class="check" x="4" y="86" width="9" height="9"/><text class="lbl b" x="16" y="94">Unit 9082</text>
+          <rect class="lane" x="130" y="86" width="590" height="10" rx="4"/><line class="bar b3" x1="190" y1="91" x2="632" y2="91"/><rect class="still" x="680" y="82" width="36" height="18"/>
+        </g>
+        <rect class="col" x="218" y="30" width="414" height="76"/>
+        <line class="clk" x1="414" y1="30" x2="414" y2="106"/><rect class="box" x="392" y="108" width="48" height="12"/><text class="clktxt" x="396" y="117">20:31:40</text>
+        <polygon class="cursor" points="420,96 420,114 425,109 429,117 432,115 428,107 435,107"/>
+        <text class="mut" x="16" y="140">The Reader's head reads "3 cameras, 20:25 to 20:40 · pictures at 20:31:40"; Play here on a camera plays from there.</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Step 5 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 5</span><h2>Make the incident: it opens on its own page at the span's start, and the tab is clean again</h2></div>
+    <p class="press"><b>The press:</b> Make the incident. The incident is made in your name with the three cameras and the span 20:25 to 20:40; its page opens at 20:25:00. Back on the tab, the span and the ticks are gone and the ruler is fitted again, with the new incident as a shaded column.</p>
+    <div class="caption" style="margin-top: 0">
+      <p><b>What is recorded.</b> As today: who built it, when, from the strip, with the span; the Details tab says "Span set: while building, 6 Nov 2025, 20:25 to 20:40".</p>
+      <p><b>What is not.</b> The span, the ticks and the clock line are the tab's for its life; nothing of them is kept when nothing is made.</p>
+    </div>
+  </section>
+
+  <!-- Figure B: layout -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>The columns: the map under the strip, the Reader sticky in its own column</h2></div>
+    <div class="two">
+      <div class="pane">
+        <svg viewBox="0 0 500 260" role="img" aria-label="Today's grid, the map under both columns">
+          <rect x="0" y="0" width="500" height="260" fill="var(--surface)"/>
+          <text class="lbl b" x="12" y="18">Today, 1366 wide</text>
+          <rect class="ghost" x="12" y="30" width="300" height="80"/><text class="mut" x="20" y="48">the strip</text>
+          <rect class="box acc" x="322" y="30" width="166" height="180"/><text class="mut" x="330" y="48">the Reader, as tall as it likes</text>
+          <rect class="ghost" x="12" y="220" width="476" height="30"/><text class="mut" x="20" y="239">the map, below the fold</text>
+          <text class="faulttxt" x="120" y="170">pushed down</text>
+        </svg>
+      </div>
+      <div class="pane">
+        <svg viewBox="0 0 500 260" role="img" aria-label="The drawn grid: the map under the strip, the Reader sticky with its own scroll">
+          <rect x="0" y="0" width="500" height="260" fill="var(--surface)"/>
+          <text class="lbl b" x="12" y="18">Drawn, 1366 wide</text>
+          <rect class="ghost" x="12" y="30" width="300" height="80"/><text class="mut" x="20" y="48">the strip</text>
+          <rect class="ghost" x="12" y="118" width="300" height="100"/><text class="mut" x="20" y="136">the map, under the strip, as wide as it</text>
+          <rect class="box acc" x="322" y="30" width="166" height="188"/><text class="mut" x="330" y="48">the Reader, sticky at the top,</text><text class="mut" x="330" y="62">scrolls inside its box</text>
+          <rect class="lane" x="478" y="60" width="4" height="140" rx="2"/><rect x="478" y="80" width="4" height="50" rx="2" fill="var(--muted)"/>
+          <text class="mut" x="12" y="246">Docked to an ultrawide: three columns, the map beside the strip at its height, the Reader third.</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+    <!-- the incident page -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Then the incident page</span><h2>The incident made in step 5 opens at 20:25:00, and its Chronology carries the notes the cameras already hold</h2></div>
+    <p class="press"><b>Where we are:</b> the incident "Harbour Street stop, 20:25" with three cameras, opened at the span's start. The work panel beside the wall shows the Chronology; the notes written on these cameras, on the Notes tab, from the Map tab or in the Preview, are its events. Steps 6 to 9 are how those notes read today and as drawn.</p>
+  </section>
+
+<!-- Figure A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 6</span><h2>On the incident page, today: the Chronology's rows, a pill per note, the same note three times, the marks all alike</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The Chronology panel as it stands, with its faults ringed">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--surface)"/>
+        <!-- rows -->
+        <g>
+          <line class="rowline" x1="16" y1="24" x2="620" y2="24"/>
+          <text class="t" x="24" y="44">20:25:17</text><text class="w" x="96" y="44">First contact, officer asks for licence.</text><text class="menu" x="600" y="44">···</text>
+          <rect class="pill" x="96" y="50" width="104" height="13"/><text class="pilltxt" x="102" y="59">Note by Dana Reyes, BWC-2</text>
+          <line class="rowline" x1="16" y1="72" x2="620" y2="72"/>
+          <text class="t" x="24" y="92">20:25:50</text><text class="w" x="96" y="92">Walk proposal 1.1: something that could matter here.</text><text class="menu" x="600" y="92">···</text>
+          <rect class="pill" x="96" y="98" width="110" height="13"/><text class="pilltxt" x="102" y="107">Note by Dana Reyes, BWC-1, fro…</text>
+          <line class="rowline" x1="16" y1="120" x2="620" y2="120"/>
+          <text class="t" x="24" y="140">20:27:14</text><text class="w" x="96" y="140">All units at the corner, walk check</text><text class="menu" x="600" y="140">···</text>
+          <rect class="pill" x="96" y="146" width="110" height="13"/><text class="pilltxt" x="102" y="155">Note by Dana Reyes, BWC-2, fro…</text>
+          <line class="rowline" x1="16" y1="168" x2="620" y2="168"/>
+          <text class="t" x="24" y="188">20:27:17</text><text class="w" x="96" y="188">All units at the corner, walk check</text><text class="menu" x="600" y="188">···</text>
+          <rect class="pill" x="96" y="194" width="110" height="13"/><text class="pilltxt" x="102" y="203">Note by Dana Reyes, BWC-1, fro…</text>
+          <line class="rowline" x1="16" y1="216" x2="620" y2="216"/>
+          <text class="t" x="24" y="236">20:27:17</text><text class="w" x="96" y="236">All units at the corner, walk check</text><text class="menu" x="600" y="236">···</text>
+          <rect class="pill" x="96" y="242" width="110" height="13"/><text class="pilltxt" x="102" y="251">Note by Dana Reyes, BWC-3, fro…</text>
+          <line class="rowline" x1="16" y1="264" x2="620" y2="264"/>
+        </g>
+        <rect class="fault" x="90" y="94" width="122" height="21"/><text class="faulttxt" x="222" y="108">the source cut mid-word</text>
+        <rect class="fault" x="16" y="124" width="604" height="140"/><text class="faulttxt" x="300" y="280">one note on three cameras, three rows of the same words</text>
+        <!-- events lane -->
+        <text class="hdr" x="660" y="44">The strip's Events lane</text>
+        <text class="lanehead" x="660" y="70">Events</text>
+        <rect class="lane" x="710" y="62" width="270" height="12" rx="4"/>
+        <rect class="mk" x="722" y="64" width="3" height="8"/><rect class="mk" x="735" y="64" width="3" height="8"/><rect class="mk" x="741" y="64" width="3" height="8"/><rect class="mk" x="760" y="64" width="3" height="8"/><rect class="mk" x="790" y="64" width="3" height="8"/><rect class="mk" x="793" y="64" width="3" height="8"/><rect class="mk" x="796" y="64" width="3" height="8"/><rect class="mk" x="830" y="64" width="3" height="8"/>
+        <rect class="fault" x="704" y="56" width="282" height="24"/><text class="faulttxt" x="660" y="100">every mark the same grey: a note, a watch phrase, a camera's own event alike</text>
+        <text class="hdr" x="660" y="140">The said band under the wall</text>
+        <rect class="said" x="660" y="150" width="320" height="60"/>
+        <text class="t" x="668" y="168">20:27:10</text><text class="who" x="724" y="168" style="fill: var(--c2)">Ofc. Amari</text><text class="w" x="790" y="168">Step out of the vehicle for me.</text>
+        <rect class="lit" x="664" y="176" width="312" height="14"/><text class="t littxt" x="668" y="186">20:27:14</text><text class="who littxt" x="724" y="186">Note</text><text class="w littxt" x="754" y="186">All units at the corner, walk check</text>
+        <text class="t" x="668" y="204">20:27:20</text><text class="who" x="724" y="204" style="fill: var(--c1)">Ofc. Pell</text><text class="w" x="790" y="204">Licence and registration, please.</text>
+        <text class="mut" x="660" y="236">The band's note row is already quiet: time, "Note", the words. Only the writer is missing.</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Figure B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 7</span><h2>Drawn: a note is a row like any other, with the camera's colour, a small mark, and the writer in a quiet line that never cuts</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The Chronology rows redrawn: a colour dot, a note mark, the words, and a muted source line that wraps">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--surface)"/>
+        <g>
+          <line class="rowline" x1="16" y1="24" x2="620" y2="24"/>
+          <text class="t" x="24" y="44">20:25:17</text><circle class="dot d2" cx="88" cy="40" r="4"/><path class="ico" d="M 98 35 h 7 l 3 3 v 7 h -10 z"/>
+          <text class="w" x="114" y="44">First contact, officer asks for licence.</text><text class="menu" x="600" y="44">···</text>
+          <text class="src" x="114" y="58">Dana Reyes · Ofc. Amari · 4 Nov 2026</text>
+          <line class="rowline" x1="16" y1="68" x2="620" y2="68"/>
+          <text class="t" x="24" y="88">20:25:40</text><circle class="dot d1" cx="88" cy="84" r="4"/><path class="ico" d="M 98 79 h 7 l 3 3 v 7 h -10 z"/>
+          <text class="w" x="114" y="88">He says he was never at the stop that night.</text><text class="menu" x="600" y="88">···</text>
+          <text class="src" x="114" y="102">Dana Reyes · Ofc. Pell</text>
+          <line class="rowline" x1="16" y1="112" x2="620" y2="112"/>
+          <text class="t" x="24" y="132">20:25:50</text><circle class="dot d1" cx="88" cy="128" r="4"/><path class="ico" d="M 98 123 h 7 l 3 3 v 7 h -10 z"/>
+          <text class="w" x="114" y="132">Walk proposal 1.1: something that could matter here.</text><text class="menu" x="600" y="132">···</text>
+          <text class="src" x="114" y="146">Dana Reyes · Ofc. Pell · accepted from a proposed event</text>
+          <line class="rowline" x1="16" y1="156" x2="620" y2="156"/>
+          <text class="t" x="24" y="176">20:26:03</text><circle class="dot d3" cx="88" cy="172" r="4"/>
+          <text class="w" x="114" y="176">Siren on until 20:28:40</text><text class="menu" x="600" y="176">···</text>
+          <text class="src" x="114" y="190">Unit 9082 · its own file</text>
+          <line class="rowline" x1="16" y1="200" x2="620" y2="200"/>
+          <text class="t" x="24" y="220">20:27:14</text><circle class="dot d2" cx="84" cy="216" r="4"/><circle class="dot d1" cx="90" cy="216" r="4"/><circle class="dot d4" cx="96" cy="216" r="4"/><path class="ico" d="M 104 211 h 7 l 3 3 v 7 h -10 z"/>
+          <text class="w" x="120" y="220">All units at the corner, walk check</text><text class="menu" x="600" y="220">···</text>
+          <text class="src" x="120" y="234">Dana Reyes · on 3 cameras from the map</text>
+          <line class="rowline" x1="16" y1="244" x2="620" y2="244"/>
+          <text class="t" x="24" y="264">20:28:10</text><circle class="dot d1" cx="88" cy="260" r="4"/>
+          <text class="w" x="114" y="264">"Step out of the vehicle for me."</text><text class="menu" x="600" y="264">···</text>
+          <text class="src" x="114" y="278">Ofc. Pell's words · added by Sam Okafor</text>
+          <line class="rowline" x1="16" y1="288" x2="620" y2="288"/>
+        </g>
+        <!-- legend -->
+        <text class="hdr" x="660" y="44">What each row carries</text>
+        <text class="t" x="660" y="68">20:25:17</text><text class="mut" x="720" y="68">the time, a press seeks every camera</text>
+        <circle class="dot d2" cx="666" cy="86" r="4"/><text class="mut" x="680" y="90">the camera's colour, the same dot the tiles and lanes wear</text>
+        <path class="ico" d="M 662 100 h 7 l 3 3 v 7 h -10 z"/><text class="mut" x="680" y="110">the note mark, on a note's row alone</text>
+        <text class="w" x="660" y="132">the words</text><text class="mut" x="720" y="132">one size for every event</text>
+        <text class="src" x="660" y="152">the source line</text><text class="mut" x="740" y="152">who and which camera, where from; two</text>
+        <text class="mut" x="740" y="166">facts at most, wrapped, never cut</text>
+        <text class="hdr" x="660" y="196">What goes</text>
+        <text class="mut" x="660" y="214">The grey pill with "Note by…" on every note row.</text>
+        <text class="mut" x="660" y="228">Three rows for a note written on three cameras.</text>
+        <text class="mut" x="660" y="242">"Note by" as the first words of every source line:</text>
+        <text class="mut" x="660" y="256">the mark says it is a note, the name says who.</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>One row shape for every event.</b> The time, the camera's colour dot, the words at one size, and a source line under them in the muted small text: who wrote it, which camera, where it came from. A note's row adds the small note mark before its words and nothing else. The pill goes; the line wraps and is never cut.</p>
+      <p><b>A note on several cameras is one row.</b> Note on all shown already marks its copies as one for the Notes tab; the Chronology lists them once too, at the earliest moment, with every camera's dot and "on 3 cameras from the map · each at its second". Edit or remove it once and every copy follows, as the Notes tab does.</p>
+      <p><b>The other sources read the same way.</b> "Ofc. Pell's words · added by Sam Okafor", "Unit 9082's own file", "accepted from a proposed event", "found by the watch phrase gun". The pill's colour coding is carried by the words.</p>
+    </div>
+  </section>
+
+  <!-- Figure C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 8</span><h2>Drawn: the strip's Events lane in the cameras' colours, a note's mark shaped as a note, and the card</h2></div>
+    <div class="two">
+      <div class="pane">
+        <svg viewBox="0 0 500 180" role="img" aria-label="The Events lane with marks in the cameras' colours and note marks as small flags">
+          <rect x="0" y="0" width="500" height="180" fill="var(--surface)"/>
+          <text class="tk" x="100" y="20">20:25</text><text class="tk" x="220" y="20">20:27</text><text class="tk" x="340" y="20">20:29</text><text class="tk" x="460" y="20">20:31</text>
+          <text class="lanehead" x="12" y="46">Ofc. Pell</text><rect class="lane" x="100" y="38" width="390" height="10" rx="4"/><line class="bar b1" x1="110" y1="43" x2="480" y2="43"/>
+          <text class="lanehead" x="12" y="70">Ofc. Amari</text><rect class="lane" x="100" y="62" width="390" height="10" rx="4"/><line class="bar b2" x1="114" y1="67" x2="476" y2="67"/>
+          <text class="lanehead" x="12" y="94">Unit 9082</text><rect class="lane" x="100" y="86" width="390" height="10" rx="4"/><line class="bar b3" x1="104" y1="91" x2="486" y2="91"/>
+          <text class="lanehead" x="12" y="122">Events</text><rect class="lane" x="100" y="112" width="390" height="14" rx="4"/>
+          <!-- notes as small flags in the camera colour; other events as ticks in the camera colour -->
+          <path class="mk note d2" d="M 118 114 h 7 l 2 2 v 8 h -9 z"/>
+          <path class="mk note d1" d="M 140 114 h 7 l 2 2 v 8 h -9 z"/>
+          <rect class="d3" x="166" y="114" width="3" height="10"/>
+          <path class="mk note d2" d="M 236 114 h 7 l 2 2 v 8 h -9 z"/><path class="mk note d1" d="M 240 114 h 7 l 2 2 v 8 h -9 z"/><path class="mk note d4" d="M 244 114 h 7 l 2 2 v 8 h -9 z"/>
+          <rect class="d1" x="300" y="114" width="3" height="10"/>
+          <rect class="mk" x="340" y="114" width="3" height="10"/>
+          <text class="mut" x="12" y="150">A note is a small flag in its camera's colour; a camera's own reading a tick in its colour;</text>
+          <text class="mut" x="12" y="164">a person's event or a watch-phrase hit a grey tick. Three notes at one moment fan 4 px apart, as the knots do.</text>
+        </svg>
+      </div>
+      <div class="pane">
+        <svg viewBox="0 0 500 180" role="img" aria-label="The event card for a note">
+          <rect x="0" y="0" width="500" height="180" fill="var(--surface)"/>
+          <rect class="card" x="40" y="16" width="420" height="148"/>
+          <circle class="dot d2" cx="56" cy="36" r="4"/><path class="ico" d="M 66 31 h 7 l 3 3 v 7 h -10 z"/>
+          <text class="hdr" x="82" y="40">Note at 20:27:14 · 2 min 14 s into Ofc. Amari's video</text>
+          <text class="w" x="52" y="62">All units at the corner, walk check</text>
+          <text class="src" x="52" y="80">Dana Reyes · 4 Nov 2026 14:02 · from the map · also on Ofc. Pell at 2 min 17 s and Ofc. Dunn at 40 s</text>
+          <text class="mut" x="52" y="100">Seen on: Ofc. Amari, Ofc. Pell, Ofc. Dunn</text>
+          <rect class="btn primary" x="52" y="112" width="58" height="16"/><text class="btntxt primary" x="60" y="123">Play here</text>
+          <rect class="btn" x="116" y="112" width="34" height="16"/><text class="btntxt" x="124" y="123">Edit</text>
+          <rect class="btn" x="156" y="112" width="48" height="16"/><text class="btntxt" x="164" y="123">Remove</text>
+          <rect class="btn" x="210" y="112" width="60" height="16"/><text class="btntxt" x="218" y="123">Clip this</text>
+          <rect class="btn" x="276" y="112" width="78" height="16"/><text class="btntxt" x="284" y="123">On the Notes tab</text>
+          <rect class="btn" x="360" y="112" width="92" height="16"/><text class="btntxt" x="368" y="123">Open the recording</text>
+          <text class="mut" x="52" y="150">Edit and Remove act on the note where it sits; every copy follows.</text>
+        </svg>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The Events lane.</b> A mark takes its camera's colour, as the lanes above it do, and a note's mark is a small flag rather than a tick, so a glance tells a person's note from a camera's reading. Hover says the words; a press opens the card.</p>
+      <p><b>The card.</b> The same card every event has, headed "Note at hh:mm:ss on <camera>", the words, the source line, and the cameras it is seen on; Edit and Remove act on the note itself.</p>
+    </div>
+  </section>
+
+  <!-- Figure D -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 9</span><h2>Drawn: the said band and a tile's line, the writer named</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 120" role="img" aria-label="The said band with a note row naming its writer">
+        <rect x="0" y="0" width="1000" height="120" fill="var(--surface)"/>
+        <rect class="said" x="16" y="12" width="620" height="96"/>
+        <text class="mut" x="26" y="30">Said on Ofc. Amari, following the clock</text>
+        <text class="t" x="26" y="52">20:27:10</text><text class="who" x="90" y="52" style="fill: var(--c2)">Ofc. Amari</text><text class="w" x="160" y="52">Step out of the vehicle for me.</text>
+        <rect class="lit" x="20" y="60" width="612" height="16"/><text class="t littxt" x="26" y="71">20:27:14</text><path class="ico" d="M 92 63 h 6 l 2 2 v 6 h -8 z" style="stroke: var(--now-ink)"/><text class="who littxt" x="106" y="71">Dana Reyes</text><text class="w littxt" x="176" y="71">All units at the corner, walk check</text><text class="src littxt" x="420" y="71">a note · on 3 cameras</text>
+        <text class="t" x="26" y="94">20:27:20</text><text class="who" x="90" y="94" style="fill: var(--c1)">Ofc. Pell</text><text class="w" x="160" y="94">Licence and registration, please.</text>
+        <text class="hdr" x="660" y="30">What changes here</text>
+        <text class="mut" x="660" y="50">The note row keeps its place among the lines and its own tone;</text>
+        <text class="mut" x="660" y="64">"Note" becomes the writer's name with the note mark before it,</text>
+        <text class="mut" x="660" y="78">and "a note · on 3 cameras" sits at the end of the row.</text>
+        <text class="mut" x="660" y="100">A tile's two lines read the same way.</text>
+      </svg>
+    </div>
+  </section>
+
+    <!-- Step 10 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 10</span><h2>Where an event lands on a recording: the time into the video on hover and on the card, and a way there</h2></div>
+    <p class="press"><b>The press:</b> hover a row, or open its card. Every event already has a camera and a moment on the incident's clock; the page now also says how far into that camera's recording the moment falls, and opens the recording there.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 260" role="img" aria-label="A row hovered with its landing on the recording, and the camera's lane with the mark at that moment">
+        <rect x="0" y="0" width="1000" height="260" fill="var(--surface)"/>
+        <!-- the row, hovered -->
+        <rect x="16" y="24" width="604" height="44" fill="var(--surface-2)" rx="4"/>
+        <text class="t" x="24" y="44">20:27:14</text><circle class="dot d2" cx="88" cy="40" r="4"/><path class="ico" d="M 98 35 h 7 l 3 3 v 7 h -10 z"/>
+        <text class="w" x="114" y="44">All units at the corner, walk check</text><text class="menu" x="600" y="44">···</text>
+        <text class="src" x="114" y="58">Dana Reyes · on 3 cameras from the map</text>
+        <!-- the hover -->
+        <rect class="card" x="130" y="80" width="330" height="56"/>
+        <text class="hdr" x="140" y="98">On the day's clock 20:27:14</text>
+        <text class="mut" x="140" y="114">Ofc. Amari: 2 min 14 s into its video (BWC2-1, 20:25:00 to 20:38:12)</text>
+        <text class="mut" x="140" y="128">Ofc. Pell: 2 min 17 s in · Ofc. Dunn: 40 s in</text>
+        <polygon class="cursor" points="106,62 106,80 111,75 115,83 118,81 114,73 121,73"/>
+        <!-- the lanes -->
+        <text class="tk" x="700" y="30">20:25</text><text class="tk" x="800" y="30">20:27</text><text class="tk" x="900" y="30">20:29</text>
+        <text class="lanehead" x="640" y="56">Ofc. Amari</text><rect class="lane" x="700" y="48" width="280" height="10" rx="4"/><line class="bar b2" x1="704" y1="53" x2="960" y2="53"/>
+        <path class="mk note d2" d="M 812 44 h 7 l 2 2 v 8 h -9 z"/><text class="tk" x="784" y="72">2 min 14 s</text>
+        <text class="lanehead" x="640" y="92">Ofc. Pell</text><rect class="lane" x="700" y="84" width="280" height="10" rx="4"/><line class="bar b1" x1="700" y1="89" x2="956" y2="89"/>
+        <path class="mk note d1" d="M 815 80 h 7 l 2 2 v 8 h -9 z"/><text class="tk" x="787" y="108">2 min 17 s</text>
+        <text class="lanehead" x="640" y="128">Ofc. Dunn</text><rect class="lane" x="700" y="120" width="280" height="10" rx="4"/><line class="bar b4" x1="776" y1="125" x2="950" y2="125"/>
+        <path class="mk note d4" d="M 815 116 h 7 l 2 2 v 8 h -9 z"/><text class="tk" x="800" y="144">40 s</text>
+        <text class="mut" x="640" y="170">On the strip the mark sits on its camera's own lane at that moment, not only on the Events lane,</text>
+        <text class="mut" x="640" y="184">and its hover says the camera's own time: "2 min 14 s into Ofc. Amari's video".</text>
+        <!-- the way there -->
+        <text class="hdr" x="16" y="170">A way there</text>
+        <rect class="btn primary" x="16" y="180" width="58" height="16"/><text class="btntxt primary" x="24" y="191">Play here</text>
+        <text class="mut" x="80" y="191">every camera to 20:27:14, Ofc. Amari to the front, as today</text>
+        <rect class="btn" x="16" y="202" width="92" height="16"/><text class="btntxt" x="24" y="213">Open the recording</text>
+        <text class="mut" x="114" y="213">Ofc. Amari's video at 2 min 14 s, the note lit among its lines; on a shared note, one choice per camera</text>
+        <text class="mut" x="16" y="240">A camera's own time is also what the Preview, the recording page and the notes export use, so a note reads the same everywhere a person meets it.</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>On the row.</b> The source line keeps to who and which camera; a hover on the time gives the long form, "2 min 14 s into Ofc. Amari's video", with the video's name and span, and a shared note's hover lists each camera's.</p>
+      <p><b>On the card.</b> The head reads "Note at 20:27:14 · 2 min 14 s into Ofc. Amari's video", and <b>Open the recording</b> opens that page at that second with the note lit; a shared note offers one per camera.</p>
+      <p><b>On the strip.</b> The mark is drawn on its camera's lane at the moment as well as on the Events lane, so a glance from a lane finds the note; hover says the camera's own time.</p>
+    </div>
+  </section>
+
+  <!-- Step 11 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Step 11</span><h2>A video with no clock and no path file: ticked in anyway, synced on the incident page, its notes waiting until then</h2></div>
+    <p class="press"><b>The press:</b> tick Cell-9, a phone video with no clock in its picture and no path file, in the Not on the clock row at the strip's foot. It has no lane and no place on the ruler, but you know it belongs to the stop.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The Not on the clock row with ticks, Your incident with the clockless video's line, and the chronology's foot line">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--surface)"/>
+        <!-- the strip's foot row -->
+        <text class="lbl b" x="16" y="30">Not on the clock</text>
+        <rect class="check" x="130" y="22" width="9" height="9"/><text class="lbl" x="146" y="30">Cell-9</text><text class="mut" x="186" y="30">Ofc. Ruiz's phone · 14 min · no clock in its picture, no path file</text>
+        <rect class="uncheck" x="130" y="42" width="9" height="9"/><text class="lbl" x="146" y="50">AirOne</text><text class="mut" x="186" y="50">the helicopter's feed · 41 min · no clock in its picture</text>
+        <rect class="btn" x="560" y="18" width="90" height="16"/><text class="btntxt" x="568" y="29">Put on the clock…</text>
+        <!-- the panel, opened -->
+        <rect class="box" x="16" y="66" width="640" height="78"/>
+        <text class="lbl b" x="28" y="84">Cell-9</text><text class="mut" x="70" y="84">No time in its file. The place is yours.</text>
+        <rect class="btn primary" x="28" y="94" width="186" height="16"/><text class="btntxt primary" x="36" y="105">Match its sound against the cameras you ticked</text>
+        <rect class="btn" x="220" y="94" width="60" height="16"/><text class="btntxt" x="228" y="105">Type a time</text>
+        <rect class="btn" x="286" y="94" width="78" height="16"/><text class="btntxt" x="294" y="105">Place by the day</text>
+        <text class="mut" x="28" y="132">Or leave it: the incident takes it unplaced, and Sync on the incident page places it by sound or by hand.</text>
+        <!-- the Reader: Your incident -->
+        <rect class="box acc" x="700" y="10" width="284" height="150"/>
+        <text class="lbl b" x="712" y="30">Your incident</text><rect class="pill acc" x="796" y="19" width="34" height="14"/><text class="pilltxt" x="802" y="29">4 of 8</text>
+        <rect class="still" x="712" y="44" width="44" height="26"/><text class="lbl b" x="764" y="54">Ofc. Pell</text><text class="mut" x="764" y="66">20:25 to 20:38 · the clock in its picture</text>
+        <rect class="still" x="712" y="76" width="44" height="26"/><text class="lbl b" x="764" y="86">Ofc. Amari</text><text class="mut" x="764" y="98">20:25 to 20:38 · the clock in its picture</text>
+        <rect class="still" x="712" y="108" width="44" height="26"/><text class="lbl b" x="764" y="118">Cell-9</text><text class="mut" x="764" y="130">not on the clock yet; synced on the incident</text><text class="mut" x="764" y="142">page by sound or by hand · not on the map</text>
+        <!-- the incident page's chronology foot -->
+        <text class="lbl b" x="16" y="178">On the incident page, until Cell-9 is synced</text>
+        <line class="rowline" x1="16" y1="190" x2="656" y2="190"/>
+        <text class="t" x="24" y="210">20:27:14</text><circle class="dot d2" cx="88" cy="206" r="4"/><path class="ico" d="M 98 201 h 7 l 3 3 v 7 h -10 z"/>
+        <text class="w" x="114" y="210">All units at the corner, walk check</text><text class="src" x="114" y="224">Dana Reyes · on 3 cameras from the map</text>
+        <line class="rowline" x1="16" y1="234" x2="656" y2="234"/>
+        <rect x="16" y="240" width="640" height="26" fill="var(--surface-2)" rx="4"/>
+        <circle class="dot d5" cx="30" cy="253" r="4"/><text class="lbl" x="42" y="257">Waiting for Cell-9 to be synced · 2 notes</text><text class="mut" x="290" y="257">they join the chronology at their moments the instant it is placed</text>
+        <rect class="btn" x="590" y="245" width="58" height="16"/><text class="btntxt" x="598" y="256">Sync it</text>
+        <text class="mut" x="16" y="290">A note on Cell-9 is never lost: it lives on the video at its own second, so "4 min 2 s into Cell-9's video" is always known; only its moment on the day's clock waits.</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>Ticked in anyway.</b> The Not on the clock row gives each clockless video a tick. Ticked, it is a camera line in Your incident with a still at its start and the words "not on the clock yet; synced on the incident page by sound or by hand · not on the map", counted against the cap, with no bar on the strip and nothing on the map. The span and the tools pass it by; Your span names it under "not on the clock".</p>
+      <p><b>By sound against the ticked.</b> Once two or more cameras are ticked, Put on the clock offers "Match its sound against the cameras you ticked" first, then Type a time and Place by the day as today. The incident takes it unplaced if nothing is chosen, and the incident page's Sync has it.</p>
+      <p><b>Its notes wait, in view.</b> On the incident page a note on a camera not yet synced cannot sit among the events, since its moment on the day's clock is unknown; a foot line under the chronology says "Waiting for Cell-9 to be synced · 2 notes" with Sync it, and the notes join at their moments the instant the camera is placed. A note's time into its own video is always known.</p>
+    </div>
+  </section>
+
+  <!-- Where the incidents built are -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Where the incidents built are</span><h2>Three doors to an incident already built, open at any moment of the build</h2></div>
+    <p class="press"><b>The press:</b> "2 incidents built" in the lead, which is a button; or the shaded column's name on the strip; or Open in the Reader's day reading. Each lands on the incident's own page.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The lead's incidents button opened as a list, the shaded column's tag pressed with the Reader reading the incident">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--surface)"/>
+        <!-- door 1: the lead's button -->
+        <text class="hdr" x="16" y="24">1 · The lead's button, any time</text>
+        <rect class="pill" x="16" y="36" width="128" height="18"/><text class="pilltxt" x="24" y="48">6 cameras on the clock</text>
+        <rect class="btn primary" x="150" y="36" width="112" height="18"/><text class="btntxt primary" x="158" y="48">2 incidents built ▾</text>
+        <rect class="box acc" x="150" y="60" width="420" height="112"/>
+        <text class="lbl b" x="162" y="80">Incidents built in this case</text><text class="mut" x="330" y="80">newest first · every day</text>
+        <rect class="still" x="162" y="90" width="36" height="22"/><text class="lbl b" x="206" y="100">Harbour car park</text><text class="mut" x="206" y="112">3 cameras · 6 Nov 2025, 20:27 to 20:40 · built by Dana Reyes, 4 Nov 2026, from the strip</text>
+        <rect class="btn" x="478" y="92" width="36" height="16"/><text class="btntxt" x="486" y="103">Open</text><rect class="btn" x="520" y="92" width="44" height="16"/><text class="btntxt" x="526" y="103">On map</text>
+        <rect class="still" x="162" y="124" width="36" height="22"/><text class="lbl b" x="206" y="134">Quay Road, 7 Nov</text><text class="mut" x="206" y="146">2 cameras · 7 Nov 2025, 09:12 to 09:40 · built by Sam Okafor, 4 Nov 2026, by hand</text>
+        <rect class="btn" x="478" y="126" width="36" height="16"/><text class="btntxt" x="486" y="137">Open</text><rect class="btn" x="520" y="126" width="44" height="16"/><text class="btntxt" x="526" y="137">On map</text>
+        <text class="mut" x="162" y="164">A press on a name whose day is shown lights its column on the strip; Escape or a press elsewhere closes the list.</text>
+        <!-- door 2: the column -->
+        <text class="hdr" x="16" y="204">2 · The shaded column on the strip</text>
+        <rect class="lane" x="16" y="216" width="560" height="10" rx="4"/><rect class="lane" x="16" y="232" width="560" height="10" rx="4"/><rect class="lane" x="16" y="248" width="560" height="10" rx="4"/>
+        <line class="bar b1" x1="120" y1="221" x2="400" y2="221"/><line class="bar b2" x1="126" y1="237" x2="404" y2="237"/><line class="bar b4" x1="180" y1="253" x2="380" y2="253"/>
+        <rect class="col inc" x="178" y="212" width="222" height="50"/>
+        <rect class="tagbg" x="178" y="200" width="92" height="12"/><text class="tag" x="182" y="209">Harbour car park</text>
+        <polygon class="cursor" points="236,206 236,224 241,219 245,227 248,225 244,217 251,217"/>
+        <text class="mut" x="16" y="282">Press the column's name: the Reader reads that incident, with Open the incident and On the map; the ticks you have made stay.</text>
+        <!-- door 3: the Reader -->
+        <text class="hdr" x="620" y="24">3 · The Reader</text>
+        <rect class="box acc" x="620" y="36" width="364" height="236"/>
+        <text class="mut" x="632" y="54">‹ Your incident</text>
+        <text class="lbl b" x="632" y="76" style="font-size: 12px">Harbour car park</text>
+        <text class="mut" x="632" y="92">20:27 to 20:40 on 6 Nov 2025 · 3 cameras · 4 events</text>
+        <text class="mut" x="632" y="106">built by Dana Reyes, 4 Nov 2026, from the strip</text>
+        <rect class="still" x="632" y="116" width="60" height="34"/><rect class="still" x="700" y="116" width="60" height="34"/><rect class="still" x="768" y="116" width="60" height="34"/>
+        <rect class="btn primary" x="632" y="162" width="96" height="18"/><text class="btntxt primary" x="640" y="174">Open the incident</text>
+        <rect class="btn" x="734" y="162" width="66" height="18"/><text class="btntxt" x="742" y="174">On the map</text>
+        <rect class="btn" x="806" y="162" width="130" height="18"/><text class="btntxt" x="814" y="174">Add the ticked cameras to it</text>
+        <text class="mut" x="632" y="204">With nothing ticked the Reader reads the day instead, as in step 1:</text>
+        <text class="mut" x="632" y="218">"Incidents built on this day" with Open and On the map for each, and</text>
+        <text class="mut" x="632" y="232">the other days folded under. ‹ Your incident returns to the build.</text>
+        <text class="mut" x="632" y="256">Elsewhere: the recordings list's Incident column, and the incident page itself.</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>The lead's button is the door that is always there.</b> "2 incidents built" opens a list of every incident in the case, newest first, with a still, its day and span, who built it and how, Open and On map; it works mid-build, when the Reader is busy being Your incident. Today the pill is a count and nothing more.</p>
+      <p><b>The strip and the Reader keep their doors.</b> The shaded column's name reads the incident in the Reader without losing the ticks, and ‹ Your incident goes back; the Reader's day reading lists the day's incidents as it does now.</p>
+      <p><b>One more press while building.</b> On an incident's reading the Reader offers <b>Add the ticked cameras to it</b>, so a person who finds the stop already built does not make a second one; the cap and the sitting apply as on Add cameras today.</p>
+    </div>
+  </section>
+
+  <!-- The whole tab -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The whole tab</span><h2>Put together: the Incidents tab at 1366 wide, mid-build, after every change above</h2></div>
+    <p class="press"><b>Where we are:</b> the span 20:25 to 20:40 set by hand, three cameras ticked, the clock line dragged to 20:28:10, two more cameras ringed as near. One screen, no scrolling but the Reader's own.</p>
+    <div class="pane">
+      <svg viewBox="0 0 1366 760" role="img" aria-label="The whole Incidents tab at 1366 wide: the head, the tabs, the lead, the strip with its ruler, lanes, column and clock line, the Not on the clock row, the map under the strip, and the Reader beside">
+        <rect x="0" y="0" width="1366" height="760" fill="var(--bg)"/>
+        <!-- the head -->
+        <text class="eyeb" x="16" y="18">CASES</text>
+        <text class="ttl" x="16" y="38">Harbour Street stop</text>
+        <rect class="btn" x="1180" y="20" width="84" height="20"/><text class="btntxt" x="1190" y="33">Add path files</text>
+        <rect class="btn primary" x="1270" y="20" width="80" height="20"/><text class="btntxt primary" x="1280" y="33">Add recordings</text>
+        <!-- the tabs -->
+        <text class="tabtxt" x="16" y="66">Recordings 8</text><text class="tabtxt" x="110" y="66">Search</text><text class="tabtxt" x="166" y="66">Proposed events 8</text><text class="tabtxt" x="290" y="66">Notes 14</text><text class="tabtxt" x="358" y="66">Documents 2</text>
+        <text class="tabtxt on" x="448" y="66">Incidents 6</text><text class="tabtxt" x="530" y="66">Map 6</text><text class="tabtxt" x="580" y="66">Clips 3</text><text class="tabtxt" x="632" y="66">Speakers 2</text><text class="tabtxt" x="708" y="66">Details</text>
+        <line x1="16" y1="76" x2="1350" y2="76" stroke="var(--line)"/><line class="tabline" x1="444" y1="76" x2="520" y2="76"/>
+        <!-- the lead -->
+        <rect class="pill" x="16" y="90" width="128" height="18"/><text class="pilltxt" x="24" y="102">6 cameras on the clock</text>
+        <rect class="btn" x="150" y="90" width="112" height="18"/><text class="btntxt" x="158" y="102">2 incidents built ▾</text>
+        <rect class="pill" x="268" y="90" width="100" height="18"/><text class="pilltxt" x="276" y="102">2 not on the clock</text>
+        <text class="mut" x="380" y="102">Span</text><rect class="field" x="410" y="90" width="44" height="18"/><text class="fieldtxt" x="416" y="102">20:25</text>
+        <text class="mut" x="460" y="102">to</text><rect class="field" x="474" y="90" width="44" height="18"/><text class="fieldtxt" x="480" y="102">20:40</text>
+        <rect class="btn" x="524" y="90" width="30" height="18"/><text class="btntxt" x="531" y="102">Set</text>
+        <rect class="btn" x="560" y="90" width="80" height="18"/><text class="btntxt" x="567" y="102">Clear the span</text>
+        <rect class="pill acc" x="650" y="90" width="240" height="18"/><text class="pilltxt" x="658" y="102">Building: 3 cameras, 20:25 to 20:40 · at 20:28:10</text>
+        <!-- the strip card -->
+        <rect class="box" x="16" y="118" width="884" height="310"/>
+        <text class="mut" x="28" y="140">Days</text>
+        <rect class="pill acc" x="60" y="128" width="190" height="18"/><text class="pilltxt" x="68" y="140">6 Nov 2025 · 6 videos · 13 notes</text>
+        <rect class="pill" x="256" y="128" width="130" height="18"/><text class="pilltxt" x="264" y="140">7 Nov 2025 · 2 videos</text>
+        <!-- the day line -->
+        <text class="tk" x="150" y="162">the day</text>
+        <rect class="lane" x="200" y="156" width="640" height="6" rx="3"/>
+        <line class="bar b3" style="stroke-width: 4" x1="204" y1="159" x2="216" y2="159"/><line class="bar b1" style="stroke-width: 4" x1="770" y1="159" x2="810" y2="159"/>
+        <rect class="win" x="766" y="153" width="48" height="12"/>
+        <!-- the ruler -->
+        <text class="tk" x="200" y="184">20:22</text><text class="tk" x="310" y="184">20:26</text><text class="tk" x="432" y="184">20:30</text><text class="tk" x="554" y="184">20:34</text><text class="tk" x="676" y="184">20:38</text><text class="tk" x="812" y="184">20:43</text>
+        <rect class="lane" x="200" y="190" width="640" height="8" rx="4"/><text class="mut" x="470" y="197" style="font-size: 8px">drag across here to set a span</text>
+        <!-- lanes -->
+        <rect class="check" x="20" y="219" width="10" height="10"/><circle cx="42" cy="224" r="4" fill="var(--c1)"/><text class="lbl b" x="52" y="228">Ofc. Pell</text><text class="mut" x="118" y="228">13 min</text><rect class="lane" x="200" y="219" width="640" height="10" rx="4"/><line class="bar b1" x1="291.42857142857144" y1="224" x2="687.6190476190476" y2="224"/><text class="time" x="299.42857142857144" y="227">20:25 to 20:38</text><rect class="still" x="852" y="213" width="40" height="22"/><rect class="check" x="20" y="247" width="10" height="10"/><circle cx="42" cy="252" r="4" fill="var(--c2)"/><text class="lbl b" x="52" y="256">Ofc. Amari</text><text class="mut" x="118" y="256">13 min</text><rect class="lane" x="200" y="247" width="640" height="10" rx="4"/><line class="bar b2" x1="291.42857142857144" y1="252" x2="687.6190476190476" y2="252"/><text class="time" x="299.42857142857144" y="255">20:25 to 20:38</text><rect class="still" x="852" y="241" width="40" height="22"/><rect class="check" x="20" y="275" width="10" height="10"/><circle cx="42" cy="280" r="4" fill="var(--c3)"/><text class="lbl b" x="52" y="284">Unit 9082</text><text class="mut" x="118" y="284">14 min</text><rect class="lane" x="200" y="275" width="640" height="10" rx="4"/><line class="bar b3" x1="260.95238095238096" y1="280" x2="718.0952380952381" y2="280"/><text class="time" x="268.95238095238096" y="283">20:24 to 20:39</text><rect class="still" x="852" y="269" width="40" height="22"/><rect class="uncheck" x="20" y="303" width="10" height="10"/><circle class="ring" cx="25" cy="308" r="8"/><circle cx="42" cy="308" r="4" fill="var(--c4)"/><text class="lbl b" x="52" y="312">Ofc. Dunn</text><text class="mut" x="118" y="312">10 min</text><rect class="lane" x="200" y="303" width="640" height="10" rx="4"/><line class="bar b4" x1="352.3809523809524" y1="308" x2="657.1428571428571" y2="308"/><text class="time" x="360.3809523809524" y="311">20:27 to 20:37</text><rect class="still" x="852" y="297" width="40" height="22"/><rect class="uncheck" x="20" y="331" width="10" height="10"/><circle class="ring" cx="25" cy="336" r="8"/><circle cx="42" cy="336" r="4" fill="var(--c5)"/><text class="lbl b" x="52" y="340">Kit Vale</text><text class="mut" x="118" y="340">9 min</text><rect class="lane" x="200" y="331" width="640" height="10" rx="4"/><line class="bar b5" x1="382.85714285714283" y1="336" x2="657.1428571428571" y2="336"/><text class="time" x="390.85714285714283" y="339">20:28 to 20:37</text><rect class="still" x="852" y="325" width="40" height="22"/><rect class="uncheck" x="20" y="359" width="10" height="10"/><circle cx="42" cy="364" r="4" fill="var(--c6)"/><text class="lbl b" x="52" y="368" opacity=".4">Ofc. Ruiz</text><text class="mut" x="118" y="368">no overlap</text><rect class="lane" x="200" y="359" width="640" height="10" rx="4"/><rect class="still" x="852" y="353" width="40" height="22" opacity=".35"/>
+        <!-- columns over the lanes -->
+        <rect class="col inc" x="352" y="212" width="396" height="164"/>
+        <rect class="tagbg inc" x="657" y="376" width="92" height="12"/><text class="tag inc" x="661" y="385">Harbour car park</text>
+        <rect class="col" x="291" y="212" width="457" height="164"/>
+        <rect class="tagbg" x="291" y="200" width="134" height="12"/><text class="tag" x="295" y="209">your incident · 20:25 to 20:40</text>
+        <rect class="hdl" x="288" y="282" width="6" height="24"/><rect class="hdl" x="746" y="282" width="6" height="24"/>
+        <line class="clk" x1="388" y1="212" x2="388" y2="376"/>
+        <rect class="box" x="364" y="378" width="48" height="12"/><text class="clktxt" x="368" y="387">20:28:10</text>
+        <!-- Not on the clock -->
+        <line x1="28" y1="396" x2="888" y2="396" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <text class="lbl b" x="28" y="412">Not on the clock</text>
+        <rect class="uncheck" x="130" y="404" width="10" height="10"/><text class="lbl" x="146" y="412">Cell-9</text><text class="mut" x="186" y="412">Ofc. Ruiz's phone · 14 min</text>
+        <rect class="uncheck" x="340" y="404" width="10" height="10"/><text class="lbl" x="356" y="412">AirOne</text><text class="mut" x="400" y="412">the helicopter's feed · 41 min</text>
+        <rect class="btn" x="600" y="400" width="92" height="18"/><text class="btntxt" x="608" y="412">Put on the clock…</text>
+        <text class="mut" x="716" y="412">Tick a camera to build; press a name to read it.</text><rect class="btn" x="868" y="402" width="14" height="14" rx="7"/><text class="btntxt" x="872" y="412">?</text>
+        <!-- the map under the strip -->
+        <rect class="box" x="16" y="438" width="884" height="306"/>
+        <rect x="17" y="439" width="882" height="304" fill="var(--ground)" rx="6"/>
+        <rect class="ro" x="17" y="560" width="882" height="30"/><rect class="ro" x="560" y="439" width="26" height="304"/>
+        <text class="road-name" x="40" y="580">HARBOUR STREET</text><text class="road-name" x="596" y="458">QUAY ROAD</text>
+        <rect class="ro" x="620" y="620" width="200" height="90" rx="4"/><text class="road-name" x="632" y="700">HARBOUR CAR PARK</text>
+        <path class="pt" stroke="var(--c1)" d="M 60 575 L 540 575 L 572 578 L 572 630 L 690 660"/>
+        <path class="pt" stroke="var(--c2)" d="M 572 450 L 572 560 L 572 640 L 700 666"/>
+        <path class="pt" stroke="var(--c3)" d="M 880 575 L 590 578 L 590 645 L 712 662"/>
+        <circle class="hd" cx="690" cy="660" r="7" fill="var(--c1)"/><rect class="hd" x="693" y="659" width="14" height="14" rx="2" fill="var(--c3)"/><circle class="hd" cx="700" cy="666" r="7" fill="var(--c2)"/>
+        <path class="ldr" d="M 690 653 L 720 626"/><rect class="tagbg2" x="722" y="616" width="64" height="18"/><text class="tag2" x="730" y="628">Ofc. Pell</text>
+        <path class="ldr" d="M 707 673 L 742 692"/><rect class="tagbg2" x="744" y="682" width="78" height="18"/><text class="tag2" x="752" y="694">Unit 9082</text>
+        <path class="ldr" d="M 717 662 L 800 644"/><rect class="tagbg2" x="802" y="634" width="72" height="18"/><text class="tag2" x="810" y="646">Ofc. Amari</text>
+        <rect class="btn" x="786" y="448" width="104" height="18"/><text class="btntxt" x="794" y="460">Open the Map tab</text>
+        <rect class="box" x="28" y="720" width="60" height="14"/><text class="tk" x="34" y="730">200 ft</text>
+        <text class="mut" x="100" y="730">No street map installed: the paths are drawn on plain ground.</text>
+        <!-- the Reader -->
+        <rect class="box acc" x="920" y="118" width="430" height="626"/>
+        <text class="lbl b" x="934" y="140" style="font-size: 13px">Your incident</text><rect class="pill acc" x="1036" y="128" width="40" height="16"/><text class="pilltxt" x="1043" y="139">3 of 8</text>
+        <rect class="btn" x="1320" y="128" width="14" height="14" rx="7"/><text class="btntxt" x="1324" y="138">?</text>
+        <text class="mut" x="934" y="162">NAME</text><rect class="field" x="934" y="168" width="400" height="22"/><text class="fieldtxt" x="942" y="183" style="font: 500 11px var(--font)">Harbour Street stop, 20:25</text>
+        <text class="mut" x="934" y="214">3 CAMERAS, 20:25 TO 20:40 · PICTURES AT 20:28:10</text>
+        <rect class="still" x="934" y="226" width="60" height="34"/><text class="lbl b" x="1004" y="240">Ofc. Pell</text><text class="mut" x="1004" y="254">20:25 to 20:38 · the clock in its picture</text><text class="mut" x="1300" y="240">untick</text>
+        <rect class="still" x="934" y="268" width="60" height="34"/><text class="lbl b" x="1004" y="282">Ofc. Amari</text><text class="mut" x="1004" y="296">20:25 to 20:38 · the clock in its picture</text><text class="mut" x="1300" y="282">untick</text>
+        <rect class="still" x="934" y="310" width="60" height="34"/><text class="lbl b" x="1004" y="324">Unit 9082</text><text class="mut" x="1004" y="338">2 streams · 20:24 to 20:39 · its own clock, from its path file</text><text class="mut" x="1300" y="324">untick</text>
+        <line x1="934" y1="356" x2="1334" y2="356" stroke="var(--line)"/>
+        <text class="mut" x="934" y="376">In your span, not ticked: Ofc. Dunn (in Harbour car park), Kit Vale.</text>
+        <text class="mut" x="934" y="392">Not on the clock: Cell-9, AirOne.</text>
+        <text class="lbl b" x="934" y="420">Tools</text>
+        <rect class="btn" x="934" y="430" width="172" height="18"/><text class="btntxt" x="942" y="442">Tick everyone running at 20:28:10</text>
+        <rect class="btn" x="1112" y="430" width="200" height="18"/><text class="btntxt" x="1120" y="442">Tick the cameras within 50 m on the map</text>
+        <text class="mut" x="934" y="466">Both only tick; you can untick any of them.</text>
+        <text class="mut" x="934" y="494">3 of 8 cameras · ⅓ of 4 hours' worth</text><rect class="lane" x="1130" y="488" width="90" height="6" rx="3"/><rect x="1130" y="488" width="30" height="6" rx="3" fill="var(--ok)"/><text class="mut" x="1228" y="494">one sitting</text>
+        <rect class="btn primary" x="934" y="520" width="104" height="22"/><text class="btntxt primary" x="944" y="534">Make the incident</text>
+        <rect class="btn" x="1044" y="520" width="90" height="22"/><text class="btntxt" x="1054" y="534">Clear the ticks</text>
+        <text class="mut" x="934" y="562">Made in your name, from the cameras you ticked, with the span you set. It opens on its own page.</text>
+        <rect class="scroll" x="1340" y="130" width="4" height="600"/><rect x="1340" y="130" width="4" height="420" rx="2" fill="var(--muted)"/>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>Read top to bottom.</b> The lead says what is on the clock and what you are building; the strip is the day with your span as the bright column and the clock line across it; the Not on the clock row and the foot's one line close the strip; the map under it shows the three ticked paths where they were at 20:28:10; the Reader beside is Your incident, scrolling in its own box, with the tools and Make the incident at the end.</p>
+      <p><b>What a non-technical reader meets.</b> Plain words only: cameras, span, your incident, the clock in its picture, not on the clock, pictures at a time. One row shape on the lanes, one in the Reader. Nothing is cut mid-word; the long explanations sit behind the two help marks.</p>
+      <p><b>What stays as it is.</b> The case head, the tabs, the day chips, the map's own drawing, Make the incident's door and the incident page it lands on.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The whole tab, docked</span><h2>On the ultrawide monitor: three columns, everything in view at once</h2></div>
+    <div class="pane">
+      <svg viewBox="0 0 1000 300" role="img" aria-label="The tab on an ultrawide monitor in three columns: the strip, the map beside it, the Reader">
+        <rect x="0" y="0" width="1000" height="300" fill="var(--bg)"/>
+        <text class="eyeb" x="12" y="16">CASES</text><text class="ttl" x="12" y="34" style="font-size: 13px">Harbour Street stop</text>
+        <text class="tabtxt" x="12" y="56" style="font-size: 9px">Recordings 8 · Search · Proposed events 8 · Notes 14 · Documents 2 · </text><text class="tabtxt on" x="300" y="56" style="font-size: 9px">Incidents 6</text><text class="tabtxt" x="352" y="56" style="font-size: 9px"> · Map 6 · Clips 3 · Speakers 2 · Details</text>
+        <line x1="12" y1="62" x2="988" y2="62" stroke="var(--line)"/>
+        <rect class="pill" x="12" y="70" width="96" height="14"/><text class="pilltxt" x="18" y="80" style="font-size: 8px">6 cameras on the clock</text>
+        <rect class="pill" x="112" y="70" width="74" height="14"/><text class="pilltxt" x="118" y="80" style="font-size: 8px">2 incidents built</text>
+        <text class="mut" x="200" y="80" style="font-size: 8px">Span</text><rect class="field" x="222" y="70" width="32" height="14"/><text class="fieldtxt" x="226" y="80" style="font-size: 8px">20:25</text><text class="mut" x="258" y="80" style="font-size: 8px">to</text><rect class="field" x="268" y="70" width="32" height="14"/><text class="fieldtxt" x="272" y="80" style="font-size: 8px">20:40</text><rect class="btn" x="304" y="70" width="22" height="14"/><text class="btntxt" x="309" y="80" style="font-size: 8px">Set</text>
+        <rect class="pill acc" x="600" y="70" width="170" height="14"/><text class="pilltxt" x="606" y="80" style="font-size: 8px">Building: 3 cameras, 20:25 to 20:40 · at 20:28:10</text>
+        <!-- three columns -->
+        <rect class="box" x="12" y="94" width="430" height="196"/><text class="mut" x="20" y="110" style="font-size: 9px">the strip: days, the day line, the ruler, the lanes, your span, the clock line, Not on the clock</text>
+        <g transform="translate(20,118) scale(0.42)">
+          <rect class="lane" x="200" y="0" width="640" height="10" rx="4"/><line class="bar b1" x1="291" y1="5" x2="688" y2="5"/>
+          <rect class="lane" x="200" y="28" width="640" height="10" rx="4"/><line class="bar b2" x1="291" y1="33" x2="688" y2="33"/>
+          <rect class="lane" x="200" y="56" width="640" height="10" rx="4"/><line class="bar b3" x1="261" y1="61" x2="718" y2="61"/>
+          <rect class="lane" x="200" y="84" width="640" height="10" rx="4"/><line class="bar b4" x1="352" y1="89" x2="657" y2="89"/>
+          <rect class="lane" x="200" y="112" width="640" height="10" rx="4"/><line class="bar b5" x1="383" y1="117" x2="657" y2="117"/>
+          <rect class="lane" x="200" y="140" width="640" height="10" rx="4"/>
+          <rect class="col" x="291" y="-10" width="457" height="170"/><line class="clk" x1="388" y1="-10" x2="388" y2="160"/>
+          <text class="lbl b" x="40" y="9" style="font-size: 20px">Ofc. Pell</text><text class="lbl b" x="40" y="37" style="font-size: 20px">Ofc. Amari</text><text class="lbl b" x="40" y="65" style="font-size: 20px">Unit 9082</text><text class="lbl b" x="40" y="93" style="font-size: 20px">Ofc. Dunn</text><text class="lbl b" x="40" y="121" style="font-size: 20px">Kit Vale</text><text class="lbl b" x="40" y="149" style="font-size: 20px" opacity=".4">Ofc. Ruiz</text>
+        </g>
+        <text class="mut" x="20" y="282" style="font-size: 8px">Not on the clock · Cell-9 · AirOne · Put on the clock… · Tick a camera to build; press a name to read it. ?</text>
+        <rect class="box" x="452" y="94" width="300" height="196"/><rect x="453" y="95" width="298" height="194" fill="var(--ground)" rx="6"/>
+        <text class="mut" x="460" y="110" style="font-size: 9px">the map beside the strip, at its height</text>
+        <rect class="ro" x="453" y="190" width="298" height="18"/><rect class="ro" x="640" y="95" width="16" height="194"/>
+        <path class="pt" stroke="var(--c1)" d="M 470 199 L 630 199 L 648 201 L 648 240 L 690 256"/><path class="pt" stroke="var(--c2)" d="M 648 100 L 648 180 L 648 246 L 696 260"/><path class="pt" stroke="var(--c3)" d="M 740 199 L 660 201 L 660 248 L 704 258"/>
+        <circle class="hd" cx="690" cy="256" r="5" fill="var(--c1)"/><rect class="hd" x="700" y="254" width="10" height="10" rx="2" fill="var(--c3)"/><circle class="hd" cx="696" cy="260" r="5" fill="var(--c2)"/>
+        <rect class="box acc" x="762" y="94" width="226" height="196"/>
+        <text class="lbl b" x="772" y="112">Your incident</text><rect class="pill acc" x="852" y="102" width="34" height="14"/><text class="pilltxt" x="858" y="112">3 of 8</text>
+        <text class="mut" x="772" y="130" style="font-size: 8px">NAME · Harbour Street stop, 20:25</text>
+        <text class="mut" x="772" y="146" style="font-size: 8px">3 cameras, 20:25 to 20:40 · pictures at 20:28:10</text>
+        <rect class="still" x="772" y="154" width="34" height="20"/><text class="lbl" x="812" y="162" style="font-size: 9px">Ofc. Pell</text><text class="mut" x="812" y="172" style="font-size: 8px">20:25 to 20:38 · the clock in its picture</text>
+        <rect class="still" x="772" y="180" width="34" height="20"/><text class="lbl" x="812" y="188" style="font-size: 9px">Ofc. Amari</text><text class="mut" x="812" y="198" style="font-size: 8px">20:25 to 20:38 · the clock in its picture</text>
+        <rect class="still" x="772" y="206" width="34" height="20"/><text class="lbl" x="812" y="214" style="font-size: 9px">Unit 9082</text><text class="mut" x="812" y="224" style="font-size: 8px">2 streams · its own clock, from its path file</text>
+        <text class="mut" x="772" y="244" style="font-size: 8px">Tools · Tick everyone running at 20:28:10 · Tick the cameras within 50 m</text>
+        <rect class="btn primary" x="772" y="256" width="78" height="16"/><text class="btntxt primary" x="780" y="267">Make the incident</text><rect class="btn" x="856" y="256" width="66" height="16"/><text class="btntxt" x="864" y="267">Clear the ticks</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <p><b>Three columns from 2560 wide.</b> The strip keeps its width, the map stands beside it at the strip's height, and the Reader is third; nothing scrolls but the Reader's own box, and the clock line, the markers and the pictures are all in one eyeline.</p>
+      <p><b>At 1366</b> the map drops under the strip, as in the picture above; that is the only difference between the two shapes.</p>
+    </div>
+  </section>
+
+  <!-- The choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Eighteen to decide, in one table</h2></div>
+    <table>
+      <tr><th>#</th><th>The choice</th><th>Drawn and recommended</th><th>The other way</th></tr>
+      <tr><td colspan="4"><b>The Incidents tab</b></td></tr>
+      <tr><td>1</td><td>The ruler at rest</td><td>Fitted to the cameras, a gap of over an hour folded to a short break that says its length and opens on a press</td><td>No fold (one far camera still stretches it); or the busiest hour alone</td></tr>
+      <tr><td>2</td><td>The ruler with a span</td><td>Zoomed to the span with a little either side, never under ten minutes; the day line above with the window, draggable</td><td>The ruler never moves</td></tr>
+      <tr><td>3</td><td>Setting a span by hand</td><td>Three ways, one result: type two times and Set; drag across the ruler's track; drag the window on the day line</td><td>Typed times only</td></tr>
+      <tr><td>4</td><td>What a set span does</td><td>The lanes sort by overlap with it, no overlap sinks and fades; the Reader becomes Your span with the cameras, their minutes, their ticks, Tick all (the longest 8 over the cap) and the one outside named</td><td>The ruler zooms and nothing else changes until a tick</td></tr>
+      <tr><td>5</td><td>A set span and the ticks</td><td>The span holds: ticks do not widen it; the handles and the window move it; a camera ticked outside it still goes in whole</td><td>The span widens to the ticked cameras' span</td></tr>
+      <tr><td>6</td><td>The Reader and the map</td><td>The map under the strip in the left column; the Reader in the right column, sticky, scrolling inside its box; three columns on an ultrawide, the map beside the strip</td><td>The map in the right column under the Reader; or the Reader under the strip</td></tr>
+      <tr><td>7</td><td>The bars' words</td><td>The span inside a bar wide enough, nothing otherwise; no surety word on the tab</td><td>Nothing on any bar</td></tr>
+      <tr><td>8</td><td>The foot's words</td><td>One line and a help mark; the paragraph behind the mark</td><td>The paragraph stays, shortened</td></tr>
+      <tr><td colspan="4"><b>The incident page</b></td></tr>
+      <tr><td>9</td><td>The source on a Chronology row</td><td>A muted line under the words that wraps and never cuts: who, which camera, where from; the pill goes for every source, not only notes</td><td>The pill stays, widened to its words</td></tr>
+      <tr><td>10</td><td>Telling a note from the rest</td><td>A small note mark before the words, and the camera's colour dot every row wears</td><td>A tinted background on note rows</td></tr>
+      <tr><td>11</td><td>A note on several cameras</td><td>One row at the earliest moment, every camera's dot, "on 3 cameras from the map"; Edit and Remove follow every copy</td><td>One row per camera, as today</td></tr>
+      <tr><td>12</td><td>The Events lane</td><td>Marks in the cameras' colours; a note's mark a small flag, a reading a tick, a person's event or a watch hit a grey tick</td><td>Marks all alike, as today</td></tr>
+      <tr><td>13</td><td>The said band and the tiles</td><td>The writer's name with the note mark where "Note" stood; "a note · on N cameras" at the row's end</td><td>As today</td></tr>
+      <tr><td>15</td><td>Where an event lands on a recording</td><td>The row keeps to who and which camera; the time into the video in words ("2 min 14 s into Ofc. Amari's video") on hover and on the card, with Open the recording there; the mark on the camera's own lane as well as the Events lane</td><td>The time into the video on every row too</td></tr>
+      <tr><td>16</td><td>A video with no clock and no path file</td><td>Ticked into Your incident from the Not on the clock row, taken unplaced, synced on the incident page; its notes wait under the chronology until then; the sound match offered against the ticked cameras first</td><td>Placed first, then ticked, as today</td></tr>
+      <tr><td>18</td><td>Where the incidents built are</td><td>The lead's "N incidents built" is a button that lists every incident with Open and On map, at any moment of the build; the column's name and the Reader's day reading keep their doors; an incident's reading offers Add the ticked cameras to it</td><td>The count stays a pill; clear the ticks to see the day's list</td></tr>
+      <tr><td>17</td><td>The screens</td><td>Walked at 1366 (the laptop) and at 2560 and 3440 wide (docked), the three-column shape on the wide screens; no phone or tablet shape</td><td>As today, with a phone shape kept</td></tr>
+      <tr><td>14</td><td>Where else "Clear" and the pill show</td><td>"Clear" gone from the Incidents tab only for now; the Chronology's Word export and the timeline report take the source line in place of the pill's words; the Notes tab keeps its rows</td><td>Everything in one release</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">All of it is drawing what the pages already read: the ruler's folds, the zoom and the window are a mapping from seconds to pixels; the set span is one more state beside the ticks, posted with Make the incident as the handles' span is today; the layout is the grid; the notes' writer, camera, origin and shared mark are already on every note event. No migration, no setting, nothing kept beyond the tab. One release, built in three passes (the tab, the page, the clockless video) and walked at 1366 and on the docked ultrawide widths; the rule throughout: two lines a row, no fact cut mid-word, one time format a line, and nothing smaller than the label size the stylesheet sets.</p>
+  </section>
+
+</div>
+</body>
+</html>

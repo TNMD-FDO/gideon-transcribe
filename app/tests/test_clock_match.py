@@ -286,7 +286,9 @@ def test_the_script_and_the_stylesheet_draw_the_panel():
         "Matching the sound; about a minute.",
         "not on the clock",
         '(one.unclocked ? " ring" : "")',
-        "stripMode && b.surety ? b.surety.word",
+        # The surety word left the bar's label (v1.207.0): a bar wide enough
+        # carries its span, and the word is on hover off the strip.
+        'hm(b.from) + " to " + hm(b.to)',
     ):
         assert piece in script, piece
     # The strip draws no rail: the panel is the videos' place.

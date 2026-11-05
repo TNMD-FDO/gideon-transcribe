@@ -98,7 +98,7 @@
       : "<span class='t'>" + escape(given.time(ev.at)) + "</span>";
     return "<div class='event-card-head'>" + time +
       (ev.until ? "<span class='muted small'>to " + escape(given.time(ev.until)) + "</span>" : "") +
-      (ev.source_words ? "<span class='" + pillClass(ev) + "' title='" + escape(ev.source_words).replace(/'/g, "&#39;") + "'>" + escape(ev.source_words) + "</span>" : "") +
+      (ev.video_words ? "<span class='muted small'>" + escape(ev.video_words) + " into " + escape(ev.camera_name || "the camera") + "&#39;s video</span>" : (ev.source_words && !ev.source_line ? "<span class='" + pillClass(ev) + "' title='" + escape(ev.source_words).replace(/'/g, "&#39;") + "'>" + escape(ev.source_words) + "</span>" : "")) +
       "<span class='grow'></span>" +
       (whole ? "<button type='button' class='tiny ghost event-card-close' aria-label='Close'>Close</button>" : "") +
       "</div>";
@@ -114,6 +114,9 @@
   function bodyHtml(ev) {
     var html = "";
     if (ev.detail) { html += "<p class='event-card-detail'>" + escape(ev.detail) + "</p>"; }
+    // The quiet source line (v1.207.0): who, which camera, where from; and
+    // the other cameras a shared note sits on, each at its own second.
+    if (ev.source_line) { html += "<p class='muted small'>" + escape(ev.source_line) + (ev.group_words ? " · " + escape(ev.group_words) : "") + "</p>"; }
     if (ev.source === "note") {
       // A note event: the note is the line above; under it, the words it sits on.
       if (ev.line_words) { html += "<p class='muted small'>On the line: " + escape(ev.line_words) + "</p>"; }

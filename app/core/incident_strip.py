@@ -160,9 +160,19 @@ def all_incidents(case) -> list[dict]:
                 "built": _built_words(incident),
                 "date": when.isoformat() if when else "",
                 "map_url": camera_paths.incident_map_url(incident, on_map),
+                # A still of the first camera at its start (v1.207.0), for
+                # the lead's list of incidents built.
+                "still": _first_still(incident),
             }
         )
     return out
+
+
+def _first_still(incident) -> str:
+    camera = incident.cameras.order_by("starts_at", "added").first()
+    if camera is None:
+        return ""
+    return f"/recording/{camera.recording_id}/still?t=0.0"
 
 
 def _built_words(incident) -> str:

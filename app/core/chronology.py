@@ -464,6 +464,61 @@ def source_words(event: Event, names: dict) -> str:
     return f"Added by {event.added_by.shown_name if event.added_by else 'a person'}"
 
 
+def source_line(event: Event, names: dict) -> str:
+    """The row's quiet line under the words (Phase 12 chapter 9 amended,
+    v1.207.0): who and which camera, where from, in plain words; two facts
+    at most, never cut. The pill's words stay in source_words for what
+    still reads them."""
+    camera = names.get(str(event.camera_id), "a camera no longer in the incident")
+    who = event.added_by.shown_name if event.added_by else ""
+    if event.source == WORDS:
+        return f"{camera}'s words" + (f" · added by {who}" if who else "")
+    if event.source == CAMERA:
+        return f"seen on {camera}" + (f" · added by {who}" if who else "")
+    if event.source == ASSISTANT:
+        return (
+            f"proposed by the assistant from {camera}"
+            if event.proposed
+            else f"the assistant, from {camera}"
+        )
+    if event.source == WATCH:
+        return f"found by a watch phrase on {camera}"
+    if event.source == LOOKED:
+        return f"looked for on {camera}"
+    if event.source == REPORT:
+        return "from the report"
+    if event.source == NOTE:
+        came = note_origin(event).get("words", "")
+        return f"{note_writer(event)} · {camera}" + (f" · {came}" if came else "")
+    return f"added by {who or 'a person'}"
+
+
+def video_at(event: Event, cameras_by_id: dict) -> float | None:
+    """How far into its camera's video the event's moment falls, in seconds,
+    when that camera is on the incident's clock; else nothing."""
+    camera = cameras_by_id.get(str(event.camera_id))
+    if camera is None or not camera.is_placed():
+        return None
+    return max(0.0, float(event.at) - float(camera.starts_at))
+
+
+def video_words(seconds: float | None) -> str:
+    """ "2 min 14 s", "40 s", "1 h 2 min 3 s": a video's own time in words."""
+    if seconds is None:
+        return ""
+    whole = int(round(seconds))
+    hours, rest = divmod(whole, 3600)
+    minutes, secs = divmod(rest, 60)
+    parts = []
+    if hours:
+        parts.append(f"{hours} h")
+    if minutes:
+        parts.append(f"{minutes} min")
+    if secs or not parts:
+        parts.append(f"{secs} s")
+    return " ".join(parts)
+
+
 def note_origin(event: Event) -> dict:
     """Where a note event's note came from (v1.168.0): the proposal or the
     finding a person accepted, else empty for a note they typed."""
@@ -552,6 +607,7 @@ def events_json(incident) -> list[dict]:
 
     cameras = list(incident.cameras.select_related("recording"))
     names = {str(one.pk): one.camera_id() for one in cameras}
+    by_id = {str(one.pk): one for one in cameras}
     clips = clips_per_event(incident)
     rows = []
     for event in incident.events.filter(dismissed=False).select_related(
@@ -580,6 +636,22 @@ def events_json(incident) -> list[dict]:
                 "detail": detail,
                 "source": event.source,
                 "source_words": source_words(event, names),
+                # The quiet line, where the event lands on its video, and the
+                # shared note's group (v1.207.0).
+                "source_line": source_line(event, names),
+                "camera_name": names.get(str(event.camera_id), ""),
+                "video_at": video_at(event, by_id),
+                "video_words": video_words(video_at(event, by_id)),
+                "video_url": (
+                    reverse("viewer", args=[by_id[str(event.camera_id)].recording_id])
+                    + f"?t={video_at(event, by_id):.1f}"
+                    + ("&note=1" if event.source == NOTE else "")
+                    if video_at(event, by_id) is not None
+                    else ""
+                ),
+                "group": (
+                    note_origin(event).get("group", "") if event.source == NOTE else ""
+                ),
                 "camera": str(event.camera_id) if event.camera_id else "",
                 "cameras": [one for one in event.cameras if one in names],
                 "seen_on": ", ".join(
@@ -769,7 +841,7 @@ def _rows(incident) -> list[dict]:
                 if event.until
                 else "",
                 "text": event.text,
-                "source": source_words(event, names),
+                "source": source_line(event, names),
                 "camera": names.get(str(event.camera_id), ""),
                 "colour": colour,
                 "seen_on": ", ".join(

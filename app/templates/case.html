@@ -353,13 +353,17 @@
             <div class="lead grow m0 inc-counts" id="incident-counts">
               {% if incident_counts %}
                 <span class="pill small" title="Videos of the case with a time on the case's clock, over every day.">{{ incident_counts.on_clock }} camera{{ incident_counts.on_clock|pluralize }} on the clock</span>
-                <span class="pill small {% if incident_counts.incidents %}acc{% endif %}" title="An incident is the cameras you ticked, laid on one clock so they play in step, up to {{ incident_counts.most }}. Each opens on a page of its own.">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }} built{% else %}No incident built yet{% endif %}</span>
+                {% comment %}The count is a button (v1.207.0): it lists every incident of the case, at any moment of the build.{% endcomment %}
+                <button type="button" class="pill small {% if incident_counts.incidents %}acc{% endif %}" id="incidents-built" aria-expanded="false" title="Every incident built in this case, with Open and On map">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }} built ▾{% else %}No incident built yet{% endif %}</button>
+                <div class="inc-list card" id="incidents-list" hidden></div>
                 {% if incident_counts.unclocked %}<a class="pill small warn" href="#unclocked-host" title="Videos whose clock nobody has read or placed; Put on the clock under the strip offers a time or a sound match.">{{ incident_counts.unclocked }} not on the clock</a>{% endif %}
               {% else %}
                 <span class="pill small">{% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident built yet{% endif %}</span>
               {% endif %}
             </div>
-            <span class="muted small" id="building-words">Tick cameras on the strip to build an incident.</span>
+            {% comment %}The span box (v1.207.0): two times and Set; the drag across the ruler's track does the same.{% endcomment %}
+            <span class="span-box small" id="span-box"><span class="muted">Span</span><input type="text" id="span-from" class="small" placeholder="from" maxlength="5" size="5" title="From, as hh:mm"><span class="muted">to</span><input type="text" id="span-to" class="small" placeholder="to" maxlength="5" size="5" title="To, as hh:mm"><button type="button" class="tiny" id="span-set">Set</button><button type="button" class="tiny ghost" id="span-clear" hidden>Clear the span</button></span>
+            <span class="muted small" id="building-words">Set a span, or tick cameras on the strip, to build an incident.</span>
           </div>
           {% comment %}
             The strip (Phase 10 chapter 5, v1.180.0; the drawing
@@ -377,11 +381,15 @@
             the incidents table are all read there. Not on the clock keeps
             its panel under them.
           {% endcomment %}
+          {% comment %}
+            The columns (v1.207.0): the strip and the map in the left column,
+            the Reader in its own, sticky and scrolling inside its box; three
+            columns on an ultrawide monitor.
+          {% endcomment %}
           <div class="strip-wrap">
             <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-case-name="{{ case.name }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-new="{% url 'new-incident' case.pk %}" data-reader="#strip-reader" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
             <aside id="strip-reader" class="chron reader" aria-live="polite"></aside>
-          </div>
-          <div id="unclocked-host" hidden></div>
+            <div id="unclocked-host" hidden></div>
           {% comment %}
             The map at the foot of the tab (Phase 12 chapter 8): the Map tab's
             drawing mounted small, showing only the cameras ticked on the
@@ -396,6 +404,7 @@
               <a class="btn tiny ghost strip-map-open" id="strip-map-open" href="{% url 'case' case.pk %}?tab=map" title="The Map tab, with the cameras you ticked shown">Open the Map tab</a>
             </div>
           {% endif %}
+          </div>
         {% elif tab == "map" %}
           {% comment %}
             The Map tab (Phase 12 chapter 1; the drawing

@@ -137,9 +137,12 @@
       panel(null);
       return;
     }
+    state.scale = scaleOf(d);
     host.innerHTML = dayChips() + ruler(d) + lanes(d) + unclockedRow() + stripFoot(d);
     columns(d);
     wire();
+    wireSpanTrack(d);
+    spanBox(d);
     // The lanes' pictures at the clock line (chapter 9), cut as they come
     // into view like the Reader's.
     stills(host);
@@ -150,18 +153,64 @@
     rearm();
   }
   function stripFoot(d) {
-    var words = ticked().length
-      ? "The lanes are in order of how long each camera ran inside your span; the small pictures are each camera at the clock line. Drag the handles at the bright column's edges to narrow the span, and the line to move the clock the map and the pictures show."
-      : "Tick a camera to put it in your incident; press its name to read it. A shaded column is an incident already built.";
-    var near = ticked().length ? " <span data-near-words" + (Object.keys(state.near).length ? "" : " hidden") + ">A ring on a box means the camera was within 50 m of one you ticked at the clock line, by their paths.</span>" : "";
-    return "<div class='legend'><span>" + words + near + "</span></div>";
+    var near = Object.keys(state.near).length ? " <span data-near-words>A ring on a box means the camera was within 50 m of one you ticked at the clock line, by their paths.</span>" : "";
+    return "<div class='legend'><span>Tick a camera to build; press a name to read it.</span>" +
+      helpHtml("A shaded column is an incident already built; press its name to read it. Set a span in the lead, or drag across the ruler's track, and the lanes sort by how long each camera ran inside it; a gap of more than an hour between cameras folds to a short break, which opens on a press. While building, the bright column is your span, its handles move it, the line across the lanes is the clock the map and the pictures show, and a ring on a tick box means that camera was within 50 m of one you ticked, by their paths.") +
+      "<span data-near-words" + (near ? "" : " hidden") + "></span></div>";
+  }
+  // The lead's span box (v1.207.0): two times and Set; Clear the span while one is set.
+  function spanBox(d) {
+    var from = document.getElementById("span-from"), to = document.getElementById("span-to"), clear = document.getElementById("span-clear");
+    if (!from || !to) { return; }
+    var span = spanOf(d);
+    if (document.activeElement !== from && document.activeElement !== to) { from.value = span ? hm(span[0]) : ""; to.value = span ? hm(span[1]) : ""; }
+    if (clear) { clear.hidden = !state.setSpan; }
+  }
+  function wireSpanBox() {
+    var from = document.getElementById("span-from"), to = document.getElementById("span-to"), set = document.getElementById("span-set"), clear = document.getElementById("span-clear");
+    if (!from || !to || !set) { return; }
+    function go() {
+      var a = toSeconds(from.value.trim() || "x"), b = toSeconds(to.value.trim() || "x");
+      if (isNaN(a) || isNaN(b)) { window.UI.toast("Type two times of day, as hh:mm.", { problem: true, icon: "warning" }); return; }
+      if (b <= a) { b += 86400; }
+      if (b - a < 60) { window.UI.toast("A span is at least a minute.", { problem: true, icon: "warning" }); return; }
+      setSpan(a, b);
+    }
+    set.addEventListener("click", go);
+    [from, to].forEach(function (f) { f.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); go(); } }); });
+    if (clear) { clear.addEventListener("click", function () { clearSpan(); }); }
+    var btn = document.getElementById("incidents-built");
+    if (btn) {
+      btn.addEventListener("click", function () { incidentsMenu(); });
+      document.addEventListener("click", function (ev) { var box = document.getElementById("incidents-list"); if (box && !box.hidden && !ev.target.closest("#incidents-list, #incidents-built")) { incidentsMenu(false); } });
+      document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { incidentsMenu(false); } });
+    }
+  }
+  // The ruler's track (v1.207.0): a drag across it sets the span; the day
+  // line's window, dragged, moves it.
+  function wireSpanTrack(d) {
+    var r = host.querySelector("#chron-track.strip");
+    if (r) {
+      var from = null, sel = null;
+      r.addEventListener("pointerdown", function (ev) { if (ev.button !== 0) { return; } from = secondsOf((ev.clientX - r.getBoundingClientRect().left) * 100 / (r.getBoundingClientRect().width || 1)); r.setPointerCapture(ev.pointerId); });
+      r.addEventListener("pointermove", function (ev) { if (from === null) { return; } var to = secondsOf((ev.clientX - r.getBoundingClientRect().left) * 100 / (r.getBoundingClientRect().width || 1)); if (!sel) { sel = document.createElement("span"); sel.className = "sel"; r.appendChild(sel); } var a = Math.min(from, to), b = Math.max(from, to); sel.style.left = x(a, d) + "%"; sel.style.width = (x(b, d) - x(a, d)) + "%"; var words = r.querySelector(".words"); if (words) { words.textContent = hm(a) + " to " + hm(b); } });
+      r.addEventListener("pointerup", function (ev) { if (from === null) { return; } var to = secondsOf((ev.clientX - r.getBoundingClientRect().left) * 100 / (r.getBoundingClientRect().width || 1)); var a = Math.min(from, to), b = Math.max(from, to); from = null; if (sel) { sel.remove(); sel = null; } if (b - a >= 60) { setSpan(a, b); } else { draw(); } });
+    }
+    var win = host.querySelector("#chron-dayline [data-win]");
+    if (win) {
+      var track = win.parentNode, startX = null, startSpan = null;
+      win.addEventListener("pointerdown", function (ev) { if (ev.button !== 0) { return; } ev.preventDefault(); startX = ev.clientX; startSpan = spanOf(d); win.setPointerCapture(ev.pointerId); });
+      win.addEventListener("pointermove", function (ev) { if (startX === null) { return; } var dw = d.ruler.to - d.ruler.from, dx = (ev.clientX - startX) / (track.getBoundingClientRect().width || 1) * dw; var low = startSpan[0] + dx, high = startSpan[1] + dx; win.style.left = ((low - d.ruler.from) * 100 / dw) + "%"; });
+      win.addEventListener("pointerup", function (ev) { if (startX === null) { return; } var dw = d.ruler.to - d.ruler.from, dx = (ev.clientX - startX) / (track.getBoundingClientRect().width || 1) * dw; startX = null; if (Math.abs(dx) >= 15) { state.setSpan = [Math.round(startSpan[0] + dx), Math.round(startSpan[1] + dx)]; state.buildSpan = null; } draw(); });
+    }
   }
   // The lead's right-hand words: what is being built.
   function buildingWords(d) {
     var box = document.getElementById("building-words"); if (!box) { return; }
-    var span = spanOf(d);
-    if (!span) { box.textContent = "Tick cameras on the strip to build an incident."; box.className = "muted small"; return; }
-    box.textContent = "Building: " + plural(ticked().length, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]);
+    var span = spanOf(d), at = clockLine(d);
+    if (!span) { box.textContent = "Set a span, or tick cameras on the strip, to build an incident."; box.className = "muted small"; return; }
+    if (!ticked().length) { box.textContent = "Span: " + hm(span[0]) + " to " + hm(span[1]) + " · " + plural(d.bars.filter(function (b) { return overlap(b, span) > 0; }).length, "camera") + " ran in it"; box.className = "pill small acc"; return; }
+    box.textContent = "Building: " + plural(ticked().length, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + " · at " + hms(at);
     box.className = "pill small acc";
   }
   // The panel for what is not on the clock (Phase 10 chapter 5, v1.186.0):
@@ -251,10 +300,25 @@
     if (!bars.length) { return null; }
     return [Math.min.apply(null, bars.map(function (b) { return b.from; })), Math.max.apply(null, bars.map(function (b) { return b.to; }))];
   }
-  // The span as the person has it: the ticks' span, narrowed by the handles
-  // where they still fall inside it; a narrowing the ticks have outgrown or
-  // squeezed under a minute is let go.
+  // A span set by hand (chapter 9 amended, v1.207.0; the drawing
+  // phase-12-incidents-tidy.html): typed in the lead's span box, dragged
+  // across the ruler's track, or moved by the day line's window. It holds:
+  // the ticks do not widen it, the handles and the window move it.
+  state.setSpan = null;
+  function setSpan(low, high) {
+    if (!state.day) { return; }
+    var r = state.day.ruler;
+    low = Math.max(0, Math.round(low)); high = Math.min(86400 * 2, Math.round(high));
+    if (high - low < 60) { return; }
+    state.setSpan = [low, high]; state.buildSpan = null; state.clockAt = null; state.sel = null;
+    draw();
+  }
+  function clearSpan() { state.setSpan = null; state.buildSpan = null; state.clockAt = null; state.sel = null; draw(); }
+  // The span as the person has it: the one set by hand, else the ticks'
+  // span narrowed by the handles where they still fall inside it; a
+  // narrowing the ticks have outgrown or squeezed under a minute is let go.
   function spanOf(d) {
+    if (state.setSpan) { return state.setSpan.slice(); }
     var auto = tickSpan(d);
     if (!auto) { return null; }
     var set = state.buildSpan;
@@ -279,12 +343,58 @@
     (d.incidents || []).forEach(function (one) { (one.camera_ids || []).forEach(function (id) { out[id] = one.name; }); });
     return out;
   }
+  // The videos not on the clock (v1.207.0) can be ticked too: they join
+  // the incident unplaced, counted against the cap, with no bar and no map.
+  function unclockedRows() { return state.unclocked || []; }
+  function tickedUnclocked() { return unclockedRows().filter(function (r) { return ticks[r.id]; }); }
   function toggleTick(id, on) {
     if (on) { if (ticked().length >= most()) { return; } ticks[id] = true; } else { delete ticks[id]; }
     state.sel = null;
     draw();
   }
   function clearTicks() { ticks = {}; state.buildSpan = null; state.clockAt = null; state.sel = null; draw(); }
+  // The ruler's scale (v1.207.0): at rest the cameras' first start to last
+  // end with a gap of over an hour folded to a short break; with a span
+  // the span and a fifth either side, never under ten minutes. Seconds map
+  // to a percent of the track through the scale's pieces, and back.
+  var FOLD_AFTER = 3600, FOLD_SHARE = 3.2;
+  function scaleOf(d) {
+    var span = spanOf(d);
+    if (span) {
+      var pad = Math.max(120, (span[1] - span[0]) * 0.2), low = span[0] - pad, high = span[1] + pad;
+      if (high - low < 600) { var mid = (low + high) / 2; low = mid - 300; high = mid + 300; }
+      return { pieces: [{ from: low, to: high, x0: 0, x1: 100 }], from: low, to: high, zoomed: true, folded: false };
+    }
+    var bars = d.bars.slice().sort(function (a, b) { return a.from - b.from; });
+    var whole = { pieces: [{ from: d.ruler.from, to: d.ruler.to, x0: 0, x1: 100 }], from: d.ruler.from, to: d.ruler.to, zoomed: false, folded: false };
+    if (!bars.length || state.unfold) { return whole; }
+    var clusters = [];
+    bars.forEach(function (b) { var last = clusters[clusters.length - 1]; if (last && b.from - last.to <= FOLD_AFTER) { last.to = Math.max(last.to, b.to); } else { clusters.push({ from: b.from, to: b.to }); } });
+    if (clusters.length < 2) { return whole; }
+    var shown = clusters.reduce(function (n, c) { return n + Math.max(120, c.to - c.from); }, 0);
+    var free = 100 - (clusters.length - 1) * FOLD_SHARE, pieces = [], at = 0;
+    clusters.forEach(function (c, i) {
+      var w = Math.max(120, c.to - c.from) * free / shown;
+      pieces.push({ from: c.from, to: c.to, x0: at, x1: at + w }); at += w;
+      if (i < clusters.length - 1) { pieces.push({ fold: true, from: c.to, to: clusters[i + 1].from, x0: at, x1: at + FOLD_SHARE }); at += FOLD_SHARE; }
+    });
+    return { pieces: pieces, from: clusters[0].from, to: clusters[clusters.length - 1].to, zoomed: false, folded: true };
+  }
+  function percentOf(seconds) {
+    var sc = state.scale;
+    if (!sc) { return null; }
+    if (seconds <= sc.from) { return 0; }
+    if (seconds >= sc.to) { return 100; }
+    for (var i = 0; i < sc.pieces.length; i++) { var p = sc.pieces[i]; if (seconds >= p.from && seconds <= p.to) { return p.x0 + (p.x1 - p.x0) * (seconds - p.from) / ((p.to - p.from) || 1); } }
+    return 100;
+  }
+  function secondsOf(percent) {
+    var sc = state.scale;
+    if (!sc) { return 0; }
+    percent = Math.max(0, Math.min(100, percent));
+    for (var i = 0; i < sc.pieces.length; i++) { var p = sc.pieces[i]; if (percent >= p.x0 && percent <= p.x1) { return p.from + (p.to - p.from) * (percent - p.x0) / ((p.x1 - p.x0) || 1); } }
+    return sc.to;
+  }
   // The map at the foot hears the ticks, the day and the clock (map.js,
   // pick mode).
   function tellMap(d) {
@@ -319,7 +429,7 @@
       if (small && small.dataset.base !== undefined) { small.textContent = small.dataset.base + (by ? " · near " + by : ""); }
     });
     var words = host.querySelector("[data-near-words]");
-    if (words) { words.hidden = !host.querySelector(".lane-row.near"); }
+    if (words) { var anyNear = !!host.querySelector(".lane-row.near"); words.hidden = !anyNear; words.textContent = anyNear ? " A ring on a box means the camera was within 50 m of one you ticked at the clock line, by their paths." : ""; }
     // The near tool in Your incident (v1.205.0) follows the answer too, since
     // the Reader is drawn before the map answers.
     var tool = document.querySelector((host.dataset.reader || "#strip-reader") + " [data-act='tick-near']");
@@ -367,23 +477,18 @@
   function lanes(d) {
     var rows = laneOrder(d), all = state.showAll || rows.length <= LANES_SHOWN + 2;
     var shown = all ? rows : rows.slice(0, LANES_SHOWN);
-    var building = ticked().length > 0, full = ticked().length >= most();
-    var span = spanOf(d), at = clockLine(d), inInc = building ? inIncidents(d) : {};
+    var span = spanOf(d), at = clockLine(d), building = !!span, full = ticked().length >= most(), inInc = building ? inIncidents(d) : {};
     var html = "<div class='lanes" + (shown.length > 24 ? " capped" : "") + (building ? " building" : "") + "' id='chron-band'>";
     shown.forEach(function (b) {
       var marks = "";
       notesOf(d, b.id).forEach(function (e) { marks += "<em class='nm' style='left: " + x(e.seconds, d) + "%' title='Note " + e.number + " at " + hms(e.seconds) + "'></em>"; });
       var on = !!ticks[b.id], ran = overlap(b, span), near = !on && building ? state.near[b.id] : null;
       var tick = "<input type='checkbox' class='tk' data-tick='" + b.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled title='" + most() + " is the most an incident holds; untick one to swap'" : " title='" + esc((near ? nearWords(near) + " " : "") + "Tick to put this camera in your incident") + "'") + ">";
-      // The head's small words: the unit at rest; while building, how long
-      // the camera ran inside the span, the incident it is in already, and
-      // (v1.202.0) near whom it was at the clock line.
-      var base = [b.unit && b.unit !== b.name ? b.unit : "", streamWords(b)].filter(Boolean).join(" · ");
-      if (building) { base = (ran ? minutesWords(ran) : "no overlap") + (inInc[b.id] ? " · in " + inInc[b.id] : ""); }
-      var small = base + (near ? " · near " + near : "");
-      // The picture at the clock (the filmstrip): cut when the lane is drawn,
-      // for the shown lanes alone, never kept; blank where the camera was
-      // not running then.
+      // The head carries one fact (v1.207.0): the minutes inside the span
+      // while there is one, else the unit or the streams; the incident it
+      // is in already and who it was near are on hover and in the Reader.
+      var base = building ? (ran ? minutesWords(ran) : "no overlap") : [b.unit && b.unit !== b.name ? b.unit : "", streamWords(b)].filter(Boolean).join(" · ");
+      var more = (inInc[b.id] ? " · in " + inInc[b.id] : "") + (near ? " · near " + near : "");
       var film = "";
       if (building) {
         film = at !== null && at >= b.from && at <= b.to
@@ -391,7 +496,7 @@
           : "<span class='film off' title='" + esc(shortName(b)) + " was not running at " + hms(at) + "'></span>";
       }
       html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + (building && !on && !ran ? " none" : "") + (near ? " near" : "") + "' data-lane='" + b.id + "'>" +
-        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (streamWords(b) ? " · " + streamWords(b) + ", one camera" : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small data-base='" + esc(base) + "'>" + esc(small) + "</small>" : "") + "</label>" +
+        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (streamWords(b) ? " · " + streamWords(b) + ", one camera" : "") + (building ? " · " + base : "") + more + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (base ? "<small data-base='" + esc(base) + "'>" + esc(base) + "</small>" : "") + "</label>" +
         "<div class='bar'>" + barPiece(b, d, true) + marks + "</div>" + film + "</div>";
     });
     html += "<div class='cols' id='chron-cols' aria-hidden='false'></div></div>";
@@ -400,12 +505,21 @@
     return html;
   }
   // Not on the clock as the strip's last row (Phase 12 chapter 8): the
-  // clockless videos named, and Put on the clock opening the panel under.
+  // clockless videos, each with a tick (v1.207.0) that puts it in your
+  // incident unplaced, and Put on the clock opening the panel under.
+  var UNCLOCKED_SHOWN = 6;
   function unclockedRow() {
-    var rows = state.unclocked || [];
+    var rows = unclockedRows();
     if (!rows.length) { return ""; }
-    var names = rows.slice(0, 4).map(function (r) { return esc(r.title); }).join(" · ") + (rows.length > 4 ? " and " + (rows.length - 4) + " more" : "");
-    return "<div class='unclocked-row'><b>Not on the clock</b><span>" + names + "</span><button type='button' class='tiny' data-act='unclocked'>Put on the clock…</button></div>";
+    var full = ticked().length >= most();
+    var html = "<div class='unclocked-row'><b>Not on the clock</b>";
+    rows.slice(0, UNCLOCKED_SHOWN).forEach(function (r) {
+      var on = !!ticks[r.id];
+      html += "<label class='uc' title='" + esc(r.title + ". No clock in its picture; it joins your incident unplaced and is synced on the incident page, by sound or by hand.") + "'><input type='checkbox' class='tk' data-tick='" + r.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled" : "") + "><span>" + esc(r.title) + "</span></label>";
+    });
+    if (rows.length > UNCLOCKED_SHOWN) { html += "<span class='muted'>and " + (rows.length - UNCLOCKED_SHOWN) + " more</span>"; }
+    html += "<button type='button' class='tiny' data-act='unclocked'>Put on the clock…</button></div>";
+    return html;
   }
   // The columns: an incident is a shaded column across every lane with its
   // name on top; a suggestion a dashed column with its number at its foot.
@@ -424,10 +538,10 @@
     // Your incident (Phase 12 chapter 8): the span, one bright column with
     // its words on top; its two handles and the clock line (chapter 9) sit
     // beside the column, not in it, so its shade does not fade them.
-    var span = spanOf(d), at = clockLine(d);
+    var span = spanOf(d), at = clockLine(d), yours = ticked().length ? "your incident" : "your span";
     if (span) {
       var sl = x(span[0], d), sw = Math.max(0.6, x(span[1], d) - sl);
-      html += "<div class='col build' style='left: " + sl + "%; width: " + sw + "%'><span class='tag' data-build-tag title='Your incident, " + hm(span[0]) + " to " + hm(span[1]) + "; drag the handles at its edges to narrow it'>your incident · " + hm(span[0]) + " to " + hm(span[1]) + "</span></div>";
+      html += "<div class='col build" + (ticked().length ? "" : " set") + "' style='left: " + sl + "%; width: " + sw + "%'><span class='tag' data-build-tag title='" + esc(yours) + ", " + hm(span[0]) + " to " + hm(span[1]) + "; drag the handles at its edges to move it'>" + yours + " · " + hm(span[0]) + " to " + hm(span[1]) + "</span></div>";
       html += "<span class='hdl l' data-hdl='0' style='left: " + sl + "%' title='Drag to move the start of your incident'></span><span class='hdl r' data-hdl='1' style='left: " + (sl + sw) + "%' title='Drag to move the end of your incident'></span>";
       html += "<div class='clock-line' data-clock style='left: " + x(at, d) + "%' title='The clock: the map and the pictures show this moment. Drag it.'><b>" + hms(at) + "</b></div>";
     }
@@ -441,8 +555,9 @@
   // the pointer; when it is let go the strip is drawn again, so the lanes
   // take their new order and the pictures are cut at the new moment.
   function wireBuild(box, d) {
-    var auto = tickSpan(d); if (!auto) { return; }
-    function secondsIn(clientX) { var r = box.getBoundingClientRect(); var share = Math.max(0, Math.min(1, (clientX - r.left) / (r.width || 1))); return d.ruler.from + share * (d.ruler.to - d.ruler.from); }
+    // A span set by hand moves anywhere in the day; the ticks' span only narrows.
+    var auto = state.setSpan ? [Math.min(d.ruler.from, state.setSpan[0]) - 3600, Math.max(d.ruler.to, state.setSpan[1]) + 3600] : tickSpan(d); if (!auto) { return; }
+    function secondsIn(clientX) { var r = box.getBoundingClientRect(); var share = Math.max(0, Math.min(1, (clientX - r.left) / (r.width || 1))); return secondsOf(share * 100); }
     function grab(el, move, done) {
       el.addEventListener("pointerdown", function (ev) {
         if (ev.button !== 0) { return; }
@@ -458,8 +573,8 @@
       var l = x(low, d), w = Math.max(0.6, x(high, d) - l);
       col.style.left = l + "%"; col.style.width = w + "%";
       hdls[0].style.left = l + "%"; hdls[1].style.left = (l + w) + "%";
-      tag.textContent = "your incident · " + hm(low) + " to " + hm(high);
-      var words = document.getElementById("building-words"); if (words) { words.textContent = "Building: " + plural(ticked().length, "camera") + ", " + hm(low) + " to " + hm(high); }
+      tag.textContent = (ticked().length ? "your incident · " : "your span · ") + hm(low) + " to " + hm(high);
+      var words = document.getElementById("building-words"); if (words) { words.textContent = (ticked().length ? "Building: " + plural(ticked().length, "camera") + ", " : "Span: ") + hm(low) + " to " + hm(high); }
     }
     hdls.forEach(function (h) {
       var end = h.dataset.hdl === "1", pending = null;
@@ -468,7 +583,7 @@
         if (end) { high = Math.max(low + 60, Math.min(auto[1], Math.round(at))); } else { low = Math.min(high - 60, Math.max(auto[0], Math.round(at))); }
         pending = [low, high]; showSpan(low, high);
       }, function () {
-        if (pending) { state.buildSpan = pending[0] === auto[0] && pending[1] === auto[1] ? null : pending; }
+        if (pending) { if (state.setSpan) { state.setSpan = pending; } else { state.buildSpan = pending[0] === auto[0] && pending[1] === auto[1] ? null : pending; } }
         draw();
       });
     });
@@ -518,16 +633,20 @@
   function readerDraw(d) {
     var box = document.querySelector(host.dataset.reader || "#strip-reader"); if (!box) { return; }
     var sel = state.sel, html = "";
-    box.classList.toggle("build", !!d && ticked().length > 0 && !sel);
+    box.classList.toggle("build", !!d && (ticked().length > 0 || !!state.setSpan) && !sel);
     if (d && sel && sel.kind === "inc") { var inc = (d.incidents || []).filter(function (one) { return one.id === sel.id; })[0]; if (inc) { html = readerIncident(inc, d); } else { state.sel = null; } }
     else if (d && sel && sel.kind === "cam") { var b = d.bars.filter(function (one) { return one.id === sel.id; })[0]; if (b) { html = readerCamera(b, d); } else { state.sel = null; } }
     else if (d && ticked().length) { html = readerBuilder(d); }
+    else if (d && state.setSpan) { html = readerSpan(d); }
     if (!html) { html = readerDay(d); }
     box.innerHTML = html;
     box.querySelectorAll("[data-back]").forEach(function (b) { b.addEventListener("click", function () { select(null); }); });
     box.querySelectorAll("[data-untick]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.untick, false); }); });
     box.querySelectorAll("[data-act='clear-ticks']").forEach(function (b) { b.addEventListener("click", function () { clearTicks(); }); });
-    box.querySelectorAll("[data-act='tick-running'], [data-act='tick-near']").forEach(function (b) { b.addEventListener("click", function () { tickMany((b.dataset.ids || "").split(" ").filter(Boolean)); }); });
+    box.querySelectorAll("[data-act='tick-running'], [data-act='tick-near'], [data-act='tick-many']").forEach(function (b) { b.addEventListener("click", function () { tickMany((b.dataset.ids || "").split(" ").filter(Boolean)); }); });
+    box.querySelectorAll("[data-act='clear-span']").forEach(function (b) { b.addEventListener("click", function () { clearSpan(); }); });
+    box.querySelectorAll("[data-act='add-ticked']").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.inc, (b.dataset.ids || "").split(" ").filter(Boolean), d); }); });
+    box.querySelectorAll("[data-tick]").forEach(function (t) { t.addEventListener("change", function () { toggleTick(t.dataset.tick, t.checked); }); });
     box.querySelectorAll("[data-act='make']").forEach(function (b) { b.addEventListener("click", function () { makeIncident(box); }); });
     box.querySelectorAll("[data-play]").forEach(function (b) { b.addEventListener("click", function () { open(b.dataset.play, playAt(b.dataset.play, d)); }); });
     box.querySelectorAll("[data-tick-one]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.tickOne, true); }); });
@@ -555,43 +674,85 @@
     if (!host.dataset.map || !any) { return ""; }
     return host.dataset.map + "&day=" + encodeURIComponent(d.date) + "&show=" + encodeURIComponent(ids.join(",")) + "&from=" + from + "&to=" + to;
   }
-  function backHtml() { return "<div class='rd-top'><button type='button' class='tiny ghost' data-back>‹ The day</button></div>"; }
+  function backHtml() {
+    var to = ticked().length ? "‹ Your incident" : (state.setSpan ? "‹ Your span" : "‹ The day");
+    return "<div class='rd-top'><button type='button' class='tiny ghost' data-back>" + to + "</button></div>";
+  }
+  // A help mark (v1.207.0): the long words behind a press, so a box stays short.
+  function helpHtml(words) { return "<details class='help'><summary title='How this works'>?</summary><div class='muted small'>" + words + "</div></details>"; }
   function readerDay(d) {
     var all = state.incidentsAll || [];
     if (!d) { return "<h3>This case</h3><p class='muted small'>No video is on the clock yet.</p>" + incidentsListHtml(all, ""); }
-    var html = "<h3>" + esc(d.words) + "</h3><div class='muted small'>" + plural(d.bars.length, "camera") + " on the clock · " + plural((d.incidents || []).length, "incident") + " built" + ((state.unclocked || []).length ? " · " + (state.unclocked || []).length + " not on the clock" : "") + "</div>";
+    var html = "<h3>" + esc(d.words) + "</h3><div class='muted small'>" + plural(d.bars.length, "camera") + " on the clock · " + plural((d.incidents || []).length, "incident") + " built" + (unclockedRows().length ? " · " + unclockedRows().length + " not on the clock" : "") + "</div>";
     html += incidentsListHtml(all, d.date);
-    html += "<div class='rd-head'>To build one</div><p class='muted small'>Tick the cameras on the strip. Each one you tick appears on the map below, and this box becomes your incident: name it, check its span, and make it. Nothing is made for you.</p>";
+    html += "<div class='rd-head'>To build one</div><p class='muted small'>Set a span, or tick cameras on the strip. Nothing is made for you.</p>";
     return html;
+  }
+  function incidentRowHtml(i) {
+    var onDay = state.day && (state.day.incidents || []).some(function (one) { return one.id === i.id; });
+    return "<div class='inc-row'>" + (i.still ? "<span class='still sm'><img alt='' data-still='" + esc(i.still) + "'></span>" : "") + "<div class='grow'><b>" + (onDay ? "<button type='button' class='link' data-sel='inc:" + i.id + "'>" + esc(i.name) + "</button>" : esc(i.name)) + "</b><div class='muted tiny'>" + plural(i.cameras, "camera") + " · " + esc(i.span) + (i.events ? " · " + plural(i.events, "event") : "") + "</div><div class='muted tiny'>" + esc(i.built || "") + "</div></div><div class='acts'><a class='btn tiny' href='" + esc(i.url) + "'>Open</a>" + (i.map_url ? "<a class='btn tiny ghost' href='" + esc(i.map_url) + "'>On map</a>" : "") + "</div></div>";
   }
   function incidentsListHtml(all, date) {
     if (!all.length) { return "<p class='muted small'>No incident built in this case yet.</p>"; }
     var today = all.filter(function (i) { return i.date === date; }), other = all.filter(function (i) { return i.date !== date; });
-    function row(i) {
-      var onDay = state.day && (state.day.incidents || []).some(function (one) { return one.id === i.id; });
-      return "<div class='inc-row'><div><b>" + (onDay ? "<button type='button' class='link' data-sel='inc:" + i.id + "'>" + esc(i.name) + "</button>" : esc(i.name)) + "</b><div class='muted tiny'>" + plural(i.cameras, "camera") + " · " + esc(i.span) + (i.events ? " · " + plural(i.events, "event") : "") + "</div><div class='muted tiny'>" + esc(i.built || "") + "</div></div><div class='acts'><a class='btn tiny' href='" + esc(i.url) + "'>Open</a>" + (i.map_url ? "<a class='btn tiny ghost' href='" + esc(i.map_url) + "'>On the map</a>" : "") + "</div></div>";
-    }
     var html = "";
-    if (today.length) { html += "<div class='rd-head'>Incidents built on this day</div>" + today.map(row).join(""); }
-    if (other.length) { html += "<details class='rd-fold'" + (today.length ? "" : " open") + "><summary>" + (today.length ? "Other days: " : "") + plural(other.length, "incident") + " built</summary>" + other.map(row).join("") + "</details>"; }
+    if (today.length) { html += "<div class='rd-head'>Incidents built on this day</div>" + today.map(incidentRowHtml).join(""); }
+    if (other.length) { html += "<details class='rd-fold'" + (today.length ? "" : " open") + "><summary>" + (today.length ? "Other days: " : "") + plural(other.length, "incident") + " built</summary>" + other.map(incidentRowHtml).join("") + "</details>"; }
+    return html;
+  }
+  // The lead's "N incidents built" (v1.207.0) opens the list of every
+  // incident in the case, at any moment of the build.
+  function incidentsMenu(open) {
+    var box = document.getElementById("incidents-list"), btn = document.getElementById("incidents-built");
+    if (!box) { return; }
+    if (open === undefined) { open = box.hidden; }
+    box.hidden = !open;
+    if (btn) { btn.setAttribute("aria-expanded", open ? "true" : "false"); }
+    if (!open) { return; }
+    var all = state.incidentsAll || [];
+    box.innerHTML = "<div class='h'><b>Incidents built in this case</b><span class='muted small'>newest first · every day</span></div>" + (all.length ? all.map(incidentRowHtml).join("") : "<p class='muted small'>None yet.</p>");
+    box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { incidentsMenu(false); var at = b.dataset.sel.indexOf(":"); select({ kind: "inc", id: b.dataset.sel.slice(at + 1) }); }); });
+    stills(box);
+  }
+  // Your span (v1.207.0): a span set by hand with nothing ticked yet.
+  function readerSpan(d) {
+    var span = spanOf(d), cap = most();
+    var ran = d.bars.filter(function (b) { return overlap(b, span) > 0; }).sort(function (a, b) { return overlap(b, span) - overlap(a, span); });
+    var outside = d.bars.filter(function (b) { return overlap(b, span) <= 0; });
+    var html = "<h3>Your span <span class='pill small acc'>" + hm(span[0]) + " to " + hm(span[1]) + "</span></h3>";
+    html += "<p class='small muted'>" + (ran.length ? plural(ran.length, "camera") + " ran in it; " + cap + " is the most an incident holds." : "No camera ran in it.") + "</p>";
+    if (ran.length) {
+      var ids = ran.slice(0, cap).map(function (b) { return b.id; }).join(" ");
+      html += "<div class='acts'><button type='button' class='small primary' data-act='tick-many' data-ids='" + ids + "'>" + (ran.length > cap ? "Tick the longest " + cap : "Tick all " + ran.length) + "</button></div>";
+      ran.forEach(function (b) {
+        html += "<div class='cam-row'><input type='checkbox' class='tk' data-tick='" + b.id + "' title='Tick to put this camera in your incident'><div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc(minutesWords(overlap(b, span)) + (streamWords(b) ? " · " + streamWords(b) : "") + (inIncidents(d)[b.id] ? " · in " + inIncidents(d)[b.id] : "")) + "</small></div></div>";
+      });
+    }
+    if (outside.length) { html += "<p class='muted small'>Outside the span: " + esc(outside.map(function (b) { return b.name || shortName(b); }).join(", ")) + ".</p>"; }
+    if (unclockedRows().length) { html += "<p class='muted small'>Not on the clock: " + esc(unclockedRows().map(function (r) { return r.title; }).join(", ")) + ".</p>"; }
+    html += "<div class='acts'><button type='button' class='small ghost' data-act='clear-span'>Clear the span</button>" + helpHtml("Drag the handles at the dashed column's edges to narrow or widen the span, or drag the shaded window on the day line to move it. Tick cameras here or on the lanes; the span holds as you tick.") + "</div>";
     return html;
   }
   // Your incident (Phase 12 chapter 8): the ticked cameras, a name offered
   // and editable, the span, the budget, Make the incident and Clear.
   function readerBuilder(d) {
-    var bars = tickedBars(d), span = spanOf(d), at = clockLine(d), n = bars.length, cap = most();
+    var bars = tickedBars(d), loose = tickedUnclocked(), span = spanOf(d), at = clockLine(d), n = ticked().length, cap = most();
     var name = state.buildName !== undefined ? state.buildName : (host.dataset.caseName || "Incident") + ", " + hm(span[0]);
-    var html = "<h3>Your incident <span class='pill small acc'>" + n + " of " + cap + "</span></h3>" +
+    var html = "<h3>Your incident <span class='pill small acc'>" + n + " of " + cap + "</span>" + helpHtml("Drag the line on the strip to move the clock; the map and the pictures follow it. Drag the handles at the bright column's edges to move the span" + (state.setSpan ? "; the span you set holds as you tick" : "") + ". Make the incident makes it in your name, with this span, and opens it on its own page.") + "</h3>" +
       "<label class='field'><span>Name</span><input type='text' id='build-name' maxlength='200' value='" + esc(name) + "'></label>" +
-      "<div class='rd-head'>" + plural(n, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + " · at " + hms(at) + "</div>";
-    // A camera already in a built incident will be in both (chapter 9).
-    var inInc = inIncidents(d), both = bars.filter(function (b) { return inInc[b.id]; });
-    if (both.length) { html += "<p class='small muted'>" + esc(both.map(function (b) { return (b.name || shortName(b)) + " is already in " + inInc[b.id]; }).join("; ")) + (both.length === 1 ? ". It will be in both." : ". Each will be in both.") + "</p>"; }
-    // The pictures are each camera at the clock line.
+      "<div class='rd-head'>" + plural(n, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + " · pictures at " + hms(at) + "</div>";
     bars.forEach(function (b) {
       html += "<div class='cam-row'>" + stillHtml(b, at, true) + "<div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc((b.unit && b.unit !== b.name ? b.unit + " · " : "") + (streamWords(b) ? streamWords(b) + " · " : "") + hm(b.from) + " to " + hm(b.to) + " · " + (b.why_short || b.placed)) + "</small></div><button type='button' class='tiny ghost' data-untick='" + b.id + "'>untick</button></div>";
     });
-    html += "<p class='muted tiny'>The pictures are each camera at " + hms(at) + ". Drag the line on the strip to move the clock; drag the handles at the bright column's edges to narrow the span.</p>";
+    loose.forEach(function (r) {
+      html += "<div class='cam-row'><span class='still sm' title='" + esc(r.title) + "'><img alt='' data-still='" + esc(r.still) + "'></span><div><b>" + esc(r.title) + "</b><small>not on the clock yet; synced on the incident page by sound or by hand · not on the map</small></div><button type='button' class='tiny ghost' data-untick='" + r.id + "'>untick</button></div>";
+    });
+    var inInc = inIncidents(d), notTicked = d.bars.filter(function (b) { return !ticks[b.id] && overlap(b, span) > 0; });
+    if (notTicked.length) { html += "<p class='muted small'>In your span, not ticked: " + esc(notTicked.map(function (b) { return (b.name || shortName(b)) + (inInc[b.id] ? " (in " + inInc[b.id] + ")" : ""); }).join(", ")) + ".</p>"; }
+    var both = bars.filter(function (b) { return inInc[b.id]; });
+    if (both.length) { html += "<p class='muted small'>" + esc(both.map(function (b) { return (b.name || shortName(b)) + " is already in " + inInc[b.id]; }).join("; ")) + (both.length === 1 ? ". It will be in both." : ". Each will be in both.") + "</p>"; }
+    var loosely = unclockedRows().filter(function (r) { return !ticks[r.id]; });
+    if (loosely.length) { html += "<p class='muted small'>Not on the clock: " + esc(loosely.map(function (r) { return r.title; }).join(", ")) + ".</p>"; }
     if (n >= cap) { html += "<div class='cap-note'>" + cap + " is the most an incident holds; untick one to swap another in.</div>"; }
     // The two tools (chapter 9, v1.205.0): both only tick, up to the cap.
     var running = d.bars.filter(function (b) { return !ticks[b.id] && at >= b.from && at <= b.to; }).sort(function (a, b) { return overlap(b, span) - overlap(a, span); });
@@ -601,8 +762,7 @@
       "<button type='button' class='tiny' data-act='tick-near' data-ids='" + nearIds.join(" ") + "'" + (nearIds.length && n < cap ? "" : " disabled") + " title='" + (n >= cap ? cap + " is the most an incident holds" : nearIds.length ? "Tick the cameras within 50 m of a ticked one at the clock line, by their paths" : "No other camera was within 50 m of a ticked one at the clock line, by the paths the map holds") + "'>Tick the cameras within 50 m on the map</button></div>" +
       "<p class='muted tiny'>Both only tick; you can untick any of them.</p>";
     html += "<p class='small muted' data-most='" + cap + "'><span data-sitting data-sitting-for='" + bars.map(function (b) { return b.id; }).join(" ") + "'></span></p>";
-    html += "<div class='acts'><button type='button' class='small primary' data-act='make'>Make the incident</button><button type='button' class='small ghost' data-act='clear-ticks'>Clear the ticks</button></div>" +
-      "<p class='muted tiny'>Made in your name, from the cameras you ticked. It opens on its own page.</p>";
+    html += "<div class='acts'><button type='button' class='small primary' data-act='make'>Make the incident</button><button type='button' class='small ghost' data-act='clear-ticks'>Clear the ticks</button>" + (state.setSpan ? "<button type='button' class='small ghost' data-act='clear-span'>Clear the span</button>" : "") + "</div>";
     return html;
   }
   function makeIncident(box) {
@@ -616,17 +776,21 @@
     var span = state.day ? spanOf(state.day) : null;
     var fields = [["csrfmiddlewaretoken", cookie("csrftoken")], ["how", "strip"], ["name", nameBox ? nameBox.value.trim() : ""]];
     if (span) { fields.push(["date", state.day.date], ["from", String(Math.round(span[0]))], ["to", String(Math.round(span[1]))]); }
-    // Every stream of a ticked vehicle goes in (v1.205.0); the server counts them as one camera.
-    var recordings = state.day ? streamsOf(tickedBars(state.day)) : ids;
+    // Every stream of a ticked vehicle goes in (v1.205.0); the server counts
+    // them as one camera. A ticked video not on the clock goes in unplaced.
+    var recordings = state.day ? streamsOf(tickedBars(state.day)).concat(tickedUnclocked().map(function (r) { return r.id; })) : ids;
     fields.concat(recordings.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
     document.body.appendChild(form); form.submit();
   }
   function readerIncident(one, d) {
     var bars = d.bars.filter(function (b) { return (one.camera_ids || []).indexOf(b.id) >= 0; });
     var all = (state.incidentsAll || []).filter(function (i) { return i.id === one.id; })[0] || {};
-    return backHtml() + "<h3>" + esc(one.name) + "</h3><div class='muted small'>" + hm(one.from) + " to " + hm(one.to) + " on " + esc(d.words) + " · " + plural(one.cameras, "camera") + " · " + plural(one.events, "event") + (all.placed ? " <span class='pill small " + esc(all.tone || "") + "'>" + esc(all.placed) + "</span>" : "") + "</div>" +
+    var fresh = tickedBars(d).filter(function (b) { return (one.camera_ids || []).indexOf(b.id) < 0; });
+    return backHtml() + "<h3>" + esc(one.name) + "</h3><div class='muted small'>" + hm(one.from) + " to " + hm(one.to) + " on " + esc(d.words) + " · " + plural(one.cameras, "camera") + " · " + plural(one.events, "event") + "</div>" +
+      (all.built ? "<div class='muted small'>" + esc(all.built) + "</div>" : "") +
       stillsHtml(bars, one.from) +
-      "<div class='acts'><a class='btn small primary' href='" + esc(one.url) + "'>Open the incident</a>" + (one.map_url ? "<a class='btn small' href='" + esc(one.map_url) + "' title='Its cameras on the Map tab, this incident alone'>On the map</a>" : "") + "</div>";
+      "<div class='acts'><a class='btn small primary' href='" + esc(one.url) + "'>Open the incident</a>" + (one.map_url ? "<a class='btn small' href='" + esc(one.map_url) + "' title='Its cameras on the Map tab, this incident alone'>On the map</a>" : "") +
+      (fresh.length ? "<button type='button' class='small' data-act='add-ticked' data-inc='" + one.id + "' data-ids='" + fresh.map(function (b) { return b.id; }).join(" ") + "' title='Add the cameras you ticked that are not in it; the incident widens to hold them'>Add the ticked cameras to it</button>" : "") + "</div>";
   }
   function readerCamera(b, d) {
     var n = notesOf(d, b.id).length;
@@ -846,17 +1010,44 @@
     return html;
   }
 
-  function x(seconds, d) { var w = d.ruler.to - d.ruler.from; return Math.max(0, Math.min(100, (seconds - d.ruler.from) * 100 / (w || 1))); }
+  function x(seconds, d) {
+    if (stripMode && state.scale) { return percentOf(seconds); }
+    var w = d.ruler.to - d.ruler.from; return Math.max(0, Math.min(100, (seconds - d.ruler.from) * 100 / (w || 1)));
+  }
   // A label centred near an edge would clip: it is kept a little inside.
   function inside(percent) { return Math.max(6, Math.min(94, percent)); }
 
   function ruler(d) {
-    var html = "<div class='ruler' id='chron-ruler'>";
+    var html = "";
+    if (stripMode && state.scale) {
+      var sc = state.scale, dayFrom = d.ruler.from, dayTo = d.ruler.to;
+      // The day line (v1.207.0): the whole day thin, the cameras as ticks,
+      // the window shaded while the ruler is zoomed; a drag on the window
+      // moves the span.
+      if (sc.zoomed) {
+        var dw = (dayTo - dayFrom) || 1, wl = Math.max(0, (sc.from - dayFrom) * 100 / dw), wr = Math.min(100, (sc.to - dayFrom) * 100 / dw);
+        html += "<div class='dayline' id='chron-dayline' title='The whole day; drag the shaded window to move your span'><span class='lbl'>the day</span><div class='track'>";
+        d.bars.forEach(function (b) { html += "<i style='left: " + ((b.from - dayFrom) * 100 / dw) + "%; width: " + Math.max(0.3, (b.to - b.from) * 100 / dw) + "%; background: " + paint(b.colour) + "'></i>"; });
+        html += "<em class='win' data-win style='left: " + wl + "%; width: " + Math.max(1, wr - wl) + "%'></em></div></div>";
+      }
+      html += "<div class='ruler' id='chron-ruler'>";
+      sc.pieces.forEach(function (p) {
+        if (p.fold) {
+          var hours = Math.round((p.to - p.from) / 3600);
+          html += "<button type='button' class='fold' data-act='unfold' style='left: " + p.x0 + "%; width: " + (p.x1 - p.x0) + "%' title='" + hours + " hour" + (hours === 1 ? "" : "s") + " with no camera running; press to open the whole day'>" + hours + " h</button>";
+          return;
+        }
+        var width = p.x1 - p.x0, n = Math.max(1, Math.round(width / 14));
+        for (var i = 0; i <= n; i++) { var at = p.from + (p.to - p.from) * i / n, px = p.x0 + width * i / n; html += "<span class='tick' style='left: " + px + "%'>" + hm(at) + "</span>"; }
+      });
+      html += "</div>";
+      html += "<div class='track strip' id='chron-track' title='Drag across here to set a span'><span class='words'>" + (state.unfold ? "the whole day · " : "") + "drag across here to set a span</span></div>";
+      return html;
+    }
+    html = "<div class='ruler' id='chron-ruler'>";
     var span = d.ruler.to - d.ruler.from, ticks = 6;
     for (var i = 0; i <= ticks; i++) { var at = d.ruler.from + span * i / ticks; html += "<span class='tick' style='left: " + (100 * i / ticks) + "%'>" + hm(at) + "</span>"; }
     html += "</div>";
-    // The strip has no drag: it reads, the Notes tab looks closer.
-    if (stripMode) { return html; }
     // The drag track (v1.164.1): a drag across it looks closer at the span;
     // a chip from the rail dropped on it places the recording there.
     html += "<div class='track' id='chron-track' title='Drag across a span to look closer; drop a recording from the rail here to place it'><span class='words'>" +
@@ -913,11 +1104,12 @@
     var pixels = width * (host.clientWidth || 900) / 100;
     // On the strip the label carries the surety word (v1.186.0), the Notes
     // tab's chronology the note count.
-    var tail = stripMode && b.surety ? b.surety.word : plural(b.notes, "note");
-    // On the strip's named lanes (v1.199.0) the name is at the left, so the
-    // bar carries the surety word alone.
-    var label = pixels < 56 ? "" : stripMode ? tail : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + tail);
-    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + paint(b.colour) + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (b.surety && b.surety.why ? " · " + b.surety.word + ": " + b.surety.why : "") + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
+    var tail = plural(b.notes, "note");
+    // On the strip (v1.207.0) a bar wide enough carries its span and the
+    // rest carry nothing; the surety word left the tab.
+    var label = stripMode ? (pixels < 96 ? "" : hm(b.from) + " to " + hm(b.to)) : (pixels < 56 ? "" : (idOnly || pixels < 120 ? shortName(b) : shortName(b) + " · " + tail));
+    if (stripMode && (b.to <= (state.scale ? state.scale.from : -1) || b.from >= (state.scale ? state.scale.to : 1e9))) { return ""; }
+    return "<i class='" + (b.movable ? "movable" : "") + lit + (label ? "" : " narrow") + "' data-bar='" + b.id + "' style='left: " + left + "%; width: " + width + "%; background: " + paint(b.colour) + "' title='" + esc(b.title + " · " + plural(b.notes, "note") + " · " + b.placed + (!stripMode && b.surety && b.surety.why ? " · " + b.surety.word + ": " + b.surety.why : "") + (b.movable ? " · press to move or take off the clock" : " · press to light its notes")) + "'>" + esc(label) + "</i>";
   }
 
   function legend(d) {
@@ -1046,6 +1238,7 @@
         var act = b.dataset.act;
         if (act === "back") { load(state.day.date, null); }
         else if (act === "open-all") { state.open.all = true; draw(); }
+        else if (act === "unfold") { state.unfold = true; draw(); }
         else if (act === "toggle-all") { ev.preventDefault(); state.showAll = !state.showAll; try { localStorage.setItem(keyAll, state.showAll ? "1" : "0"); } catch (e) { /* no storage */ } draw(); }
         else if (act === "sheet") { sheet(); }
         else if (act === "make-span") { if (state.span) { makeSheet(state.span[0], state.span[1]); } }
@@ -1340,6 +1533,7 @@
     // The day in the address (v1.201.0), so an incident's Details can lead
     // back to it; the ticks in it (v1.203.0) from the Map tab's circle.
     state.askedTicks = params().tick ? params().tick.split(",").filter(Boolean) : null;
+    wireSpanBox();
     load(params().day || "", null);
     return;
   }
