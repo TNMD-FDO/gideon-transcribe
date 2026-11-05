@@ -123,7 +123,9 @@ def test_the_map_paints_the_cameras_in_the_pages_tokens():
     assert "#1f6fb2" in script  # the chronology's palette, mapped to tokens
     css = static("app.css")
     assert ".map-tab {" in css and ".map-strip" in css and ".map-head" in css
-    assert ".map-evcard" in css and ".map-tab.large" in css and ".map-tab.full" in css
+    # The tab's own Larger map went with the frame (v1.208.0); the incident
+    # page's stays as .inc-map-large.
+    assert ".map-evcard" in css and ".inc-map-large" in css and ".map-tab.full" in css
     rules = css[css.index("/* The Map tab (Phase 12") :]
     assert "font-size: 1" not in rules.replace("font-size: var(", "")
 
@@ -145,9 +147,68 @@ def test_the_events_show_control_and_larger_map_are_remembered_per_person():
     script = static("map.js")
     assert 'remember("map-show", S.show)' in script
     assert 'remember("map-ev-" + t.dataset.ev' in script
-    assert 'remember("map-large"' in script
+    # Larger map left the tab (v1.208.0): the frame has the window; what is
+    # remembered now is the list panel's fold and the Show box.
+    assert 'remember("map-large"' not in script
+    assert 'remember("map-list-folded"' in script
+    assert 'remember("map-show-open"' in script
     assert "maplibregl.FullscreenControl" in script
     assert 'data-act="note"' in script.replace("'", '"')
+
+
+def test_the_tab_is_one_bar_over_one_frame_that_grows_with_the_window():
+    """Chapter 6.8 (v1.208.0; the drawing phase-12-map-space.html, Direction
+    1): the window decides, never the monitor."""
+    script = static("map.js")
+    for wanted in (
+        "function sizeFrame()",
+        "window.innerHeight - top - 12",
+        'window.addEventListener("resize"',
+        "class='map-frame' id='map-wrap'",
+        "class='map-showbox' id='map-showbox'",
+        "class='map-list' id='map-list'",
+        "class='menu map-more' id='map-more'",
+        "function helpHtml()",
+        'getElementById("map-help-words")',
+        "<aside class='map-reader' id='map-reader'",
+        "function readerShown()",
+        "function drawReader()",
+        "var STRIP_SHOWN = 6;",
+        "data-act='strip-all'",
+        'if (days.length < 2) { return ""; }',
+    ):
+        assert wanted in script, wanted
+    # The bar's More holds the occasional presses; the tab's transport no
+    # longer offers Larger map (the incident page's panel keeps its own).
+    bar = script.split("function drawTransport()")[1].split("function helpHtml()")[0]
+    assert "data-act='large'" not in bar.split("var scope = ")[1]
+    assert "Note here" in bar and "Save a picture" in bar and "Tidy names" in bar
+    assert "Smaller map" in bar.split("var scope = ")[0]
+    css = static("app.css")
+    for wanted in (
+        ".map-frame {",
+        ".map-frame .map-pane {",
+        ".map-frame .map-strip {",
+        ".map-frame .map-list {",
+        ".map-tab.folded .map-list {",
+        ".map-showbox {",
+        ".map-more .menu-body {",
+        ".map-help {",
+        ".map-reader { display: none; }",
+        "@media (min-width: 2200px) {",
+        ".map-tab.full .map-frame {",
+    ):
+        assert wanted in css, wanted
+    assert ".map-tab.large .map-wrap" not in css
+    assert ".map-tab.large .map-list" not in css
+    page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
+    assert 'id="map-help-words"' in page
+    glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+    assert "the list a panel inside the map's edge" in glossary
+    guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    assert "**The tab's space**" in guide and "**More**" in guide
+    spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-12.md").read_text(encoding="utf-8")
+    assert "### 6.8 The tab's space" in spec
 
 
 def test_the_vendored_map_files_match_the_hashes_the_readme_records():
@@ -380,7 +441,7 @@ def test_the_list_ticks_cameras_and_remembers_them_per_person_per_case():
     assert 'remember("map-hidden-" + CASE' in script
     assert "function shown(cam) { return INC || !S.hidden[cam.id]; }" in script
     # The strip, the events and Fit shown follow the ticks; the clock's span does not.
-    assert "var range = span(), cams = shownCams();" in script
+    assert "var range = span(), cams = shownCams(), hidden = 0;" in script
     assert "shownCams().forEach(function (cam) {" in script
     assert "Fit shown" in script
     assert "data-act='tick-all'" in script and "data-act='tick-none'" in script

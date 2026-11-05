@@ -51,7 +51,9 @@
     told: null, cams: [], byId: {}, day: "", loaded: false,
     moment: 0, playing: false, speed: 4, anchorMoment: 0, anchorNow: 0,
     following: null, selected: null, lit: null, inView: {},
-    show: recall("map-show") || "trails", faint: recall("map-faint") !== "0", large: recall("map-large") === "1",
+    show: recall("map-show") || "trails", faint: recall("map-faint") !== "0", large: false,
+    // The tab's space (v1.208.0): the list panel folded to its chip, the Show box open, every lane on the strip.
+    listFolded: recall("map-list-folded") === "1", showOpen: recall("map-show-open") === "1", stripAll: false,
     events: {}, incident: host.dataset.incident || "", scope: null,
     readingsOpen: {}, asking: false,
     // Chapter 6: the cameras a person has unticked (hidden from the map, the
@@ -259,33 +261,73 @@
   // The page ---------------------------------------------------------------------
   function layout() {
     if (INC) { layoutPane(); return; }
-    host.classList.toggle("large", S.large && !PICK);
+    // The tab's space (chapter 6.8, v1.208.0; the drawing phase-12-map-space.html,
+    // Direction 1): one bar, then one frame as tall as the window leaves,
+    // holding the map with the Show box in its corner and the list as a
+    // panel inside its right edge, and the strip as the frame's foot. The
+    // cards take a column of their own when the window is 2200 wide.
+    host.classList.remove("large");
     host.classList.toggle("map-pick", PICK);
+    host.classList.toggle("folded", S.listFolded && !PICK);
     S.tiles = {}; S.sound = null; S.tags = {};
     host.innerHTML =
-      "<div class='map-lead'>" +
-        "<div class='map-lead-left'>" + dayChips() +
-          "<div class='map-show'><span class='muted small'>Show</span><span class='seg' id='map-show'>" +
-            seg("markers", "Markers only") + seg("trails", "Trails") + seg("whole", "Whole paths") + "</span>" +
-          "<span class='map-ev'><label title='The whole path drawn faint under the markers and trails'><input type='checkbox' id='map-faint'" + (S.faint ? " checked" : "") + "> faint paths under</label></span>" +
-          "<span class='muted small'>Events</span><span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span></div>" +
+      "<div class='map-lead' id='map-lead'><div class='transport' id='map-transport'></div></div>" +
+      "<div class='map-frame' id='map-wrap'>" +
+        "<div class='map-pane' id='map-pane'>" +
+          "<details class='map-showbox' id='map-showbox'" + (S.showOpen ? " open" : "") + "><summary id='map-show-words' title='What the map draws'></summary>" +
+            "<div class='map-show'><span class='muted small'>Show</span><span class='seg' id='map-show'>" +
+              seg("markers", "Markers only") + seg("trails", "Trails") + seg("whole", "Whole paths") + "</span>" +
+            "<span class='map-ev'><label title='The whole path drawn faint under the markers and trails'><input type='checkbox' id='map-faint'" + (S.faint ? " checked" : "") + "> faint paths under</label></span>" +
+            "<span class='muted small'>Events</span><span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span></div></details>" +
+          "<div class='map-list' id='map-list'></div>" +
         "</div>" +
-        "<div class='transport' id='map-transport'></div>" +
+        "<div class='map-bar' id='map-bar'></div>" +
+        "<div class='map-strip inc-strip' id='map-strip'></div>" +
       "</div>" +
-      "<div class='map-wrap' id='map-wrap'><div class='map-pane' id='map-pane'></div>" +
-        "<div class='map-list' id='map-list'></div>" +
-        "<div class='map-bar' id='map-bar'></div></div>" +
-      "<div class='map-strip inc-strip' id='map-strip'></div>";
+      "<aside class='map-reader' id='map-reader' aria-live='polite'></aside>";
     el.transport = host.querySelector("#map-transport"); el.pane = host.querySelector("#map-pane");
     el.list = host.querySelector("#map-list"); el.strip = host.querySelector("#map-strip"); el.bar = host.querySelector("#map-bar"); el.wrap = host.querySelector("#map-wrap");
+    el.reader = host.querySelector("#map-reader"); el.showbox = host.querySelector("#map-showbox");
     host.querySelector("#map-show").addEventListener("click", function (e) { var b = e.target.closest("[data-show]"); if (!b) { return; } S.show = b.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); });
-    host.querySelector("#map-events").addEventListener("change", function (e) { var t = e.target; if (!t.dataset.ev) { return; } S.events[t.dataset.ev] = t.checked; remember("map-ev-" + t.dataset.ev, t.checked ? "1" : "0"); refreshLayers(); drawStrip(); });
+    host.querySelector("#map-events").addEventListener("change", function (e) { var t = e.target; if (!t.dataset.ev) { return; } S.events[t.dataset.ev] = t.checked; remember("map-ev-" + t.dataset.ev, t.checked ? "1" : "0"); drawShow(); refreshLayers(); drawStrip(); });
     host.querySelector("#map-faint").addEventListener("change", function (e) { S.faint = e.target.checked; remember("map-faint", S.faint ? "1" : "0"); refreshLayers(); });
+    el.showbox.addEventListener("toggle", function () { S.showOpen = el.showbox.open; remember("map-show-open", S.showOpen ? "1" : "0"); });
     host.addEventListener("click", onPress);
     host.addEventListener("change", onChange);
+    if (!layout.wired) {
+      layout.wired = true;
+      var sizing = null;
+      window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(sizeFrame, 80); });
+      // The More menu closes on a press outside it.
+      document.addEventListener("click", function (e) { var more = host.querySelector("details.map-more[open]"); if (more && !more.contains(e.target)) { more.removeAttribute("open"); } });
+    }
     var asked = askedMoment();
     S.moment = asked !== null ? asked : span()[0] + 60;
-    drawTransport(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar();
+    drawTransport(); sizeFrame(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar(); drawReader();
+  }
+  // The frame takes what the window leaves under the bar, measured again on
+  // every resize; never the screen's size, only the window's. In full
+  // screen the stylesheet has it; the strip's small map keeps its own.
+  function sizeFrame() {
+    if (INC || PICK || !el.wrap) { return; }
+    if (host.classList.contains("full")) { el.wrap.style.height = ""; return; }
+    var top = el.wrap.getBoundingClientRect().top + window.scrollY;
+    var wanted = Math.max(360, Math.round(window.innerHeight - top - 12));
+    el.wrap.style.height = wanted + "px";
+    if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } }
+  }
+  function readerShown() { return !!el.reader && getComputedStyle(el.reader).display !== "none"; }
+  // The cards' column (v1.208.0): the pressed camera's reading and the
+  // selected event's card, kept out of the map when the window is wide.
+  function drawReader() {
+    if (!el.reader) { return; }
+    var card = el.reader.querySelector(".map-evcard");
+    var cam = S.pressed ? S.byId[S.pressed] : null;
+    var html = "";
+    if (cam) { html = "<div class='map-reader-cam'><div class='h'><span class='dot " + (cam.source === "car" ? "sq" : "") + "' style='background: " + paint(cam.colour) + "'></span><b>" + nameHtml(cam) + "</b></div>" + openOf(cam) + "</div>"; }
+    else if (!card) { html = "<p class='muted small'>Press a camera's row or its marker, or an event on the map or the strip, and it reads here.</p>"; }
+    el.reader.innerHTML = html;
+    if (card) { el.reader.appendChild(card); }
   }
   // The incident page's pane: the map and a foot row, nothing of its own
   // to play with; the page's transport is the clock.
@@ -328,7 +370,8 @@
   }
   function dayChips() {
     var days = S.told.days || [];
-    if (!days.length) { return ""; }
+    // One day reads in the clock's date line (v1.208.0); chips from two.
+    if (days.length < 2) { return ""; }
     var html = "<div class='days map-days'><span class='lbl'>Days</span>";
     var incidentDays = {};
     (S.told.incidents || []).forEach(function (inc) { if (inc.date) { incidentDays[inc.date] = (incidentDays[inc.date] || 0) + 1; } });
@@ -339,7 +382,14 @@
     if (S.told.off_clock && S.told.off_clock.length) { html += "<span class='muted small'>" + plural(S.told.off_clock.length, "camera") + " not on the clock</span>"; }
     return html + "</div>";
   }
-  function drawShow() { host.querySelectorAll("#map-show [data-show]").forEach(function (b) { b.classList.toggle("on", b.dataset.show === S.show); }); }
+  function drawShow() {
+    host.querySelectorAll("#map-show [data-show]").forEach(function (b) { b.classList.toggle("on", b.dataset.show === S.show); });
+    var words = host.querySelector("#map-show-words");
+    if (words) {
+      var kinds = EVENT_KINDS.filter(function (k) { return S.events[k]; }).length;
+      words.textContent = "Show: " + ({ markers: "Markers only", trails: "Trails", whole: "Whole paths" }[S.show] || "Trails") + " · " + (kinds === EVENT_KINDS.length ? "every kind of event" : kinds === 0 ? "no events" : kinds + " of " + EVENT_KINDS.length + " kinds of event");
+    }
+  }
   function drawTransport() {
     var m = now();
     if (INC) {
@@ -369,14 +419,27 @@
       "<button type='button' class='small' data-act='fit'>Fit shown</button>" +
       (tileCount() ? "<span class='pill small acc'>" + plural(tileCount(), "tile") + "</span><button type='button' class='tiny ghost' data-act='close-tiles'>close all</button>" : "") +
       (pinnedCount() ? "<span class='pill small acc' title='Names and tiles you have put somewhere; Tidy names lets them all go'>" + pinnedCount() + " pinned</span>" : "") +
-      "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
-      "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
-      (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
-      "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>Within a circle</button>" +
+      (S.asking ? "<span class='pill small acc'>press a place on the map</span>" : "") +
       (S.circle ? "<span class='pill small acc' id='map-radius'>" + Math.round(S.circle.radius) + " m</span><button type='button' class='tiny ghost' data-act='clear-circle'>clear the circle</button>" : "") +
-      (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a Document on the incident shown, or on the camera pressed'>Save a picture</button>" : "") +
-      "<button type='button' class='small " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
+      // The presses a person reaches for now and then sit behind More
+      // (v1.208.0), so the bar is one row.
+      "<details class='menu map-more' id='map-more'><summary class='btn small' title='Note here, Note on all shown, Within a circle, Save a picture, Tidy names'>More \u25BE</summary><div class='menu-body'>" +
+        "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
+        (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
+        "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>" +
+        (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a Document on the incident shown, or on the camera pressed'>Save a picture</button>" : "") +
+        "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
+      "</div></details>" +
+      dayChips() +
+      "<span class='grow'></span>" + helpHtml();
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
+  }
+  // The explanation that stood above the map, now behind a help mark at the
+  // bar's end (v1.208.0); the page writes it once, map.js only moves it.
+  function helpHtml() {
+    var words = document.getElementById("map-help-words");
+    if (!words) { return ""; }
+    return "<details class='help map-help'><summary title='How this tab works'>?</summary><div class='muted small'>" + words.innerHTML + "</div></details>";
   }
   function drawBar() {
     if (!el.bar) { return; }
@@ -409,13 +472,16 @@
       try {
         map = new maplibregl.Map({ container: el.pane, style: style, attributionControl: false, dragRotate: false, pitchWithRotate: false, maxPitch: 0, minZoom: 2 });
       } catch (e) {
-        el.pane.innerHTML = "<div class='map-nomap'><b>This browser cannot draw the map.</b> The list and the strip still work.</div>";
+        var fail = document.createElement("div"); fail.className = "map-nomap"; fail.innerHTML = "<b>This browser cannot draw the map.</b> The list and the strip still work.";
+        el.pane.appendChild(fail);
         return;
       }
       map.touchZoomRotate.disableRotation();
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      // The zoom and the full-screen corner sit bottom right (v1.208.0): the
+      // list panel has the top right.
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), INC || PICK ? "top-right" : "bottom-right");
       map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
-      map.addControl(new maplibregl.FullscreenControl({ container: el.wrap }), "top-right");
+      map.addControl(new maplibregl.FullscreenControl({ container: el.wrap }), INC || PICK ? "top-right" : "bottom-right");
       if (host.dataset.basemap) { map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: host.dataset.attribution }), "bottom-right"); }
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
@@ -436,7 +502,7 @@
       map.on("click", function (e) { if (S.asking) { placeCircle(e.lngLat); } });
       map.on("mouseenter", "map-events-hit", function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "map-events-hit", function () { map.getCanvas().style.cursor = ""; });
-      document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); window.setTimeout(function () { map.resize(); }, 50); });
+      document.addEventListener("fullscreenchange", function () { host.classList.toggle("full", document.fullscreenElement === el.wrap); drawBar(); sizeFrame(); window.setTimeout(function () { map.resize(); }, 50); });
     });
     if (!drawMap.observing) {
       drawMap.observing = true;
@@ -1098,7 +1164,7 @@
     var cams = S.cams.filter(scoped);
     var today = cams.filter(ofDay), other = cams.filter(function (c) { return c.onClock && !ofDay(c); }), off = cams.filter(function (c) { return !c.onClock; });
     var ticked = today.filter(shown), seen = ticked.filter(inView);
-    var fold = host.classList.contains("large") ? "<button type='button' class='tiny ghost' data-act='fold'>" + (host.classList.contains("folded") ? "‹ show" : "fold ›") + "</button>" : "";
+    var fold = PICK ? "" : "<button type='button' class='tiny ghost' data-act='fold' title='" + (S.listFolded ? "Open the list" : "Fold the list to a chip") + "'>" + (S.listFolded ? "‹ show" : "fold ›") + "</button>";
     var html;
     if (S.circle && S.hits) {
       // The circle's answer (chapter 6): who passed inside, with their spans, then the rest.
@@ -1144,6 +1210,7 @@
       r.addEventListener("mouseleave", function () { if (!S.selected) { light(null); } });
     });
     el.list.querySelectorAll(".own-bar").forEach(function (bar) { bar.addEventListener("input", function () { var cam = S.byId[bar.dataset.cam]; cam.own = parseFloat(bar.value); tick(); }); });
+    drawReader();
     var waiting = el.list.querySelector("details.map-waiting");
     if (waiting) {
       waiting.addEventListener("toggle", function () { S.waitingOpen = waiting.open; });
@@ -1167,9 +1234,11 @@
   function afterTicks() { rememberHidden(); drawList(); drawStrip(); refreshLayers(); tick(); }
 
   // The strip ---------------------------------------------------------------------
+  var STRIP_SHOWN = 6;   // lanes on the strip before Show all (v1.208.0), so the frame keeps its map
   function drawStrip() {
     if (!el.strip) { return; }
-    var range = span(), cams = shownCams();
+    var range = span(), cams = shownCams(), hidden = 0;
+    if (!S.stripAll && cams.length > STRIP_SHOWN) { hidden = cams.length - STRIP_SHOWN; cams = cams.slice(0, STRIP_SHOWN); }
     function x(sec) { return Math.max(0, Math.min(100, ((sec - range[0]) / (range[1] - range[0])) * 100)); }
     var html = "<div class='ruler'><div class='head'></div><div class='ticks'>";
     var step = (range[1] - range[0]) > 3 * 3600 ? 1800 : (range[1] - range[0]) > 3600 ? 900 : 300;
@@ -1204,9 +1273,10 @@
       html += "</div></div>";
     });
     if (!cams.length) { html += "<p class='muted small' style='grid-column: 1 / -1; margin: 6px 0 0'>" + (dayCams().length ? "No camera is ticked: tick one in the list." : "No camera on the clock on this day.") + "</p>"; }
+    if (hidden) { html += "<div class='strip-more muted small'>and " + plural(hidden, "more camera") + " · <button type='button' class='tiny ghost' data-act='strip-all'>Show all</button></div>"; }
+    else if (S.stripAll && cams.length > STRIP_SHOWN) { html += "<div class='strip-more muted small'><button type='button' class='tiny ghost' data-act='strip-all'>Show fewer</button></div>"; }
     html += "<div class='playhead' id='map-playhead'><b>" + hm(now()) + "</b></div>";
     el.strip.innerHTML = html;
-    el.strip.style.setProperty("--head", host.classList.contains("large") ? "110px" : "");
     wireStrip(range);
     movePlayhead(now());
   }
@@ -1225,10 +1295,10 @@
       var px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
       return range[0] + Math.max(0, Math.min(1, px / r.width)) * (range[1] - range[0]);
     }
-    el.strip.addEventListener("mousedown", function (e) { if (e.target.closest("em.mk, i.clip, .head")) { return; } dragging = true; seek(at(e)); e.preventDefault(); });
+    el.strip.addEventListener("mousedown", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } dragging = true; seek(at(e)); e.preventDefault(); });
     document.addEventListener("mousemove", function (e) { if (dragging) { seek(at(e)); } });
     document.addEventListener("mouseup", function () { dragging = false; });
-    el.strip.addEventListener("touchstart", function (e) { if (e.target.closest("em.mk, i.clip, .head")) { return; } dragging = true; seek(at(e)); }, { passive: true });
+    el.strip.addEventListener("touchstart", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } dragging = true; seek(at(e)); }, { passive: true });
     el.strip.addEventListener("touchmove", function (e) { if (dragging) { seek(at(e)); } }, { passive: true });
     el.strip.addEventListener("touchend", function () { dragging = false; });
     el.strip.addEventListener("click", function (e) { var mk = e.target.closest("em.mk"); if (mk) { selectKey(mk.dataset.key); } });
@@ -1290,7 +1360,7 @@
     box.style.top = Math.max(8, Math.min(el.pane.clientHeight - box.offsetHeight - 8, point.y - 10)) + "px";
     S.stack = keys;
   }
-  function closeCard() { var c = host.querySelector(".map-evcard"); if (c) { c.remove(); } }
+  function closeCard() { var c = host.querySelector(".map-evcard"); if (c) { c.remove(); } drawReader(); }
   function drawCard(one) {
     closeCard(); closeStack();
     var cam = one.cam, z = cam.zero.second;
@@ -1319,6 +1389,7 @@
       (prev ? "<button type='button' class='tiny ghost' data-act='select' data-key='" + prev.key + "'>‹ " + hm(prev.moment) + " " + esc(prev.words).slice(0, 18) + "</button>" : "") +
       (next ? "<button type='button' class='tiny ghost' data-act='select' data-key='" + next.key + "'>" + hm(next.moment) + " " + esc(next.words).slice(0, 18) + " ›</button>" : "") +
       "<button type='button' class='tiny ghost' data-act='clear'>Close</button></div>";
+    if (readerShown()) { el.reader.appendChild(card); drawReader(); return; }
     el.pane.appendChild(card);
     if (map && mapReady) { var p = positionAt(cam, one.t); if (p) { var pt = map.project([p.lon, p.lat]); card.style.left = Math.max(8, Math.min(el.pane.clientWidth - card.offsetWidth - 8, pt.x + 14)) + "px"; card.style.top = Math.max(8, Math.min(el.pane.clientHeight - card.offsetHeight - 8, pt.y - 10)) + "px"; } }
   }
@@ -1532,6 +1603,7 @@
     if (INC) { var sh = e.target.closest("#map-show [data-show]"); if (sh) { S.show = sh.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); return; } }
     var b = e.target.closest("[data-act]");
     if (b) {
+      var more = b.closest("details.map-more"); if (more) { more.removeAttribute("open"); }
       var cam = b.dataset.cam ? S.byId[b.dataset.cam] : null;
       switch (b.dataset.act) {
         case "play": if (S.playing) { pause(); } else { play(); } drawBar(); return;
@@ -1564,10 +1636,11 @@
         case "circle": if (S.circle) { clearCircle(); return; } S.asking = !S.asking; drawTransport(); if (map) { map.getCanvas().style.cursor = S.asking ? "crosshair" : ""; } if (S.asking) { toast("Press a place on the map: a circle appears there, with a handle to widen it."); } return;
         case "clear-circle": clearCircle(); return;
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
-        case "large": S.large = !S.large; if (INC) { remember("map-inc-large", S.large ? "1" : "0"); applyLarge(); return; } remember("map-large", S.large ? "1" : "0"); host.classList.toggle("large", S.large); drawTransport(); drawList(); drawStrip(); window.setTimeout(function () { if (map) { map.resize(); } }, 50); return;
+        case "large": if (INC) { S.large = !S.large; remember("map-inc-large", S.large ? "1" : "0"); applyLarge(); } return;
+        case "strip-all": S.stripAll = !S.stripAll; drawStrip(); sizeFrame(); return;
         case "picture": savePicture(); return;
         case "leave-full": if (document.exitFullscreen) { document.exitFullscreen(); } return;
-        case "fold": host.classList.toggle("folded"); drawList(); return;
+        case "fold": S.listFolded = !S.listFolded; remember("map-list-folded", S.listFolded ? "1" : "0"); host.classList.toggle("folded", S.listFolded); drawList(); return;
         case "play-here": if (cam) { select(cam); openPreview(cam); } return;
         case "own": if (cam) { if (cam.own !== undefined) { delete cam.own; var mk = markers[cam.id]; if (mk) { mk.getElement().classList.add("before"); } } else { cam.own = 0; } drawList(); tick(); if (cam.own !== undefined) { flyTo(cam); } } return;
         case "select": selectKey(b.dataset.key); return;
@@ -1594,7 +1667,7 @@
     var row = e.target.closest(".map-row[data-cam]");
     if (row && !e.target.closest("button, label, input, a")) { var c = S.byId[row.dataset.cam]; select(c); if (ofDay(c)) { only(c, e.shiftKey); } }
   }
-  function select(cam) { S.selected = null; S.pressed = cam ? cam.id : null; closeCard(); light(cam); refreshLayers(); }
+  function select(cam) { S.selected = null; S.pressed = cam ? cam.id : null; closeCard(); light(cam); refreshLayers(); drawReader(); }
   // The Incidents tab's own form, posted from here: the incident is made
   // there and the page lands on it.
   function makeIncident(ids) {

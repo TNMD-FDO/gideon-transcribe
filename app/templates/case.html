@@ -414,13 +414,17 @@
             map is the file the Admin placed, or plain ground without it.
           {% endcomment %}
           <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
-          <div class="row" style="align-items: center; margin: 14px 0 8px">
-            <p class="lead grow m0">
-              {% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %}
-              <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth here and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</span>
-            </p>
-            {% comment %}Add path files left for the case's head in v1.194.0 (chapter 6).{% endcomment %}
+          {% comment %}
+            The explanation sits behind the ? at the bar's end (v1.208.0);
+            map.js moves these words there. A case with no path file yet
+            keeps the line in view.
+          {% endcomment %}
+          {% if not map_count %}<p class="lead" style="margin: 14px 0 8px">No camera has a path file yet. <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files and they find their videos by name.</span></p>{% endif %}
+          <div id="map-help-words" hidden>
+            <p style="margin: 0 0 6px">{% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %} A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files in the case's head and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</p>
+            <p style="margin: 0">Tick a camera in the list to draw it; press its row or its marker to read it; press an event on the map or on the strip for its card. The box in the map's corner chooses what is drawn. The ⤢ corner is the browser's full screen. Space plays and pauses; the arrow keys step a second, ten with Shift.</p>
           </div>
+          {% comment %}Add path files left for the case's head in v1.194.0 (chapter 6).{% endcomment %}
           {% include "map-host.html" with map_clock="" %}
         {% elif tab == "speakers" %}
           {% comment %}

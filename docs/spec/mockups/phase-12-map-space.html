@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Map tab: the same pieces, the space used</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #ad1457;
+    --ground: #eef1ea; --road: #ffffff; --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .press { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 6px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin: 0 0 12px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .measure { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .measure div { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+  .measure b { display: block; font-size: 20px; }
+  /* the frames */
+  .win { fill: var(--bg); }
+  .surf { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .surf2 { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .ground { fill: var(--ground); }
+  .road { stroke: var(--road); stroke-width: 7; stroke-linecap: round; fill: none; }
+  .roadname { font: 600 10px var(--font); fill: var(--muted); letter-spacing: .12em; }
+  .t { font: 500 11px var(--font); fill: var(--text); }
+  .t.b { font-weight: 600; } .t.m { fill: var(--muted); } .t.s { font-size: 10px; } .t.mono { font-family: var(--mono); }
+  .t.big { font: 600 16px var(--mono); fill: var(--text); }
+  .t.ttl { font: 700 17px var(--font); }
+  .t.eye { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .08em; }
+  .t.tab { font: 500 11px var(--font); fill: var(--muted); } .t.tab.on { fill: var(--text); font-weight: 600; }
+  .t.acc { fill: var(--accent); font-weight: 600; }
+  .t.ink { fill: var(--accent-ink); font-weight: 600; }
+  .tabline { stroke: var(--accent); stroke-width: 2; }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .pill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .pill.acc { fill: var(--accent-soft); stroke: var(--accent); }
+  .pill.warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .seg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .seg.on { fill: var(--accent-soft); }
+  .check { fill: var(--accent); rx: 2; }
+  .uncheck { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 2; }
+  .lane { fill: var(--surface-2); }
+  .pt { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .pt.faint { opacity: .3; }
+  .mk { stroke: var(--surface); stroke-width: 2; }
+  .mk.sq { rx: 2; }
+  .c1 { stroke: var(--c1); } .c2 { stroke: var(--c2); } .c3 { stroke: var(--c3); } .c4 { stroke: var(--c4); } .c5 { stroke: var(--c5); }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .bar { stroke-width: 8; stroke-linecap: round; }
+  .clk { stroke: var(--text); stroke-width: 2; }
+  .fold { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 8 6; }
+  .foldtxt { font: 700 11px var(--font); fill: var(--bad); }
+  .fault { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; rx: 4; }
+  .faulttxt { font: 600 11px var(--font); fill: var(--bad); }
+  .card { fill: var(--surface); stroke: var(--accent); stroke-width: 1; rx: 6; }
+  .over { fill: var(--surface); fill-opacity: .94; stroke: var(--line); stroke-width: 1; rx: 6; }
+  .scroll { fill: var(--line); rx: 2; }
+  .ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .num { fill: var(--warn); }
+  .numtxt { font: 700 11px var(--font); fill: var(--accent-ink); }
+  .note { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, chapter 6 (the Map tab) · a drawing for the maintainer's word · 2026-11-05</span>
+    <h1>The Map tab: the same pieces, the space used</h1>
+    <p class="lede">The ask: "For the map page, I like what it is, but we need to make better use of the space." So nothing is taken away and nothing new is invented: every control, the list, the strip, the cards and the circle stay as they are. What changes is where they sit, so that the map, the list and the strip are all in view at once on an office laptop, and the docked ultrawide monitor gets a map as tall as the window instead of a capped one with an empty column beside it. Two directions are drawn, each at 1366 by 768 (the laptop) and at 2560 by 1200 (a window maximised on the docked monitor), with the ten choices at the end. <b>The window decides, never the monitor</b>: every shape here follows the browser window's own width and height, so a person who keeps a modest window on a wide screen gets the laptop shape (Figure G), and the map grows and shrinks with the window as they resize it. Fictional office throughout. <b>Decided 2026-11-05: Direction 1, the frame growing with the window without a cap.</b></p>
+  </header>
+
+  <!-- Figure A: today -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>Today, measured on the laptop: the map starts under the fold and the strip is a screen away</h2></div>
+    <div class="pane"><svg id="fig-a" viewBox="0 0 1366 1010" role="img" aria-label="The Map tab as it stands at 1366 wide: the map's top at 560 pixels, the window ending at 768, the strip at 1003"></svg></div>
+    <div class="measure">
+      <div><b>560 px</b>from the window's top to the map's top: the case head, the One reading card, the tab bar, two lines of explanation, the Days row, the Show and Events row, and a transport that wraps to two rows</div>
+      <div><b>208 px</b>of the map in view when the tab opens on a 768-tall window; the strip begins at 1003, a full screen down</div>
+      <div><b>320 px</b>the list's column, holding five rows and empty under them; on the ultrawide monitor the same column stands 640 tall beside a map capped at 640 of the 1200 the window has</div>
+      <div><b>3 rows</b>of controls, each half empty: Show and Events; Play to Fit shown; Tidy names to Larger map</div>
+    </div>
+    <div class="caption">
+      <p><b>What is right about it</b> and stays: one clock for every camera, the list beside the map with its ticks and folds, the strip's lanes under it, the event and camera cards, the circle, the picture, Larger map and full screen.</p>
+      <p><b>What wastes the space</b>: three rows of controls where one fits; an explanation that a person reads once; the list column kept at 320 wide and as tall as the map whatever it holds; the map's height capped at 640 instead of taking the window; and the strip placed under everything, so the thing that says <i>when</i> is never beside the thing that says <i>where</i>.</p>
+    </div>
+  </section>
+
+  <!-- Direction 1 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · the laptop</span><h2>One bar, then one frame: the map takes the window's height, the list stands inside the frame, the strip is its foot</h2></div>
+    <div class="pane"><svg id="fig-b" viewBox="0 0 1366 768" role="img" aria-label="Direction 1 at 1366 by 768: the case head, the tab bar, one control bar, and a frame holding the map with the list on its right and the strip under both"></svg></div>
+    <div class="caption">
+      <p><b>The bar.</b> Play, the steps, the event steps, the speed, the clock with its date under, Fit shown, and a <b>More</b> menu for Note here, Note on all shown, Within a circle, Save a picture and Tidy names, which a person reaches for now and then, not every minute. The Show choice (Markers only, Trails, Whole paths) and the Events ticks move onto the map's top-left corner as a small overlay with a fold, so they sit where their effect is. The explanation sentence goes behind a <b>?</b> at the bar's end.</p>
+      <p><b>The frame.</b> One box from the bar down: the map fills it, the list is a panel inside its right edge (the same panel Larger map draws today, now always there, 300 wide, folding to a chip that says "5 of 5 shown"), and the strip is the frame's foot at the map's full width, the clock line running up through the map's edge so the two read as one. The frame is as tall as the window leaves it, measured again whenever the window is resized: on this laptop 420 for the map and 110 for the strip, all in view with nothing to scroll; in a taller window the map is taller.</p>
+      <p><b>Days</b> sit on the bar as chips only when the case has more than one day; a single day reads in the clock's date line, as it does today. <b>Larger map</b> is no longer needed, since the map already has the window; the <b>⤢</b> corner keeps full screen. Nothing grows because the screen is wide: only the window's own size counts.</p>
+      <p><b>Nothing moves on the case page itself</b>: the head, the state pills and the One reading card stay as they are on every tab.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · a window maximised on the docked monitor</span><h2>At 2560 by 1200 the frame grows with the window, the list panel's folds open, and the cards take a column of their own</h2></div>
+    <div class="pane"><svg id="fig-c" viewBox="0 0 2560 1200" role="img" aria-label="Direction 1 at 2560 by 1200: the frame holds a tall map with the list panel inside its right edge; a reader column on the right holds the selected camera's card and the event card"></svg></div>
+    <div class="caption">
+      <p><b>The third column.</b> When the window itself is 2200 or wider the cards leave the map: a camera's reading (its row opened: unit, wearer, how it sits on the clock, Play here, Add or Replace its path file) and an event's card (what, where, until when, Play here, Offer to the chronology, previous and next) draw in a column of their own on the right, 380 wide, so they never cover the map and a long list of readings has height to use. On the laptop they stay as the cards over the map, as today.</p>
+      <p><b>The list panel</b> has the height to open its folds (Never inside, Not on the clock, Other days, No path file, Waiting for their video) without scrolling, and the map keeps 1800 by 940 of ground.</p>
+    </div>
+  </section>
+
+  <!-- Direction 2 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 2 · the laptop</span><h2>The list is the strip's heads: the map takes the whole width, and the cameras are listed once, on their own lanes</h2></div>
+    <div class="pane"><svg id="fig-d" viewBox="0 0 1366 768" role="img" aria-label="Direction 2 at 1366 by 768: the map at the full width, the strip under it whose lane heads carry the tick, the dot, the name and the speed; the folds as rows under the lanes; a camera's card over the map's right edge"></svg></div>
+    <div class="caption">
+      <p><b>One list, not two.</b> Today a camera is named twice: in the list column and on its lane's head. Here the lane's head <i>is</i> its row: the tick, the colour dot, the name, the unit or the speed while playing, and the ▸ that opens its reading; the lanes run beside the heads as they do today. The folds (Never inside, Not on the clock, Other days, No path file, Waiting for their video) are rows under the lanes, closed by default. The map gets the 320 the list column had, so at 1366 the ground is 1150 wide.</p>
+      <p><b>The cards</b> (a camera's reading, an event's card, the circle's list) open as a panel over the map's right edge, as the circle's list does today, and close on Escape or a press outside.</p>
+      <p><b>The cost.</b> With many cameras on a day the strip is tall (24 px a lane; twelve lanes show and Show all the rest, as the Incidents tab does), and "in view" grouping, which the list does by moving rows between In view and Out of view, becomes a mark on the head instead (a faint head for a camera out of view). The bar and the Show overlay are the same as Direction 1.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 2 · a window maximised on the docked monitor</span><h2>At 2560 by 1200: the map and the strip, and the cards in their own column</h2></div>
+    <div class="pane"><svg id="fig-e" viewBox="0 0 2560 1200" role="img" aria-label="Direction 2 at 2560 by 1200: a very wide map with the strip under it, the cards in a right column"></svg></div>
+    <div class="caption">
+      <p><b>The same third column</b> as Direction 1 for the cards. The map is 2100 wide by 880 tall; the strip under it has the width to show every minute of a six-hour day at better than a pixel a second.</p>
+      <p><b>Which fits the office better</b> comes down to one question: is the list column worth 320 of the map's width? Direction 1 keeps it (as a panel that folds); Direction 2 folds it into the strip.</p>
+    </div>
+  </section>
+
+  <!-- Figure G: a modest window on the wide screen -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure G · a modest window on the docked monitor</span><h2>A 1600 by 900 window on the ultrawide gets the laptop shape: the window decides, not the screen</h2></div>
+    <div class="pane"><svg id="fig-g" viewBox="0 0 1600 900" role="img" aria-label="Direction 1 in a 1600 by 900 window: the same bar and frame as on the laptop, the frame at its natural height, ordinary page under it"></svg></div>
+    <div class="caption">
+      <p><b>What the rules are.</b> The cards' column only when the window is 2200 or wider; the frame's height is what the window leaves, measured again on every resize; full screen is a press. A person who likes a small window beside their notes keeps a small map, and nothing is decided from the monitor.</p>
+      <p><b>What stays the same at every size</b>: the bar, the Show overlay, the list panel, the strip as the frame's foot. Only the proportions follow the window.</p>
+    </div>
+  </section>
+
+  <!-- The bar and the overlay -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The bar, close up</span><h2>The three rows become one, with More for the occasional presses and the Show choice on the map itself</h2></div>
+    <div class="pane"><svg id="fig-f" viewBox="0 0 1366 300" role="img" aria-label="The control bar close up, the More menu open, and the Show overlay in the map's corner, folded and unfolded"></svg></div>
+    <div class="caption">
+      <p><b>Always on the bar</b>: Play, −10 s, +10 s, ‹ event, event ›, Speed, the clock, Fit shown. These are pressed every minute.</p>
+      <p><b>Behind More</b>: Note here, Note on all shown, Within a circle, Save a picture, Tidy names. Each keeps its words and its greyed state with the reason; the menu closes on a press and on Escape. A control the office presses often can be promoted to the bar later, since it is one line of markup.</p>
+      <p><b>The Show overlay</b> in the map's corner: folded it reads "Trails · 6 kinds of event"; open it is today's segment and the six ticks. Remembered per person as today.</p>
+    </div>
+  </section>
+
+  <!-- The choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Ten to decide, in one table</h2></div>
+    <table>
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn</th><th>The other way</th></tr>
+      <tr><td>1</td><td>The direction</td><td>Direction 1: the list as a panel inside the map's frame, the strip the frame's foot (chosen 2026-11-05)</td><td>Direction 2: the list folded into the strip's lane heads, the map at the full width</td></tr>
+      <tr><td>2</td><td>The frame's height</td><td>What the window leaves under the bar, measured again on every resize: nothing to scroll on the laptop, a taller map in a taller window (chosen 2026-11-05)</td><td>A cap of 720 with Larger map as the press past it</td></tr>
+      <tr><td>3</td><td>The controls</td><td>One bar; Note here, Note on all shown, Within a circle, Save a picture and Tidy names behind More</td><td>Two bars, nothing behind a menu</td></tr>
+      <tr><td>4</td><td>The Show choice and the Events ticks</td><td>An overlay in the map's top-left corner, folding to one line</td><td>On the bar, which then wraps at 1366</td></tr>
+      <tr><td>5</td><td>The explanation sentence</td><td>Behind a ? at the bar's end</td><td>Kept as two lines above the bar</td></tr>
+      <tr><td>6</td><td>The list panel's fold (Direction 1)</td><td>Folds to a chip "5 of 5 shown" at the frame's right edge; open by default</td><td>Never folds</td></tr>
+      <tr><td>7</td><td>Larger map</td><td>Gone, since the map has the window; the ⤢ corner keeps full screen (chosen 2026-11-05)</td><td>Kept as a press that folds the list and the strip</td></tr>
+      <tr><td>8</td><td>The cards in a wide window</td><td>A third column of 380 when the window itself is 2200 or wider, for the camera's reading and the event card</td><td>Cards over the map at every width, as today</td></tr>
+      <tr><td>9</td><td>The strip's lanes at the laptop height</td><td>Six lanes of 18 px and Show all the rest, so the strip stays about 110 tall</td><td>Every lane always, the frame growing past the window</td></tr>
+      <tr><td>10</td><td>The map's pick mode on the Incidents tab</td><td>Untouched: that small map keeps its own shape (chapter 8)</td><td>The same frame there too</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">Both directions are the same code moved: the bar is today's three rows in one flex row with a menu; the frame is a grid of two rows (the map and the strip) with the list panel positioned the way Larger map already positions it; the height is one measure from the window, taken again on resize; the third column is a media query on the window's width at 2200; the monitor is never asked. No migration, no setting, nothing new kept; map.json is untouched. One release, walked at 1366 by 768 and at 2560 and 3440 wide, light and dark. The build's recommendation is Direction 1, because it keeps every piece where a person who knows the tab today will look for it.</p>
+  </section>
+
+</div>
+<script>
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  function el(svg, name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] !== null && attrs[k] !== undefined) { e.setAttribute(k, attrs[k]); } }
+    if (text !== undefined) { e.textContent = text; }
+    svg.appendChild(e);
+    return e;
+  }
+  function rect(s, x, y, w, h, cls, rx) { return el(s, "rect", { x: x, y: y, width: w, height: h, "class": cls, rx: rx === undefined ? 6 : rx }); }
+  function text(s, x, y, words, cls, anchor) { return el(s, "text", { x: x, y: y, "class": cls, "text-anchor": anchor || null }, words); }
+  function line(s, x1, y1, x2, y2, cls) { return el(s, "line", { x1: x1, y1: y1, x2: x2, y2: y2, "class": cls }); }
+  function btn(s, x, y, w, words, primary) {
+    rect(s, x, y, w, 26, "btn" + (primary ? " primary" : ""), 4);
+    text(s, x + w / 2, y + 17, words, "t b" + (primary ? " ink" : ""), "middle");
+    return x + w + 6;
+  }
+  function pill(s, x, y, words, cls, w) {
+    w = w || words.length * 6.2 + 16;
+    rect(s, x, y, w, 20, "pill " + (cls || ""), 10);
+    text(s, x + w / 2, y + 14, words, "t s" + (cls === "acc" ? " acc" : ""), "middle");
+    return x + w + 6;
+  }
+  function tick(s, x, y, on) { rect(s, x, y, 11, 11, on ? "check" : "uncheck", 2); }
+  function dot(s, x, y, n, sq) { if (sq) { rect(s, x - 5, y - 5, 10, 10, "mk sq f" + n, 2); } else { el(s, "circle", { cx: x, cy: y, r: 5, "class": "mk f" + n }); } }
+  var CAMS = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true },
+    { n: 2, name: "Lee Fox", tail: "" },
+    { n: 3, name: "Ash Kim", tail: "" },
+    { n: 4, name: "Kit Vale", tail: "" },
+    { n: 5, name: "Jo Marsh", tail: "" }
+  ];
+
+  // The case page's top: the app bar, the rail, the case head, the One reading card, the tab bar.
+  function pageTop(s, W, scale, tabsOnly) {
+    var k = scale || 1;
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40 * k, "surf", 0);
+    text(s, 24, 25 * k, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25 * k, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40 * k, 160 * k, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) {
+      if (w) { text(s, 20, (70 + i * 26) * k, w, w === "Cases" ? "t acc" : "t m"); }
+    });
+    var x0 = 180 * k;
+    text(s, x0, 60 * k, "CASES", "t eye");
+    text(s, x0, 82 * k, "Harbour Street stop", "t ttl");
+    var px = x0; px = pill(s, px, 92 * k, "2 incidents not synced", "warn"); px = pill(s, px, 92 * k, "1 proposed event waiting", "warn"); px = pill(s, px, 92 * k, "6 cameras on the map"); pill(s, px, 92 * k, "shared with 1");
+    btn(s, W - 290 * k, 50 * k, 110, "Add path files"); btn(s, W - 170 * k, 50 * k, 130, "Add recordings", true);
+    rect(s, x0, 120 * k, W - x0 - 24 * k, 44 * k, "surf", 6);
+    text(s, x0 + 12, 138 * k, "One reading · 0.7 of 120 hours", "t b"); text(s, x0 + 12, 156 * k, "5 transcripts, 3 not ready yet · a question reads every transcript whole at one go, in under a minute.", "t s m");
+    pill(s, W - 100 * k, 128 * k, "room", "acc", 60);
+    var tabs = ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"];
+    var tx = x0; var ty = 190 * k;
+    tabs.forEach(function (w) { var on = w === "Map 6"; text(s, tx, ty, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, ty + 8, tx + w.length * 6.6, ty + 8, "tabline"); } tx += w.length * 6.6 + 22; });
+    line(s, x0, ty + 9, W - 24 * k, ty + 9, "surf2");
+    return { x: x0, y: ty + 20 };
+  }
+
+  function ground(s, x, y, w, h) {
+    rect(s, x, y, w, h, "ground", 0);
+    // fictional streets, drawn as blocks
+    var roads = [
+      [[x + 40, y + h * .55], [x + w - 40, y + h * .5]],
+      [[x + w * .3, y + 20], [x + w * .32, y + h - 20]],
+      [[x + w * .62, y + 20], [x + w * .6, y + h - 20]],
+      [[x + 40, y + h * .22], [x + w * .62, y + h * .2]]
+    ];
+    roads.forEach(function (r) { line(s, r[0][0], r[0][1], r[1][0], r[1][1], "road"); });
+    text(s, x + w * .45, y + h * .53, "HARBOUR STREET", "roadname");
+    text(s, x + w * .33, y + h * .8, "QUAY LANE", "roadname");
+    text(s, x + w * .12, y + h * .19, "MILL ROAD", "roadname");
+    text(s, x + 10, y + h - 10, "300 ft", "t s mono m");
+    text(s, x + w - 10, y + h - 10, "© OpenStreetMap contributors · Protomaps", "t s m", "end");
+    text(s, x + w - 14, y + 22, "N", "t b", "end");
+    rect(s, x + w - 32, y + 34, 22, 44, "surf", 4); text(s, x + w - 21, y + 50, "+", "t b", "middle"); text(s, x + w - 21, y + 72, "−", "t b", "middle");
+    rect(s, x + w - 32, y + 86, 22, 22, "surf", 4); text(s, x + w - 21, y + 101, "⤢", "t b", "middle");
+  }
+  function paths(s, x, y, w, h, now) {
+    var P = [
+      { n: 1, pts: [[.05, .56], [.3, .54], [.31, .3], [.6, .28], [.61, .5]], sq: true },
+      { n: 2, pts: [[.33, .52], [.36, .62], [.4, .7]] },
+      { n: 3, pts: [[.3, .52], [.28, .66]] },
+      { n: 4, pts: [[.6, .5], [.63, .35], [.7, .33]] },
+      { n: 5, pts: [[.62, .52], [.66, .62], [.72, .6]] }
+    ];
+    P.forEach(function (p) {
+      var d = p.pts.map(function (q, i) { return (i ? "L" : "M") + (x + q[0] * w) + " " + (y + q[1] * h); }).join(" ");
+      el(s, "path", { d: d, "class": "pt c" + p.n });
+      var last = p.pts[p.pts.length - 1];
+      dot(s, x + last[0] * w, y + last[1] * h, p.n, p.sq);
+      var lab = CAMS[p.n - 1].name;
+      rect(s, x + last[0] * w + 8, y + last[1] * h - 8, lab.length * 6.4 + 10, 16, "over", 8);
+      text(s, x + last[0] * w + 13, y + last[1] * h + 4, lab, "t s b");
+    });
+  }
+  function showOverlay(s, x, y, open) {
+    if (!open) { rect(s, x, y, 150, 22, "over", 4); text(s, x + 8, y + 15, "Show: Trails · 6 kinds of event ▸", "t s"); return; }
+    rect(s, x, y, 300, 58, "over", 4);
+    text(s, x + 8, y + 15, "Show", "t s m");
+    var sx = x + 44; ["Markers only", "Trails", "Whole paths"].forEach(function (w, i) { var ww = w.length * 6 + 14; rect(s, sx, y + 4, ww, 18, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 16, w, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    text(s, x + 8, y + 42, "Events", "t s m");
+    var ex = x + 48; ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (w) { tick(s, ex, y + 33, true); text(s, ex + 15, y + 42, w, "t s"); ex += w.length * 5.6 + 24; });
+  }
+  function bar(s, x, y, w, withDays) {
+    var bx = x;
+    bx = btn(s, bx, y, 60, "▶ Play", true);
+    bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s");
+    bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›");
+    bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 27, "UTC · 6 Nov 2025", "t s m"); bx += 100;
+    bx = btn(s, bx, y, 76, "Fit shown");
+    bx = btn(s, bx, y, 66, "More ▾");
+    if (withDays) { bx += 8; text(s, bx, y + 17, "Days", "t s m"); bx += 32; bx = pill(s, bx, y + 3, "06 Nov 2025 · 6 cameras · 6 incidents", "acc"); bx = pill(s, bx, y + 3, "07 Nov 2025 · 2 cameras"); }
+    rect(s, x + w - 26, y, 26, 26, "btn", 13); text(s, x + w - 13, y + 17, "?", "t b", "middle");
+    return y + 26;
+  }
+  function listPanel(s, x, y, w, h, tall) {
+    rect(s, x, y, w, h, "over", 6);
+    tick(s, x + 10, y + 10, true); text(s, x + 26, y + 20, "5 of 5 shown · 5 in view", "t b");
+    text(s, x + w - 10, y + 20, "all · none · fold ›", "t s acc", "end");
+    var ry = y + 34;
+    CAMS.forEach(function (c) {
+      tick(s, x + 10, ry + 4, true); dot(s, x + 32, ry + 9, c.n, c.sq); text(s, x + 44, ry + 13, c.name, "t b");
+      if (c.tail) { text(s, x + 44 + c.name.length * 6.6 + 6, ry + 13, c.tail, "t s m"); }
+      text(s, x + w - 10, ry + 13, "▸", "t m", "end");
+      ry += 24;
+    });
+    ry += 6;
+    var folds = ["Never inside: 2 cameras", "Not on the clock: 1 camera", "Other days: 2 cameras", "No path file: 1 video", "Waiting for their video: 105 path files · kept on the case"];
+    folds.forEach(function (f, i) {
+      text(s, x + 10, ry + 13, (tall && i < 2 ? "▾ " : "▸ ") + f, "t s m");
+      ry += 20;
+      if (tall && i < 2) {
+        ["Pat Lane", "Ro Dell"].forEach(function (nm) { tick(s, x + 24, ry + 2, false); dot(s, x + 44, ry + 7, 3); text(s, x + 56, ry + 11, nm, "t s m"); ry += 18; });
+        ry += 2;
+      }
+    });
+  }
+  function strip(s, x, y, w, h, headW, lanes, nowX) {
+    rect(s, x, y, w, h, "surf", 0);
+    var tx = x + headW; var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { var px = tx + (w - headW - 20) * (i / (ticks.length - 1)); text(s, px, y + 13, t, "t s mono m", "middle"); });
+    var laneH = Math.min(22, (h - 20) / lanes.length);
+    lanes.forEach(function (c, i) {
+      var ly = y + 22 + i * laneH;
+      rect(s, tx, ly + laneH / 2 - 3, w - headW - 20, 6, "lane", 3);
+      var from = tx + (w - headW - 20) * (c.n === 1 ? .0 : .97), to = tx + (w - headW - 20) * (c.n === 1 ? .99 : 1);
+      line(s, from, ly + laneH / 2, to, ly + laneH / 2, "bar c" + c.n);
+      if (c.head) { tick(s, x + 8, ly + laneH / 2 - 5, true); dot(s, x + 30, ly + laneH / 2, c.n, c.sq); text(s, x + 42, ly + laneH / 2 + 4, c.name, "t s b"); if (c.tail) { text(s, x + 42 + c.name.length * 6 + 6, ly + laneH / 2 + 4, c.tail, "t s m"); } text(s, x + headW - 8, ly + laneH / 2 + 4, "▸", "t s m", "end"); }
+      else { dot(s, x + 12, ly + laneH / 2, c.n, c.sq); text(s, x + 24, ly + laneH / 2 + 4, c.name, "t s"); }
+    });
+    var cx = tx + (w - headW - 20) * (nowX === undefined ? .02 : nowX);
+    line(s, cx, y + 16, cx, y + h, "clk");
+    rect(s, cx - 24, y + 2, 48, 14, "btn primary", 3); text(s, cx, y + 13, "14:20:00", "t s ink mono", "middle");
+    return laneH;
+  }
+  function camCard(s, x, y, w) {
+    rect(s, x, y, w, 150, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 90, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 190, y + 32, "Clear", "acc", 44);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    text(s, x + 12, y + 80, "Lights off · mic on since 14:21:04 · 30 m from Sam Roe", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 96, 70, "Play here", true); bx = btn(s, bx, y + 96, 80, "On its own"); bx = btn(s, bx, y + 96, 100, "Replace path file");
+    text(s, x + 12, y + 140, "Readings: mic on 14:21:04 · muted 14:40 to 14:44 · stood still 14:31 to 14:36", "t s m");
+  }
+  function evCard(s, x, y, w) {
+    rect(s, x, y, w, 110, "card", 6);
+    dot(s, x + 16, y + 18, 1, true); text(s, x + 28, y + 22, "Lights on · Sam Roe", "t b");
+    text(s, x + 12, y + 42, "14:22:08 until 14:31:40 · on Harbour Street near Quay Lane", "t s");
+    text(s, x + 12, y + 60, "The in-car camera's own reading, from its path file", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 74, 70, "Play here", true); bx = btn(s, bx, y + 74, 130, "Offer to the chronology"); bx = btn(s, bx, y + 74, 28, "‹"); btn(s, bx, y + 74, 28, "›");
+  }
+
+  // ---- Figure A: today, measured ----
+  (function () {
+    var s = document.getElementById("fig-a"); var W = 1366;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 8;
+    text(s, x, y + 12, "6 cameras, 6 with a path file. A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth here and they find their", "t s m");
+    text(s, x, y + 28, "videos by name. The clock runs one day at a time. No street map is installed, so the paths are drawn on plain ground.", "t s m");
+    y += 44; text(s, x, y + 14, "Days", "t s m"); pill(s, x + 36, y, "06 Nov 2025 · 6 cameras · 6 incidents", "acc");
+    y += 30; text(s, x, y + 16, "Show", "t s m"); var sx = x + 40; ["Markers only", "Trails", "Whole paths"].forEach(function (w, i) { var ww = w.length * 6.4 + 16; rect(s, sx, y + 2, ww, 22, "seg" + (i === 0 ? " on" : ""), 3); text(s, sx + ww / 2, y + 17, w, "t s" + (i === 0 ? " acc" : ""), "middle"); sx += ww + 2; });
+    sx += 14; tick(s, sx, y + 8, false); text(s, sx + 15, y + 17, "faint paths under", "t s m"); sx += 120; text(s, sx, y + 17, "Events", "t s m"); sx += 44;
+    ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (w) { tick(s, sx, y + 8, true); text(s, sx + 15, y + 17, w, "t s"); sx += w.length * 6 + 26; });
+    y += 36; var bx = x; bx = btn(s, bx, y, 60, "▶ Play", true); bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s"); bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›"); bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 27, "UTC · 6 Nov 2025", "t s m"); bx += 100;
+    bx = btn(s, bx, y, 76, "Fit shown"); text(s, bx + 4, y + 17, "Tidy names", "t acc"); bx += 80; bx = btn(s, bx, y, 76, "Note here"); bx = btn(s, bx, y, 120, "Note on all shown"); bx = btn(s, bx, y, 100, "Within a circle");
+    y += 34; bx = x; bx = btn(s, bx, y, 100, "Save a picture"); btn(s, bx, y, 90, "Larger map");
+    y += 40;
+    var mapY = y, mapH = 430, mapW = 823;
+    rect(s, x, mapY, mapW, mapH, "surf2", 8); ground(s, x + 1, mapY + 1, mapW - 2, mapH - 2); paths(s, x, mapY, mapW, mapH);
+    rect(s, x + mapW + 12, mapY, 320, mapH, "surf", 8); listPanel(s, x + mapW + 12, mapY, 320, mapH);
+    var sy = mapY + mapH + 12;
+    strip(s, x, sy, W - x - 24, 156, 150, CAMS.map(function (c) { return Object.assign({ head: true }, c); }), .02);
+    // the fold and the measurements
+    line(s, 0, 768, W, 768, "fold"); text(s, W - 30, 760, "the window's foot at 768", "foldtxt", "end");
+    rect(s, x - 6, mapY - 4, mapW + 12, mapH + 8, "fault"); text(s, x + 8, mapY - 8, "the map: its top at 560, 208 px of it in view", "faulttxt");
+    rect(s, x + mapW + 6, mapY + 170, 332, mapH - 174, "fault"); text(s, x + mapW + 14, mapY + mapH - 12, "the list's column: empty from here down", "faulttxt");
+    rect(s, x - 6, sy - 4, W - x - 12, 164, "fault"); text(s, x + 8, sy + 170, "the strip at 1003: a screen below the map", "faulttxt");
+    rect(s, x - 6, top.y + 46, W - x - 12, 150, "fault"); text(s, W - 36, top.y + 60, "150 px of rows the map could have", "faulttxt", "end");
+  })();
+
+  // ---- Figure B: Direction 1 at 1366 x 768 ----
+  (function () {
+    var s = document.getElementById("fig-b"); var W = 1366;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    y = bar(s, x, y, W - x - 24, false) + 10;
+    var fx = x, fy = y, fw = W - x - 24, fh = 768 - y - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    var stripH = 112, mapH = fh - stripH, mapW = fw;
+    ground(s, fx + 1, fy + 1, mapW - 2, mapH - 2); paths(s, fx, fy, mapW - 310, mapH);
+    showOverlay(s, fx + 10, fy + 10, false);
+    listPanel(s, fx + mapW - 310, fy + 10, 300, mapH - 20);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH, 110, CAMS, .02);
+    text(s, fx + fw - 12, fy + mapH + 13, "5 of 6 lanes · Show all", "t s m", "end");
+    line(s, 0, 768, W, 768, "fold"); text(s, W - 30, 760, "the window's foot at 768: everything above it", "foldtxt", "end");
+  })();
+
+  // ---- Figure C: Direction 1 at 2560 x 1200 ----
+  (function () {
+    var s = document.getElementById("fig-c"); var W = 2560;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    var readerW = 380;
+    y = bar(s, x, y, W - x - 24 - readerW - 16, true) + 10;
+    var fx = x, fy = y, fw = W - x - 24 - readerW - 16, fh = 1200 - y - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    var stripH = 170, mapH = fh - stripH;
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw - 340, mapH);
+    showOverlay(s, fx + 10, fy + 10, true);
+    listPanel(s, fx + fw - 330, fy + 10, 320, mapH - 20, true);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH, 130, CAMS, .02);
+    // the reader column
+    var rx = fx + fw + 16;
+    rect(s, rx, fy, readerW, fh, "surf", 8);
+    text(s, rx + 12, fy + 22, "Lee Fox, pressed on the list", "t eye");
+    camCard(s, rx + 10, fy + 32, readerW - 20);
+    text(s, rx + 12, fy + 206, "The event under the clock", "t eye");
+    evCard(s, rx + 10, fy + 216, readerW - 20);
+    text(s, rx + 12, fy + 350, "Who was near here", "t eye");
+    rect(s, rx + 10, fy + 360, readerW - 20, 80, "note", 4);
+    text(s, rx + 22, fy + 380, "Within 50 m of the press at 14:22:08:", "t s");
+    text(s, rx + 22, fy + 398, "Sam Roe 14:21:50 to 14:31:40 · Lee Fox 14:23:10 to 14:40:02", "t s m");
+    text(s, rx + 22, fy + 416, "Ash Kim passed at 14:25", "t s m");
+    text(s, rx + 12, fy + 470, "On the laptop these are the cards over the map, as today.", "t s m");
+    text(s, rx + 12, fy + 488, "From 2200 wide they have this column, so they never cover", "t s m");
+    text(s, rx + 12, fy + 506, "the ground and a long reading has height to use.", "t s m");
+    line(s, 0, 1200, W, 1200, "fold"); text(s, W - 30, 1192, "the window's foot at 1200", "foldtxt", "end");
+  })();
+
+  // ---- Figure D: Direction 2 at 1366 x 768 ----
+  (function () {
+    var s = document.getElementById("fig-d"); var W = 1366;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    y = bar(s, x, y, W - x - 24, false) + 10;
+    var fx = x, fy = y, fw = W - x - 24, fh = 768 - y - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    var stripH = 160, mapH = fh - stripH;
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw - 320, mapH);
+    showOverlay(s, fx + 10, fy + 10, false);
+    camCard(s, fx + fw - 372, fy + 10, 362);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    var lanes = CAMS.map(function (c) { return Object.assign({ head: true }, c); });
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH - 24, 190, lanes, .02);
+    text(s, fx + 8, fy + fh - 8, "▸ Never inside: 2 · ▸ Not on the clock: 1 · ▸ Other days: 2 · ▸ No path file: 1 · ▸ Waiting for their video: 105 path files", "t s m");
+    line(s, 0, 768, W, 768, "fold"); text(s, W - 30, 760, "the window's foot at 768", "foldtxt", "end");
+  })();
+
+  // ---- Figure E: Direction 2 at 2560 x 1200 ----
+  (function () {
+    var s = document.getElementById("fig-e"); var W = 2560;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    var readerW = 380;
+    y = bar(s, x, y, W - x - 24 - readerW - 16, true) + 10;
+    var fx = x, fy = y, fw = W - x - 24 - readerW - 16, fh = 1200 - y - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    var stripH = 230, mapH = fh - stripH;
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw, mapH);
+    showOverlay(s, fx + 10, fy + 10, true);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    var lanes = CAMS.map(function (c) { return Object.assign({ head: true }, c); });
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH - 28, 220, lanes, .02);
+    text(s, fx + 8, fy + fh - 10, "▾ Never inside: 2 cameras · ▸ Not on the clock: 1 camera · ▸ Other days: 2 cameras · ▸ No path file: 1 video · ▸ Waiting for their video: 105 path files, kept on the case", "t s m");
+    var rx = fx + fw + 16;
+    rect(s, rx, fy, readerW, fh, "surf", 8);
+    text(s, rx + 12, fy + 22, "Lee Fox, pressed on her lane's head", "t eye");
+    camCard(s, rx + 10, fy + 32, readerW - 20);
+    text(s, rx + 12, fy + 206, "The event under the clock", "t eye");
+    evCard(s, rx + 10, fy + 216, readerW - 20);
+    line(s, 0, 1200, W, 1200, "fold"); text(s, W - 30, 1192, "the window's foot at 1200", "foldtxt", "end");
+  })();
+
+  // ---- Figure G: a 1600 x 900 window on the wide screen ----
+  (function () {
+    var s = document.getElementById("fig-g"); var W = 1600;
+    var top = pageTop(s, W);
+    var x = top.x, y = top.y + 6;
+    y = bar(s, x, y, W - x - 24, false) + 10;
+    var fx = x, fy = y, fw = W - x - 24, fh = 900 - y - 12;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    var stripH = 112, mapH = fh - stripH;
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx, fy, fw - 310, mapH);
+    showOverlay(s, fx + 10, fy + 10, false);
+    listPanel(s, fx + fw - 310, fy + 10, 300, mapH - 20);
+    line(s, fx, fy + mapH, fx + fw, fy + mapH, "surf2");
+    strip(s, fx + 1, fy + mapH, fw - 2, stripH, 110, CAMS, .02);
+    text(s, fx + fw - 12, fy + mapH + 13, "5 of 6 lanes · Show all", "t s m", "end");
+    line(s, 0, 900, W, 900, "fold"); text(s, W - 30, 892, "this window's foot at 900: the frame is what the window leaves", "foldtxt", "end");
+  })();
+
+  // ---- Figure F: the bar close up ----
+  (function () {
+    var s = document.getElementById("fig-f"); var W = 1366;
+    rect(s, 0, 0, W, 300, "win", 0);
+    text(s, 24, 24, "The bar at 1366 wide, with More open", "t eye");
+    var y = 36; bar(s, 24, y, W - 48, false);
+    // More open
+    var mx = 24 + 60 + 6 + 52 + 6 + 52 + 6 + 62 + 6 + 62 + 6 + 78 + 6 + 100 + 76 + 6;
+    rect(s, mx, y + 30, 190, 128, "card", 6);
+    ["Note here", "Note on all shown", "Within a circle", "Save a picture", "Tidy names"].forEach(function (w, i) { text(s, mx + 12, y + 52 + i * 22, w, i === 2 ? "t m" : "t"); if (i === 2) { text(s, mx + 178, y + 52 + i * 22, "no camera ticked", "t s m", "end"); } });
+    text(s, 24, 190, "The Show overlay in the map's corner: folded, and open", "t eye");
+    rect(s, 24, 200, 1318, 90, "ground", 6);
+    showOverlay(s, 34, 210, false);
+    showOverlay(s, 400, 210, true);
+    text(s, 720, 226, "remembered per person, as today", "t s m");
+  })();
+})();
+</script>
+</body>
+</html>

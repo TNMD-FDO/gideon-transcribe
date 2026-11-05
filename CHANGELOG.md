@@ -17,6 +17,20 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.208.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6.8: the Map tab's space (the drawing `docs/spec/mockups/phase-12-map-space.html`, Direction 1, agreed 2026-11-05). The same pieces, placed so the map, the list and the strip are in view at once; the window decides every shape, never the monitor.
+
+- **One bar.** Play, the steps, Speed, the clock, Fit shown and **More** (Note here, Note on all shown, Within a circle, Save a picture, Tidy names). The day chips show only when the case has more than one day; the explanation sits behind a ? at the bar's end.
+- **One frame, as tall as the window leaves.** The map fills it and grows or shrinks with the window; the Show choice and the Events ticks are a box in the map's corner that folds to one line; the list is a panel inside the map's right edge that folds to its chip; the strip is the frame's foot, six lanes and Show all. The zoom and full-screen controls move to the bottom-right corner. **Larger map** is gone from the tab, since the map already has the window; ⤢ keeps full screen.
+- **The cards in a column of their own** when the window is 2200 or wider: the pressed camera's reading and the event's card draw on the right, never over the map.
+- The Incidents tab's small map and the incident page's Map panel are unchanged.
+
 ## v1.207.0, 2026-11-05
 
 ```
