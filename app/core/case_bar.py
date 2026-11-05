@@ -111,7 +111,7 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
                 "map",
                 "Map",
                 "map",
-                f"{base}?tab=map",
+                reverse("case-map-page", args=[case.pk]),
                 count("map", lambda: camera_paths.count(case)),
                 on,
             )

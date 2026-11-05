@@ -90,7 +90,7 @@
       "<table class='tbl small'><thead><tr><th>What</th><th>How many</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>" +
       "<p class='muted small' style='margin: 0'>Nothing waiting is read by the map, the chat, the memo or the Speakers page until its video arrives.</p>" +
       (settle ? "<table class='tbl small'><thead><tr><th>File</th><th>What the app found</th><th></th></tr></thead><tbody>" + settle + "</tbody></table>" : "") +
-      "<div class='acts'>" + (location.search.indexOf("tab=map") < 0 ? "<a class='btn small ghost' href='" + esc(label.dataset.map) + "'>On the Map tab</a>" : "") +
+      "<div class='acts'>" + (location.search.indexOf("tab=map") < 0 && !/\/map$/.test(location.pathname) ? "<a class='btn small ghost' href='" + esc(label.dataset.map) + "'>On the Map tab</a>" : "") +
       (settle && (flagged || hasOne) ? "<button type='button' class='small primary' data-act='layer-go'>Add the settled files</button>" : "") +
       "<button type='button' class='small" + (settle && (flagged || hasOne) ? "" : " primary") + "' data-act='layer-close'>Done</button></div></div>";
     var byName = {}; files.forEach(function (f) { byName[f.name] = f; });

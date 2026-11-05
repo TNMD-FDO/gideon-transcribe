@@ -392,6 +392,7 @@ urlpatterns = [
     ),
     # The Map tab (Phase 12 chapter 1): the cameras' paths from their files.
     path("case/<uuid:case_id>/map.json", camera_path_pages.map_json, name="case-map"),
+    path("case/<uuid:case_id>/map", case_pages.map_page, name="case-map-page"),
     path(
         "case/<uuid:case_id>/paths/add",
         camera_path_pages.paths_add,

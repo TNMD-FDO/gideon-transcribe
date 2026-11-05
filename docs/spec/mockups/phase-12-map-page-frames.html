@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Map page: the two frames</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #ad1457;
+    --ground: #eef1ea; --road: #ffffff; --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .press { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 6px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin: 0 0 12px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .measure { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .measure div { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+  .measure b { display: block; font-size: 20px; }
+  /* the frames */
+  .win { fill: var(--bg); }
+  .surf { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .surf2 { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .ground { fill: var(--ground); }
+  .road { stroke: var(--road); stroke-width: 7; stroke-linecap: round; fill: none; }
+  .roadname { font: 600 10px var(--font); fill: var(--muted); letter-spacing: .12em; }
+  .t { font: 500 11px var(--font); fill: var(--text); }
+  .t.b { font-weight: 600; } .t.m { fill: var(--muted); } .t.s { font-size: 10px; } .t.mono { font-family: var(--mono); }
+  .t.big { font: 600 16px var(--mono); fill: var(--text); }
+  .t.ttl { font: 700 17px var(--font); }
+  .t.eye { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .08em; }
+  .t.tab { font: 500 11px var(--font); fill: var(--muted); } .t.tab.on { fill: var(--text); font-weight: 600; }
+  .t.acc { fill: var(--accent); font-weight: 600; }
+  .t.ink { fill: var(--accent-ink); font-weight: 600; }
+  .tabline { stroke: var(--accent); stroke-width: 2; }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .pill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .pill.acc { fill: var(--accent-soft); stroke: var(--accent); }
+  .pill.warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .seg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .seg.on { fill: var(--accent-soft); }
+  .check { fill: var(--accent); rx: 2; }
+  .uncheck { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 2; }
+  .lane { fill: var(--surface-2); }
+  .pt { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .pt.faint { opacity: .3; }
+  .mk { stroke: var(--surface); stroke-width: 2; }
+  .mk.sq { rx: 2; }
+  .c1 { stroke: var(--c1); } .c2 { stroke: var(--c2); } .c3 { stroke: var(--c3); } .c4 { stroke: var(--c4); } .c5 { stroke: var(--c5); }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .bar { stroke-width: 8; stroke-linecap: round; }
+  .clk { stroke: var(--text); stroke-width: 2; }
+  .fold { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 8 6; }
+  .foldtxt { font: 700 11px var(--font); fill: var(--bad); }
+  .fault { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; rx: 4; }
+  .faulttxt { font: 600 11px var(--font); fill: var(--bad); }
+  .card { fill: var(--surface); stroke: var(--accent); stroke-width: 1; rx: 6; }
+  .over { fill: var(--surface); fill-opacity: .94; stroke: var(--line); stroke-width: 1; rx: 6; }
+  .scroll { fill: var(--line); rx: 2; }
+  .ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .num { fill: var(--warn); }
+  .numtxt { font: 700 11px var(--font); fill: var(--accent-ink); }
+  .note { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+
+  /* The frames are drawn at the maintainer's own window, 1912 by 1034, so the
+     type is set larger than the earlier drawing's. */
+  .big .t { font-size: 15px; } .big .t.s { font-size: 13px; } .big .t.big { font-size: 22px; }
+  .big .t.ttl { font-size: 24px; } .big .t.tab { font-size: 15px; } .big .t.eye { font-size: 12px; }
+  .big .roadname { font-size: 14px; } .big .foldtxt { font-size: 16px; } .big .faulttxt { font-size: 16px; }
+  .meas { fill: var(--accent); fill-opacity: .12; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .meastxt { font: 700 16px var(--font); fill: var(--accent); }
+  .veil { fill: var(--surface); fill-opacity: .88; }
+  .rowline { stroke: var(--line); stroke-width: 1; }
+
+  .page { max-width: 1700px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <span class="eyebrow">The Map as a page of its own, with the timeline under the map · the two frames at the maintainer's window, 1912 by 1034</span>
+    <h1>K and B together: the map, then every lane under it, scrolling inside its band</h1>
+    <p class="lede">The same drawing as the fifth amendment of phase-12-map-page.html, with nothing else on the page. The first frame is the page as it opens; the second is the lanes band scrolled to its foot. Fictional office throughout.</p>
+  </header>
+  <section>
+    <div class="fig-head"><span class="eyebrow">Frame 1</span><h2>As the page opens: the map 606 tall, the band 372 with fifteen lanes in view and a scrollbar saying there are more</h2></div>
+    <div class="pane"><svg id="fig-o" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The Map page as it opens"></svg></div>
+  </section>
+  <section>
+    <div class="fig-head"><span class="eyebrow">Frame 2</span><h2>The band scrolled to its foot: the last lanes and the folds, the head line and the ruler held, the map unmoved</h2></div>
+    <div class="pane"><svg id="fig-o2" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The Map page with the lanes band scrolled to its foot"></svg></div>
+  </section>
+</div>
+
+<script>
+
+(function () {
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(svg, name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] !== null && attrs[k] !== undefined) { e.setAttribute(k, attrs[k]); } }
+    if (text !== undefined) { e.textContent = text; }
+    svg.appendChild(e);
+    return e;
+  }
+  function rect(s, x, y, w, h, cls, rx) { return el(s, "rect", { x: x, y: y, width: w, height: h, "class": cls, rx: rx === undefined ? 6 : rx }); }
+  function text(s, x, y, words, cls, anchor) { return el(s, "text", { x: x, y: y, "class": cls, "text-anchor": anchor || null }, words); }
+  function line(s, x1, y1, x2, y2, cls) { return el(s, "line", { x1: x1, y1: y1, x2: x2, y2: y2, "class": cls }); }
+  function btn(s, x, y, w, words, primary) {
+    rect(s, x, y, w, 26, "btn" + (primary ? " primary" : ""), 4);
+    text(s, x + w / 2, y + 17, words, "t b" + (primary ? " ink" : ""), "middle");
+    return x + w + 6;
+  }
+  function pill(s, x, y, words, cls, w) {
+    w = w || words.length * 6.2 + 16;
+    rect(s, x, y, w, 20, "pill " + (cls || ""), 10);
+    text(s, x + w / 2, y + 14, words, "t s" + (cls === "acc" ? " acc" : ""), "middle");
+    return x + w + 6;
+  }
+  function tick(s, x, y, on) { rect(s, x, y, 11, 11, on ? "check" : "uncheck", 2); }
+  function dot(s, x, y, n, sq) { if (sq) { rect(s, x - 5, y - 5, 10, 10, "mk sq f" + n, 2); } else { el(s, "circle", { cx: x, cy: y, r: 5, "class": "mk f" + n }); } }
+  var CAMS = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true },
+    { n: 2, name: "Lee Fox", tail: "" },
+    { n: 3, name: "Ash Kim", tail: "" },
+    { n: 4, name: "Kit Vale", tail: "" },
+    { n: 5, name: "Jo Marsh", tail: "" }
+  ];
+
+  // The case page's top: the app bar, the rail, the case head, the One reading card, the tab bar.
+  function pageTop(s, W, scale, tabsOnly) {
+    var k = scale || 1;
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40 * k, "surf", 0);
+    text(s, 24, 25 * k, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25 * k, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40 * k, 160 * k, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) {
+      if (w) { text(s, 20, (70 + i * 26) * k, w, w === "Cases" ? "t acc" : "t m"); }
+    });
+    var x0 = 180 * k;
+    text(s, x0, 60 * k, "CASES", "t eye");
+    text(s, x0, 82 * k, "Harbour Street stop", "t ttl");
+    var px = x0; px = pill(s, px, 92 * k, "2 incidents not synced", "warn"); px = pill(s, px, 92 * k, "1 proposed event waiting", "warn"); px = pill(s, px, 92 * k, "6 cameras on the map"); pill(s, px, 92 * k, "shared with 1");
+    btn(s, W - 290 * k, 50 * k, 110, "Add path files"); btn(s, W - 170 * k, 50 * k, 130, "Add recordings", true);
+    rect(s, x0, 120 * k, W - x0 - 24 * k, 44 * k, "surf", 6);
+    text(s, x0 + 12, 138 * k, "One reading · 0.7 of 120 hours", "t b"); text(s, x0 + 12, 156 * k, "5 transcripts, 3 not ready yet · a question reads every transcript whole at one go, in under a minute.", "t s m");
+    pill(s, W - 100 * k, 128 * k, "room", "acc", 60);
+    var tabs = ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"];
+    var tx = x0; var ty = 190 * k;
+    tabs.forEach(function (w) { var on = w === "Map 6"; text(s, tx, ty, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, ty + 8, tx + w.length * 6.6, ty + 8, "tabline"); } tx += w.length * 6.6 + 22; });
+    line(s, x0, ty + 9, W - 24 * k, ty + 9, "surf2");
+    return { x: x0, y: ty + 20 };
+  }
+
+  function ground(s, x, y, w, h) {
+    rect(s, x, y, w, h, "ground", 0);
+    // fictional streets, drawn as blocks
+    var roads = [
+      [[x + 40, y + h * .55], [x + w - 40, y + h * .5]],
+      [[x + w * .3, y + 20], [x + w * .32, y + h - 20]],
+      [[x + w * .62, y + 20], [x + w * .6, y + h - 20]],
+      [[x + 40, y + h * .22], [x + w * .62, y + h * .2]]
+    ];
+    roads.forEach(function (r) { line(s, r[0][0], r[0][1], r[1][0], r[1][1], "road"); });
+    text(s, x + w * .45, y + h * .53, "HARBOUR STREET", "roadname");
+    text(s, x + w * .33, y + h * .8, "QUAY LANE", "roadname");
+    text(s, x + w * .12, y + h * .19, "MILL ROAD", "roadname");
+    text(s, x + 10, y + h - 10, "300 ft", "t s mono m");
+    text(s, x + w - 10, y + h - 10, "© OpenStreetMap contributors · Protomaps", "t s m", "end");
+    text(s, x + w - 14, y + 22, "N", "t b", "end");
+    rect(s, x + w - 32, y + 34, 22, 44, "surf", 4); text(s, x + w - 21, y + 50, "+", "t b", "middle"); text(s, x + w - 21, y + 72, "−", "t b", "middle");
+    rect(s, x + w - 32, y + 86, 22, 22, "surf", 4); text(s, x + w - 21, y + 101, "⤢", "t b", "middle");
+  }
+  function paths(s, x, y, w, h, now) {
+    var P = [
+      { n: 1, pts: [[.05, .56], [.3, .54], [.31, .3], [.6, .28], [.61, .5]], sq: true },
+      { n: 2, pts: [[.33, .52], [.36, .62], [.4, .7]] },
+      { n: 3, pts: [[.3, .52], [.28, .66]] },
+      { n: 4, pts: [[.6, .5], [.63, .35], [.7, .33]] },
+      { n: 5, pts: [[.62, .52], [.66, .62], [.72, .6]] }
+    ];
+    P.forEach(function (p) {
+      var d = p.pts.map(function (q, i) { return (i ? "L" : "M") + (x + q[0] * w) + " " + (y + q[1] * h); }).join(" ");
+      el(s, "path", { d: d, "class": "pt c" + p.n });
+      var last = p.pts[p.pts.length - 1];
+      dot(s, x + last[0] * w, y + last[1] * h, p.n, p.sq);
+      var lab = CAMS[p.n - 1].name;
+      rect(s, x + last[0] * w + 8, y + last[1] * h - 8, lab.length * 6.4 + 10, 16, "over", 8);
+      text(s, x + last[0] * w + 13, y + last[1] * h + 4, lab, "t s b");
+    });
+  }
+  function showOverlay(s, x, y, open) {
+    if (!open) { rect(s, x, y, 150, 22, "over", 4); text(s, x + 8, y + 15, "Show: Trails · 6 kinds of event ▸", "t s"); return; }
+    rect(s, x, y, 300, 58, "over", 4);
+    text(s, x + 8, y + 15, "Show", "t s m");
+    var sx = x + 44; ["Markers only", "Trails", "Whole paths"].forEach(function (w, i) { var ww = w.length * 6 + 14; rect(s, sx, y + 4, ww, 18, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 16, w, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    text(s, x + 8, y + 42, "Events", "t s m");
+    var ex = x + 48; ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (w) { tick(s, ex, y + 33, true); text(s, ex + 15, y + 42, w, "t s"); ex += w.length * 5.6 + 24; });
+  }
+  function bar(s, x, y, w, withDays) {
+    var bx = x;
+    bx = btn(s, bx, y, 60, "▶ Play", true);
+    bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s");
+    bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›");
+    bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 27, "UTC · 6 Nov 2025", "t s m"); bx += 100;
+    bx = btn(s, bx, y, 76, "Fit shown");
+    bx = btn(s, bx, y, 66, "More ▾");
+    if (withDays) { bx += 8; text(s, bx, y + 17, "Days", "t s m"); bx += 32; bx = pill(s, bx, y + 3, "06 Nov 2025 · 6 cameras · 6 incidents", "acc"); bx = pill(s, bx, y + 3, "07 Nov 2025 · 2 cameras"); }
+    rect(s, x + w - 26, y, 26, 26, "btn", 13); text(s, x + w - 13, y + 17, "?", "t b", "middle");
+    return y + 26;
+  }
+  function listPanel(s, x, y, w, h, tall) {
+    rect(s, x, y, w, h, "over", 6);
+    tick(s, x + 10, y + 10, true); text(s, x + 26, y + 20, "5 of 5 shown · 5 in view", "t b");
+    text(s, x + w - 10, y + 20, "all · none · fold ›", "t s acc", "end");
+    var ry = y + 34;
+    CAMS.forEach(function (c) {
+      tick(s, x + 10, ry + 4, true); dot(s, x + 32, ry + 9, c.n, c.sq); text(s, x + 44, ry + 13, c.name, "t b");
+      if (c.tail) { text(s, x + 44 + c.name.length * 6.6 + 6, ry + 13, c.tail, "t s m"); }
+      text(s, x + w - 10, ry + 13, "▸", "t m", "end");
+      ry += 24;
+    });
+    ry += 6;
+    var folds = ["Never inside: 2 cameras", "Not on the clock: 1 camera", "Other days: 2 cameras", "No path file: 1 video", "Waiting for their video: 105 path files · kept on the case"];
+    folds.forEach(function (f, i) {
+      text(s, x + 10, ry + 13, (tall && i < 2 ? "▾ " : "▸ ") + f, "t s m");
+      ry += 20;
+      if (tall && i < 2) {
+        ["Pat Lane", "Ro Dell"].forEach(function (nm) { tick(s, x + 24, ry + 2, false); dot(s, x + 44, ry + 7, 3); text(s, x + 56, ry + 11, nm, "t s m"); ry += 18; });
+        ry += 2;
+      }
+    });
+  }
+  function strip(s, x, y, w, h, headW, lanes, nowX) {
+    rect(s, x, y, w, h, "surf", 0);
+    var tx = x + headW; var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { var px = tx + (w - headW - 20) * (i / (ticks.length - 1)); text(s, px, y + 13, t, "t s mono m", "middle"); });
+    var laneH = Math.min(22, (h - 20) / lanes.length);
+    lanes.forEach(function (c, i) {
+      var ly = y + 22 + i * laneH;
+      rect(s, tx, ly + laneH / 2 - 3, w - headW - 20, 6, "lane", 3);
+      var from = tx + (w - headW - 20) * (c.n === 1 ? .0 : .97), to = tx + (w - headW - 20) * (c.n === 1 ? .99 : 1);
+      line(s, from, ly + laneH / 2, to, ly + laneH / 2, "bar c" + c.n);
+      if (c.head) { tick(s, x + 8, ly + laneH / 2 - 5, true); dot(s, x + 30, ly + laneH / 2, c.n, c.sq); text(s, x + 42, ly + laneH / 2 + 4, c.name, "t s b" + (c.faint ? " m" : "")); if (c.tail) { text(s, x + 42 + c.name.length * 7 + 8, ly + laneH / 2 + 4, c.tail, "t s m"); } text(s, x + headW - 8, ly + laneH / 2 + 4, "▸", "t s m", "end"); }
+      else { dot(s, x + 12, ly + laneH / 2, c.n, c.sq); text(s, x + 24, ly + laneH / 2 + 4, c.name, "t s"); }
+    });
+    var cx = tx + (w - headW - 20) * (nowX === undefined ? .02 : nowX);
+    line(s, cx, y + 16, cx, y + h, "clk");
+    rect(s, cx - 24, y + 2, 48, 14, "btn primary", 3); text(s, cx, y + 13, "14:20:00", "t s ink mono", "middle");
+    return laneH;
+  }
+  function camCard(s, x, y, w) {
+    rect(s, x, y, w, 150, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 90, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 190, y + 32, "Clear", "acc", 44);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    text(s, x + 12, y + 80, "Lights off · mic on since 14:21:04 · 30 m from Sam Roe", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 96, 70, "Play here", true); bx = btn(s, bx, y + 96, 80, "On its own"); bx = btn(s, bx, y + 96, 100, "Replace path file");
+    text(s, x + 12, y + 140, "Readings: mic on 14:21:04 · muted 14:40 to 14:44 · stood still 14:31 to 14:36", "t s m");
+  }
+  function evCard(s, x, y, w) {
+    rect(s, x, y, w, 110, "card", 6);
+    dot(s, x + 16, y + 18, 1, true); text(s, x + 28, y + 22, "Lights on · Sam Roe", "t b");
+    text(s, x + 12, y + 42, "14:22:08 until 14:31:40 · on Harbour Street near Quay Lane", "t s");
+    text(s, x + 12, y + 60, "The in-car camera's own reading, from its path file", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 74, 70, "Play here", true); bx = btn(s, bx, y + 74, 130, "Offer to the chronology"); bx = btn(s, bx, y + 74, 28, "‹"); btn(s, bx, y + 74, 28, "›");
+  }
+
+
+  // An office-shaped head: four days of path files make the bar's chips wrap.
+  function officeBar(s, x, y, w) {
+    var yy = bar(s, x, y, w, false);
+    text(s, x, yy + 22, "Days", "t s m");
+    var cx = x + 44; ["04 Nov 2025 · 3 cameras", "05 Nov 2025 · 9 cameras · 2 incidents", "06 Nov 2025 · 22 cameras · 4 incidents", "07 Nov 2025 · 5 cameras"].forEach(function (d, i) { cx = pill(s, cx, yy + 8, d, i === 2 ? "acc" : "", d.length * 7 + 18); });
+    return yy + 30;
+  }
+  function measure(s, x, y, h, words) {
+    rect(s, x - 70, y, 60, h, "meas", 4);
+    line(s, x - 40, y, x - 40, y + h, "ldr");
+    text(s, x - 40, y + h / 2 + 6, words, "meastxt", "middle");
+  }
+  function overlayBar(s, x, y, w) {
+    rect(s, x, y, w, 46, "veil", 0);
+    var bx = x + 10; var yy = y + 10;
+    bx = btn(s, bx, yy, 60, "▶ Play", true); bx = btn(s, bx, yy, 52, "−10 s"); bx = btn(s, bx, yy, 52, "+10 s");
+    bx = btn(s, bx, yy, 62, "‹ event"); bx = btn(s, bx, yy, 62, "event ›"); bx = btn(s, bx, yy, 78, "Speed 4× ▾");
+    text(s, bx + 6, yy + 15, "14:20:00", "t big"); text(s, bx + 6, yy + 30, "UTC · 6 Nov 2025", "t s m"); bx += 110;
+    bx = btn(s, bx, yy, 76, "Fit shown"); bx = btn(s, bx, yy, 66, "More ▾"); bx = btn(s, bx, yy, 150, "Day: 06 Nov 2025 ▾");
+    rect(s, x + w - 36, yy, 26, 26, "btn", 13); text(s, x + w - 23, yy + 17, "?", "t b", "middle");
+    return y + 46;
+  }
+  function overlayStrip(s, x, y, w, folded) {
+    var h = folded ? 26 : 128;
+    rect(s, x, y - h, w, h, "veil", 0);
+    if (folded) {
+      text(s, x + 10, y - 9, "Lanes ▸", "t s acc");
+      var tx = x + 90; ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"].forEach(function (t, i) { text(s, tx + (w - 120) * (i / 7), y - 9, t, "t s mono m", "middle"); });
+      line(s, tx + 8, y - h, tx + 8, y, "clk");
+      return;
+    }
+    text(s, x + 10, y - h + 16, "Lanes ▾", "t s acc");
+    strip(s, x + 70, y - h + 2, w - 80, h - 4, 110, CAMS, .02);
+    text(s, x + w - 12, y - h + 16, "and 16 more cameras · Show all", "t s m", "end");
+  }
+  function slimBand(s, W, words) {
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40, "surf", 0);
+    text(s, 24, 25, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40, 160, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) { if (w) { text(s, 20, 70 + i * 26, w, w === "Cases" ? "t acc" : "t m"); } });
+    rect(s, 160, 40, W - 160, 44, "surf", 0);
+    var x = 180;
+    text(s, x, 68, words.left, "t b");
+    var tx = x + words.left.length * 8 + 30;
+    (words.tabs || []).forEach(function (w) { var on = w === "Map 6"; text(s, tx, 68, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, 76, tx + w.length * 8, 76, "tabline"); } tx += w.length * 8 + 22; });
+    if (words.right) { pill(s, W - 24 - (words.right.length * 7 + 18), 52, words.right, "warn", words.right.length * 7 + 18); }
+    return 84;
+  }
+
+
+
+  // The Show row under the play controls, always in view.
+  function showRow(s, x, y, w) {
+    rect(s, x, y, w, 32, "veil", 0);
+    text(s, x + 12, y + 21, "Show", "t s m");
+    var sx = x + 54; ["Markers only", "Trails", "Whole paths"].forEach(function (wd, i) { var ww = wd.length * 7 + 16; rect(s, sx, y + 5, ww, 22, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 20, wd, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    sx += 14; tick(s, sx, y + 11, true); text(s, sx + 16, y + 21, "faint paths under", "t s m"); sx += 150;
+    text(s, sx, y + 21, "Events", "t s m"); sx += 56;
+    ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (wd) { tick(s, sx, y + 11, true); text(s, sx + 16, y + 21, wd, "t s"); sx += wd.length * 7 + 30; });
+    return y + 32;
+  }
+  // The strip whose heads are the list: the tick, the colour, the name, the speed, the disclosure.
+  var OFFICE = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true, head: true },
+    { n: 2, name: "Lee Fox", tail: "", head: true },
+    { n: 3, name: "Ash Kim", tail: "", head: true },
+    { n: 4, name: "Kit Vale", tail: "", head: true },
+    { n: 5, name: "Jo Marsh", tail: "out of view", head: true, faint: true },
+    { n: 2, name: "Pat Lane", tail: "", head: true }
+  ];
+  function namesStrip(s, x, y, w) {
+    var h = 172;
+    rect(s, x, y - h, w, h, "veil", 0);
+    text(s, x + 10, y - h + 17, "Lanes ▾", "t s acc");
+    text(s, x + 80, y - h + 17, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 290, y - h + 17, "all · none", "t s acc");
+    text(s, x + w - 12, y - h + 17, "and 16 more cameras · Show all", "t s m", "end");
+    var lanes = OFFICE.map(function (c) { return Object.assign({}, c); });
+    var laneH = strip(s, x + 4, y - h + 22, w - 8, 128, 230, lanes, .02);
+    // the faint head for a camera out of view
+    rect(s, x + 4, y - h + 22 + 22 + 4 * 20, 226, 20, "veil", 0);
+    text(s, x + 10, y - 8, "▸ Not on the clock: 1 camera   ▸ Other days: 3 cameras   ▸ No path file: 2 videos   ▸ Waiting for their video: 105 path files, kept on the case", "t s m");
+  }
+  function camCardOver(s, x, y) {
+    rect(s, x, y, 360, 130, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 100, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 220, y + 32, "Clear", "acc", 50);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 78, 74, "Open a tile", true); bx = btn(s, bx, y + 78, 70, "Play here"); bx = btn(s, bx, y + 78, 54, "Fly to"); bx = btn(s, bx, y + 78, 70, "Readings");
+    text(s, x + 12, y + 122, "Open the recording · Replace file · Remove", "t s acc");
+  }
+
+
+  // The day's cameras, a fictional office's worth, for the whole-timeline figures.
+  var MANY = (function () {
+    var names = ["Sam Roe", "Lee Fox", "Ash Kim", "Kit Vale", "Jo Marsh", "Pat Lane", "Ro Dell", "Max Hale", "Dee Nash", "Val Oak", "Ty Brook", "Cam Rhys", "Bea Lund", "Gil Ford", "Ira Moss", "Nia Cole", "Oli Tate", "Rae Finn", "Sol Kerr", "Uma Vos", "Wes Lamb", "Zed Pike"];
+    return names.map(function (n, i) { return { n: (i % 5) + 1, name: n, tail: i === 0 ? "vehicle · 12 mph" : "", sq: i === 0, head: true, faint: i % 7 === 6, from: 0.05 + (i * 0.037) % 0.6, to: 0.2 + (i * 0.053) % 0.7 }; });
+  })();
+  function lanesColumn(s, x, y, w, h, laneH, lanes) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 230, y + 20, "all · none", "t s acc");
+    text(s, x + w - 12, y + 20, "the day's six hours · drag the edge", "t s m", "end");
+    var headW = 200, tx = x + headW, tw = w - headW - 16;
+    var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { text(s, tx + tw * (i / 7), y + 42, t, "t s mono m", "middle"); });
+    line(s, x + 8, y + 48, x + w - 8, y + 48, "rowline");
+    lanes.forEach(function (c, i) {
+      var ly = y + 54 + i * laneH, cy = ly + laneH / 2;
+      rect(s, tx, cy - 3, tw, 6, "lane", 3);
+      var a = tx + tw * Math.min(c.from, 0.9), b = tx + tw * Math.max(Math.min(c.to, 0.98), Math.min(c.from, 0.9) + 0.04);
+      line(s, a, cy, b, cy, "bar c" + c.n);
+      dot(s, a + (b - a) * 0.5, cy, c.n, false);
+      tick(s, x + 10, cy - 5, true); dot(s, x + 32, cy, c.n, c.sq);
+      text(s, x + 44, cy + 4, c.name, "t s b" + (c.faint ? " m" : ""));
+      if (c.tail) { text(s, x + 44 + c.name.length * 7 + 8, cy + 4, c.tail, "t s m"); }
+      text(s, x + headW - 8, cy + 4, "▸", "t s m", "end");
+    });
+    var cx = tx + tw * 0.02;
+    line(s, cx, y + 30, cx, y + 54 + lanes.length * laneH, "clk");
+    rect(s, cx - 26, y + 24, 52, 15, "btn primary", 3); text(s, cx, y + 36, "14:20:00", "t s ink mono", "middle");
+    var fy = y + 60 + lanes.length * laneH;
+    ["▸ Not on the clock: 1 camera", "▸ Other days: 3 cameras", "▸ No path file: 2 videos", "▸ Waiting for their video: 105 path files, kept on the case"].forEach(function (f, i) { text(s, x + 12, fy + 16 + i * 20, f, "t s m"); });
+  }
+
+
+
+
+  // The lanes band under the map: the head line, the ruler, the lanes with their heads, the folds.
+  function lanesBand(s, x, y, w, h, laneH, lanes, scrolled) {
+    rect(s, x, y, w, h, "surf", 0);
+    rect(s, x, y - 4, w, 8, "btn", 4); text(s, x + w / 2, y + 2, "═", "t s m", "middle");
+    text(s, x + 12, y + 24, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 230, y + 24, "all · none", "t s acc");
+    text(s, x + w - 12, y + 24, "drag the edge above for more lanes or more ground", "t s m", "end");
+    var headW = 230, tx = x + headW, tw = w - headW - 16;
+    var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { text(s, tx + tw * (i / 7), y + 46, t, "t s mono m", "middle"); });
+    line(s, x + 8, y + 52, x + w - 8, y + 52, "rowline");
+    var fit = Math.floor((h - 60) / laneH);
+    // Scrolled to the foot: the last lanes and the folds, the head line and the ruler held.
+    var start = scrolled ? Math.max(0, lanes.length - fit + 4) : 0;
+    var shown = lanes.slice(start, start + fit + (scrolled ? 0 : 1));
+    var clipId = "clip" + s.id; var defs = el(s, "defs", {}); var cp = el(defs, "clipPath", { id: clipId }); el(cp, "rect", { x: x, y: y + 54, width: w, height: h - 54 });
+    var g = el(s, "g", { "clip-path": "url(#" + clipId + ")" });
+    shown.forEach(function (c, i) {
+      var ly = y + 58 + i * laneH, cy = ly + laneH / 2;
+      if (scrolled && i >= lanes.length - start) { return; }
+      var s0 = s; s = g;
+      rect(s, tx, cy - 3, tw, 6, "lane", 3);
+      var a = tx + tw * Math.min(c.from, 0.9), b = tx + tw * Math.max(Math.min(c.to, 0.98), Math.min(c.from, 0.9) + 0.04);
+      line(s, a, cy, b, cy, "bar c" + c.n);
+      dot(s, a + (b - a) * 0.5, cy, c.n, false);
+      tick(s, x + 10, cy - 5, true); dot(s, x + 32, cy, c.n, c.sq);
+      text(s, x + 44, cy + 4, c.name, "t s b" + (c.faint ? " m" : ""));
+      if (c.tail) { text(s, x + 44 + c.name.length * 7 + 8, cy + 4, c.tail, "t s m"); }
+      text(s, x + headW - 8, cy + 4, "▸", "t s m", "end");
+      s = s0;
+    });
+    if (scrolled) {
+      var fy0 = y + 58 + (lanes.length - start) * laneH + 6;
+      ["▸ Not on the clock: 1 camera", "▸ Other days: 3 cameras", "▸ No path file: 2 videos", "▸ Waiting for their video: 105 path files, kept on the case"].forEach(function (f, i) { if (fy0 + 16 + i * 20 < y + h - 4) { text(g, x + 12, fy0 + 16 + i * 20, f, "t s m"); } });
+    }
+    var cx = tx + tw * 0.02;
+    line(s, cx, y + 34, cx, y + h, "clk");
+    rect(s, cx - 26, y + 28, 52, 15, "btn primary", 3); text(s, cx, y + 40, "14:20:00", "t s ink mono", "middle");
+    if (lanes.length > fit) {
+      // The scrollbar: the band scrolls inside itself; the head line and the ruler stay.
+      var sbY = y + 56, sbH = h - 62;
+      rect(s, x + w - 16, sbY, 12, sbH, "scroll", 6);
+      var thumbH = Math.max(30, sbH * fit / (lanes.length + 4));
+      rect(s, x + w - 16, scrolled ? sbY + sbH - thumbH : sbY, 12, thumbH, "btn primary", 6);
+      text(s, x + w - 12, y + 24, scrolled ? "scrolled to the foot: the last lanes and the folds; the head line and the ruler stay" : "the band scrolls: " + (lanes.length - fit) + " more lanes and the folds below; wheel or drag the bar", "t s b", "end");
+      rect(s, x + w - 150, y + h - 30, 134, 22, "note", 4); text(s, x + w - 83, y + h - 15, scrolled ? "▴ scroll up" : "▾ scroll for more", "t s b", "middle");
+    }
+  }
+
+  // The whole timeline open on the map's foot: a translucent band with every lane, or the ruler alone.
+  function overlayLanes(s, x, yBottom, w, lanes, cap, folded) {
+    if (folded) {
+      var hf = 26;
+      rect(s, x, yBottom - hf, w, hf, "veil", 0);
+      text(s, x + 10, yBottom - 9, "Lanes ▸", "t s acc");
+      var tx0 = x + 100; ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"].forEach(function (t, i) { text(s, tx0 + (w - 130) * (i / 7), yBottom - 9, t, "t s mono m", "middle"); });
+      line(s, tx0 + 8, yBottom - hf, tx0 + 8, yBottom, "clk");
+      return hf;
+    }
+    var laneH = 20, want = 58 + lanes.length * laneH + 30, h = Math.min(want, cap), fit = Math.floor((h - 58 - (want <= cap ? 30 : 0)) / laneH);
+    rect(s, x, yBottom - h, w, h, "veil", 0);
+    var y = yBottom - h;
+    text(s, x + 10, y + 22, "Lanes ▾", "t s acc");
+    text(s, x + 90, y + 22, "22 of 22 shown · 9 in view", "t s b");
+    text(s, x + 310, y + 22, "all · none", "t s acc");
+    var headW = 230, tx = x + headW, tw = w - headW - 16;
+    var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { text(s, tx + tw * (i / 7), y + 44, t, "t s mono m", "middle"); });
+    line(s, x + 8, y + 50, x + w - 8, y + 50, "rowline");
+    lanes.slice(0, fit).forEach(function (c, i) {
+      var ly = y + 56 + i * laneH, cy = ly + laneH / 2;
+      rect(s, tx, cy - 3, tw, 6, "lane", 3);
+      var a = tx + tw * Math.min(c.from, 0.9), b = tx + tw * Math.max(Math.min(c.to, 0.98), Math.min(c.from, 0.9) + 0.04);
+      line(s, a, cy, b, cy, "bar c" + c.n);
+      dot(s, a + (b - a) * 0.5, cy, c.n, false);
+      tick(s, x + 10, cy - 5, true); dot(s, x + 32, cy, c.n, c.sq);
+      text(s, x + 44, cy + 4, c.name, "t s b" + (c.faint ? " m" : ""));
+      if (c.tail) { text(s, x + 44 + c.name.length * 7 + 8, cy + 4, c.tail, "t s m"); }
+      text(s, x + headW - 8, cy + 4, "▸", "t s m", "end");
+    });
+    var cx = tx + tw * 0.02;
+    line(s, cx, y + 32, cx, yBottom, "clk");
+    rect(s, cx - 26, y + 26, 52, 15, "btn primary", 3); text(s, cx, y + 38, "14:20:00", "t s ink mono", "middle");
+    if (fit >= lanes.length) { text(s, x + 10, yBottom - 8, "▸ Not on the clock: 1 camera   ▸ Other days: 3 cameras   ▸ No path file: 2 videos   ▸ Waiting for their video: 105 path files, kept on the case", "t s m"); }
+    else { rect(s, x + w - 14, y + 58, 6, h - 66, "scroll", 3); rect(s, x + w - 14, y + 58, 6, (h - 66) * fit / lanes.length, "btn primary", 3); text(s, x + w - 24, yBottom - 8, "and " + (lanes.length - fit) + " more lanes below, then the folds: the band scrolls inside itself", "t s m", "end"); }
+    return h;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+  // ---- Amended a fifth time: a page of its own with the timeline under the map ----
+  (function () {
+    var s = document.getElementById("fig-o"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "‹ Back to the case · Harbour Street stop · Map · 6 cameras, 6 with a path file", tabs: [], right: "" });
+    var fx = 172, fy = y0 - 40, fw = W - 172 - 24, fh = 1034 - fy - 12, bandH = Math.round(fh * 0.38), mapH = fh - bandH;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx + 20, fy + 90, fw - 80, mapH - 140);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showRow(s, fx + 1, by, fw - 2);
+    lanesBand(s, fx + 1, fy + mapH, fw - 2, bandH - 1, 20, MANY);
+    measure(s, fx, 0, fy, "44");
+    measure(s, fx, fy, mapH, "606");
+    measure(s, fx, fy + mapH, bandH, "372");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- Figure O2: the band scrolled to its foot ----
+  (function () {
+    var s = document.getElementById("fig-o2"); var W = 1912;
+    var y0 = slimBand(s, W, { left: "‹ Back to the case · Harbour Street stop · Map · 6 cameras, 6 with a path file", tabs: [], right: "" });
+    var fx = 172, fy = y0 - 40, fw = W - 172 - 24, fh = 1034 - fy - 12, bandH = Math.round(fh * 0.38), mapH = fh - bandH;
+    rect(s, fx, fy, fw, fh, "surf", 8);
+    ground(s, fx + 1, fy + 1, fw - 2, mapH - 2); paths(s, fx + 20, fy + 90, fw - 80, mapH - 140);
+    var by = overlayBar(s, fx + 1, fy + 1, fw - 2);
+    showRow(s, fx + 1, by, fw - 2);
+    lanesBand(s, fx + 1, fy + mapH, fw - 2, bandH - 1, 20, MANY, true);
+    measure(s, fx, fy, mapH, "606");
+    measure(s, fx, fy + mapH, bandH, "372");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+})();
+</script>
+</body>
+</html>

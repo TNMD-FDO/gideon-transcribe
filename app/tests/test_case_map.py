@@ -77,23 +77,34 @@ def test_the_map_tab_is_in_the_bar_after_incidents_while_maps_are_on(person, a_c
     assert "map" not in [t["key"] for t in case_bar.bar(a_case, on="map")["tabs"]]
 
 
-def test_the_case_page_draws_the_host_and_the_scripts_on_the_map_tab_alone(
-    client, person, a_case
-):
+def test_the_map_is_a_page_of_its_own_and_the_tab_sends_there(client, person, a_case):
+    """Chapter 6.10 (v1.210.0): the case bar's Map tab opens the page; the
+    old tab address goes there with its query, so every On the map address
+    keeps landing at its moment."""
     video(person, a_case, "BWC2-1")
     signed_in(client, person)
-    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=map").content.decode()
+    page_url = reverse("case-map-page", args=[a_case.pk])
+    asked = "?tab=map&recording=x&at=12.0"
+    sent = client.get(reverse("case", args=[a_case.pk]) + asked)
+    assert sent.status_code == 302
+    assert sent["Location"] == page_url + asked
+    page = client.get(page_url).content.decode()
     assert 'id="case-map"' in page and "vendor/maplibre-gl.js" in page
-    assert "vendor/pmtiles.js" in page and "map.js" in page
+    assert "vendor/pmtiles.js" in page and "map.js" in page and "preview.js" in page
     assert "No camera has a path file yet." in page
     assert "No street map is installed" in page
-    assert "Add path files" in page
+    assert 'id="case-add-paths"' in page and "path-files.js" in page
     assert f'data-json="{reverse("case-map", args=[a_case.pk])}"' in page
+    # The case bar stands above with the Map tab lit, and the case page
+    # itself draws no map any more.
+    assert 'id="case-bar"' in page and 'href="' + page_url + '"' in page
     other = client.get(reverse("case", args=[a_case.pk])).content.decode()
     assert 'id="case-map"' not in other and "maplibre-gl.js" not in other
+    assert 'href="' + page_url + '"' in other
     settings_store.set_to("maps", False)
-    page = client.get(reverse("case", args=[a_case.pk]) + "?tab=map").content.decode()
-    assert 'id="case-map"' not in page
+    assert client.get(page_url).status_code == 404
+    sent = client.get(reverse("case", args=[a_case.pk]) + "?tab=map", follow=True)
+    assert 'id="case-map"' not in sent.content.decode()
 
 
 def test_the_map_script_runs_the_incidents_clock_pattern():
@@ -150,23 +161,24 @@ def test_the_events_show_control_and_larger_map_are_remembered_per_person():
     # Larger map left the tab (v1.208.0): the frame has the window; what is
     # remembered now is the list panel's fold and the Show box.
     assert 'remember("map-large"' not in script
-    assert 'remember("map-lanes-w"' in script
+    assert 'remember("map-band-h"' in script
     assert "maplibregl.FullscreenControl" in script
     assert 'data-act="note"' in script.replace("'", '"')
 
 
 def test_the_map_takes_the_window_and_the_lanes_carry_the_names():
-    """Chapter 6.9 (v1.209.0; the drawing phase-12-map-page.html, Direction A
-    amended twice): the case head folds to a band on the Map tab, the band
-    on the map's top edge holds the play controls and Show for good, the
-    lanes column beside the map carries every camera as a lane whose head
-    is its row, and the map's height is the window's."""
+    """Chapter 6.10 (v1.210.0; the drawing phase-12-map-page.html, K and B
+    together): the band on the map's top edge holds the play controls and
+    Show for good, the lanes band under the map carries every camera as a
+    lane whose head is its row, the split between them is the person's,
+    and the map's height is the window's."""
     script = static("map.js")
     for wanted in (
         "function sizeFrame()",
-        "var PANE_LEAST = 320;",
-        "el.pane.style.height = wanted",
-        "el.lanes.style.height = wanted",
+        "var PANE_LEAST = 320, BAND_LEAST = 120, SPLIT = 8;",
+        "Math.round(frame * 0.38)",
+        "el.pane.style.height = (frame - band - SPLIT)",
+        "el.lanes.style.height = band",
         'window.addEventListener("resize"',
         "class='map-frame' id='map-wrap'",
         "class='map-top' id='map-top'",
@@ -182,17 +194,18 @@ def test_the_map_takes_the_window_and_the_lanes_carry_the_names():
         "function laneCams()",
         "function laneHead(cam)",
         "function drawCamCard()",
-        "function foldHead()",
-        'getElementById("head-fold")',
+        "r.bottom - e.clientY",
     ):
         assert wanted in script, wanted
-    # Gone with the names panel, the Show box and the lane limit.
+    # Gone: the names panel, the Show box, the lane limit, the folded case head.
     for gone in (
         "map-showbox",
         "STRIP_SHOWN",
         "map-reader",
         "data-act='fold'",
         "data-act='strip-all'",
+        "function foldHead()",
+        "map-lanes-w",
     ):
         assert gone not in script, gone
     bar = script.split("function drawTransport()")[1].split("function helpHtml()")[0]
@@ -200,31 +213,37 @@ def test_the_map_takes_the_window_and_the_lanes_carry_the_names():
     assert "Note here" in bar and "Save a picture" in bar and "Tidy names" in bar
     css = static("app.css")
     for wanted in (
-        ".map-frame {",
-        '"pane split lanes"',
+        ".map-frame { position: relative; display: flex; flex-direction: column;",
         ".map-frame .map-lanes {",
         ".map-frame .map-split {",
+        "cursor: row-resize",
         ".map-lanes-head {",
         ".map-lanes .map-strip .map-lane .head .tk {",
         ".map-top {",
         ".map-camcard {",
         ".map-days-menu .menu-body",
-        ".map-tab-page .page-head .eyebrow { display: none; }",
-        ".map-tab-page:not(.head-open) #dashboard-line",
+        ".map-page-lead {",
         ".map-tab.full .map-frame {",
     ):
         assert wanted in css, wanted
-    for gone in (".map-showbox", ".map-reader", ".map-tab.folded", "min-width: 2200px"):
+    for gone in (
+        ".map-showbox",
+        ".map-reader",
+        ".map-tab.folded",
+        "min-width: 2200px",
+        ".map-tab-page",
+    ):
         assert gone not in css, gone
-    page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
-    assert 'id="map-help-words"' in page and 'id="head-fold"' in page
-    assert " map-tab-page{% endif %}" in page
+    page = (HERE / "templates" / "case-map.html").read_text(encoding="utf-8")
+    assert 'id="map-help-words"' in page and "map-host.html" in page
+    case_page = (HERE / "templates" / "case.html").read_text(encoding="utf-8")
+    assert "map-tab-page" not in case_page and "head-fold" not in case_page
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
-    assert "the lanes column" in glossary
+    assert "a page of its own" in glossary and "the lanes band" in glossary
     guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
-    assert "**The map takes the window**" in guide and "**More**" in guide
+    assert "**The Map page**" in guide and "**More**" in guide
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-12.md").read_text(encoding="utf-8")
-    assert "### 6.9 The map takes the window" in spec
+    assert "### 6.10 The map as a page of its own" in spec
 
 
 def test_the_vendored_map_files_match_the_hashes_the_readme_records():
@@ -797,9 +816,14 @@ def test_add_path_files_stands_in_the_case_head_on_every_tab(client, person, a_c
     video(person, a_case, "BWC1-1")
     camera_paths.keep_waiting(a_case, data=body_file(), filename="Z.vtt", by=person)
     for tab in ("", "?tab=notes", "?tab=map", "?tab=details"):
-        page = client.get(reverse("case", args=[a_case.pk]) + tab).content.decode()
+        got = client.get(reverse("case", args=[a_case.pk]) + tab, follow=True)
+        page = got.content.decode()
         assert 'id="case-add-paths"' in page and "path-files.js" in page, tab
         assert 'id="map-add-files"' not in page
+        if tab == "?tab=map":
+            # The Map page (v1.210.0) has it in its own slim row.
+            assert "Add path files" in page[: page.index('id="case-map"')]
+            continue
         head = page[: page.index("Add recordings")]
         assert "Add path files" in head  # to the left of Add recordings
     details = client.get(

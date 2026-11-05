@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.210.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6.10: the Map as a page of its own, with the timeline under the map (the drawing `docs/spec/mockups/phase-12-map-page.html`, K and B together, agreed 2026-11-05).
+
+- **A page of its own.** The Map tab in the case bar opens its own page, as Incidents open an incident: the case bar above with the Map tab lit, a slim row with the count and Add path files, then the map. The case page's head goes back to what it is on every other tab; the old tab address, and every On the map address with it, goes to the page with its query, so a note, a hit or an incident still lands at its moment.
+- **The timeline under the map.** The lanes band sits under the map at the map's full width, inside the frame: its line ("N of N shown · M in view · all · none"), the ruler with the playhead running down every lane, every camera of the day as a lane whose head is its row (the tick, the colour, the name, the speed, the ▸ to the reading), and the folds under the last lane. The band scrolls inside itself when the day has more lanes than its height, the head line and the ruler held at the top. The edge between the map and the band drags up and down and is remembered; the band starts at 38 % of the frame, the map takes the rest and is never under 320 px.
+- The two-row band on the map's top edge (the play controls, then Show and the Events ticks), the reading as a card beside its lane, Day as a menu, and the circle's answer on the lanes are as in v1.209.0. The Incidents tab's small map and the incident page's Map panel are unchanged.
+
 ## v1.209.0, 2026-11-05
 
 ```

@@ -291,6 +291,14 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
         + ("clips", "speakers", "details")
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
+    # The Map is a page of its own (chapter 6.10, v1.210.0): the tab's
+    # address goes there with its query, so On the map from a note, a hit
+    # or an incident keeps landing at its moment.
+    if tab == "map":
+        query = request.GET.urlencode()
+        return redirect(
+            reverse("case-map-page", args=[case.pk]) + (f"?{query}" if query else "")
+        )
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
     if asked and not request.GET.get("tab"):
         tab = "search"
@@ -466,6 +474,36 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
                 if tab == "map" or (tab in ("details", "incidents") and maps_on)
                 else {}
             ),
+        },
+    )
+
+
+@login_required
+def map_page(request: HttpRequest, case_id) -> HttpResponse:
+    """The Map as a page of its own (Phase 12 chapter 6.10, v1.210.0): the
+    case bar, a slim row, and the frame map.js draws from map.json; the
+    map keeps the window's room and the lanes band sits under it."""
+    from core import camera_paths, case_bar
+
+    _on_or_404()
+    if not camera_paths.on():
+        raise Http404
+    case = _their_case(request, case_id)
+    cases.note_activity(case, by=request.user)
+    role = case.role_of(request.user)
+    if role == "collaborator":
+        sharing.note_opened(case, request.user)
+    map_count = camera_paths.count(case)
+    return render(
+        request,
+        "case-map.html",
+        {
+            "case": case,
+            "role": role,
+            "case_bar": case_bar.bar(case, on="map"),
+            "map_count": map_count,
+            "paths_door": bool(role),
+            **_map_context(case, request.user),
         },
     )
 

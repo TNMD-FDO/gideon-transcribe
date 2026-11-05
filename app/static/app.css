@@ -4100,19 +4100,19 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
    the cameras beside it, the clock under, the street map or plain ground. */
 .map-tab { display: block; }
 .map-lead { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-/* The map takes the window (chapter 6.9, v1.209.0; the drawing
-   phase-12-map-page.html, Direction A amended twice): the frame is the
-   map, as tall as the window leaves (map.js measures it, never the
-   screen), with the two-row band on its top edge; beside it the lanes
-   column, every camera of the day as a lane whose head is its row, the
-   folds under, its edge draggable; the case page's head folds to a band
-   while the tab is open. */
-.map-frame { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 8px var(--lanes, 40%); grid-template-areas: "pane split lanes" "bar bar bar"; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
-.map-frame .map-pane { grid-area: pane; height: 480px; min-height: 320px; border: 0; border-radius: 0; }
-.map-frame .map-split { grid-area: split; cursor: col-resize; background: var(--surface-2); border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+/* The Map as a page of its own (chapter 6.10, v1.210.0; the drawing
+   phase-12-map-page.html, K and B together): the frame is the map, as
+   tall as the window leaves (map.js measures it, never the screen), with
+   the two-row band on its top edge; a drag edge; then the lanes band at
+   the map's full width, every camera of the day as a lane whose head is
+   its row, the folds under, scrolling inside itself. */
+.map-frame { position: relative; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+.map-frame .map-pane { flex: none; height: 480px; min-height: 320px; border: 0; border-radius: 0; }
+.map-frame .map-split { flex: none; height: 8px; cursor: row-resize; background: var(--surface-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .map-frame .map-split:hover { background: var(--accent-soft); }
-.map-frame .map-lanes { grid-area: lanes; height: 480px; overflow: auto; display: flex; flex-direction: column; min-width: 0; font-size: var(--t-small); background: var(--surface); scrollbar-width: thin; }
-.map-frame .map-bar { grid-area: bar; }
+.map-frame .map-lanes { flex: none; height: 300px; overflow: auto; display: flex; flex-direction: column; min-width: 0; font-size: var(--t-small); background: var(--surface); scrollbar-width: thin; }
+.map-frame .map-bar { flex: none; }
+.map-page-lead { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 0 0 8px; }
 .map-lanes-head { position: sticky; top: 0; z-index: 4; background: var(--surface); padding: 6px 10px 4px; border-bottom: 1px solid var(--line); }
 .map-lanes-head .h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); }
 .map-lanes-head .h label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
@@ -4143,12 +4143,6 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-days-menu .menu-body button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .map-help { position: relative; margin-left: auto; }
 .map-help > div { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(560px, 80vw); padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-/* The case page's head on the Map tab: a band, with the state pills and the One reading card behind "N need you". */
-.map-tab-page .page-head { margin: 0 0 4px; }
-.map-tab-page .page-head .eyebrow { display: none; }
-.map-tab-page .page-head .line h1 { font-size: var(--t-title); }
-.map-tab-page:not(.head-open) #dashboard-line, .map-tab-page:not(.head-open) #one-reading { display: none; }
-.map-tab-page .case-tabs { margin-top: 2px; }
 .map-lead-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .map-show { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .map-tab .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -4328,8 +4322,9 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .inc-stage > .map-tab.map-inc .map-pane { height: clamp(360px, calc(100vh - 420px), 820px); }
 .inc-desk.inc-map-large .inc-wall { display: none; }
 .inc-map-away { margin: 8px 0; }
-.map-tab.full .map-frame { background: var(--bg); height: 100vh; border-radius: 0; grid-template-rows: minmax(0, 1fr) auto; }
-.map-tab.full .map-frame .map-pane, .map-tab.full .map-frame .map-lanes { height: auto; min-height: 0; }
+.map-tab.full .map-frame { background: var(--bg); height: 100vh; border-radius: 0; }
+.map-tab.full .map-frame .map-pane { flex: 1 1 auto; height: auto; min-height: 0; }
+.map-tab.full .map-frame .map-lanes { flex: none; height: 38vh; }
 .map-tab.full .map-bar { display: flex; gap: 10px; align-items: center; height: 44px; padding: 0 12px; background: var(--surface); border-top: 1px solid var(--line); }
 @media (max-width: 1023px) {
   .map-wrap { grid-template-columns: minmax(0, 1fr); }

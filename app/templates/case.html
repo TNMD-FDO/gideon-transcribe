@@ -5,14 +5,12 @@
 {% block main_class %}wide{% endblock %}
 
 {% block content %}
-  <div class="page roomy workbench{% if tab == "map" %} map-tab-page{% endif %}" data-case="{{ case.pk }}">
+  <div class="page roomy workbench" data-case="{{ case.pk }}">
     <header class="page-head">
       <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
       <div class="line">
         <h1 id="case-name">{{ case.name }}</h1>
         {% if role == "admin" %}{% include "admin-pill.html" with owner=case.owner what="case" %}{% endif %}
-        {% comment %}On the Map tab the head is a band (v1.209.0): the state pills and the One reading card wait behind this press, and the map takes the room.{% endcomment %}
-        {% if tab == "map" %}<button type="button" class="pill small{% if pills %} warn{% endif %}" id="head-fold" aria-expanded="false" title="The case's state and the One reading card">{% if pills %}{{ pills|length }} need you{% else %}the case's state{% endif %} ▾</button>{% endif %}
       </div>
       <div class="acts">
         {# The head's Notes page door (v1.121.1) went in v1.173.0: the Page shape is in the Notes tab's toggle. #}
@@ -407,27 +405,7 @@
             </div>
           {% endif %}
           </div>
-        {% elif tab == "map" %}
-          {% comment %}
-            The Map tab (Phase 12 chapter 1; the drawing
-            docs/spec/mockups/phase-12-map.html): every camera's path from
-            the file beside its video, on one clock, with the video a press
-            away. Drawn by map.js from map.json into one host; the street
-            map is the file the Admin placed, or plain ground without it.
-          {% endcomment %}
-          <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
-          {% comment %}
-            The explanation sits behind the ? at the bar's end (v1.208.0);
-            map.js moves these words there. A case with no path file yet
-            keeps the line in view.
-          {% endcomment %}
-          {% if not map_count %}<p class="lead" style="margin: 14px 0 8px">No camera has a path file yet. <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files and they find their videos by name.</span></p>{% endif %}
-          <div id="map-help-words" hidden>
-            <p style="margin: 0 0 6px">{% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %} A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files in the case's head and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</p>
-            <p style="margin: 0">Tick a camera in the list to draw it; press its row or its marker to read it; press an event on the map or on the strip for its card. The box in the map's corner chooses what is drawn. The ⤢ corner is the browser's full screen. Space plays and pauses; the arrow keys step a second, ten with Shift.</p>
-          </div>
-          {% comment %}Add path files left for the case's head in v1.194.0 (chapter 6).{% endcomment %}
-          {% include "map-host.html" with map_clock="" %}
+        {% comment %}The Map tab (Phase 12 chapter 1) is a page of its own from v1.210.0 (chapter 6.10): the view sends ?tab=map there with its query, so every On the map address keeps working.{% endcomment %}
         {% elif tab == "speakers" %}
           {% comment %}
             The Speakers tab (v1.151.0, the drawing phase-5-speakers-tab-and-voices.html):
@@ -1042,7 +1020,7 @@
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}
   <script src="{% static 'preview.js' %}"></script>
   {% comment %}The Map tab (Phase 12 chapter 1): the vendored map library, the pmtiles reader, then the tab's own script, after the Preview it opens.{% endcomment %}
-  {% if tab == "map" or map_json_url %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
+  {% if map_json_url %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}
   {% if tab == "notes" %}{% if notes.total or recordings %}<script src="{% static 'waveform.js' %}"></script><script src="{% static 'notes-page.js' %}"></script>{% endif %}{% endif %}
   {% if case_chat_available %}
     <script src="{% static 'paragraph-card.js' %}"></script>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Map, {{ case.name }}{% endblock %}
+{% block body_class %}case-page map-page{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The Map as a page of its own (Phase 12 chapter 6.10, v1.210.0; the
+    drawing docs/spec/mockups/phase-12-map-page.html, K and B together):
+    the case bar above (base.html draws it), one slim row with the count
+    and Add path files, then the frame map.js draws: the map with the
+    play controls and Show on its top edge, and under it the lanes band
+    with every camera of the day, the split between them the person's own.
+  {% endcomment %}
+  <div class="page roomy workbench map-page-body" data-case="{{ case.pk }}">
+    <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
+    <div class="map-page-lead">
+      <p class="lead grow m0 small">{% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet. <span class="muted">A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files and they find their videos by name.</span>{% endif %}</p>
+      {% if paths_door %}<label class="btn small" id="case-add-paths" data-add="{% url 'case-paths-add' case.pk %}" data-map="{% url 'case-map-page' case.pk %}" title="A folder's worth of .vtt path files: each finds its video by name; the rest wait here for theirs">{% icon "upload" %} Add path files<input type="file" accept=".vtt,text/vtt" multiple hidden></label>{% endif %}
+    </div>
+    <div id="map-help-words" hidden>
+      <p style="margin: 0 0 6px">{% if map_count %}{{ map_videos }} camera{{ map_videos|pluralize }}, {{ map_count }} with a path file.{% else %}No camera has a path file yet.{% endif %} A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with Add path files and they find their videos by name. The clock runs one day at a time.{% if not map_basemap.present %} No street map is installed, so the paths are drawn on plain ground.{% endif %}</p>
+      <p style="margin: 0">Tick a camera on its lane to draw it; press its name to show it alone; press the &#9656; at its lane's head to read it; press an event on the map or on a lane for its card. Drag the edge between the map and the lanes to give either more room. The &#10530; corner is the browser's full screen. Space plays and pauses; the arrow keys step a second, ten with Shift.</p>
+    </div>
+    {% include "map-host.html" with map_clock="" %}
+  </div>
+
+  {% if paths_door %}<script src="{% static 'path-files.js' %}"></script>{% endif %}
+  {% comment %}The Preview (v1.98.0), then the vendored map library, the pmtiles reader and the page's own script, after the Preview it opens.{% endcomment %}
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>
+{% endblock %}

@@ -52,8 +52,8 @@
     moment: 0, playing: false, speed: 4, anchorMoment: 0, anchorNow: 0,
     following: null, selected: null, lit: null, inView: {},
     show: recall("map-show") || "trails", faint: recall("map-faint") !== "0", large: false,
-    // The lanes column's width (v1.209.0), set by dragging its edge; empty is the stylesheet's share.
-    lanesWidth: parseInt(recall("map-lanes-w") || "0", 10) || 0,
+    // The lanes band's height (v1.210.0), set by dragging the edge between the map and the band; 0 is the share of 38 %.
+    bandHeight: parseInt(recall("map-band-h") || "0", 10) || 0,
     events: {}, incident: host.dataset.incident || "", scope: null,
     readingsOpen: {}, asking: false,
     // Chapter 6: the cameras a person has unticked (hidden from the map, the
@@ -261,18 +261,19 @@
   // The page ---------------------------------------------------------------------
   function layout() {
     if (INC) { layoutPane(); return; }
-    // The map takes the window (chapter 6.9, v1.209.0; the drawing
-    // phase-12-map-page.html, Direction A amended twice): the frame is the
-    // map with a two-row band on its top edge (the play controls, then Show
-    // and the Events ticks, always in view) and beside it the lanes column,
-    // every camera of the day as a lane whose head is its row (the tick, the
-    // colour, the name, the speed, the disclosure) with the folds under; the
-    // case page folds its head to a band while this tab is open.
+    // The Map as a page of its own (chapter 6.10, v1.210.0; the drawing
+    // phase-12-map-page.html, K and B together): the frame is the map with
+    // a two-row band on its top edge (the play controls, then Show and the
+    // Events ticks, always in view), a drag edge, and under it the lanes
+    // band at the map's full width, every camera of the day as a lane whose
+    // head is its row (the tick, the colour, the name, the speed, the
+    // disclosure) with the folds under; the band scrolls inside itself and
+    // the split between the two is the person's own.
     host.classList.remove("large"); host.classList.remove("folded");
     host.classList.toggle("map-pick", PICK);
     S.tiles = {}; S.sound = null; S.tags = {};
     host.innerHTML =
-      "<div class='map-frame' id='map-wrap'" + (S.lanesWidth ? " style='--lanes: " + S.lanesWidth + "px'" : "") + ">" +
+      "<div class='map-frame' id='map-wrap'>" +
         "<div class='map-pane' id='map-pane'>" +
           "<div class='map-top' id='map-top'><div class='transport' id='map-transport'></div>" +
             "<div class='map-show' id='map-showrow'><span class='muted small'>Show</span><span class='seg' id='map-show'>" +
@@ -280,7 +281,7 @@
             "<span class='map-ev'><label title='The whole path drawn faint under the markers and trails'><input type='checkbox' id='map-faint'" + (S.faint ? " checked" : "") + "> faint paths</label></span>" +
             "<span class='muted small'>Events</span><span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span></div></div>" +
         "</div>" +
-        "<div class='map-split' id='map-split' title='Drag to widen or narrow the lanes'></div>" +
+        "<div class='map-split' id='map-split' title='Drag up or down: more lanes, or more ground'></div>" +
         "<div class='map-lanes' id='map-lanes'><div class='map-lanes-head' id='map-lanes-head'></div><div class='map-strip inc-strip' id='map-strip'></div><div class='map-folds' id='map-list'></div></div>" +
         "<div class='map-bar' id='map-bar'></div>" +
       "</div>";
@@ -299,41 +300,32 @@
       window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(sizeFrame, 80); });
       // A menu on the bar (More, Day) closes on a press outside it.
       document.addEventListener("click", function (e) { host.querySelectorAll("details.menu[open]").forEach(function (m) { if (!m.contains(e.target)) { m.removeAttribute("open"); } }); });
-      // The lanes column's edge: drag it, remembered per person.
-      document.addEventListener("mousemove", function (e) { if (!S.splitting || !el.wrap) { return; } var r = el.wrap.getBoundingClientRect(); var w = Math.round(Math.max(300, Math.min(r.width * 0.6, r.right - e.clientX - 4))); S.lanesWidth = w; el.wrap.style.setProperty("--lanes", w + "px"); });
-      document.addEventListener("mouseup", function () { if (!S.splitting) { return; } S.splitting = false; remember("map-lanes-w", String(S.lanesWidth)); if (map) { map.resize(); } movePlayhead(now()); });
-      foldHead();
+      // The edge between the map and the lanes band: drag it up or down, remembered per person.
+      document.addEventListener("mousemove", function (e) { if (!S.splitting || !el.wrap) { return; } var r = el.wrap.getBoundingClientRect(); S.bandHeight = Math.round(r.bottom - e.clientY - 4); sizeFrame(); });
+      document.addEventListener("mouseup", function () { if (!S.splitting) { return; } S.splitting = false; remember("map-band-h", String(S.bandHeight)); movePlayhead(now()); });
     }
     var asked = askedMoment();
     S.moment = asked !== null ? asked : span()[0] + 60;
     drawTransport(); sizeFrame(); drawShow(); drawMap(); drawList(); drawStrip(); drawBar();
   }
-  // The map's height is the window's room under the band (v1.209.0): the
+  // The frame takes the window's room under the case bar (v1.210.0): the
   // window's inner height less the frame's top in the page and a margin,
-  // never under 320, measured again on every resize; the lanes column takes
-  // the same height and scrolls inside. Never the screen, only the window.
-  var PANE_LEAST = 320;
+  // measured again on every resize, never the screen. The lanes band gets
+  // its share of it (38 % until the person drags the edge, then what they
+  // set, remembered), the map the rest and never under 320; the band is
+  // never under 120, and scrolls inside itself when the day has more lanes.
+  var PANE_LEAST = 320, BAND_LEAST = 120, SPLIT = 8;
   function sizeFrame() {
     if (INC || PICK || !el.wrap || !el.pane) { return; }
     if (host.classList.contains("full")) { el.pane.style.height = ""; if (el.lanes) { el.lanes.style.height = ""; } return; }
     var top = el.wrap.getBoundingClientRect().top + window.scrollY;
-    var wanted = Math.max(PANE_LEAST, Math.round(window.innerHeight - top - 12));
-    el.pane.style.height = wanted + "px";
-    if (el.lanes) { el.lanes.style.height = wanted + "px"; }
+    var frame = Math.max(PANE_LEAST + SPLIT + BAND_LEAST, Math.round(window.innerHeight - top - 12));
+    var band = S.bandHeight || Math.round(frame * 0.38);
+    band = Math.max(BAND_LEAST, Math.min(frame - PANE_LEAST - SPLIT, band));
+    if (S.bandHeight) { S.bandHeight = band; }
+    el.pane.style.height = (frame - band - SPLIT) + "px";
+    if (el.lanes) { el.lanes.style.height = band + "px"; }
     if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } }
-  }
-  // The case page's head folds to a band while the Map tab is open; the
-  // "N need you" pill in it opens the state pills and the One reading card
-  // again, and the map takes the room that is left.
-  function foldHead() {
-    var b = document.getElementById("head-fold"); if (!b) { return; }
-    b.addEventListener("click", function () {
-      var page = b.closest(".map-tab-page"); if (!page) { return; }
-      var open = page.classList.toggle("head-open");
-      b.setAttribute("aria-expanded", open ? "true" : "false");
-      b.textContent = b.textContent.replace(/[\u25BE\u25B4]\s*$/, open ? "\u25B4" : "\u25BE");
-      sizeFrame();
-    });
   }
   // The incident page's pane: the map and a foot row, nothing of its own
   // to play with; the page's transport is the clock.
