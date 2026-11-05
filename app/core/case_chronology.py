@@ -1156,18 +1156,27 @@ def _carry_places(incident, date: dt.date, *, by) -> None:
 
 
 def make_incident(
-    case, date: dt.date, span, name: str, recordings, *, by, request=None
+    case,
+    date: dt.date,
+    span,
+    name: str,
+    recordings,
+    *,
+    by,
+    request=None,
+    how: str = incidents.FROM_CHRONOLOGY,
 ):
     """An incident from the span: made with these recordings, each carried
     onto the incident's clock as the case's clock has it, and told where it
-    came from."""
+    came from. The Incidents tab's builder (Phase 12 chapter 9, v1.201.0)
+    comes through here too with the span the person set, `how` strip."""
     kept = _span_dict(date, span)
     incident = incidents.make(
         case,
         name,
         recordings,
         by=by,
-        how=incidents.FROM_CHRONOLOGY,
+        how=how,
         request=request,
         details={"day": kept["date"], "span": f"{kept['from']} to {kept['to']}"},
     )

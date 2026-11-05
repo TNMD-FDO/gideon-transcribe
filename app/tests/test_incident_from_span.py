@@ -387,3 +387,61 @@ def test_the_page_draws_the_lane_the_sheets_and_the_line():
     assert "Incident widened from the chronology" in spec
     glossary = (here.parent / "CONTEXT.md").read_text(encoding="utf-8")
     assert "**Incidents lane**:" in glossary
+
+
+def test_the_builder_posts_its_span_and_the_incident_opens_at_its_start(
+    owner, a_case, a_day, client
+):
+    """The Incidents tab's builder (Phase 12 chapter 9, v1.201.0): Make the
+    incident posts the ticks with the day and the span the person set; the
+    incident is made from the strip, keeps the span as a chronology-made one
+    does, says so in its Details with a link back to the tab's day, and the
+    person lands on it at the span's start."""
+    first, second, third, later = a_day
+    signed_in(client, owner)
+    answer = client.post(
+        reverse("new-incident", args=[a_case.pk]),
+        {
+            "how": "strip",
+            "name": "Harbour Street stop, 20:25",
+            "date": DAY.isoformat(),
+            "from": str(seconds("20:25")),
+            "to": str(seconds("20:38")),
+            "recordings": [str(first.pk), str(second.pk)],
+        },
+    )
+    incident = incidents.Incident.objects.get(case=a_case)
+    assert answer.status_code == 302
+    # Opens at the span's start on the incident's clock: 20:25 less the clock's
+    # zero, which is the first stamp's second (20:24 less the two seconds in).
+    assert answer["Location"] == incident.url() + f"?t={60.0 + 2.0:.1f}"
+    assert incident.how == incidents.FROM_STRIP
+    assert incident.from_chronology["made"] == {
+        "date": "2025-11-06",
+        "from": "20:25",
+        "to": "20:38",
+    }
+    row = Row.objects.get(event="incident made")
+    assert row.details["how"] == "strip" and row.details["span"] == "20:25 to 20:38"
+    page = client.get(reverse("incident-state", args=[a_case.pk, incident.pk])).json()
+    told = page["incident"]["from_chronology"]
+    assert told["made"] == "6 Nov 2025, 20:25 to 20:38"
+    assert told["url"].endswith(f"?tab=incidents&day={DAY.isoformat()}")
+    # A span that will not read is ignored: made as before, no span kept.
+    incident.delete()
+    answer = client.post(
+        reverse("new-incident", args=[a_case.pk]),
+        {
+            "how": "strip",
+            "date": DAY.isoformat(),
+            "from": "20:25",
+            "to": "20:38",
+            "recordings": [str(first.pk)],
+        },
+    )
+    incident = incidents.Incident.objects.get(case=a_case)
+    assert answer["Location"] == incident.url()
+    assert incident.how == incidents.FROM_STRIP and incident.from_chronology == {}
+    # The hidden dialog is gone from the case page; the strip stands alone.
+    body = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents").content
+    assert b'id="incident-box"' not in body and b'id="incident-strip"' in body

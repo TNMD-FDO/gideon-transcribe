@@ -8,6 +8,7 @@ step; this side keeps the rows and says what each camera is.
 
 from __future__ import annotations
 
+import datetime as dt
 import uuid
 
 from django.contrib import messages
@@ -845,10 +846,43 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
         "map": incidents.FROM_MAP,
     }.get(request.POST.get("how", ""), incidents.BY_HAND)
     name = request.POST.get("name", "").strip() or _suggested_name(chosen)
-    incident = incidents.make(
-        case, name, chosen, by=request.user, how=how, request=request
+    # The builder's span (Phase 12 chapter 9, v1.201.0): the ticked cameras'
+    # first start to last end, narrowed by the person's handles, posted as
+    # the day and two times of day. Kept as a chronology-made incident keeps
+    # its span, and the incident opens at the span's start.
+    span = None
+    if how in (incidents.FROM_STRIP, incidents.FROM_MAP):
+        span = _posted_span(request)
+    if span is None:
+        incident = incidents.make(
+            case, name, chosen, by=request.user, how=how, request=request
+        )
+        return redirect(incident.url())
+    from core import case_chronology
+
+    date, low, high = span
+    incident = case_chronology.make_incident(
+        case, date, (low, high), name, chosen, by=request.user, request=request, how=how
     )
-    return redirect(incident.url())
+    at = ""
+    if incident.clock_zero is not None:
+        at = f"?t={max(0.0, low - float(incident.clock_zero)):.1f}"
+    return redirect(incident.url() + at)
+
+
+def _posted_span(request: HttpRequest):
+    """The builder's posted span, or None when it is missing or will not read:
+    `date` as YYYY-MM-DD, `from` and `to` as seconds of the day, at least a
+    minute apart."""
+    try:
+        date = dt.date.fromisoformat(request.POST.get("date", "").strip())
+        low = float(request.POST.get("from", ""))
+        high = float(request.POST.get("to", ""))
+    except (TypeError, ValueError):
+        return None
+    if not (0 <= low < high <= 2 * 86400) or high - low < 60:
+        return None
+    return date, low, high
 
 
 def _from_chronology(incident) -> dict:
@@ -861,7 +895,13 @@ def _from_chronology(incident) -> dict:
         return {}
     span = kept.get("span") or kept.get("made") or {}
     url = ""
-    if span:
+    if span and incident.how in (incidents.FROM_STRIP, incidents.FROM_MAP):
+        # Built on the Incidents tab (v1.201.0): the link goes back to its day.
+        url = (
+            reverse("case", args=[incident.case_id])
+            + f"?tab=incidents&day={span['date']}"
+        )
+    elif span:
         url = (
             reverse("case", args=[incident.case_id])
             + f"?tab=notes&shape=chronology&day={span['date']}"

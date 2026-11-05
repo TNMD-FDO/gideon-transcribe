@@ -353,7 +353,44 @@ The Map tab's trail, with Trails on, used to keep its length when the clock was 
 
 ### Left to the next releases
 
-From the drawing, in order: the span's two handles on the ruler and the moment line driving the map and the stills (Figures B and F); the lanes reordered by overlap while building, the filmstrip at the moment and the near marks (Figure F); the Map tab's circle under the cap and "Build it on the Incidents tab" (Figure G); the wall at eight in every view with "Cameras on the wall" defaulting to the cap, the work panel folding to its rail at seven or more, the small tiles' words in the said band, the film strip fitted (Figures H and I); the two tools in Your incident. The chronology's own surety pills and the recordings list keep their words until looked at in their own turn.
+From the drawing, in order: the span's two handles on the ruler and the moment line driving the map and the stills (Figures B and F), the lanes reordered by overlap while building and the filmstrip at the moment (Figure F), built as chapter 9 (v1.201.0); the near marks from the paths (Figure F); the Map tab's circle under the cap and "Build it on the Incidents tab" (Figure G); the wall at eight in every view with "Cameras on the wall" defaulting to the cap, the work panel folding to its rail at seven or more, the small tiles' words in the said band, the film strip fitted (Figures H and I); the two tools in Your incident. The chronology's own surety pills and the recordings list keep their words until looked at in their own turn.
+
+## 9. The builder's span and clock line (the second release, v1.201.0)
+
+### About
+
+The builder's second release, from the same drawing (`docs/spec/mockups/phase-12-incident-builder.html`, Figures B and F) and the maintainer's word of 2026-11-05 on what came next: the span the person sets, the line that moves the clock, and the lanes and pictures that help the choice while the person still makes it. Chapter 8's principles hold throughout.
+
+### Words
+
+`CONTEXT.md`: **Clock line**; **Your incident** amended. "Moment" is not the page word for the line, since a Moment is a description (Phase 4).
+
+### The span is the person's
+
+- Your incident's column starts as the ticked cameras' first start to last end (chapter 8) and has a handle at each edge. A drag on a handle narrows the span inside the ticks' span, never under a minute; the column, its words on top, and the lead's "Building: N cameras, hh:mm to hh:mm" follow the pointer, and when it is let go the strip is drawn again. A narrowing the ticks have since outgrown is let go, so the span is never wider than the cameras or narrower than a minute.
+- Make the incident posts the span with the ticks (`date`, `from` and `to` as seconds of the day) to New incident's door, which makes the incident through `case_chronology.make_incident` with `how` strip: the incident keeps the span as one made from the chronology does (`from_chronology.made`), the audit row carries the day and the span as it does there, and the person lands on the incident at the span's start (`?t=`). The incident's Details say "Span set: while building, 6 Nov 2025, 20:25 to 20:38", with a link back to the tab on that day, and "Made ... built on the Incidents tab". A span that will not read (missing, a minute or less, out of the day) is ignored and the incident is made as before.
+
+### The clock line
+
+- A vertical line across the lanes inside the span with its time of day at the strip's foot, at the span's start until dragged. A drag moves it inside the span; while it moves the map at the foot seeks every ticked camera to that moment (an `incident-clock` event, throttled; the `incident-ticks` event carries the line's moment too, so a redraw lands the map there), and when it is let go the pictures in Your incident and on the lanes are cut at the new moment. Your incident's head reads "N cameras, hh:mm to hh:mm · at hh:mm:ss".
+- Play here on a camera's reading, while building and when the camera was running at the line, plays from the line; otherwise from the camera's start.
+
+### The lanes while building
+
+- From the first tick the lanes sort by how long each camera ran inside the span, longest first, with the minutes on the head ("13 min"; "under a minute"); the ticked first among them; a camera that never ran in it reads "no overlap" and sinks, drawn faint. The unit leaves the head for the hover while building. A camera already in a built incident on the day reads "· in <incident>" on its head, and Your incident says "<camera> is already in <incident>. It will be in both."
+- **The pictures.** While building every shown lane ends in a small picture of the camera at the clock line, in a column of its own at the lane's end (the clean-text rule), cut on request for the shown lanes alone (twelve, or all when shown) and never kept; a camera not running at the line shows a blank with the reason on hover. The pictures are cut again only when the line or the ticks change.
+
+### Every word clean
+
+The handles and the line sit beside the bright column, not inside it, so its shade does not fade them. A column's tag drawn over another steps to the column's foot; the line's time steps aside from a tag in its way and gives way to it when there is nowhere left. Near the strip's edges the time sits to one side of the line.
+
+### Also in this release
+
+The hidden New incident dialog kept on the case page since v1.200.0 is removed with its script; the Incidents tab reads the day in its address (`?tab=incidents&day=`) so an incident's Details can lead back to it.
+
+### Left to the next releases
+
+The near marks from the paths (a ring on the box of a camera within 50 m of a ticked one at the clock line), the Map tab's circle under the cap (Figure G), the wall at eight (Figures H and I), and the two tools in Your incident.
 
 ## Appendix A. Audit rows added in Phase 12
 

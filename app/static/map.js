@@ -77,18 +77,28 @@
     S.cams.forEach(function (c) { if (!wanted[c.id]) { S.hidden[c.id] = true; } });
     var empty = document.getElementById("map-pick-empty");
     if (empty) { empty.hidden = S.pick.some(function (id) { return S.byId[id]; }); }
-    // The clock sits at the first ticked camera's start, so every ticked
-    // marker is on the map and not "before".
+    // The clock sits where the strip's clock line is (chapter 9), else at
+    // the first ticked camera's start, so every ticked marker is on the map
+    // and not "before".
     var starts = S.cams.filter(function (c) { return wanted[c.id] && c.onClock; }).map(function (c) { return c.zero.second; });
-    if (starts.length) { S.playing = false; seek(Math.min.apply(null, starts) + 1); }
+    if (S.pickAt !== null && S.pickAt !== undefined) { S.playing = false; seek(S.pickAt); }
+    else if (starts.length) { S.playing = false; seek(Math.min.apply(null, starts) + 1); }
     if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } drawList(); drawStrip(); refreshLayers(); tick(); fitAll(); }
   }
   if (PICK) {
+    S.pickAt = null;
     window.addEventListener("incident-ticks", function (e) {
       var told = e.detail || {};
       S.pick = told.ids || [];
+      S.pickAt = typeof told.at === "number" ? told.at : null;
       if (told.day && told.day !== S.day) { S.day = told.day; load(false); return; }
       applyPick();
+    });
+    // The strip's clock line while it is dragged: the markers follow.
+    window.addEventListener("incident-clock", function (e) {
+      var at = e.detail && e.detail.at;
+      if (typeof at !== "number" || !S.loaded) { return; }
+      S.pickAt = at; S.playing = false; seek(at);
     });
   }
   // Ticked means drawn. The incident page's pane has no list to untick from,

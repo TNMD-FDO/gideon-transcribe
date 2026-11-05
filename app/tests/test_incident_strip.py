@@ -177,9 +177,10 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     assert told["incidents_all"] == []
     assert told["day"]["bars"][0]["name"] and "on_map" in told["day"]["bars"][0]
     # No table of every video under the incidents (v1.180.1): the recordings
-    # list carries the clock columns. New incident's own tick list stays.
+    # list carries the clock columns. New incident's dialog and its tick list
+    # left the page in v1.201.0: the strip is New incident.
     assert "Videos in this case" not in page and 'id="case-videos"' not in page
-    assert 'name="recordings"' in page
+    assert 'name="recordings"' not in page and 'id="incident-box"' not in page
     # Incidents proposed Off: the strip's reading says so, the lead counts no
     # forming, and the page keeps its strip.
     settings_store.set_to("incidents_proposed", False)

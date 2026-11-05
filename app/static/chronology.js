@@ -134,6 +134,9 @@
     host.innerHTML = dayChips() + ruler(d) + lanes(d) + unclockedRow() + stripFoot(d);
     columns(d);
     wire();
+    // The lanes' pictures at the clock line (chapter 9), cut as they come
+    // into view like the Reader's.
+    stills(host);
     readerDraw(d);
     panel(d);
     buildingWords(d);
@@ -141,13 +144,15 @@
     rearm();
   }
   function stripFoot(d) {
-    var words = "Tick a camera to put it in your incident; press its name to read it. A shaded column is an incident already built.";
+    var words = ticked().length
+      ? "The lanes are in order of how long each camera ran inside your span; the small pictures are each camera at the clock line. Drag the handles at the bright column's edges to narrow the span, and the line to move the clock the map and the pictures show."
+      : "Tick a camera to put it in your incident; press its name to read it. A shaded column is an incident already built.";
     return "<div class='legend'><span>" + words + "</span></div>";
   }
   // The lead's right-hand words: what is being built.
   function buildingWords(d) {
     var box = document.getElementById("building-words"); if (!box) { return; }
-    var span = tickSpan(d);
+    var span = spanOf(d);
     if (!span) { box.textContent = "Tick cameras on the strip to build an incident."; box.className = "muted small"; return; }
     box.textContent = "Building: " + plural(ticked().length, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]);
     box.className = "pill small acc";
@@ -225,6 +230,12 @@
   // incident in the Reader and on the map at the foot; Make the incident
   // makes it in their name. The ticks live here for the tab's life.
   var ticks = {};
+  // The span and the clock line (chapter 9, v1.201.0): the span starts as
+  // the ticked cameras' first start to last end and is narrowed by the two
+  // handles beside its column; the clock line is the time of day the map at
+  // the foot and the pictures show, dragged along the lanes. Both live for
+  // the tab's life, as the ticks do.
+  state.buildSpan = null; state.clockAt = null;
   function ticked() { return Object.keys(ticks); }
   function tickedBars(d) { return d.bars.filter(function (b) { return ticks[b.id]; }); }
   function most() { return (state.counts && state.counts.most) || state.most || 8; }
@@ -233,23 +244,65 @@
     if (!bars.length) { return null; }
     return [Math.min.apply(null, bars.map(function (b) { return b.from; })), Math.max.apply(null, bars.map(function (b) { return b.to; }))];
   }
+  // The span as the person has it: the ticks' span, narrowed by the handles
+  // where they still fall inside it; a narrowing the ticks have outgrown or
+  // squeezed under a minute is let go.
+  function spanOf(d) {
+    var auto = tickSpan(d);
+    if (!auto) { return null; }
+    var set = state.buildSpan;
+    if (!set) { return auto; }
+    var low = Math.max(auto[0], set[0]), high = Math.min(auto[1], set[1]);
+    if (high - low < 60) { state.buildSpan = null; return auto; }
+    return [low, high];
+  }
+  // The clock line: inside the span, at its start until dragged.
+  function clockLine(d) {
+    var span = spanOf(d);
+    if (!span) { return null; }
+    var at = state.clockAt === null ? span[0] : state.clockAt;
+    return Math.max(span[0], Math.min(span[1], at));
+  }
+  // How long a camera ran inside the span, in seconds.
+  function overlap(b, span) { return span ? Math.max(0, Math.min(b.to, span[1]) - Math.max(b.from, span[0])) : 0; }
+  function minutesWords(seconds) { var m = Math.round(seconds / 60); return m < 1 ? "under a minute" : m + " min"; }
+  // Which built incident each camera of the day is in, by id.
+  function inIncidents(d) {
+    var out = {};
+    (d.incidents || []).forEach(function (one) { (one.camera_ids || []).forEach(function (id) { out[id] = one.name; }); });
+    return out;
+  }
   function toggleTick(id, on) {
     if (on) { if (ticked().length >= most()) { return; } ticks[id] = true; } else { delete ticks[id]; }
     state.sel = null;
     draw();
   }
-  function clearTicks() { ticks = {}; state.sel = null; draw(); }
-  // The map at the foot hears the ticks and the day (map.js, pick mode).
+  function clearTicks() { ticks = {}; state.buildSpan = null; state.clockAt = null; state.sel = null; draw(); }
+  // The map at the foot hears the ticks, the day and the clock (map.js,
+  // pick mode).
   function tellMap(d) {
-    try { window.dispatchEvent(new CustomEvent("incident-ticks", { detail: { ids: ticked(), day: d ? d.date : "" } })); } catch (e) { /* an old browser; the map keeps its last ticks */ }
+    try { window.dispatchEvent(new CustomEvent("incident-ticks", { detail: { ids: ticked(), day: d ? d.date : "", at: d ? clockLine(d) : null } })); } catch (e) { /* an old browser; the map keeps its last ticks */ }
+  }
+  // The clock line alone, while it is dragged: the markers follow it.
+  function tellClock(at) {
+    try { window.dispatchEvent(new CustomEvent("incident-clock", { detail: { at: at } })); } catch (e) { /* an old browser */ }
   }
   // The lanes (Phase 12 chapter 7, v1.199.0): one row per camera on the
   // day, named by the officer as the path file gives them, else the unit,
   // else the file; the ticked first, then by start; twelve shown, the rest
   // behind Show all; each camera's notes as marks on its own row.
   var LANES_SHOWN = 12;
+  // While building (chapter 9): the ticked first, then by how long each ran
+  // inside the span, longest first, so the likely eight are the top rows
+  // and each is still a press; the ones that never ran in it sink, by start.
   function laneOrder(d) {
-    return d.bars.slice().sort(function (a, b) { return (ticks[b.id] ? 1 : 0) - (ticks[a.id] ? 1 : 0) || a.from - b.from; });
+    var span = spanOf(d);
+    return d.bars.slice().sort(function (a, b) {
+      var t = (ticks[b.id] ? 1 : 0) - (ticks[a.id] ? 1 : 0);
+      if (t) { return t; }
+      if (span) { var o = overlap(b, span) - overlap(a, span); if (o) { return o; } }
+      return a.from - b.from;
+    });
   }
   function notesOf(d, id) {
     var out = [];
@@ -261,15 +314,29 @@
     var rows = laneOrder(d), all = state.showAll || rows.length <= LANES_SHOWN + 2;
     var shown = all ? rows : rows.slice(0, LANES_SHOWN);
     var building = ticked().length > 0, full = ticked().length >= most();
+    var span = spanOf(d), at = clockLine(d), inInc = building ? inIncidents(d) : {};
     var html = "<div class='lanes" + (shown.length > 24 ? " capped" : "") + (building ? " building" : "") + "' id='chron-band'>";
     shown.forEach(function (b) {
       var marks = "";
       notesOf(d, b.id).forEach(function (e) { marks += "<em class='nm' style='left: " + x(e.seconds, d) + "%' title='Note " + e.number + " at " + hms(e.seconds) + "'></em>"; });
-      var on = !!ticks[b.id];
+      var on = !!ticks[b.id], ran = overlap(b, span);
       var tick = "<input type='checkbox' class='tk' data-tick='" + b.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled title='" + most() + " is the most an incident holds; untick one to swap'" : " title='Tick to put this camera in your incident'") + ">";
-      html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + "' data-lane='" + b.id + "'>" +
-        "<label class='lane-name' title='" + esc(b.title + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (b.unit && b.unit !== b.name ? "<small>" + esc(b.unit) + "</small>" : "") + "</label>" +
-        "<div class='bar'>" + barPiece(b, d, true) + marks + "</div></div>";
+      // The head's small words: the unit at rest; while building, how long
+      // the camera ran inside the span, and the incident it is in already.
+      var small = b.unit && b.unit !== b.name ? b.unit : "";
+      if (building) { small = (ran ? minutesWords(ran) : "no overlap") + (inInc[b.id] ? " · in " + inInc[b.id] : ""); }
+      // The picture at the clock (the filmstrip): cut when the lane is drawn,
+      // for the shown lanes alone, never kept; blank where the camera was
+      // not running then.
+      var film = "";
+      if (building) {
+        film = at !== null && at >= b.from && at <= b.to
+          ? "<span class='film' title='" + esc(shortName(b)) + " at " + hms(at) + "'><img alt='' data-still='" + stillUrl(b, at) + "'></span>"
+          : "<span class='film off' title='" + esc(shortName(b)) + " was not running at " + hms(at) + "'></span>";
+      }
+      html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + (building && !on && !ran ? " none" : "") + "' data-lane='" + b.id + "'>" +
+        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small>" + esc(small) + "</small>" : "") + "</label>" +
+        "<div class='bar'>" + barPiece(b, d, true) + marks + "</div>" + film + "</div>";
     });
     html += "<div class='cols' id='chron-cols' aria-hidden='false'></div></div>";
     if (!all) { html += "<div class='lane-more muted small'>and " + plural(rows.length - shown.length, "more camera") + " on this day · <a href='#' data-act='toggle-all'>Show all</a></div>"; }
@@ -298,15 +365,91 @@
       var l = x(one.from, d), w = Math.max(0.6, x(one.to, d) - l);
       html += "<div class='col inc" + (selected("inc", one.id) ? " on" : "") + "' style='left: " + l + "%; width: " + w + "%'><button type='button' class='tag' data-sel='inc:" + one.id + "' title='" + esc(one.words + " · " + hm(one.from) + " to " + hm(one.to) + "; press to read it") + "'>" + esc(one.name) + "</button></div>";
     });
-    // Your incident (Phase 12 chapter 8): the ticked cameras' first start to
-    // last end, one bright column with its words on top.
-    var span = tickSpan(d);
+    // Your incident (Phase 12 chapter 8): the span, one bright column with
+    // its words on top; its two handles and the clock line (chapter 9) sit
+    // beside the column, not in it, so its shade does not fade them.
+    var span = spanOf(d), at = clockLine(d);
     if (span) {
       var sl = x(span[0], d), sw = Math.max(0.6, x(span[1], d) - sl);
-      html += "<div class='col build' style='left: " + sl + "%; width: " + sw + "%'><span class='tag' title='Your incident, from the first ticked camera to the last'>your incident · " + hm(span[0]) + " to " + hm(span[1]) + "</span></div>";
+      html += "<div class='col build' style='left: " + sl + "%; width: " + sw + "%'><span class='tag' data-build-tag title='Your incident, " + hm(span[0]) + " to " + hm(span[1]) + "; drag the handles at its edges to narrow it'>your incident · " + hm(span[0]) + " to " + hm(span[1]) + "</span></div>";
+      html += "<span class='hdl l' data-hdl='0' style='left: " + sl + "%' title='Drag to move the start of your incident'></span><span class='hdl r' data-hdl='1' style='left: " + (sl + sw) + "%' title='Drag to move the end of your incident'></span>";
+      html += "<div class='clock-line' data-clock style='left: " + x(at, d) + "%' title='The clock: the map and the pictures show this moment. Drag it.'><b>" + hms(at) + "</b></div>";
     }
     box.innerHTML = html;
     box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { var at = b.dataset.sel.indexOf(":"); var kind = b.dataset.sel.slice(0, at), id = b.dataset.sel.slice(at + 1); select(kind === "inc" ? { kind: "inc", id: id } : { kind: "sug", key: id }); }); });
+    if (span) { wireBuild(box, d); }
+    settleTags(box);
+  }
+  // Dragging on the strip (chapter 9): a handle narrows the span, the clock
+  // line moves the clock. The column, the lead's words and the map follow
+  // the pointer; when it is let go the strip is drawn again, so the lanes
+  // take their new order and the pictures are cut at the new moment.
+  function wireBuild(box, d) {
+    var auto = tickSpan(d); if (!auto) { return; }
+    function secondsIn(clientX) { var r = box.getBoundingClientRect(); var share = Math.max(0, Math.min(1, (clientX - r.left) / (r.width || 1))); return d.ruler.from + share * (d.ruler.to - d.ruler.from); }
+    function grab(el, move, done) {
+      el.addEventListener("pointerdown", function (ev) {
+        if (ev.button !== 0) { return; }
+        ev.preventDefault(); el.setPointerCapture(ev.pointerId); box.classList.add("dragging");
+        var onMove = function (e) { move(secondsIn(e.clientX)); };
+        var onUp = function () { el.removeEventListener("pointermove", onMove); el.removeEventListener("pointerup", onUp); el.removeEventListener("pointercancel", onUp); box.classList.remove("dragging"); done(); };
+        el.addEventListener("pointermove", onMove); el.addEventListener("pointerup", onUp); el.addEventListener("pointercancel", onUp);
+      });
+    }
+    var col = box.querySelector(".col.build"), tag = box.querySelector("[data-build-tag]"), line = box.querySelector("[data-clock]");
+    var hdls = box.querySelectorAll("[data-hdl]");
+    function showSpan(low, high) {
+      var l = x(low, d), w = Math.max(0.6, x(high, d) - l);
+      col.style.left = l + "%"; col.style.width = w + "%";
+      hdls[0].style.left = l + "%"; hdls[1].style.left = (l + w) + "%";
+      tag.textContent = "your incident · " + hm(low) + " to " + hm(high);
+      var words = document.getElementById("building-words"); if (words) { words.textContent = "Building: " + plural(ticked().length, "camera") + ", " + hm(low) + " to " + hm(high); }
+    }
+    hdls.forEach(function (h) {
+      var end = h.dataset.hdl === "1", pending = null;
+      grab(h, function (at) {
+        var cur = spanOf(d), low = cur[0], high = cur[1];
+        if (end) { high = Math.max(low + 60, Math.min(auto[1], Math.round(at))); } else { low = Math.min(high - 60, Math.max(auto[0], Math.round(at))); }
+        pending = [low, high]; showSpan(low, high);
+      }, function () {
+        if (pending) { state.buildSpan = pending[0] === auto[0] && pending[1] === auto[1] ? null : pending; }
+        draw();
+      });
+    });
+    var told = 0, lineAt = null;
+    grab(line, function (at) {
+      var cur = spanOf(d); at = Math.round(Math.max(cur[0], Math.min(cur[1], at)));
+      lineAt = at; line.style.left = x(at, d) + "%"; line.firstChild.textContent = hms(at); edgeLabel(line, d, at);
+      var now = Date.now(); if (now - told > 120) { told = now; tellClock(at); }
+    }, function () {
+      if (lineAt !== null) { state.clockAt = lineAt; }
+      draw();
+    });
+    edgeLabel(line, d, clockLine(d));
+  }
+  // The clock line's time steps to one side near the strip's edges.
+  function edgeLabel(line, d, at) { var p = x(at, d); line.classList.toggle("edge-l", p < 6); line.classList.toggle("edge-r", p > 94); }
+  // Every word clean (chapter 8's rule): Your incident's tag drawn over an
+  // incident's steps to the column's foot, and goes when it would sit over
+  // the clock line's time there, which stays: the span is said in the lead
+  // and in the Reader as well, the time nowhere else on the strip.
+  function settleTags(box) {
+    var tags = Array.prototype.slice.call(box.querySelectorAll(".col .tag"));
+    if (!tags.length) { return; }
+    var edge = box.getBoundingClientRect().right, placed = [];
+    function hits(a, b) { var r = a.getBoundingClientRect(), s = b.getBoundingClientRect(); return r.width > 0 && s.width > 0 && r.left < s.right && s.left < r.right && r.top < s.bottom && s.top < r.bottom; }
+    function hit(t) { return placed.some(function (p) { return hits(p, t); }); }
+    tags.forEach(function (t) {
+      // Past the strip's right edge, it hangs from the column's right instead.
+      if (t.getBoundingClientRect().right > edge) { t.classList.add("end"); }
+      // Over a tag already placed: to the foot; still over one: hidden, its
+      // words kept on hover.
+      if (hit(t)) { t.classList.add("foot"); }
+      if (hit(t)) { t.classList.add("hid"); return; }
+      placed.push(t);
+    });
+    var label = box.querySelector("[data-clock] b");
+    if (label) { placed.forEach(function (t) { if (hits(t, label)) { t.classList.add("hid"); } }); }
   }
   function select(sel) {
     var same = sel && state.sel && state.sel.kind === sel.kind && (state.sel.id === sel.id && state.sel.key === sel.key);
@@ -329,7 +472,7 @@
     box.querySelectorAll("[data-untick]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.untick, false); }); });
     box.querySelectorAll("[data-act='clear-ticks']").forEach(function (b) { b.addEventListener("click", function () { clearTicks(); }); });
     box.querySelectorAll("[data-act='make']").forEach(function (b) { b.addEventListener("click", function () { makeIncident(box); }); });
-    box.querySelectorAll("[data-play]").forEach(function (b) { b.addEventListener("click", function () { open(b.dataset.play, 0); }); });
+    box.querySelectorAll("[data-play]").forEach(function (b) { b.addEventListener("click", function () { open(b.dataset.play, playAt(b.dataset.play, d)); }); });
     box.querySelectorAll("[data-tick-one]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.tickOne, true); }); });
     var nameBox = box.querySelector("#build-name");
     if (nameBox) { nameBox.addEventListener("input", function () { state.buildName = nameBox.value; }); }
@@ -337,6 +480,14 @@
     box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { var at = b.dataset.sel.indexOf(":"); var kind = b.dataset.sel.slice(0, at), id = b.dataset.sel.slice(at + 1); select(kind === "inc" ? { kind: "inc", id: id } : { kind: "sug", key: id }); }); });
     box.querySelectorAll("[data-sitting-for]").forEach(function (el) { sittingBar(el.parentNode, el.dataset.sittingFor.split(" ")); });
     stills(box);
+  }
+  // Play here from a camera's reading: at the clock line while building, if
+  // the camera was running then; else from its start.
+  function playAt(id, d) {
+    if (!d || !ticked().length) { return 0; }
+    var b = d.bars.filter(function (one) { return one.id === id; })[0], at = clockLine(d);
+    if (!b || at === null || at < b.from || at > b.to) { return 0; }
+    return Math.max(0, at - (b.zero || 0));
   }
   function namesLine(ids, given, d) {
     var names = (given && given.length ? given : d.bars.filter(function (b) { return ids.indexOf(b.id) >= 0; }).map(function (b) { return b.name || shortName(b); })).map(esc);
@@ -371,14 +522,19 @@
   // Your incident (Phase 12 chapter 8): the ticked cameras, a name offered
   // and editable, the span, the budget, Make the incident and Clear.
   function readerBuilder(d) {
-    var bars = tickedBars(d), span = tickSpan(d), n = bars.length, cap = most();
+    var bars = tickedBars(d), span = spanOf(d), at = clockLine(d), n = bars.length, cap = most();
     var name = state.buildName !== undefined ? state.buildName : (host.dataset.caseName || "Incident") + ", " + hm(span[0]);
     var html = "<h3>Your incident <span class='pill small acc'>" + n + " of " + cap + "</span></h3>" +
       "<label class='field'><span>Name</span><input type='text' id='build-name' maxlength='200' value='" + esc(name) + "'></label>" +
-      "<div class='rd-head'>" + plural(n, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + "</div>";
+      "<div class='rd-head'>" + plural(n, "camera") + ", " + hm(span[0]) + " to " + hm(span[1]) + " · at " + hms(at) + "</div>";
+    // A camera already in a built incident will be in both (chapter 9).
+    var inInc = inIncidents(d), both = bars.filter(function (b) { return inInc[b.id]; });
+    if (both.length) { html += "<p class='small muted'>" + esc(both.map(function (b) { return (b.name || shortName(b)) + " is already in " + inInc[b.id]; }).join("; ")) + (both.length === 1 ? ". It will be in both." : ". Each will be in both.") + "</p>"; }
+    // The pictures are each camera at the clock line.
     bars.forEach(function (b) {
-      html += "<div class='cam-row'>" + stillHtml(b, null, true) + "<div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc((b.unit && b.unit !== b.name ? b.unit + " · " : "") + hm(b.from) + " to " + hm(b.to) + " · " + (b.why_short || b.placed)) + "</small></div><button type='button' class='tiny ghost' data-untick='" + b.id + "'>untick</button></div>";
+      html += "<div class='cam-row'>" + stillHtml(b, at, true) + "<div><b>" + esc(b.name || shortName(b)) + "</b><small>" + esc((b.unit && b.unit !== b.name ? b.unit + " · " : "") + hm(b.from) + " to " + hm(b.to) + " · " + (b.why_short || b.placed)) + "</small></div><button type='button' class='tiny ghost' data-untick='" + b.id + "'>untick</button></div>";
     });
+    html += "<p class='muted tiny'>The pictures are each camera at " + hms(at) + ". Drag the line on the strip to move the clock; drag the handles at the bright column's edges to narrow the span.</p>";
     if (n >= cap) { html += "<div class='cap-note'>" + cap + " is the most an incident holds; untick one to swap another in.</div>"; }
     html += "<p class='small muted' data-most='" + cap + "'><span data-sitting data-sitting-for='" + bars.map(function (b) { return b.id; }).join(" ") + "'></span></p>";
     html += "<div class='acts'><button type='button' class='small primary' data-act='make'>Make the incident</button><button type='button' class='small ghost' data-act='clear-ticks'>Clear the ticks</button></div>" +
@@ -391,7 +547,12 @@
     var nameBox = box.querySelector("#build-name");
     var form = document.createElement("form");
     form.method = "post"; form.action = host.dataset.new;
-    [["csrfmiddlewaretoken", cookie("csrftoken")], ["how", "strip"], ["name", nameBox ? nameBox.value.trim() : ""]].concat(ids.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
+    // The span goes with it (chapter 9): the day and two times of day in
+    // seconds; the incident keeps it and opens at its start.
+    var span = state.day ? spanOf(state.day) : null;
+    var fields = [["csrfmiddlewaretoken", cookie("csrftoken")], ["how", "strip"], ["name", nameBox ? nameBox.value.trim() : ""]];
+    if (span) { fields.push(["date", state.day.date], ["from", String(Math.round(span[0]))], ["to", String(Math.round(span[1]))]); }
+    fields.concat(ids.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
     document.body.appendChild(form); form.submit();
   }
   function readerIncident(one, d) {
@@ -442,7 +603,7 @@
       stillBusy += 1;
       var done = function () { stillBusy -= 1; stillNext(); };
       img.addEventListener("load", done, { once: true });
-      img.addEventListener("error", (function (one) { return function () { var box = one.closest(".still"); if (box) { box.classList.add("none"); } done(); }; })(img), { once: true });
+      img.addEventListener("error", (function (one) { return function () { var box = one.closest(".still, .film"); if (box) { box.classList.add("none"); } done(); }; })(img), { once: true });
       img.src = img.dataset.still;
     }
   }
@@ -1109,7 +1270,8 @@
   // the Notes tab's host, mounted first, keeps CaseChronology.
   if (stripMode) {
     window.IncidentStrip = { reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", null, true); } } };
-    load("", null);
+    // The day in the address (v1.201.0), so an incident's Details can lead back to it.
+    load(params().day || "", null);
     return;
   }
   window.CaseChronology = { show: show, reload: function () { if (state.loaded) { load(state.day ? state.day.date : "", state.span); } } };

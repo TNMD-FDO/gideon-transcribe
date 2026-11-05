@@ -233,7 +233,10 @@ def test_the_case_page_carries_the_strip_only_while_incidents_are_on(
     assert "Tick cameras on the strip" in page and "No incident built yet" in page
     told = client.get(f"/case/{a_case.pk}/incidents/strip.json").json()
     assert told["day"]["offers"] == []  # the app suggests nothing (v1.200.0)
-    assert "07 Jun 2025 21:56:19, checked" in page
+    # The stamp's words were the New incident dialog's (gone in v1.201.0);
+    # the strip's reading carries each camera's clock words instead.
+    assert "07 Jun 2025 21:56:19, checked" not in page
+    assert told["day"]["bars"] and all(b["placed"] for b in told["day"]["bars"])
     # A video with no clock shows nothing for it: not a fault.
     mute = video(person, a_case, "mute", stamp={})
     assert incidents.stamp_words(mute) == ("", "")

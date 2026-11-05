@@ -532,28 +532,8 @@ def _incidents_context(
 
     if not incidents.on():
         return {"incidents_on": False}
-    videos = []
-    # One camera lookup for the case (v1.123.0), not one per video.
-    cameras: dict = {}
-    for camera in incidents.IncidentCamera.objects.filter(
-        incident__case=case
-    ).select_related("incident"):
-        cameras.setdefault(camera.recording_id, camera)
-    # The videos narrowed in SQL and settled from the probe (v1.134.0): the
-    # page had asked the disk twice for every recording in the case.
-    for recording in incidents.videos_of(case.recordings.order_by("created")):
-        if not incidents.is_video(recording):
-            continue
-        words, tone = incidents.stamp_words(recording)
-        elsewhere = cameras.get(recording.pk)
-        videos.append(
-            {
-                "recording": recording,
-                "clock": words,
-                "tone": tone,
-                "elsewhere": elsewhere.incident.name if elsewhere else "",
-            }
-        )
+    # The New incident dialog's rows (one per video with its stamp's words)
+    # left with the dialog in v1.201.0: the strip is New incident.
     from core import camera_paths, clock_match, incident_strip
 
     # On the map (Phase 12 chapter 1) on the rows whose cameras have a path.
@@ -576,7 +556,6 @@ def _incidents_context(
         "incident_rows": rows,
         "incident_offers": incidents.offers(case),
         "incident_counts": counts,
-        "incident_videos": videos,
         # The strip (Phase 10 chapter 5, v1.180.0): the lead's forming count.
         "incident_forming": (
             incident_strip.forming_count(case)
@@ -591,8 +570,6 @@ def _incidents_context(
         ),
         # The sitting's column and the offer's bar (Phase 8 chapter 10).
         "sitting_on": sitting.available(),
-        "incident_most": incidents.most_cameras(),
-        "incident_wall": incidents.wall_size(),
     }
 
 

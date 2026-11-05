@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.201.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9, the builder's second release (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, Figures B and F).
+
+- **The span is yours.** Your incident's bright column on the strip has a handle at each edge: drag one to narrow the span from the ticked cameras' first start to last end. The span goes with Make the incident; the incident keeps it, its Details say so, and it opens at the span's start.
+- **The clock line.** A line across the lanes with its time of day at the foot. Drag it and the map at the foot moves every ticked camera to that moment, and the pictures in Your incident and on the lanes are cut there, so you see where everyone was before you decide. Play here on a camera's reading plays from the clock line while you are building.
+- **The lanes sort themselves while you build.** From the first tick the lanes are in order of how long each camera ran inside your span, longest first, with the minutes on the head; cameras that never ran in it sink and fade. A camera already in a built incident says so on its head, and Your incident says it will be in both.
+- **A picture per lane.** While building, every shown lane ends in a small picture of that camera at the clock line, cut on request and never kept; blank where the camera was not running then.
+- **Tidied:** the hidden New incident dialog left on the case page since v1.200.0 is gone; an incident's Details name the Incidents tab and the Map tab as doors.
+
 ## v1.200.0, 2026-11-04
 
 ```

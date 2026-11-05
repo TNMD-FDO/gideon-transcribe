@@ -2404,12 +2404,13 @@
     var I = S.incident;
     var html = "<dl class='kv'>";
     html += "<dt>Incident</dt><dd>" + escape(I.name) + "</dd>";
-    html += "<dt>Made</dt><dd>" + (I.created_by ? "by " + escape(I.created_by) + ", " : "") + dateWords(I.created) + (I.how === "offer" ? ", from the case page's offer" : (I.how === "chronology" ? ", from the case's chronology" : ", with New incident")) + "</dd>";
+    html += "<dt>Made</dt><dd>" + (I.created_by ? "by " + escape(I.created_by) + ", " : "") + dateWords(I.created) + (I.how === "offer" ? ", from the case page's offer" : (I.how === "chronology" ? ", from the case's chronology" : (I.how === "strip" ? ", built on the Incidents tab" : (I.how === "map" ? ", from the Map tab's circle" : ", with New incident")))) + "</dd>";
     // From the case's chronology (Phase 10 chapter 2, v1.167.0): where it
     // came from, and each addition from the chronology since.
     var F = I.from_chronology || {};
     if (F.span) {
-      html += "<dt>" + (F.made ? "From" : "Chronology") + "</dt><dd>" + (F.made ? "the case's chronology, " + escape(F.made) : "added to from the case's chronology, " + escape(F.span)) + (F.url ? " <a class='small' href='" + escape(F.url) + "'>Open there</a>" : "") + "</dd>";
+      // Built on the Incidents tab (Phase 12 chapter 9, v1.201.0): the span the person set.
+      html += "<dt>" + (F.made ? (I.how === "strip" || I.how === "map" ? "Span set" : "From") : "Chronology") + "</dt><dd>" + (F.made ? (I.how === "strip" || I.how === "map" ? "while building, " : "the case's chronology, ") + escape(F.made) : "added to from the case's chronology, " + escape(F.span)) + (F.url ? " <a class='small' href='" + escape(F.url) + "'>Open there</a>" : "") + "</dd>";
       (F.changes || []).forEach(function (c) { html += "<dt>Changed</dt><dd>" + escape(c.words) + (c.at ? ", " + dateWords(c.at) : "") + "</dd>"; });
     }
     html += "<dt>Clock</dt><dd>" + (I.has_clock ? "the time of day on " + escape(I.clock_date) + ", from the first camera placed from a checked clock" : "no camera clock; times count from the first camera") + "</dd>";

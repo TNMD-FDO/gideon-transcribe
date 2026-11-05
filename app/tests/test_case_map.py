@@ -785,3 +785,19 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     # The builder (chapter 8): ticks, Your incident, no suggestions.
     assert "function tickSpan(d)" in strip and "suggestions(" not in strip
     assert "incident-ticks" in strip and "var PICK = host.dataset.pick" in script
+    # The span and the clock line (chapter 9, v1.201.0): the handles and the
+    # line beside the column, the lanes by overlap, a picture per lane, the
+    # map following the line, the span posted with Make the incident.
+    assert "function spanOf(d)" in strip and "function clockLine(d)" in strip
+    assert "data-hdl='0'" in strip and "data-clock" in strip
+    assert "incident-clock" in strip and "function settleTags(box)" in strip
+    assert "function wireBuild(box, d)" in strip
+    assert "overlap(b, span) - overlap(a, span)" in strip and "class='film" in strip
+    assert '["date", state.day.date]' in strip and "function playAt(id, d)" in strip
+    assert 'addEventListener("incident-clock"' in script and "S.pickAt" in script
+    assert ".chron .cols .clock-line {" in css and ".chron .cols .hdl {" in css
+    assert ".chron .lanes.building .lane-row {" in css
+    assert ".chron .lane-row .film {" in css
+    assert ".chron .col .tag.foot {" in css
+    # The hidden New incident dialog left the page (v1.201.0).
+    assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")

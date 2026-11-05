@@ -815,30 +815,6 @@
   }
 }());
 
-// Incidents (Phase 6 chapter 1): the New incident dialog on the case page,
-// opened empty from the header or with the offer's videos ticked by Choose
-// myself.
-(function () {
-  "use strict";
-  var box = document.getElementById("incident-box");
-  if (!box) { return; }
-  function openWith(ids) {
-    box.querySelectorAll("input[type=checkbox]").forEach(function (one) { one.checked = ids.indexOf(one.value) !== -1; });
-    box.hidden = false;
-    var name = box.querySelector("input[name=name]");
-    if (name) { name.focus(); }
-  }
-  var open = document.getElementById("new-incident");
-  if (open) { open.addEventListener("click", function () { openWith([]); }); }
-  // Delegated (v1.180.0): the strip's forming cards add their own Choose
-  // myself after the page is drawn.
-  document.addEventListener("click", function (event) {
-    var button = event.target.closest(".choose-myself");
-    if (button && button.dataset.recordings) { openWith(button.dataset.recordings.trim().split(/\s+/)); }
-  });
-  // The recording page loads this script too and has no incident box (v1.75.1).
-  var cancel = document.getElementById("incident-cancel");
-  if (!box || !cancel) { return; }
-  cancel.addEventListener("click", function () { box.hidden = true; });
-  box.addEventListener("click", function (event) { if (event.target === box) { box.hidden = true; } });
-})();
+// The New incident dialog of Phase 6 chapter 1 left the case page in
+// v1.201.0: the Incidents tab's strip is New incident (Phase 12 chapter 8),
+// and the Map tab's circle has its own box (map.js).

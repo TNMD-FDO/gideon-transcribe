@@ -559,8 +559,12 @@ The band's third shape on the case's chronology, when more than six recordings o
 _Avoid_: density, histogram, heat
 
 **Your incident**:
-The Reader of the Incidents tab while any camera is ticked on the strip (Phase 12 chapter 8, v1.200.0): the ticked cameras with a still and a plain line each, a name offered and editable, the count against the most an incident holds, Make the incident and Clear the ticks. The ticked cameras are also one bright column on the strip and the only cameras on the map at the foot. Nothing is made without Make the incident, and the incident records who built it, when, and that it came from the strip.
+The Reader of the Incidents tab while any camera is ticked on the strip (Phase 12 chapter 8, v1.200.0): the ticked cameras with a still and a plain line each, a name offered and editable, the count against the most an incident holds, Make the incident and Clear the ticks. The ticked cameras are also one bright column on the strip and the only cameras on the map at the foot. From v1.201.0 (chapter 9) the column's span is the person's, narrowed by a handle at each edge, and the stills are cut at the Clock line; Make the incident carries the span, which the incident keeps and opens at. Nothing is made without Make the incident, and the incident records who built it, when, and that it came from the strip.
 _Avoid_: draft, selection, basket, cart, pending incident
+
+**Clock line**:
+The vertical line across the Incidents tab's lanes while cameras are ticked (Phase 12 chapter 9, v1.201.0), with its time of day at the strip's foot: the moment the map at the foot shows every ticked camera at and the moment the pictures on the lanes and in Your incident are cut at. Dragged along the lanes, inside Your incident's span; at the span's start until dragged. Nothing is kept when the tab is left.
+_Avoid_: moment line (a Moment is a description), playhead (that is the incident page's), scrubber, cursor, needle
 
 **Suggested**:
 Gone from the Incidents tab in v1.200.0 (Phase 12 chapter 8): the app suggests nothing there; the person ticks. The word stays for the history of v1.197.0 to v1.199.1 below.

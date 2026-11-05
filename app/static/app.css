@@ -3845,8 +3845,8 @@ nav.rail { view-transition-name: rail; }
 .chron .lane-row .lane-name { display: flex; gap: 6px; align-items: center; min-width: 0; height: 16px; padding: 0 4px; border: 0; border-radius: 3px; background: transparent; color: var(--text); font: inherit; font-size: var(--t-label); text-align: left; cursor: pointer; }
 .chron .lane-row .lane-name:hover, .chron .lane-row.on .lane-name { background: var(--surface-2); }
 .chron .lane-row .lane-name i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.chron .lane-row .lane-name .w { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.chron .lane-row .lane-name small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chron .lane-row .lane-name .w { flex: 1 1 auto; min-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; text-align: left; }
+.chron .lane-row .lane-name small { flex: 0 1 auto; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chron .lane-row .bar { position: relative; height: 12px; }
 .chron .lane-row .bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 5px; display: block; cursor: pointer; overflow: hidden; font-style: normal; font-size: var(--t-label); font-weight: 600; line-height: 10px; color: var(--accent-ink); padding: 0 6px; white-space: nowrap; text-overflow: ellipsis; box-sizing: border-box; }
 .chron .lane-row .bar i.narrow { font-size: 0; }
@@ -3888,6 +3888,35 @@ nav.rail { view-transition-name: rail; }
 .chron .lane-row.on .lane-name { background: var(--accent-soft); color: var(--text); }
 .chron .col.build { border: 2px solid var(--accent); background: var(--accent); opacity: 0.16; }
 .chron .col.build .tag { background: var(--accent); color: var(--accent-ink); }
+/* The builder's span and clock line (Phase 12 chapter 9, v1.201.0): two
+   handles beside the bright column, the clock line across the lanes with its
+   time at the foot, a picture per lane at the clock in a column of its own,
+   and the lanes in order of how long each ran inside the span. */
+.chron .lanes.building { padding-bottom: 22px; }
+.chron .lanes.building .lane-row { grid-template-columns: 168px minmax(0, 1fr) 44px; }
+.chron .lane-row .film { display: block; width: 44px; height: 24px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.chron .lane-row .film img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.chron .lane-row .film.off { opacity: 0.35; }
+.chron .lanes.building .lane-row.none .bar i { opacity: 0.18; }
+.chron .lanes.building .lane-row.none .lane-name { opacity: 0.55; }
+.chron .cols .hdl { position: absolute; top: 0; bottom: 0; width: 14px; margin-left: -7px; cursor: ew-resize; pointer-events: auto; touch-action: none; }
+.chron .cols .hdl::after { content: ""; position: absolute; left: 5px; top: 50%; width: 4px; height: 24px; margin-top: -12px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 0 1px var(--surface); }
+.chron .cols .hdl:hover::after, .chron .cols.dragging .hdl::after { background: var(--text); }
+.chron .cols .clock-line { position: absolute; top: 0; bottom: 0; width: 14px; margin-left: -7px; cursor: col-resize; pointer-events: auto; touch-action: none; }
+.chron .cols .clock-line::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 18px; width: 2px; background: var(--text); }
+.chron .cols .clock-line b { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--text); font: 600 var(--t-label)/14px var(--mono); white-space: nowrap; }
+.chron .cols .clock-line.edge-l b { left: 0; transform: none; }
+.chron .cols .clock-line.edge-r b { left: auto; right: 0; transform: none; }
+.chron .col .tag.foot { top: auto; bottom: 2px; }
+.chron .col .tag.end { left: auto; right: -2px; }
+.chron .col .tag.hid { visibility: hidden; }
+.chron .lane-row .film.none img { display: none; }
+/* The columns' shade as a translucent fill, not an opacity (v1.201.0): an
+   opacity faded the tags with the column, so an incident's name on the strip
+   read at 14 percent. */
+.chron .col.inc { opacity: 1; background: color-mix(in srgb, var(--accent) 14%, transparent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.chron .col.inc.on { opacity: 1; background: color-mix(in srgb, var(--accent) 30%, transparent); border-color: var(--accent); }
+.chron .col.build { opacity: 1; background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .chron .unclocked-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0 2px; border-top: 1px dashed var(--line); margin-top: 6px; font-size: var(--t-small); color: var(--muted); }
 .chron .unclocked-row b { color: var(--text); }
 .reader.build { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
@@ -3898,6 +3927,11 @@ nav.rail { view-transition-name: rail; }
 .reader .cam-row small { display: block; color: var(--muted); font-size: var(--t-label); }
 .reader .cam-row .still { width: 58px; height: 36px; }
 .reader .cap-note { color: var(--warn); font-size: var(--t-label); }
+/* The sitting's bar in Your incident (v1.201.0): the forming card's bar, which
+   had no rule in the Reader, so its two lines ran together. */
+.reader .sit { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; margin: 0 6px; }
+.reader .sit i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 3px; }
+.reader .sit.over i { background: var(--danger); } .reader .sit.near i { background: var(--warn); }
 .strip-map { position: relative; margin-top: 12px; }
 .strip-map .map-tab.map-pick .map-lead, .strip-map .map-tab.map-pick .map-list, .strip-map .map-tab.map-pick .map-strip, .strip-map .map-tab.map-pick .map-bar { display: none; }
 .strip-map .map-tab.map-pick .map-wrap { display: block; }
