@@ -3907,6 +3907,9 @@ nav.rail { view-transition-name: rail; }
 .chron .cols .clock-line b { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--text); font: 600 var(--t-label)/14px var(--mono); white-space: nowrap; }
 .chron .cols .clock-line.edge-l b { left: 0; transform: none; }
 .chron .cols .clock-line.edge-r b { left: auto; right: 0; transform: none; }
+/* The near marks (v1.202.0): a ring on the box of a camera within 50 m of a
+   ticked one at the clock line. */
+.chron .lane-row.near .lane-name input.tk { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
 .chron .col .tag.foot { top: auto; bottom: 2px; }
 .chron .col .tag.end { left: auto; right: -2px; }
 .chron .col .tag.hid { visibility: hidden; }

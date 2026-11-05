@@ -799,5 +799,10 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert ".chron .lanes.building .lane-row {" in css
     assert ".chron .lane-row .film {" in css
     assert ".chron .col .tag.foot {" in css
+    # The near marks (v1.202.0): the map answers from the paths it holds, the
+    # strip rings the boxes in place.
+    assert "function tellNear()" in script and "incident-near" in script
+    assert "function nearMarks()" in strip and "data-near-words" in strip
+    assert ".chron .lane-row.near .lane-name input.tk {" in css
     # The hidden New incident dialog left the page (v1.201.0).
     assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")

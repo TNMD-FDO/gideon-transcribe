@@ -563,7 +563,7 @@ The Reader of the Incidents tab while any camera is ticked on the strip (Phase 1
 _Avoid_: draft, selection, basket, cart, pending incident
 
 **Clock line**:
-The vertical line across the Incidents tab's lanes while cameras are ticked (Phase 12 chapter 9, v1.201.0), with its time of day at the strip's foot: the moment the map at the foot shows every ticked camera at and the moment the pictures on the lanes and in Your incident are cut at. Dragged along the lanes, inside Your incident's span; at the span's start until dragged. Nothing is kept when the tab is left.
+The vertical line across the Incidents tab's lanes while cameras are ticked (Phase 12 chapter 9, v1.201.0), with its time of day at the strip's foot: the moment the map at the foot shows every ticked camera at and the moment the pictures on the lanes and in Your incident are cut at. Dragged along the lanes, inside Your incident's span; at the span's start until dragged. From v1.202.0 a ring on a lane's tick box marks a camera within 50 m of a ticked one at the line, by their paths, worked out in the browser. Nothing is kept when the tab is left.
 _Avoid_: moment line (a Moment is a description), playhead (that is the incident page's), scrubber, cursor, needle
 
 **Suggested**:

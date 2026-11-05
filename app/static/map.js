@@ -84,6 +84,29 @@
     if (S.pickAt !== null && S.pickAt !== undefined) { S.playing = false; seek(S.pickAt); }
     else if (starts.length) { S.playing = false; seek(Math.min.apply(null, starts) + 1); }
     if (map && mapReady) { try { map.resize(); } catch (e) { /* not yet sized */ } drawList(); drawStrip(); refreshLayers(); tick(); fitAll(); }
+    tellNear();
+  }
+  // The near marks (Phase 12 chapter 9, v1.202.0): which cameras of the day,
+  // not ticked, were within 50 m of a ticked one at the clock, from the
+  // paths the map already holds; told to the strip, which rings their
+  // boxes. A vehicle's streams answer as one. Nothing is kept.
+  function tellNear() {
+    if (!PICK || !S.loaded) { return; }
+    var wanted = {}; S.pick.forEach(function (id) { wanted[id] = true; });
+    function picked(c) { return !!wanted[c.id] || c.streams.some(function (s) { return wanted[s.id]; }); }
+    var at = now(), out = {};
+    var ticked = dayCams().filter(picked).map(function (c) { var p = positionAt(c, at - c.zero.second); return p && !p.nofix && !p.ended ? { cam: c, p: p } : null; }).filter(Boolean);
+    if (ticked.length) {
+      dayCams().forEach(function (c) {
+        if (picked(c)) { return; }
+        var p = positionAt(c, at - c.zero.second);
+        if (!p || p.nofix || p.ended) { return; }
+        var by = null;
+        ticked.forEach(function (t) { if (!by && metres(p, t.p) <= NEAR) { by = nameOf(t.cam); } });
+        if (by) { out[c.id] = by; c.streams.forEach(function (s) { out[s.id] = by; }); }
+      });
+    }
+    try { window.dispatchEvent(new CustomEvent("incident-near", { detail: { near: out, at: at } })); } catch (e) { /* an old browser */ }
   }
   if (PICK) {
     S.pickAt = null;
@@ -99,6 +122,7 @@
       var at = e.detail && e.detail.at;
       if (typeof at !== "number" || !S.loaded) { return; }
       S.pickAt = at; S.playing = false; seek(at);
+      tellNear();
     });
   }
   // Ticked means drawn. The incident page's pane has no list to untick from,

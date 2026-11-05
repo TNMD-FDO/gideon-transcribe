@@ -388,9 +388,13 @@ The handles and the line sit beside the bright column, not inside it, so its sha
 
 The hidden New incident dialog kept on the case page since v1.200.0 is removed with its script; the Incidents tab reads the day in its address (`?tab=incidents&day=`) so an incident's Details can lead back to it.
 
+### The near marks (the third release, v1.202.0)
+
+Figure F's rings, at the maintainer's word of 2026-11-05. While cameras are ticked, the map at the foot answers, from the paths it already holds for the day, which unticked cameras were within 50 m of a ticked one at the clock line (`map.js` `tellNear`: each camera's position at the moment by its fixes, a camera with no fix then or already ended left out, a vehicle's streams answering as one, the server's 50 m), and tells the strip on an `incident-near` event after every tick and every move of the line. The strip rings the box of each such camera, its head says "· near <the ticked camera's name>", its hover and its reading in the Reader say "Within 50 m of <name> at hh:mm:ss, by their paths", and the foot's words say what a ring means while any is drawn. The marks are patched in place, so no picture is cut again for them; nothing is kept, nothing is sent to the server, and with Maps off there is no map and no ring.
+
 ### Left to the next releases
 
-The near marks from the paths (a ring on the box of a camera within 50 m of a ticked one at the clock line), the Map tab's circle under the cap (Figure G), the wall at eight (Figures H and I), and the two tools in Your incident.
+The Map tab's circle under the cap (Figure G), the wall at eight (Figures H and I), and the two tools in Your incident.
 
 ## Appendix A. Audit rows added in Phase 12
 

@@ -17,6 +17,17 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.202.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9, the builder's third release: the near marks (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, Figure F).
+
+- **A ring on a box** means that camera was within 50 m of one you ticked at the clock line, by their paths. Its head says near whom, its hover and its reading say so with the time, and the strip's foot says what a ring means while any is drawn. The answer is worked out in your browser from the paths the map at the foot already holds; nothing is kept or sent, and with Maps off there is no ring.
+
 ## v1.201.0, 2026-11-05
 
 ```

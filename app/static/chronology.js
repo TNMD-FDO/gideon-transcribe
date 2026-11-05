@@ -147,7 +147,8 @@
     var words = ticked().length
       ? "The lanes are in order of how long each camera ran inside your span; the small pictures are each camera at the clock line. Drag the handles at the bright column's edges to narrow the span, and the line to move the clock the map and the pictures show."
       : "Tick a camera to put it in your incident; press its name to read it. A shaded column is an incident already built.";
-    return "<div class='legend'><span>" + words + "</span></div>";
+    var near = ticked().length ? " <span data-near-words" + (Object.keys(state.near).length ? "" : " hidden") + ">A ring on a box means the camera was within 50 m of one you ticked at the clock line, by their paths.</span>" : "";
+    return "<div class='legend'><span>" + words + near + "</span></div>";
   }
   // The lead's right-hand words: what is being built.
   function buildingWords(d) {
@@ -287,6 +288,30 @@
   function tellClock(at) {
     try { window.dispatchEvent(new CustomEvent("incident-clock", { detail: { at: at } })); } catch (e) { /* an old browser */ }
   }
+  // The near marks (chapter 9, v1.202.0): the map at the foot answers, from
+  // the paths it holds, which unticked cameras were within 50 m of a ticked
+  // one at the clock line; their boxes wear a ring and their heads say near
+  // whom. Patched in place, so no picture is cut again for it.
+  state.near = {}; state.nearAt = null;
+  if (stripMode) {
+    window.addEventListener("incident-near", function (e) {
+      var told = e.detail || {};
+      state.near = told.near || {}; state.nearAt = typeof told.at === "number" ? told.at : null;
+      nearMarks();
+    });
+  }
+  function nearWords(by) { return "Within 50 m of " + by + (state.nearAt !== null ? " at " + hms(state.nearAt) : "") + ", by their paths."; }
+  function nearMarks() {
+    host.querySelectorAll(".lane-row[data-lane]").forEach(function (row) {
+      var id = row.dataset.lane, by = row.classList.contains("on") ? null : state.near[id];
+      row.classList.toggle("near", !!by);
+      var tick = row.querySelector("input.tk"), small = row.querySelector(".lane-name small");
+      if (tick && !tick.disabled) { tick.title = (by ? nearWords(by) + " " : "") + "Tick to put this camera in your incident"; }
+      if (small && small.dataset.base !== undefined) { small.textContent = small.dataset.base + (by ? " · near " + by : ""); }
+    });
+    var words = host.querySelector("[data-near-words]");
+    if (words) { words.hidden = !host.querySelector(".lane-row.near"); }
+  }
   // The lanes (Phase 12 chapter 7, v1.199.0): one row per camera on the
   // day, named by the officer as the path file gives them, else the unit,
   // else the file; the ticked first, then by start; twelve shown, the rest
@@ -319,12 +344,14 @@
     shown.forEach(function (b) {
       var marks = "";
       notesOf(d, b.id).forEach(function (e) { marks += "<em class='nm' style='left: " + x(e.seconds, d) + "%' title='Note " + e.number + " at " + hms(e.seconds) + "'></em>"; });
-      var on = !!ticks[b.id], ran = overlap(b, span);
-      var tick = "<input type='checkbox' class='tk' data-tick='" + b.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled title='" + most() + " is the most an incident holds; untick one to swap'" : " title='Tick to put this camera in your incident'") + ">";
+      var on = !!ticks[b.id], ran = overlap(b, span), near = !on && building ? state.near[b.id] : null;
+      var tick = "<input type='checkbox' class='tk' data-tick='" + b.id + "'" + (on ? " checked" : "") + (!on && full ? " disabled title='" + most() + " is the most an incident holds; untick one to swap'" : " title='" + esc((near ? nearWords(near) + " " : "") + "Tick to put this camera in your incident") + "'") + ">";
       // The head's small words: the unit at rest; while building, how long
-      // the camera ran inside the span, and the incident it is in already.
-      var small = b.unit && b.unit !== b.name ? b.unit : "";
-      if (building) { small = (ran ? minutesWords(ran) : "no overlap") + (inInc[b.id] ? " · in " + inInc[b.id] : ""); }
+      // the camera ran inside the span, the incident it is in already, and
+      // (v1.202.0) near whom it was at the clock line.
+      var base = b.unit && b.unit !== b.name ? b.unit : "";
+      if (building) { base = (ran ? minutesWords(ran) : "no overlap") + (inInc[b.id] ? " · in " + inInc[b.id] : ""); }
+      var small = base + (near ? " · near " + near : "");
       // The picture at the clock (the filmstrip): cut when the lane is drawn,
       // for the shown lanes alone, never kept; blank where the camera was
       // not running then.
@@ -334,8 +361,8 @@
           ? "<span class='film' title='" + esc(shortName(b)) + " at " + hms(at) + "'><img alt='' data-still='" + stillUrl(b, at) + "'></span>"
           : "<span class='film off' title='" + esc(shortName(b)) + " was not running at " + hms(at) + "'></span>";
       }
-      html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + (building && !on && !ran ? " none" : "") + "' data-lane='" + b.id + "'>" +
-        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small>" + esc(small) + "</small>" : "") + "</label>" +
+      html += "<div class='lane-row" + (on ? " on" : "") + (selected("cam", b.id) ? " sel" : "") + (building && !on && !ran ? " none" : "") + (near ? " near" : "") + "' data-lane='" + b.id + "'>" +
+        "<label class='lane-name' title='" + esc((b.name && b.name !== shortName(b) ? b.name + " · " : "") + b.title + (b.unit && b.unit !== b.name ? " · " + b.unit : "") + (building && small ? " · " + small : "") + ". " + (b.why || b.placed) + " Press the name to read the camera.") + "'>" + tick + "<i style='background: " + paint(b.colour) + "'></i><button type='button' class='link w' data-cam='" + b.id + "'>" + esc(b.name || shortName(b)) + "</button>" + (small ? "<small data-base='" + esc(base) + "'>" + esc(small) + "</small>" : "") + "</label>" +
         "<div class='bar'>" + barPiece(b, d, true) + marks + "</div>" + film + "</div>";
     });
     html += "<div class='cols' id='chron-cols' aria-hidden='false'></div></div>";
@@ -567,7 +594,8 @@
     var mapHref = host.dataset.map && b.on_map ? host.dataset.map + "&recording=" + b.id + "&at=0" : "";
     var on = !!ticks[b.id], full = ticked().length >= most();
     return backHtml() + "<h3><i class='dot' style='background: " + paint(b.colour) + "'></i> " + esc(b.name || shortName(b)) + "</h3><div class='muted small'>" + esc(b.title) + (b.unit && b.unit !== b.name ? " · " + esc(b.unit) : "") + "</div>" +
-      "<div class='small'>" + hm(b.from) + " to " + hm(b.to) + " · " + plural(n, "note") + "</div><p class='small muted'>" + esc(b.why || b.placed) + "</p>" + stillsHtml([b], null) +
+      "<div class='small'>" + hm(b.from) + " to " + hm(b.to) + " · " + plural(n, "note") + "</div><p class='small muted'>" + esc(b.why || b.placed) + "</p>" +
+      (!on && ticked().length && state.near[b.id] ? "<p class='small'>" + esc(nearWords(state.near[b.id])) + "</p>" : "") + stillsHtml([b], null) +
       "<div class='acts'>" + (on ? "<button type='button' class='small' data-untick='" + b.id + "'>Untick</button>" : "<button type='button' class='small primary' data-tick-one='" + b.id + "'" + (full ? " disabled title='" + most() + " is the most an incident holds'" : "") + ">Tick for your incident</button>") +
       "<button type='button' class='small' data-play='" + b.id + "'>Play here</button>" + (mapHref ? "<a class='btn small' href='" + esc(mapHref) + "'>On the map</a>" : "") + (b.movable ? "<button type='button' class='small ghost' data-move='" + b.id + "'>Move or take off the clock</button>" : "") + "</div>";
   }
