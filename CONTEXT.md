@@ -523,7 +523,7 @@ How surely a camera sits where it does, one word beside its Placed pill (v1.183.
 _Avoid_: confidence, score, certainty, probability
 
 **Wall**:
-The Incident page's grid of cameras playing in step, up to the number the office sets (six shipped), one of them with the sound; the rest of the Incident's cameras wait as parked lanes in the strip to swap in (parked tiles until chapter 4). Phase 6.
+The Incident page's grid of cameras playing in step, up to the number the office sets (six shipped; eight, the most an Incident holds, from v1.204.0, so every camera of an Incident plays), one of them with the sound; below the cap the rest of the Incident's cameras wait as parked lanes in the strip to swap in (parked tiles until chapter 4). At seven or more the work panel opens folded to its rail and the small tiles give their words to the said band (Phase 12 chapter 9). Phase 6.
 _Avoid_: multiview, grid (as a name for the whole), mosaic, split screen
 
 **Layout**:

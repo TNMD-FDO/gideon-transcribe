@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.204.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 9, the builder's fifth release: the wall at eight (the drawing `docs/spec/mockups/phase-12-incident-builder.html`, Figures H and I).
+
+- **Every camera of an incident plays.** Cameras on the wall now ships at 8, the most an incident holds (an office that saved 6 keeps 6, and the parked tiles still serve a lower setting). Focus plays the rest small under the large one, Side by side goes to three across from five cameras, and the grids fill.
+- **The work panel folds to its rail at seven or more cameras**, so the cameras take the width; a tab's press opens the panel over the right edge, and **Fold the panel** / **Work panel** on the bar folds or pins it, remembered for you. At seven or more the small tiles drop their lines and sync row, the said band under the wall carries the focus camera's words in every layout, a press on a tile makes it the focus, and the bar says "Grid, 4 across shows all 8" while another layout is chosen.
+- **Focus fits its film strip** to the stage instead of scrolling off the edge.
+
 ## v1.203.0, 2026-11-05
 
 ```

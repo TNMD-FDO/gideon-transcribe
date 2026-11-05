@@ -89,7 +89,10 @@
             <option value="grid4">Grid, 4 across</option>
           </select>
         </label>
+        {% comment %}Seven or more cameras (Phase 12 chapter 9, v1.204.0): which layout shows them all, and the work panel's fold.{% endcomment %}
+        <span class="small muted" id="layout-hint"></span>
         <label><input type="checkbox" id="follow" checked> Follow</label>
+        <button type="button" class="small" id="work-toggle" title="Fold the work panel to its rail, so the cameras take the width">‹ Fold the panel</button>
         <p id="player-trouble" class="problem" hidden></p>
       </div>
     </div>

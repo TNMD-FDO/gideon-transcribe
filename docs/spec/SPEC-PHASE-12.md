@@ -402,9 +402,20 @@ Figure G and choice 10, at the maintainer's word of 2026-11-05. The circle's ans
 - **Build it on the Incidents tab instead** carries the ticks to the strip (`?tab=incidents&day=<day>&tick=<ids>`): the strip opens on that day with those lanes ticked, up to the cap, and the Reader as Your incident, where the span handles, the clock line and the pictures are. **Open the Map tab** on the strip's small map carries the ticked cameras back as the Map tab's shown cameras (`&show=`). Neither door makes anything without the press.
 - A vehicle's streams are one camera in the circle's list and one tick; the incident made from the map still takes the head stream alone, as before, since the server's cap counts recordings and the strip's lanes are one per stream. The streams join as one when the lanes do.
 
+### The wall at eight (the fifth release, v1.204.0)
+
+Figures H and I and choices 11 to 14, at the maintainer's word of 2026-11-05. The cap and the wall are one promise: what you build, you see.
+
+- **Cameras on the wall defaults to the cap.** The setting ships at 8 (6 before), 2 to 9 as before, and its words say the valve: set below Most cameras in an incident, some cameras of a full incident wait as parked tiles to swap in; a workstation decodes this many videos at once. An office that saved 6 keeps 6; one that never touched it gets 8 on upgrade. The parked tiles stay in the code for the lower setting. The views keep their shapes: Focus plays the rest small under the large one, Side by side goes to three across from five cameras, the grids fill as drawn.
+- **The work panel folds to its rail at seven or more** (`incident.js` `MANY`, `foldWanted`, `setFolded`): the page opens with the panel folded to its tab rail (the tabs as icons, 44 px) and the stage takes the width; a tab's press opens the panel over the stage's right edge at its usual width, the same tab again or a press outside closes it. **‹ Fold the panel** / **Work panel ›** on the transport folds or pins it open, remembered per person (`incident-work-folded`), as the layout is; with nothing remembered the page folds at seven or more and not below. Under 1280 the panel sits under the wall as before and the toggle is not shown.
+- **The small tiles give up what they cannot use.** At seven or more, outside Focus, the tiles drop their two lines of words and their sync row and their head is one short line; the said band under the wall carries the focus camera's words, as it does in Focus; a press on a tile makes it the focus (its head marked, the sound following unless pinned), and the focus tile's press plays or pauses as before.
+- **Focus fits its film strip.** The small tiles share the stage width, 170 px at most, and scroll only below 90 px each.
+- **Layout** on the bar says "Grid, 4 across shows all 8" beside the chooser while the wall holds seven or more and another layout is chosen. The layout setting's default stays Focus; the page suggests nothing else.
+- The strip under the wall still shows every camera, Follow and the clock are untouched, and the One reading measure counts cameras as before.
+
 ### Left to the next releases
 
-The wall at eight (Figures H and I), and the two tools in Your incident; a vehicle's streams as one lane and one camera on the server's count.
+The two tools in Your incident; a vehicle's streams as one lane and one camera on the server's count, with "8 cameras, 10 pictures" on the incident page when a unit brings more than one stream.
 
 ## Appendix A. Audit rows added in Phase 12
 

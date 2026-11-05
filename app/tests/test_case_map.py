@@ -814,5 +814,21 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "function budget()" in script and "#map-inc-count" in script
     assert "state.askedTicks" in strip and 'getElementById("strip-map-open")' in strip
     assert 'id="strip-map-open"' in page and ".map-head.hollow {" in css
+    # The wall at eight (v1.204.0): the setting's default is the cap, the
+    # work panel folds to its rail at seven or more, the tiles drop their
+    # lines, the said band follows the focus in every layout, the film strip
+    # fits the stage.
+    from core import settings_store
+
+    assert settings_store.definition("incidents_wall").default == 8
+    incident_js = static("incident.js")
+    assert "var MANY = 7;" in incident_js and "function foldWanted()" in incident_js
+    assert "incident-work-folded" in incident_js
+    assert 'classList.toggle("many"' in incident_js
+    incident_page = (HERE / "templates" / "incident.html").read_text(encoding="utf-8")
+    assert 'id="work-toggle"' in incident_page and 'id="layout-hint"' in incident_page
+    assert ".inc-desk.folded {" in css and ".inc-desk.folded .inc-work.over {" in css
+    assert ".inc-film .inc-tile { flex: 1 1 0;" in css
+    assert '.inc-desk.many:not([data-layout="focus"]) .inc-tile .inc-lines' in css
     # The hidden New incident dialog left the page (v1.201.0).
     assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")

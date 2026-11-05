@@ -334,6 +334,10 @@
       if (event.target.closest("label, .player-bar")) { return; }
       // A filmstrip tile's picture brings that camera to the front (chapter 4).
       if (tile.classList.contains("film")) { setFocus(cam.id); return; }
+      // Seven or more in a grid (v1.204.0): a press makes the tile the
+      // focus, whose words the said band carries; the focus tile's press
+      // plays or pauses as before.
+      if (deskBox.classList.contains("many") && layout !== "focus" && focusCamera !== cam.id) { focusCamera = cam.id; drawWall(); if (!soundPinned) { setSound(cam.id); } return; }
       if (playing) { pause(); } else { play(); }
     });
     Array.prototype.forEach.call(tile.querySelectorAll(".add-line"), function (button) {
@@ -488,7 +492,9 @@
   // Clip from here. The focus camera alone, as the chapter decided.
   function drawSaid(m, force) {
     if (!saidBand) { return; }
-    var inFocus = layout === "focus" && focusCamera && players[focusCamera];
+    // In Focus, and (v1.204.0) in any layout with seven or more cameras,
+    // when the small tiles have given up their lines.
+    var inFocus = (layout === "focus" || deskBox.classList.contains("many")) && focusCamera && players[focusCamera];
     saidBand.hidden = !inFocus;
     if (!inFocus) { saidKey = ""; return; }
     if (!followBox.checked && !force) { return; }
@@ -706,8 +712,53 @@
     });
   })();
 
+  // The work panel folds to its rail at seven or more cameras (Phase 12
+  // chapter 9, v1.204.0; Figure I): the stage takes the width, each tab is
+  // a press that opens the panel over the stage's right edge, and the
+  // toggle on the bar pins it open or folds it; the choice is remembered
+  // per person, as the layout is.
+  var MANY = 7;
+  var workToggle = document.getElementById("work-toggle");
+  function foldWanted() {
+    var kept = "";
+    try { kept = window.localStorage.getItem("incident-work-folded") || ""; } catch (ignored) { /* this page only */ }
+    if (kept === "1") { return true; }
+    if (kept === "0") { return false; }
+    return wallCameras().length >= MANY;
+  }
+  function setFolded(on, remember) {
+    if (!deskBox) { return; }
+    deskBox.classList.toggle("folded", on);
+    if (!on) { workBox.classList.remove("over"); }
+    if (workToggle) {
+      workToggle.textContent = on ? "Work panel ›" : "‹ Fold the panel";
+      workToggle.title = on ? "Open the work panel beside the cameras and keep it open" : "Fold the work panel to its rail, so the cameras take the width";
+    }
+    if (remember) { try { window.localStorage.setItem("incident-work-folded", on ? "1" : "0"); } catch (ignored) { /* this page only */ } }
+    layWall(wallCameras().length);
+    drawStrip();
+  }
+  if (workToggle) { workToggle.addEventListener("click", function () { setFolded(!deskBox.classList.contains("folded"), true); }); }
+  // Folded, a tab's press opens the panel over the stage's edge; the same
+  // tab again, or a press outside it, closes it.
+  (function () {
+    var tabBar = document.querySelector(".inc-work .tabbar");
+    if (!tabBar) { return; }
+    tabBar.addEventListener("click", function (event) {
+      var tab = event.target.closest(".tab");
+      if (!tab || !deskBox.classList.contains("folded")) { return; }
+      if (workBox.classList.contains("over") && tab.classList.contains("on")) { workBox.classList.remove("over"); return; }
+      workBox.classList.add("over");
+    }, true);
+    document.addEventListener("click", function (event) {
+      if (!workBox.classList.contains("over")) { return; }
+      if (event.target.closest(".inc-work, .modal-bg, .ui-layer, .picker, .map-layer, #work-toggle")) { return; }
+      workBox.classList.remove("over");
+    });
+  })();
+
   // "18 Sep 2026 13:50", the page's one date style (v1.75.1).
-  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var MONTHS =["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function dateWords(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) { return escape(iso || ""); }
@@ -754,6 +805,17 @@
       (film ? filmBox : wallBox).appendChild(tile);
     });
     layWall(wanted.length);
+    // Seven or more (Phase 12 chapter 9, v1.204.0): the tiles drop their
+    // lines and their sync row, the said band carries the focus camera's
+    // words in every layout, a press on a tile makes it the focus, the bar
+    // says which layout shows them all, and the work panel opens folded.
+    var many = wanted.length >= MANY;
+    deskBox.classList.toggle("many", many);
+    if (many && focusId === null && !wanted.some(function (one) { return one.id === focusCamera; })) { focusCamera = wanted[0].id; }
+    wanted.forEach(function (cam) { players[cam.id].tile.classList.toggle("focus", many && layout !== "focus" && cam.id === focusCamera); });
+    var hint = document.getElementById("layout-hint");
+    if (hint) { hint.textContent = many && layout !== "grid4" ? "Grid, 4 across shows all " + wanted.length : ""; }
+    if (!drawWall.foldSet && wanted.length) { drawWall.foldSet = true; setFolded(foldWanted(), false); }
     if (!wanted.length) {
       wallBox.innerHTML = "<p class='muted' style='padding: 20px'>No camera is placed yet. Place one on the Cameras tab, and it plays here.</p>";
     }

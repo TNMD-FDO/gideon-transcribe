@@ -1798,14 +1798,17 @@ def _rows() -> list[Definition]:
             group="The wall",
             name="Cameras on the wall",
             kind=NUMBER,
-            default=6,
+            default=8,
             least=2,
             most=9,
             needs="incidents",
             what_it_does=(
-                "How many of an incident's cameras play at once; the rest wait "
-                "as parked tiles to swap in. A workstation decodes this many "
-                "videos at once, so the figure is the office's to judge."
+                "How many of an incident's cameras play at once; eight, the "
+                "most an incident holds, so every camera of an incident plays. "
+                "Set below Most cameras in an incident, some cameras of a full "
+                "incident wait as parked tiles to swap in. A workstation "
+                "decodes this many videos at once, so the figure is the "
+                "office's to judge."
             ),
             when_changed="The next incident page opened.",
         ),
