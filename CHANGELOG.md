@@ -17,6 +17,46 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.212.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Incidents tab as a desk (Phase 12 chapter 10; the drawing
+`docs/spec/mockups/phase-12-incident-builder-desk.html`, Direction 1 built
+out at the maintainer's word of 2026-11-06). Everything in view at once: the
+strip over a wall of videos on the left, the map over Your incident and
+Built on this day on the right; the desk takes the window's height and its
+boxes scroll inside themselves.
+
+- **The strip scrolls.** Every lane of the day is drawn in a box that
+  scrolls inside itself, the ticked lanes held at its top over a rule; the
+  ruler, the incidents' names, the span handles and the clock line's label
+  are held in a row above it. Show all is gone.
+- **The wall plays.** A ticked camera is a video playing at the clock, in
+  step with the others, up to the Cameras on the wall setting; one
+  transport under the wall (Play, 10 s back and forward, the speed, the
+  clock, a scrub across the span), one tile with the sound, name, time into
+  the video and untick on each. Grid, or Focus with the line being said
+  beside the large tile. The near cameras are offered under the tiles as
+  chips. The lanes' pictures are gone: the video is there instead.
+- **Review without an incident.** Nothing is made until Make the incident;
+  the ticks, the clock, the span and the name are remembered for you on
+  this browser per day, and the wall's layout per case.
+- **The map is always there**, every camera of the day on it, the ticked
+  lit and the rest faint; a press on a marker ticks it.
+- **Your incident** is a compact panel sized for eight, **Built on this
+  day** the day's incidents under it with Open, On map and Add the ticked;
+  the Reader column is gone. The lead's words make way for **Make the
+  incident · N** and **Clear the ticks**.
+- The strip's rows carry each camera's playback copy for the wall; a
+  vehicle's head stream plays over its own run.
+- For a local walk, Django serves the playback copies with byte ranges when
+  `run_local.sh` sets `APP_LOCAL_MEDIA` (`core/local_media.py`); a server
+  never runs it.
+
 ## v1.211.0, 2026-11-05
 
 ```

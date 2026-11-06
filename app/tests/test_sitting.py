@@ -263,7 +263,7 @@ def test_the_offer_and_the_case_page_carry_the_bar(client, incident, person, a_c
     incidents.make(a_case, "Again", [cameras_of_case(a_case)["first"]], by=person)
     page = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents")
     body = page.content.decode()
-    assert 'id="strip-reader"' in body and "sitting-mini" not in body
+    assert 'id="desk-yours"' in body and "sitting-mini" not in body
     # The strip suggests nothing (v1.200.0); Your incident asks the sitting
     # for the cameras ticked.
     ids = [str(third.pk)]

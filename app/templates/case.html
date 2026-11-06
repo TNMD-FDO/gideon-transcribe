@@ -363,7 +363,9 @@
             </div>
             {% comment %}The span box (v1.207.0): two times and Set; the drag across the ruler's track does the same.{% endcomment %}
             <span class="span-box small" id="span-box"><span class="muted">Span</span><input type="text" id="span-from" class="small" placeholder="from" maxlength="5" size="5" title="From, as hh:mm"><span class="muted">to</span><input type="text" id="span-to" class="small" placeholder="to" maxlength="5" size="5" title="To, as hh:mm"><button type="button" class="tiny" id="span-set">Set</button><button type="button" class="tiny ghost" id="span-clear" hidden>Clear the span</button></span>
-            <span class="muted small" id="building-words">Set a span, or tick cameras on the strip, to build an incident.</span>
+            {% comment %}The desk's two presses (Phase 12 chapter 10, v1.212.0): Make the incident with its count, greyed until a camera is ticked, and Clear the ticks.{% endcomment %}
+            <button type="button" class="small primary" id="desk-make" disabled title="Tick a camera first">Make the incident</button>
+            <button type="button" class="small ghost" id="desk-clear" disabled>Clear the ticks</button>
           </div>
           {% comment %}
             The strip (Phase 10 chapter 5, v1.180.0; the drawing
@@ -382,28 +384,46 @@
             its panel under them.
           {% endcomment %}
           {% comment %}
-            The columns (v1.207.0): the strip and the map in the left column,
-            the Reader in its own, sticky and scrolling inside its box; three
-            columns on an ultrawide monitor.
+            The desk (Phase 12 chapter 10, v1.212.0; the drawing
+            docs/spec/mockups/phase-12-incident-builder-desk.html): the
+            strip over the wall on the left, the map over Your incident
+            and Built on this day on the right, all in view at once; the
+            desk takes the window's height and its boxes scroll inside
+            themselves. The Reader column is gone: Your incident is a
+            compact panel sized for the most an incident holds, and the
+            day's incidents are rows under it.
           {% endcomment %}
-          <div class="strip-wrap">
-            <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-case-name="{{ case.name }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-new="{% url 'new-incident' case.pk %}" data-reader="#strip-reader" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
-            <aside id="strip-reader" class="chron reader" aria-live="polite"></aside>
-            <div id="unclocked-host" hidden></div>
+          <div class="builder" id="incident-desk">
+            <div class="builder-left">
+              <div id="incident-strip" class="chron strip-host" data-mode="strip" data-case="{{ case.pk }}" data-case-name="{{ case.name }}" data-json="{% url 'case-incident-strip' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-decline="{% url 'decline-incident-offer' case.pk %}" data-add="{% url 'add-to-incident' case.pk %}" data-new="{% url 'new-incident' case.pk %}" data-unclocked="#unclocked-host" data-map="{% url 'case' case.pk %}?tab=map" data-export=""></div>
+              <div id="unclocked-host" hidden></div>
+              {% comment %}
+                The wall (chapter 10): every ticked camera playing its video
+                at the clock, in step, up to the Cameras on the wall setting,
+                with one transport and scrub under it; drawn by
+                incident-desk.js from what the strip tells it.
+              {% endcomment %}
+              <div class="desk-wall" id="desk-wall" data-case="{{ case.pk }}" data-most="{{ incident_counts.most|default:8 }}"></div>
+            </div>
+            <div class="builder-right">
           {% comment %}
-            The map at the foot of the tab (Phase 12 chapter 8): the Map tab's
-            drawing mounted small, showing only the cameras ticked on the
-            strip, which tells it the ticks and the day by an event.
+            The map beside the strip (Phase 12 chapter 8, always there
+            from chapter 10): the Map page's drawing mounted small in pick
+            mode, every camera of the day at the clock line, the ticked lit
+            and the rest faint, a press on a marker ticking; the strip tells
+            it the ticks, the day and the clock by an event.
           {% endcomment %}
           {% if map_json_url %}
             <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
             <div class="strip-map" id="strip-map">
               {% include "map-host.html" with map_clock="" map_pick="1" %}
-              <p class="map-pick-empty muted small" id="map-pick-empty">Pick a camera on the strip and its path appears here.</p>
-              {% comment %}The way back to the Map tab (Phase 12 chapter 9, v1.203.0): with the ticked cameras shown there.{% endcomment %}
-              <a class="btn tiny ghost strip-map-open" id="strip-map-open" href="{% url 'case' case.pk %}?tab=map" title="The Map tab, with the cameras you ticked shown">Open the Map tab</a>
+              {% comment %}The way to the Map page (Phase 12 chapter 9, v1.203.0): with the ticked cameras shown there.{% endcomment %}
+              <a class="btn tiny ghost strip-map-open" id="strip-map-open" href="{% url 'case' case.pk %}?tab=map" title="The Map page, with the cameras you ticked shown">Open the Map page</a>
             </div>
           {% endif %}
+              <div class="card desk-panel" id="desk-yours" aria-live="polite"></div>
+              <div class="card desk-panel desk-built" id="desk-built"></div>
+            </div>
           </div>
         {% comment %}The Map tab (Phase 12 chapter 1) is a page of its own from v1.210.0 (chapter 6.10): the view sends ?tab=map there with its query, so every On the map address keeps working.{% endcomment %}
         {% elif tab == "speakers" %}
@@ -1013,6 +1033,8 @@
   {% if paths_door %}<script src="{% static 'path-files.js' %}"></script>{% endif %}
   {% comment %}The Page shape's script (v1.172.0), after preview.js, which it mounts into the desk.{% endcomment %}
   <script src="{% static 'chronology.js' %}"></script>
+  {% comment %}The Incidents tab's wall (Phase 12 chapter 10, v1.212.0): the ticked cameras playing in step under the timeline.{% endcomment %}
+  {% if tab == "incidents" %}<script src="{% static 'incident-desk.js' %}"></script>{% endif %}
   <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'case-compare.js' %}"></script>
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}

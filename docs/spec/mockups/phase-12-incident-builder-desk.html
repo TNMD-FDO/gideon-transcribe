@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab as an incident builder</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --c5: #00838f; --c6: #ad1457;
+    --ground: #eef1ea; --road: #ffffff; --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --c5: #63d3e0; --c6: #f48fb1; --ground: #1e2328; --road: #2a3139;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 80ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .press { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 6px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin: 0 0 12px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .pane { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+  .pane svg { display: block; width: 100%; height: auto; }
+  .measure { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .measure div { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+  .measure b { display: block; font-size: 20px; }
+  /* the frames */
+  .win { fill: var(--bg); }
+  .surf { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .surf2 { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .ground { fill: var(--ground); }
+  .road { stroke: var(--road); stroke-width: 7; stroke-linecap: round; fill: none; }
+  .roadname { font: 600 10px var(--font); fill: var(--muted); letter-spacing: .12em; }
+  .t { font: 500 11px var(--font); fill: var(--text); }
+  .t.b { font-weight: 600; } .t.m { fill: var(--muted); } .t.s { font-size: 10px; } .t.mono { font-family: var(--mono); }
+  .t.big { font: 600 16px var(--mono); fill: var(--text); }
+  .t.ttl { font: 700 17px var(--font); }
+  .t.eye { font: 600 9px var(--font); fill: var(--muted); letter-spacing: .08em; }
+  .t.tab { font: 500 11px var(--font); fill: var(--muted); } .t.tab.on { fill: var(--text); font-weight: 600; }
+  .t.acc { fill: var(--accent); font-weight: 600; }
+  .t.ink { fill: var(--accent-ink); font-weight: 600; }
+  .tabline { stroke: var(--accent); stroke-width: 2; }
+  .btn { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .btn.primary { fill: var(--accent); stroke: none; }
+  .pill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 9; }
+  .pill.acc { fill: var(--accent-soft); stroke: var(--accent); }
+  .pill.warn { fill: var(--warn-soft); stroke: var(--warn); }
+  .seg { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 4; }
+  .seg.on { fill: var(--accent-soft); }
+  .check { fill: var(--accent); rx: 2; }
+  .uncheck { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 2; }
+  .lane { fill: var(--surface-2); }
+  .pt { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .pt.faint { opacity: .3; }
+  .mk { stroke: var(--surface); stroke-width: 2; }
+  .mk.sq { rx: 2; }
+  .c1 { stroke: var(--c1); } .c2 { stroke: var(--c2); } .c3 { stroke: var(--c3); } .c4 { stroke: var(--c4); } .c5 { stroke: var(--c5); }
+  .f1 { fill: var(--c1); } .f2 { fill: var(--c2); } .f3 { fill: var(--c3); } .f4 { fill: var(--c4); } .f5 { fill: var(--c5); }
+  .bar { stroke-width: 8; stroke-linecap: round; }
+  .clk { stroke: var(--text); stroke-width: 2; }
+  .fold { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 8 6; }
+  .foldtxt { font: 700 11px var(--font); fill: var(--bad); }
+  .fault { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; rx: 4; }
+  .faulttxt { font: 600 11px var(--font); fill: var(--bad); }
+  .card { fill: var(--surface); stroke: var(--accent); stroke-width: 1; rx: 6; }
+  .over { fill: var(--surface); fill-opacity: .94; stroke: var(--line); stroke-width: 1; rx: 6; }
+  .scroll { fill: var(--line); rx: 2; }
+  .ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .ldr { stroke: var(--text); stroke-width: 1; opacity: .55; fill: none; }
+  .num { fill: var(--warn); }
+  .numtxt { font: 700 11px var(--font); fill: var(--accent-ink); }
+  .note { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; rx: 4; }
+
+  .big .t { font-size: 15px; } .big .t.s { font-size: 13px; } .big .t.big { font-size: 22px; }
+  .big .t.ttl { font-size: 24px; } .big .t.tab { font-size: 15px; } .big .t.eye { font-size: 12px; }
+  .big .roadname { font-size: 14px; } .big .foldtxt { font-size: 16px; } .big .faulttxt { font-size: 16px; }
+  .meas { fill: var(--accent); fill-opacity: .12; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .meastxt { font: 700 16px var(--font); fill: var(--accent); }
+  .veil { fill: var(--surface); fill-opacity: .88; }
+  .rowline { stroke: var(--line); stroke-width: 1; }
+  .tile { fill: var(--ground); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .tile.on { stroke: var(--accent); stroke-width: 2; }
+  .tile.blank { fill: var(--surface-2); stroke-dasharray: 5 4; }
+  .tilebar { fill: var(--surface); }
+  .colshade { fill: var(--accent); fill-opacity: .12; stroke: var(--accent); stroke-width: 1; }
+  .colshade.inc { fill-opacity: .08; stroke-opacity: .5; }
+  .colshade.set { stroke-dasharray: 5 4; }
+  .step { fill: var(--warn); }
+  .steptxt { font: 700 13px var(--font); fill: var(--accent-ink); }
+  .frame { fill: var(--ground); }
+  .person { fill: var(--muted); fill-opacity: .55; }
+  .car { fill: var(--muted); fill-opacity: .4; rx: 4; }
+  .sel { fill: var(--accent); fill-opacity: .22; }
+  .field { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 3; }
+  .hdl { fill: var(--accent); stroke: var(--surface); stroke-width: 1; rx: 2; }
+  .win { fill: var(--accent); fill-opacity: .18; stroke: var(--accent); stroke-width: 1; }
+  .tagbg { fill: var(--accent); rx: 3; } .tag { font: 600 11px var(--font); fill: var(--accent-ink); }
+  .tagbg.inc { fill: var(--accent-soft); } .tag.inc { fill: var(--accent); }
+  .foldbox { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .cursor { fill: var(--text); stroke: var(--surface); stroke-width: 1; }
+  .still { fill: var(--ground); stroke: var(--line); stroke-width: 1; rx: 3; }
+  .said { fill: var(--surface); stroke: var(--line); stroke-width: 1; rx: 6; }
+  .scroll { fill: var(--line); rx: 2; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <span class="eyebrow">Phase 12, chapter 8 redrawn · a drawing for the maintainer's word · 2026-11-06</span>
+    <h1>The Incidents tab as an incident builder and review desk</h1>
+    <p class="lede">The maintainer's word: the page has lost its way; it should be a panel that helps a person build incidents, ticking several videos and scrubbing to moments to help decide, a dynamic builder and a review page. Three directions follow, each drawn at the maintainer's window of 1912 by 1034 with a fictional office. Direction 1 is drawn press by press. Everything the app already knows stays behind the drawings: the cameras' clocks, the path files, the near marks, the stills cut at a moment, the cap of eight, the pictures wall of the incident page.</p>
+  </header>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A · what the tab holds today</span><h2>Seven pieces that arrived one release at a time: the strip, the Reader, the span box, the incidents menu, two tools, a small map</h2></div>
+    <div class="pane"><svg id="fig-a" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The Incidents tab as it stands: the lead with counts and a span box, the strip with lanes and incident columns, the Reader on the right, the small map under the strip"></svg></div>
+    <div class="caption">
+      <p><b>Where it lost its way.</b> The strip is the day, read left to right; the Reader is a column of words on the right; the pictures at the clock line are thumbnails at the ends of lanes; the map is under everything; the tools are two lines of text in the Reader. A person deciding "do these four belong together?" has to read, not look: there is no place where the ticked cameras are seen side by side at one moment, and the review of what is built is a list of rows under the day's reading.</p>
+      <p><b>What stays true.</b> Ticks choose, the cap is eight, the span is the person's, the clock line moves everything, the map knows where each camera was, an incident built opens on its own page with the wall. The builder keeps all of it; it changes what is in front of the eyes.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · the desk: timeline, wall, map, your incident</span><h2>Step 1, the tab opens: the day's cameras as lanes, a wall that waits for ticks, the map with everyone faint, the built incidents to review on the right</h2></div>
+    <div class="pane"><svg id="fig-b" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 1 step 1: a builder bar, the timeline of lanes, an empty wall, the map, and the right column with Your incident empty and the built incidents"></svg></div>
+    <div class="caption">
+      <p><b>The desk in four parts, all in view.</b> Across the top the <b>builder bar</b>: the day, the clock as a readout and scrub, step buttons, the span, and <b>Make the incident</b>, greyed until something is ticked. On the left the <b>timeline</b>, every camera of the day as a lane with a tick, fitted to the busy stretch (a lone camera running for hours folds), the clock line across it. Under the timeline the <b>wall</b>, where ticked cameras show at the clock line as pictures. On the right the <b>map</b>, every camera faint where it was at the clock line, and under it <b>Your incident</b> and <b>Built on this day</b>.</p>
+      <p><b>Nothing ticked yet.</b> The wall says what it is for in one line; Your incident says "Tick cameras on the timeline, or press one on the map"; the built incidents are each a row with a small strip of their cameras, Open and On map.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · step 2</span><h2>Tick two cameras: their pictures fill the wall at the clock line, the map lights them, the span forms, Your incident counts</h2></div>
+    <div class="pane"><svg id="fig-c" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 1 step 2: two lanes ticked, two tiles on the wall showing the cameras at the clock line, the map with the two lit and the rest faint, Your incident listing the two"></svg></div>
+    <div class="caption">
+      <p><b>Tick, and look.</b> A tick on a lane (or a press on a marker on the map) puts the camera on the wall as a tile: its picture at the clock line, its name, how far into its video that is, and untick. The span becomes the two cameras' first start to last end, shown as the bright stretch on the timeline with handles; the map lights the two and dims the rest. The cap reads "2 of 8".</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · step 3</span><h2>Scrub: drag the clock line and every tile and marker moves with it; a ring on the map and on a lane says a third camera was within 50 m; tick it from either</h2></div>
+    <div class="pane"><svg id="fig-d" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 1 step 3: the clock line dragged to 20:27:40, the tiles showing new pictures, the map markers moved, a third camera ringed as near on both the map and its lane, its tile offered faint on the wall"></svg></div>
+    <div class="caption">
+      <p><b>Deciding by looking.</b> Dragging the clock line (or the scrub under the wall, or ‹ ›) cuts every tile's picture at the new moment and moves every marker. A camera that was within 50 m of a ticked one at that moment is ringed on the map and on its lane, and its tile appears faint on the wall with "near Lee Fox · tick"; a press ticks it. <b>Play</b> runs the wall as video for the ticked cameras in step, the way the incident page's wall does, so the person can watch ten seconds before deciding.</p>
+      <p><b>Not the clock, not the pictures.</b> A camera with no clock sits in the Not on the clock row under the lanes with a tick; a camera with no picture at the moment shows a blank tile with the reason.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 · step 4</span><h2>Make: a name is offered, the span is the person's, Make the incident opens the page at the span's start; back on the tab the new incident sits under Built on this day</h2></div>
+    <div class="pane"><svg id="fig-e" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 1 step 4: three cameras ticked, the name box filled, Make the incident lit; the right column's Built on this day with the new row at the top, its small strip, Open and On map"></svg></div>
+    <div class="caption">
+      <p><b>The review side.</b> Built on this day lists each incident as a row: its name, a small strip of its cameras over the day, the count and the span, who built it and how, <b>Open</b>, <b>On map</b>, and <b>Add the ticked</b> while cameras are ticked. A press on a row lights its cameras' lanes and draws its column on the timeline, so what is built and what is being built are seen together; a second press clears it. "N incidents built" in the bar opens the same list for every day.</p>
+      <p><b>What goes.</b> The Reader as a column of words, the span box as a row of fields (the span is the handles and the Set under the clock), the two tools as text (they are presses on the wall: "Tick everyone running now", "Tick the near"), the small map under the strip (the map is beside it).</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 built out · 2026-11-06 · many cameras, and the wall plays video</span><h2>A day of twenty-two cameras: the timeline scrolls with the ticked lanes held at its top, and the wall plays up to eight videos in step, scrubbed together</h2></div>
+    <div class="pane"><svg id="fig-h" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 1 built out: the timeline scrolling inside its box with the eight ticked lanes held at the top and fourteen more below, the wall as a grid of eight playing videos with a transport and scrub under it, the map, Your incident at 8 of 8, the built incidents"></svg></div>
+    <div class="caption">
+      <p><b>The timeline scrolls.</b> Its box keeps its height (eleven lanes in view here, with its own scrollbar); the ticked lanes rise to the top and stay there above a rule, the rest scroll under them, and the ruler, the incident names and the clock line are held, so the lanes that matter never leave view. A day of twenty-two cameras is eight on top and a scroll for the rest; the lane heads keep their ticks, names and minutes.</p>
+      <p><b>The wall plays.</b> Each ticked camera is a tile playing its video at the clock, in step with the others, the same player and the same cap of eight as the incident page's wall (the Cameras on the wall setting, which the workstation decodes at once). Under the wall one transport: Play and Pause, 10 s back and forward, the speed, the clock, and the scrub bar across the span; dragging the clock line on the timeline, the scrub, or a tile's own bar moves all of them. One tile carries the sound (its speaker mark; press another's to switch), and a tile's foot says who, how far into its video, and untick. The wall lays out as a grid: two across for two, four across and two rows from five to eight, each tile 16 by 9 so nothing is cropped.</p>
+      <p><b>Review, with or without an incident.</b> Nothing is made until Make the incident, so the desk doubles as a place to watch several videos of a day together: tick, scrub, watch, and leave; the ticks, the clock and the layout are remembered per person for the day, so coming back finds the same wall. An incident is made when the person wants the chronology, the memo, the clips and the stills that only an incident carries.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 built out · Focus</span><h2>A press on a tile makes it the focus: the large picture with the seven others in a strip, the sound following it, for watching one camera closely while the rest keep step</h2></div>
+    <div class="pane"><svg id="fig-i" class="big" viewBox="0 0 1912 1034" role="img" aria-label="The wall in Focus: one large tile and seven small ones in a row under it, the transport under them, the timeline above and the map beside"></svg></div>
+    <div class="caption">
+      <p><b>Grid and Focus</b>, the incident page's two shapes, on the builder too: Focus for one camera looked at closely with the others in step in a strip, Grid for all at once; a second press on the focus tile returns to the grid. The said line beside the focus tile shows what is being said on that camera at the clock, as the incident page's said band does, so a person reviewing can follow the words without an incident.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 1 built out · the laptop</span><h2>At 1366 by 768 the same desk: six lanes in view, the wall four across, the map and the panels in the right column</h2></div>
+    <div class="pane"><svg id="fig-j" viewBox="0 0 1366 768" role="img" aria-label="The desk in a 1366 by 768 window with eight videos on the wall at a smaller size"></svg></div>
+    <div class="caption">
+      <p><b>How eight fit on the laptop.</b> The tiles are about 180 by 100 in two rows, the timeline shows six lanes and scrolls, the map is 190 tall, Your incident lists the eight in two columns, and Built on this day has the rest of the right column with a scroll; the page itself never scrolls. On the docked monitor every box is larger and the wall's tiles are over 300 wide.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 2 · the map leads</span><h2>The map takes the width with the clock in its band; cameras are ticked on the map or in a circle; the wall sits under the map, the lanes under the wall</h2></div>
+    <div class="pane"><svg id="fig-f" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 2: a large map with the clock band, ticked markers lit and a circle drawn, the wall of ticked cameras under it, the lanes band at the foot, Your incident as a panel over the map's right edge"></svg></div>
+    <div class="caption">
+      <p><b>For a person who thinks in places.</b> The map is the page (as the Map page is), with the clock and the scrub in its top band; ticking happens on markers or with <b>Within a circle</b>; the wall of the ticked cameras runs under the map, the lanes under that, and Your incident is a panel over the map's right edge with the built incidents behind a tab in it. <b>What it costs:</b> the timeline is third, so "who ran when" takes a scroll; and on a day without path files the map is empty ground, which is the day the Incidents tab was built for.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction 3 · four steps, one at a time</span><h2>When, Who, Check, Make: the builder as a guided walk, each step a page-wide panel</h2></div>
+    <div class="pane"><svg id="fig-g" class="big" viewBox="0 0 1912 1034" role="img" aria-label="Direction 3: a stepper across the top on step 2 Who, a grid of camera stills at the chosen stretch with ticks, the chosen stretch on a small day ruler above, Next to Check"></svg></div>
+    <div class="caption">
+      <p><b>For a person who wants to be led.</b> <b>When</b>: a day and a stretch on one ruler. <b>Who</b>: every camera that ran in the stretch as a still with a tick, the near ones marked. <b>Check</b>: the wall and the map at a scrub. <b>Make</b>: the name and the span. <b>What it costs:</b> the parts are not in view together, so a change of mind means a step back, and the review of built incidents is a separate list; the desk of Direction 1 holds the same four things at once.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Twelve to decide, in one table</h2></div>
+    <table>
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn (Direction 1)</th><th>The other way</th></tr>
+      <tr><td>1</td><td>The direction</td><td>The desk: the timeline over the wall on the left, the map over Your incident and the built incidents on the right, all in view</td><td>The map leads (2); four guided steps (3)</td></tr>
+      <tr><td>2</td><td>The wall</td><td>A tile per ticked camera playing its video at the clock, in step, up to eight (the Cameras on the wall setting), the same player as the incident page's wall; one transport and scrub under the wall; one tile carries the sound; name, time into the video and untick on each; a near camera offered as a faint tile (the maintainer's word of 2026-11-06)</td><td>Stills at the clock line, cut on release</td></tr>
+      <tr><td>3</td><td>The timeline</td><td>Every lane with its tick, fitted to the busy stretch (a lone camera's long run folds), the incident names in a row of their own above the lanes, the clock line across all; the box scrolls inside itself with the ticked lanes held at its top and the ruler held (the maintainer's word of 2026-11-06)</td><td>The whole day, every lane, the page growing</td></tr>
+      <tr><td>4</td><td>The map</td><td>Beside the timeline, every camera at the clock line, ticked lit and the rest faint, a near ring, a press ticks; always there</td><td>Under the strip, drawn only once something is ticked, as today</td></tr>
+      <tr><td>5</td><td>Your incident</td><td>A compact panel: name, the ticked as one line each with untick, the span and the cap, Make the incident; the tools as two presses on the wall</td><td>The Reader column with its readings, as today</td></tr>
+      <tr><td>6</td><td>The review</td><td>Built on this day under Your incident: a row per incident with a small strip, Open, On map, Add the ticked; a press lights its lanes and column; N incidents built opens every day's</td><td>Rows in the day's reading, as today</td></tr>
+      <tr><td>7</td><td>The span</td><td>The handles on the timeline and a Set under the clock; the span box leaves the lead</td><td>The span box kept</td></tr>
+      <tr><td>8</td><td>Scrubbing</td><td>The clock line, a scrub bar under the wall and ‹ › 1 s / 10 s; the tiles cut on release, the markers move while dragging</td><td>The clock line alone</td></tr>
+      <tr><td>9</td><td>Not on the clock</td><td>A row under the lanes with a tick, as now; a blank tile on the wall with the reason</td><td>Left out of the builder</td></tr>
+      <tr><td>10</td><td>Elsewhere</td><td>The incident page and the Map page keep their shapes; the builder reuses the wall's player and layouts and the map's pick mode</td><td>Build inside the Map page</td></tr>
+      <tr><td>11</td><td>Grid and Focus</td><td>Both, as on the incident page: a press on a tile makes it the focus with the said line beside it, a second press returns to the grid; the layout remembered per person</td><td>The grid alone</td></tr>
+      <tr><td>12</td><td>Review without an incident</td><td>Nothing is made until Make; the ticks, the clock and the layout are remembered per person for the day, so the desk is a place to watch several videos together and leave</td><td>Ticks cleared on leaving</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">The build's recommendation is Direction 1. It answers the maintainer's word directly: tick several videos, scrub to a moment, and see them side by side with the map before deciding; and it puts review beside building, since what is built lights up on the same timeline. The pieces exist: the lanes and their ticks, the clock line, the stills cut at a moment, the near marks, the map's pick mode, the wall's tiles from the incident page. No migration, no setting; the page is rearranged around the wall.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(svg, name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] !== null && attrs[k] !== undefined) { e.setAttribute(k, attrs[k]); } }
+    if (text !== undefined) { e.textContent = text; }
+    svg.appendChild(e);
+    return e;
+  }
+  function rect(s, x, y, w, h, cls, rx) { return el(s, "rect", { x: x, y: y, width: w, height: h, "class": cls, rx: rx === undefined ? 6 : rx }); }
+  function text(s, x, y, words, cls, anchor) { return el(s, "text", { x: x, y: y, "class": cls, "text-anchor": anchor || null }, words); }
+  function line(s, x1, y1, x2, y2, cls) { return el(s, "line", { x1: x1, y1: y1, x2: x2, y2: y2, "class": cls }); }
+  function btn(s, x, y, w, words, primary) {
+    rect(s, x, y, w, 26, "btn" + (primary ? " primary" : ""), 4);
+    text(s, x + w / 2, y + 17, words, "t b" + (primary ? " ink" : ""), "middle");
+    return x + w + 6;
+  }
+  function pill(s, x, y, words, cls, w) {
+    w = w || words.length * 6.2 + 16;
+    rect(s, x, y, w, 20, "pill " + (cls || ""), 10);
+    text(s, x + w / 2, y + 14, words, "t s" + (cls === "acc" ? " acc" : ""), "middle");
+    return x + w + 6;
+  }
+  function tick(s, x, y, on) { rect(s, x, y, 11, 11, on ? "check" : "uncheck", 2); }
+  function dot(s, x, y, n, sq) { if (sq) { rect(s, x - 5, y - 5, 10, 10, "mk sq f" + n, 2); } else { el(s, "circle", { cx: x, cy: y, r: 5, "class": "mk f" + n }); } }
+  var CAMS = [
+    { n: 1, name: "Sam Roe", tail: "vehicle · 12 mph", sq: true },
+    { n: 2, name: "Lee Fox", tail: "" },
+    { n: 3, name: "Ash Kim", tail: "" },
+    { n: 4, name: "Kit Vale", tail: "" },
+    { n: 5, name: "Jo Marsh", tail: "" }
+  ];
+
+  // The case page's top: the app bar, the rail, the case head, the One reading card, the tab bar.
+  function pageTop(s, W, scale, tabsOnly) {
+    var k = scale || 1;
+    rect(s, 0, 0, W, 10000, "win", 0);
+    rect(s, 0, 0, W, 40 * k, "surf", 0);
+    text(s, 24, 25 * k, "Gideon Transcribe", "t b");
+    text(s, W - 24, 25 * k, "test · Admin · Sign out", "t m", "end");
+    rect(s, 0, 40 * k, 160 * k, 10000, "surf2", 0);
+    ["Upload files", "Record now", "", "Home", "Bulk transcription", "Cases", "My recordings", "Clips", "Voices", "", "Panel", "Help"].forEach(function (w, i) {
+      if (w) { text(s, 20, (70 + i * 26) * k, w, w === "Cases" ? "t acc" : "t m"); }
+    });
+    var x0 = 180 * k;
+    text(s, x0, 60 * k, "CASES", "t eye");
+    text(s, x0, 82 * k, "Harbour Street stop", "t ttl");
+    var px = x0; px = pill(s, px, 92 * k, "2 incidents not synced", "warn"); px = pill(s, px, 92 * k, "1 proposed event waiting", "warn"); px = pill(s, px, 92 * k, "6 cameras on the map"); pill(s, px, 92 * k, "shared with 1");
+    btn(s, W - 290 * k, 50 * k, 110, "Add path files"); btn(s, W - 170 * k, 50 * k, 130, "Add recordings", true);
+    rect(s, x0, 120 * k, W - x0 - 24 * k, 44 * k, "surf", 6);
+    text(s, x0 + 12, 138 * k, "One reading · 0.7 of 120 hours", "t b"); text(s, x0 + 12, 156 * k, "5 transcripts, 3 not ready yet · a question reads every transcript whole at one go, in under a minute.", "t s m");
+    pill(s, W - 100 * k, 128 * k, "room", "acc", 60);
+    var tabs = ["Recordings 8", "Search", "Proposed events 8", "Notes 14", "Documents 2", "Incidents 6", "Map 6", "Clips 3", "Speakers 2", "Details"];
+    var tx = x0; var ty = 190 * k;
+    tabs.forEach(function (w) { var on = w === "Map 6"; text(s, tx, ty, w, "t tab" + (on ? " on" : "")); if (on) { line(s, tx, ty + 8, tx + w.length * 6.6, ty + 8, "tabline"); } tx += w.length * 6.6 + 22; });
+    line(s, x0, ty + 9, W - 24 * k, ty + 9, "surf2");
+    return { x: x0, y: ty + 20 };
+  }
+
+  function ground(s, x, y, w, h) {
+    rect(s, x, y, w, h, "ground", 0);
+    // fictional streets, drawn as blocks
+    var roads = [
+      [[x + 40, y + h * .55], [x + w - 40, y + h * .5]],
+      [[x + w * .3, y + 20], [x + w * .32, y + h - 20]],
+      [[x + w * .62, y + 20], [x + w * .6, y + h - 20]],
+      [[x + 40, y + h * .22], [x + w * .62, y + h * .2]]
+    ];
+    roads.forEach(function (r) { line(s, r[0][0], r[0][1], r[1][0], r[1][1], "road"); });
+    text(s, x + w * .45, y + h * .53, "HARBOUR STREET", "roadname");
+    text(s, x + w * .33, y + h * .8, "QUAY LANE", "roadname");
+    text(s, x + w * .12, y + h * .19, "MILL ROAD", "roadname");
+    text(s, x + 10, y + h - 10, "300 ft", "t s mono m");
+    text(s, x + w - 10, y + h - 10, "© OpenStreetMap contributors · Protomaps", "t s m", "end");
+    text(s, x + w - 14, y + 22, "N", "t b", "end");
+    rect(s, x + w - 32, y + 34, 22, 44, "surf", 4); text(s, x + w - 21, y + 50, "+", "t b", "middle"); text(s, x + w - 21, y + 72, "−", "t b", "middle");
+    rect(s, x + w - 32, y + 86, 22, 22, "surf", 4); text(s, x + w - 21, y + 101, "⤢", "t b", "middle");
+  }
+  function paths(s, x, y, w, h, now) {
+    var P = [
+      { n: 1, pts: [[.05, .56], [.3, .54], [.31, .3], [.6, .28], [.61, .5]], sq: true },
+      { n: 2, pts: [[.33, .52], [.36, .62], [.4, .7]] },
+      { n: 3, pts: [[.3, .52], [.28, .66]] },
+      { n: 4, pts: [[.6, .5], [.63, .35], [.7, .33]] },
+      { n: 5, pts: [[.62, .52], [.66, .62], [.72, .6]] }
+    ];
+    P.forEach(function (p) {
+      var d = p.pts.map(function (q, i) { return (i ? "L" : "M") + (x + q[0] * w) + " " + (y + q[1] * h); }).join(" ");
+      el(s, "path", { d: d, "class": "pt c" + p.n });
+      var last = p.pts[p.pts.length - 1];
+      dot(s, x + last[0] * w, y + last[1] * h, p.n, p.sq);
+      var lab = CAMS[p.n - 1].name;
+      rect(s, x + last[0] * w + 8, y + last[1] * h - 8, lab.length * 6.4 + 10, 16, "over", 8);
+      text(s, x + last[0] * w + 13, y + last[1] * h + 4, lab, "t s b");
+    });
+  }
+  function showOverlay(s, x, y, open) {
+    if (!open) { rect(s, x, y, 150, 22, "over", 4); text(s, x + 8, y + 15, "Show: Trails · 6 kinds of event ▸", "t s"); return; }
+    rect(s, x, y, 300, 58, "over", 4);
+    text(s, x + 8, y + 15, "Show", "t s m");
+    var sx = x + 44; ["Markers only", "Trails", "Whole paths"].forEach(function (w, i) { var ww = w.length * 6 + 14; rect(s, sx, y + 4, ww, 18, "seg" + (i === 1 ? " on" : ""), 3); text(s, sx + ww / 2, y + 16, w, "t s" + (i === 1 ? " acc" : ""), "middle"); sx += ww + 2; });
+    text(s, x + 8, y + 42, "Events", "t s m");
+    var ex = x + 48; ["camera on and off", "lights", "siren", "mic", "bookmarks", "notes"].forEach(function (w) { tick(s, ex, y + 33, true); text(s, ex + 15, y + 42, w, "t s"); ex += w.length * 5.6 + 24; });
+  }
+  function bar(s, x, y, w, withDays) {
+    var bx = x;
+    bx = btn(s, bx, y, 60, "▶ Play", true);
+    bx = btn(s, bx, y, 52, "−10 s"); bx = btn(s, bx, y, 52, "+10 s");
+    bx = btn(s, bx, y, 62, "‹ event"); bx = btn(s, bx, y, 62, "event ›");
+    bx = btn(s, bx, y, 78, "Speed 4× ▾");
+    text(s, bx + 6, y + 15, "14:20:00", "t big"); text(s, bx + 6, y + 27, "UTC · 6 Nov 2025", "t s m"); bx += 100;
+    bx = btn(s, bx, y, 76, "Fit shown");
+    bx = btn(s, bx, y, 66, "More ▾");
+    if (withDays) { bx += 8; text(s, bx, y + 17, "Days", "t s m"); bx += 32; bx = pill(s, bx, y + 3, "06 Nov 2025 · 6 cameras · 6 incidents", "acc"); bx = pill(s, bx, y + 3, "07 Nov 2025 · 2 cameras"); }
+    rect(s, x + w - 26, y, 26, 26, "btn", 13); text(s, x + w - 13, y + 17, "?", "t b", "middle");
+    return y + 26;
+  }
+  function listPanel(s, x, y, w, h, tall) {
+    rect(s, x, y, w, h, "over", 6);
+    tick(s, x + 10, y + 10, true); text(s, x + 26, y + 20, "5 of 5 shown · 5 in view", "t b");
+    text(s, x + w - 10, y + 20, "all · none · fold ›", "t s acc", "end");
+    var ry = y + 34;
+    CAMS.forEach(function (c) {
+      tick(s, x + 10, ry + 4, true); dot(s, x + 32, ry + 9, c.n, c.sq); text(s, x + 44, ry + 13, c.name, "t b");
+      if (c.tail) { text(s, x + 44 + c.name.length * 6.6 + 6, ry + 13, c.tail, "t s m"); }
+      text(s, x + w - 10, ry + 13, "▸", "t m", "end");
+      ry += 24;
+    });
+    ry += 6;
+    var folds = ["Never inside: 2 cameras", "Not on the clock: 1 camera", "Other days: 2 cameras", "No path file: 1 video", "Waiting for their video: 105 path files · kept on the case"];
+    folds.forEach(function (f, i) {
+      text(s, x + 10, ry + 13, (tall && i < 2 ? "▾ " : "▸ ") + f, "t s m");
+      ry += 20;
+      if (tall && i < 2) {
+        ["Pat Lane", "Ro Dell"].forEach(function (nm) { tick(s, x + 24, ry + 2, false); dot(s, x + 44, ry + 7, 3); text(s, x + 56, ry + 11, nm, "t s m"); ry += 18; });
+        ry += 2;
+      }
+    });
+  }
+  function strip(s, x, y, w, h, headW, lanes, nowX) {
+    rect(s, x, y, w, h, "surf", 0);
+    var tx = x + headW; var ticks = ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"];
+    ticks.forEach(function (t, i) { var px = tx + (w - headW - 20) * (i / (ticks.length - 1)); text(s, px, y + 13, t, "t s mono m", "middle"); });
+    var laneH = Math.min(22, (h - 20) / lanes.length);
+    lanes.forEach(function (c, i) {
+      var ly = y + 22 + i * laneH;
+      rect(s, tx, ly + laneH / 2 - 3, w - headW - 20, 6, "lane", 3);
+      var from = tx + (w - headW - 20) * (c.n === 1 ? .0 : .97), to = tx + (w - headW - 20) * (c.n === 1 ? .99 : 1);
+      line(s, from, ly + laneH / 2, to, ly + laneH / 2, "bar c" + c.n);
+      if (c.head) { tick(s, x + 8, ly + laneH / 2 - 5, true); dot(s, x + 30, ly + laneH / 2, c.n, c.sq); text(s, x + 42, ly + laneH / 2 + 4, c.name, "t s b" + (c.faint ? " m" : "")); if (c.tail) { text(s, x + 42 + c.name.length * 7 + 8, ly + laneH / 2 + 4, c.tail, "t s m"); } text(s, x + headW - 8, ly + laneH / 2 + 4, "▸", "t s m", "end"); }
+      else { dot(s, x + 12, ly + laneH / 2, c.n, c.sq); text(s, x + 24, ly + laneH / 2 + 4, c.name, "t s"); }
+    });
+    var cx = tx + (w - headW - 20) * (nowX === undefined ? .02 : nowX);
+    line(s, cx, y + 16, cx, y + h, "clk");
+    rect(s, cx - 24, y + 2, 48, 14, "btn primary", 3); text(s, cx, y + 13, "14:20:00", "t s ink mono", "middle");
+    return laneH;
+  }
+  function camCard(s, x, y, w) {
+    rect(s, x, y, w, 150, "card", 6);
+    dot(s, x + 16, y + 18, 2); text(s, x + 28, y + 22, "Lee Fox", "t b"); text(s, x + 90, y + 22, "BWC2-1 · body camera · unit 2", "t s m");
+    text(s, x + 12, y + 44, "On the clock from its path file", "t s"); pill(s, x + 190, y + 32, "Clear", "acc", 44);
+    text(s, x + 12, y + 62, "14:20:03 to 14:58:11 · 38 min · 812 fixes", "t s m");
+    text(s, x + 12, y + 80, "Lights off · mic on since 14:21:04 · 30 m from Sam Roe", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 96, 70, "Play here", true); bx = btn(s, bx, y + 96, 80, "On its own"); bx = btn(s, bx, y + 96, 100, "Replace path file");
+    text(s, x + 12, y + 140, "Readings: mic on 14:21:04 · muted 14:40 to 14:44 · stood still 14:31 to 14:36", "t s m");
+  }
+  function evCard(s, x, y, w) {
+    rect(s, x, y, w, 110, "card", 6);
+    dot(s, x + 16, y + 18, 1, true); text(s, x + 28, y + 22, "Lights on · Sam Roe", "t b");
+    text(s, x + 12, y + 42, "14:22:08 until 14:31:40 · on Harbour Street near Quay Lane", "t s");
+    text(s, x + 12, y + 60, "The in-car camera's own reading, from its path file", "t s m");
+    var bx = x + 12; bx = btn(s, bx, y + 74, 70, "Play here", true); bx = btn(s, bx, y + 74, 130, "Offer to the chronology"); bx = btn(s, bx, y + 74, 28, "‹"); btn(s, bx, y + 74, 28, "›");
+  }
+
+
+  // ---- helpers of this drawing ----
+  var DAY = [
+    { n: 1, name: "Sam Roe", tail: "vehicle", sq: true, from: 0.00, to: 1.0, long: true },
+    { n: 2, name: "Lee Fox", from: 0.30, to: 0.62 },
+    { n: 3, name: "Ash Kim", from: 0.33, to: 0.70 },
+    { n: 4, name: "Kit Vale", from: 0.28, to: 0.55 },
+    { n: 5, name: "Jo Marsh", from: 0.45, to: 0.80 },
+    { n: 2, name: "Pat Lane", from: 0.52, to: 0.90 },
+    { n: 3, name: "Ro Dell", from: 0.60, to: 0.95 },
+    { n: 4, name: "Max Hale", from: 0.05, to: 0.20 }
+  ];
+  function builderBar(s, x, y, w, state) {
+    var bx = x;
+    bx = btn(s, bx, y, 150, "Day: 06 Nov 2025 \u25BE");
+    bx = btn(s, bx, y, 60, "\u25B6 Play", true); bx = btn(s, bx, y, 44, "\u2039 1 s"); bx = btn(s, bx, y, 44, "1 s \u203A");
+    text(s, bx + 6, y + 15, state.clock || "20:25:10", "t big"); if (!state.narrow) { text(s, bx + 6, y + 27, "the clock line · drag it, or scrub under the wall", "t s m"); } bx += state.narrow ? 110 : 290;
+    text(s, bx, y + 17, "Span", "t s m"); bx += 40;
+    rect(s, bx, y + 2, 170, 22, "field", 3); text(s, bx + 8, y + 17, state.span || "set by the ticks", "t s mono"); bx += 176;
+    bx = btn(s, bx, y, 44, "Set");
+    rect(s, x + w - 420, y, 150, 26, "pill", 13); text(s, x + w - 345, y + 17, (state.built || 6) + " incidents built \u25BE", "t s b", "middle");
+    btn(s, x + w - 262, y, 150, "Make the incident" + (state.n ? " · " + state.n : ""), !!state.n);
+    if (!state.n) { rect(s, x + w - 262, y, 150, 26, "veil", 4); text(s, x + w - 187, y + 17, "Make the incident", "t s m", "middle"); }
+    btn(s, x + w - 106, y, 106, "Clear the ticks");
+    return y + 26;
+  }
+  function timeline(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "8 cameras on the clock · fitted to 20:18 to 20:48 · a camera running alone for 6 hours folded at each side", "t s m");
+    var headW = 200, tx = x + headW, tw = w - headW - 30;
+    // the incident names' row of their own
+    var ny = y + 30;
+    rect(s, tx + tw * 0.10, ny, tw * 0.30, 16, "tagbg inc", 4); text(s, tx + tw * 0.25, ny + 12, "Harbour car park", "tag inc", "middle");
+    rect(s, tx + tw * 0.46, ny, tw * 0.22, 16, "tagbg inc", 4); text(s, tx + tw * 0.57, ny + 12, "Walk incident, 6 Nov", "tag inc", "middle");
+    rect(s, tx + tw * 0.72, ny + 18, tw * 0.20, 16, "tagbg inc", 4); text(s, tx + tw * 0.82, ny + 30, "Harbour Street stop, 20:25", "tag inc", "middle");
+    var ry = y + 68;
+    var ticks = ["20:18", "20:22", "20:26", "20:30", "20:34", "20:38", "20:42", "20:46"];
+    rect(s, tx - 26, ry - 6, 24, 14, "foldbox", 2); text(s, tx - 14, ry + 5, "6 h", "t s m", "middle");
+    ticks.forEach(function (t, i) { text(s, tx + tw * (i / 7), ry + 4, t, "t s mono m", "middle"); });
+    line(s, x + 8, ry + 10, x + w - 8, ry + 10, "rowline");
+    // incident columns (shaded) and the build column
+    [[0.10, 0.40, false], [0.46, 0.68, false], [0.72, 0.92, false]].forEach(function (c) { rect(s, tx + tw * c[0], ry + 14, tw * (c[1] - c[0]), h - 100, "colshade inc", 0); });
+    if (state.span) { rect(s, tx + tw * state.span[0], ry + 14, tw * (state.span[1] - state.span[0]), h - 100, "colshade" + (state.set ? " set" : ""), 0); rect(s, tx + tw * state.span[0] - 3, ry + 14, 6, h - 100, "hdl", 2); rect(s, tx + tw * state.span[1] - 3, ry + 14, 6, h - 100, "hdl", 2); }
+    var laneH = 22;
+    DAY.forEach(function (c, i) {
+      var ly = ry + 20 + i * laneH, cy = ly + laneH / 2;
+      var on = state.ticked && state.ticked.indexOf(c.name) >= 0, near = state.near && state.near.indexOf(c.name) >= 0;
+      if (on) { rect(s, x + 4, ly, headW - 8, laneH, "sel", 4); }
+      if (near) { el(s, "circle", { cx: x + 16, cy: cy, r: 9, "class": "ring" }); }
+      tick(s, x + 10, cy - 5, !!on); dot(s, x + 32, cy, c.n, c.sq);
+      text(s, x + 44, cy + 4, c.name, "t s b"); if (c.tail) { text(s, x + 44 + c.name.length * 7 + 8, cy + 4, c.tail, "t s m"); }
+      if (near) { text(s, x + headW - 8, cy + 4, "near \u00B7 tick", "t s acc", "end"); }
+      rect(s, tx, cy - 3, tw, 6, "lane", 3);
+      var a = tx + tw * (c.long ? 0 : c.from), b = tx + tw * (c.long ? 1 : c.to);
+      line(s, a, cy, b, cy, "bar c" + c.n);
+      if (c.long) { text(s, tx + 6, cy - 6, "runs the whole day", "t s m"); }
+    });
+    var cx = tx + tw * (state.at || 0.33);
+    line(s, cx, ry + 12, cx, y + h - 26, "clk");
+    rect(s, cx - 30, y + h - 24, 60, 16, "btn primary", 3); text(s, cx, y + h - 12, state.clock || "20:25:10", "t s ink mono", "middle");
+    text(s, x + 12, y + h - 10, "Not on the clock: 1 video \u00B7 tick it in anyway \u25B8", "t s m");
+    return { tx: tx, tw: tw };
+  }
+  function tile(s, x, y, w, h, c, opts) {
+    rect(s, x, y, w, h, "tile" + (opts.faint ? " blank" : "") + (opts.on ? " on" : ""), 6);
+    if (!opts.faint) {
+      rect(s, x + 1, y + 1, w - 2, h - 30, "frame", 0);
+      // a stand-in for the picture: the ground, a figure
+      rect(s, x + w * 0.2, y + h * 0.15, w * 0.6, h * 0.5, "car", 4);
+      el(s, "circle", { cx: x + w * 0.5, cy: y + h * 0.42, r: h * 0.12, "class": "person" });
+      el(s, "circle", { cx: x + w * 0.35, cy: y + h * 0.5, r: h * 0.1, "class": "person" });
+    } else {
+      text(s, x + w / 2, y + h * 0.4, opts.words || "", "t s m", "middle");
+    }
+    rect(s, x + 1, y + h - 29, w - 2, 28, "tilebar", 0);
+    dot(s, x + 14, y + h - 15, c.n, c.sq); text(s, x + 26, y + h - 11, c.name, "t s b");
+    text(s, x + w - 10, y + h - 11, opts.foot || "", "t s m", "end");
+  }
+  function wall(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, state.ticked && state.ticked.length ? "Pictures at " + (state.clock || "20:25:10") + " \u00B7 " + state.ticked.length + " ticked" + (state.near ? " \u00B7 1 near" : "") : "The wall: tick cameras on the timeline, or press them on the map, and they show here at the clock line", "t s b");
+    text(s, x + w - 12, y + 20, state.ticked && state.ticked.length ? "Tick everyone running now \u00B7 Tick the near \u00B7 Play runs them in step" : "", "t s acc", "end");
+    var cams = (state.ticked || []).map(function (n) { return DAY.filter(function (c) { return c.name === n; })[0]; });
+    var tw = 300, th = h - 60, gap = 12, tx = x + 12, ty = y + 32;
+    cams.forEach(function (c, i) { tile(s, tx + i * (tw + gap), ty, tw, th, c, { foot: (i === 0 ? "4 min 52 s in" : "2 min 14 s in") + " \u00B7 untick" }); });
+    (state.near || []).forEach(function (n, i) { var c = DAY.filter(function (d) { return d.name === n; })[0]; tile(s, tx + (cams.length + i) * (tw + gap), ty, tw, th, c, { faint: true, words: "within 50 m of " + cams[0].name, foot: "near \u00B7 tick" }); });
+    if (!cams.length) { for (var i = 0; i < 4; i++) { rect(s, tx + i * (tw + gap), ty, tw, th, "tile blank", 6); } }
+    // the scrub under the wall
+    var sy = y + h - 18;
+    rect(s, x + 12, sy - 3, w - 24, 6, "lane", 3);
+    rect(s, x + 12 + (w - 24) * (state.at || 0.33) - 5, sy - 7, 10, 14, "cursor", 3);
+    text(s, x + 12, sy - 10, "20:18", "t s mono m"); text(s, x + w - 12, sy - 10, "20:48", "t s mono m", "end");
+  }
+  function mapPanel(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    ground(s, x + 1, y + 1, w - 2, h - 2);
+    var pts = [[0.25, 0.55, 1, true], [0.42, 0.62, 2], [0.47, 0.58, 3], [0.6, 0.3, 4], [0.7, 0.75, 5], [0.3, 0.3, 2], [0.8, 0.5, 3]];
+    pts.forEach(function (p, i) {
+      var c = DAY[i]; var on = state.ticked && state.ticked.indexOf(c.name) >= 0, near = state.near && state.near.indexOf(c.name) >= 0;
+      var px = x + w * p[0], py = y + h * p[1];
+      if (!on) { el(s, "g", { opacity: near ? 1 : 0.35 }); }
+      if (near) { el(s, "circle", { cx: px, cy: py, r: 14, "class": "ring" }); }
+      dot(s, px, py, c.n, c.sq);
+      rect(s, px + 8, py - 8, c.name.length * 6.4 + 10, 16, "over", 8); text(s, px + 13, py + 4, c.name, "t s b");
+    });
+    text(s, x + 10, y + 20, state.short ? "At " + state.clock + " \u00B7 the ticked lit, the rest faint \u00B7 press a marker to tick" : "At " + (state.clock || "20:25:10") + " \u00B7 ticked lit, the rest faint \u00B7 a ring: within 50 m of a ticked camera \u00B7 press a marker to tick", "t s m");
+    text(s, x + 80, y + h - 8, "Open the Map page \u203A", "t s acc");
+  }
+  function yourIncident(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "YOUR INCIDENT", "t eye"); text(s, x + w - 12, y + 20, (state.n || 0) + " of 8", "t s b", "end");
+    if (!state.n) { text(s, x + 12, y + 44, "Tick cameras on the timeline, or press one on the map.", "t s m"); return; }
+    rect(s, x + 12, y + 30, w - 24, 22, "field", 3); text(s, x + 20, y + 45, state.name || "Harbour Street stop, 20:25", "t s");
+    var ly = y + 62;
+    (state.ticked || []).forEach(function (n) { var c = DAY.filter(function (d) { return d.name === n; })[0]; dot(s, x + 18, ly + 6, c.n, c.sq); text(s, x + 30, ly + 10, c.name + " \u00B7 20:25 to 20:38 \u00B7 the clock in its picture", "t s"); text(s, x + w - 12, ly + 10, "untick", "t s acc", "end"); ly += 20; });
+    text(s, x + 12, ly + 12, "Span " + (state.span2 || "20:25:10 to 20:38:17") + " \u00B7 13 min \u00B7 drag the handles or Set", "t s m");
+    btn(s, x + 12, ly + 22, 140, "Make the incident", true); btn(s, x + 160, ly + 22, 110, "Clear the ticks");
+  }
+  function builtList(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "BUILT ON THIS DAY \u00B7 " + (state.builtRows || 3), "t eye"); text(s, x + w - 12, y + 20, "every day \u25BE", "t s acc", "end");
+    var rows = [["Harbour car park", "3 cameras \u00B7 20:25 to 20:38 \u00B7 11 events \u00B7 by hand"], ["Walk incident, 6 Nov", "2 cameras \u00B7 20:25 to 20:38 \u00B7 7 events \u00B7 from the chronology"], ["Harbour Street stop, 20:25", "2 cameras \u00B7 20:25 to 20:38 \u00B7 7 events \u00B7 from the strip"]];
+    if (state.newRow) { rows.unshift([state.newRow, "3 cameras \u00B7 20:25 to 20:38 \u00B7 0 events \u00B7 just now, from the builder"]); }
+    var ry = y + 30;
+    rows.forEach(function (r, i) {
+      if (i === 0 && state.newRow) { rect(s, x + 6, ry - 4, w - 12, 54, "sel", 4); }
+      text(s, x + 12, ry + 10, r[0], "t s b"); text(s, x + 12, ry + 26, r[1], "t s m");
+      rect(s, x + 12, ry + 32, w * 0.45, 8, "lane", 3); line(s, x + 12 + w * 0.12, ry + 36, x + 12 + w * 0.35, ry + 36, "bar c2"); line(s, x + 12 + w * 0.14, ry + 36, x + 12 + w * 0.40, ry + 36, "bar c3");
+      text(s, x + w - 12, ry + 26, "Open \u00B7 On map" + (state.n ? " \u00B7 Add the ticked" : ""), "t s acc", "end");
+      ry += 58;
+    });
+  }
+  function desk(s, state) {
+    var W = 1912; var top = pageTop(s, W); var x = top.x, y = top.y + 8;
+    y = builderBar(s, x, y, W - x - 24, state) + 10;
+    var leftW = 1120, rightX = x + leftW + 12, rightW = W - rightX - 24, bottom = 1034 - 12;
+    var tlH = 320; timeline(s, x, y, leftW, tlH, state);
+    wall(s, x, y + tlH + 10, leftW, bottom - (y + tlH + 10), state);
+    var mapH = 330; mapPanel(s, rightX, y, rightW, mapH, state);
+    var yiH = state.n ? 190 : 70; yourIncident(s, rightX, y + mapH + 10, rightW, yiH, state);
+    builtList(s, rightX, y + mapH + 10 + yiH + 10, rightW, bottom - (y + mapH + 10 + yiH + 10), state);
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  }
+
+  // ---- Figure A: today ----
+  (function () {
+    var s = document.getElementById("fig-a"); var W = 1912;
+    var top = pageTop(s, W); var x = top.x, y = top.y + 8;
+    var bx = x; bx = pill(s, bx, y, "8 cameras on the clock", "", 160); bx = pill(s, bx, y, "6 incidents built \u25BE", "acc", 150);
+    text(s, x + 700, y + 14, "Span", "t s m"); rect(s, x + 740, y, 60, 20, "field", 3); text(s, x + 806, y + 14, "to", "t s m"); rect(s, x + 826, y, 60, 20, "field", 3); btn(s, x + 894, y - 3, 40, "Set");
+    text(s, x + 950, y + 14, "Set a span, or tick cameras on the strip, to build an incident.", "t s m");
+    y += 34;
+    var leftW = 1120, rightX = x + leftW + 12, rightW = W - rightX - 24;
+    rect(s, x, y, leftW, 300, "surf", 8);
+    text(s, x + 12, y + 20, "Days   06 Nov 2025 \u00B7 8 videos \u00B7 13 notes", "t s");
+    var tx = x + 200, tw = leftW - 230;
+    ["14:20", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "20:40"].forEach(function (t, i) { text(s, tx + tw * (i / 7), y + 50, t, "t s mono m", "middle"); });
+    text(s, tx + tw * 0.5, y + 66, "drag across here to set a span", "t s m", "middle");
+    [[0.95, 0.99, "Harbour car park"], [0.955, 0.985, "Walk incident, 6 Nov"], [0.96, 0.99, "Harbour Street stop, 20:25"]].forEach(function (c, i) { rect(s, tx + tw * c[0], y + 74, tw * (c[1] - c[0]) + 8, 180, "colshade inc", 0); rect(s, tx + tw * c[0] - 60 + i * 30, y + 60 + i * 2, 120, 14, "tagbg inc", 3); text(s, tx + tw * c[0] + i * 30, y + 71 + i * 2, c[2], "tag inc", "middle"); });
+    DAY.forEach(function (c, i) { var cy = y + 90 + i * 22; tick(s, x + 10, cy - 5, false); dot(s, x + 32, cy, c.n, c.sq); text(s, x + 44, cy + 4, c.name, "t s b"); text(s, x + 150, cy + 4, c.long ? "378 min" : "13 min", "t s m"); rect(s, tx, cy - 3, tw, 6, "lane", 3); line(s, tx + tw * (c.long ? 0 : 0.95), cy, tx + tw * (c.long ? 1 : 0.99), cy, "bar c" + c.n); });
+    text(s, x + 12, y + 290, "Tick a camera to build; press a name to read it.  ?", "t s m");
+    rect(s, x, y + 310, leftW, 1034 - 12 - (y + 310), "surf", 8); ground(s, x + 1, y + 311, leftW - 2, 1034 - 12 - (y + 311) - 1); text(s, x + leftW / 2, y + 360, "the small map, empty until a tick", "t s m", "middle");
+    rect(s, rightX, y, rightW, 1034 - 12 - y, "surf", 8);
+    text(s, rightX + 12, y + 22, "6 Nov 2025", "t b"); text(s, rightX + 12, y + 40, "8 cameras on the clock \u00B7 6 incidents built", "t s m"); text(s, rightX + 12, y + 64, "INCIDENTS BUILT ON THIS DAY", "t eye");
+    var ry = y + 80; ["Harbour car park", "Walk incident, 6 Nov", "Harbour Street stop, 20:25"].forEach(function (n) { rect(s, rightX + 12, ry, 60, 40, "still", 3); text(s, rightX + 80, ry + 12, n, "t s b"); text(s, rightX + 80, ry + 28, "3 cameras \u00B7 11/06/2025 20:25:10 to", "t s m"); text(s, rightX + 80, ry + 42, "20:38:51 \u00B7 11 events \u00B7 built by test", "t s m"); text(s, rightX + rightW - 12, ry + 28, "Open  On map", "t s acc", "end"); ry += 70; });
+    rect(s, x - 6, y - 40, leftW + 12, 90, "fault"); text(s, x + 8, y - 46, "three rows before the day: counts, the span box, the hint", "faulttxt");
+    rect(s, tx + tw * 0.9, y + 40, tw * 0.12, 220, "fault"); text(s, tx + tw * 0.9 - 8, y + 268, "the whole day in the ruler, the work in its last 5 %, the names on top of each other", "faulttxt", "end");
+    rect(s, rightX - 6, y - 6, rightW + 12, 1034 - y, "fault"); text(s, rightX + 8, 1034 - 20, "the Reader: words where pictures would decide", "faulttxt");
+    line(s, 0, 1034, W, 1034, "fold");
+  })();
+
+  (function () { desk(document.getElementById("fig-b"), { n: 0, at: 0.33, clock: "20:25:10", built: 6 }); })();
+  (function () { desk(document.getElementById("fig-c"), { n: 2, ticked: ["Lee Fox", "Kit Vale"], span: [0.28, 0.62], at: 0.33, clock: "20:25:10", built: 6 }); })();
+  (function () { desk(document.getElementById("fig-d"), { n: 2, ticked: ["Lee Fox", "Kit Vale"], near: ["Ash Kim"], span: [0.28, 0.62], at: 0.41, clock: "20:27:40", built: 6 }); })();
+  (function () { desk(document.getElementById("fig-e"), { n: 3, ticked: ["Lee Fox", "Kit Vale", "Ash Kim"], span: [0.28, 0.70], at: 0.41, clock: "20:27:40", built: 7, name: "Harbour Street stop, 20:25", newRow: "Harbour Street stop, 20:25 (new)", builtRows: 4 }); })();
+
+  // ---- Direction 1 built out: many cameras, the wall plays ----
+  var MANYDAY = (function () {
+    var names = ["Lee Fox", "Kit Vale", "Ash Kim", "Jo Marsh", "Pat Lane", "Ro Dell", "Max Hale", "Dee Nash", "Sam Roe", "Val Oak", "Ty Brook", "Cam Rhys", "Bea Lund", "Gil Ford", "Ira Moss", "Nia Cole", "Oli Tate", "Rae Finn", "Sol Kerr", "Uma Vos", "Wes Lamb", "Zed Pike"];
+    return names.map(function (n, i) { return { n: (i % 5) + 1, name: n, sq: i === 8, from: 0.1 + (i * 0.037) % 0.5, to: 0.35 + (i * 0.053) % 0.6 }; });
+  })();
+  function videoTile(s, x, y, w, h, c, opts) {
+    rect(s, x, y, w, h, "tile" + (opts.focus ? " on" : ""), 6);
+    rect(s, x + 1, y + 1, w - 2, h - 26, "frame", 0);
+    rect(s, x + w * 0.18, y + h * 0.18, w * 0.64, h * 0.45, "car", 4);
+    el(s, "circle", { cx: x + w * 0.5, cy: y + h * 0.4, r: h * 0.1, "class": "person" });
+    el(s, "circle", { cx: x + w * 0.36, cy: y + h * 0.48, r: h * 0.08, "class": "person" });
+    rect(s, x + 6, y + h - 32, w - 12, 3, "lane", 1); rect(s, x + 6, y + h - 32, (w - 12) * (opts.at || 0.3), 3, "clk", 1);
+    rect(s, x + 1, y + h - 25, w - 2, 24, "tilebar", 0);
+    dot(s, x + 12, y + h - 13, c.n, c.sq); text(s, x + 22, y + h - 9, c.name, "t s b");
+    if (opts.sound) { text(s, x + 22 + c.name.length * 7 + 6, y + h - 9, "\u266B sound", "t s acc"); }
+    text(s, x + w - 8, y + h - 9, w > 220 ? (opts.foot || "2 min 14 s in") + " \u00B7 untick" : "untick", "t s m", "end");
+  }
+  function wallTransport(s, x, y, w, state) {
+    var bx = x + 10;
+    bx = btn(s, bx, y, 62, state.playing ? "\u23F8 Pause" : "\u25B6 Play", true); bx = btn(s, bx, y, 52, "\u2039 10 s"); bx = btn(s, bx, y, 52, "10 s \u203A"); bx = btn(s, bx, y, 78, "Speed 1\u00D7 \u25BE");
+    text(s, bx + 6, y + 15, state.clock || "20:27:40", "t big"); bx += 130;
+    var words = state.layout === "focus" ? "Focus \u00B7 press the large tile for the grid" : "Grid \u00B7 press a tile to focus on it";
+    if (w > 900) { text(s, bx, y + 17, words, "t s m"); bx += 340; }
+    rect(s, bx, y + 10, w - (bx - x) - 12, 6, "lane", 3);
+    rect(s, bx + (w - (bx - x) - 12) * (state.at || 0.41) - 5, y + 6, 10, 14, "cursor", 3);
+    text(s, bx, y + 30, "20:18", "t s mono m"); text(s, x + w - 12, y + 30, "20:48", "t s mono m", "end");
+  }
+  function videoWall(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "The wall \u00B7 8 of 8 playing in step at " + (state.clock || "20:27:40"), "t s b");
+    text(s, x + w - 12, y + 20, "Tick everyone running now \u00B7 Tick the near", "t s acc", "end");
+    var cams = MANYDAY.slice(0, 8), gap = 10, top = y + 30, avail = h - 30 - 48;
+    if (state.layout === "focus") {
+      var bigH = avail - 10 - 96, bigW = Math.round(bigH * 16 / 9);
+      videoTile(s, x + 12, top, bigW, bigH, cams[0], { focus: true, sound: true, at: 0.41 });
+      rect(s, x + 12 + bigW + 10, top, w - bigW - 34, 60, "said", 6); text(s, x + 12 + bigW + 22, top + 20, "SAID ON LEE FOX", "t eye"); text(s, x + 12 + bigW + 22, top + 40, "\u201CStep out of the vehicle for me, please.\u201D", "t s");
+      var sw = Math.floor((w - 24 - gap * 6) / 7);
+      cams.slice(1).forEach(function (c, i) { videoTile(s, x + 12 + i * (sw + gap), top + bigH + 10, sw, 96, c, { at: 0.41 }); });
+    } else {
+      var cols = 4, rows = 2, tw = Math.floor((w - 24 - gap * (cols - 1)) / cols), th = Math.floor((avail - gap) / rows);
+      cams.forEach(function (c, i) { var col = i % cols, row = Math.floor(i / cols); videoTile(s, x + 12 + col * (tw + gap), top + row * (th + gap), tw, th, c, { at: 0.41, sound: i === 0 }); });
+    }
+    wallTransport(s, x, y + h - 40, w, state);
+  }
+  function scrollingTimeline(s, x, y, w, h, state) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "22 cameras on the clock \u00B7 fitted to 20:18 to 20:48 \u00B7 the 8 ticked held at the top, 14 more below", "t s m");
+    var headW = 200, tx = x + headW, tw = w - headW - 40;
+    var ny = y + 30;
+    rect(s, tx + tw * 0.10, ny, tw * 0.30, 16, "tagbg inc", 4); text(s, tx + tw * 0.25, ny + 12, "Harbour car park", "tag inc", "middle");
+    rect(s, tx + tw * 0.46, ny, tw * 0.22, 16, "tagbg inc", 4); text(s, tx + tw * 0.57, ny + 12, "Walk incident, 6 Nov", "tag inc", "middle");
+    var ry = y + 58;
+    ["20:18", "20:22", "20:26", "20:30", "20:34", "20:38", "20:42", "20:46"].forEach(function (t2, i) { text(s, tx + tw * (i / 7), ry + 4, t2, "t s mono m", "middle"); });
+    line(s, x + 8, ry + 10, x + w - 8, ry + 10, "rowline");
+    rect(s, tx + tw * 0.28, ry + 14, tw * 0.42, h - 90, "colshade", 0); rect(s, tx + tw * 0.28 - 3, ry + 14, 6, h - 90, "hdl", 2); rect(s, tx + tw * 0.70 - 3, ry + 14, 6, h - 90, "hdl", 2);
+    var laneH = state.laneH || 20, fit = Math.floor((h - 90) / laneH);
+    MANYDAY.slice(0, fit).forEach(function (c, i) {
+      var ly = ry + 16 + i * laneH, cy = ly + laneH / 2, on = i < 8;
+      if (on) { rect(s, x + 4, ly, headW - 8, laneH, "sel", 4); }
+      tick(s, x + 10, cy - 5, on); dot(s, x + 32, cy, c.n, c.sq); text(s, x + 44, cy + 4, c.name, "t s b");
+      rect(s, tx, cy - 3, tw, 6, "lane", 3); line(s, tx + tw * c.from, cy, tx + tw * c.to, cy, "bar c" + c.n);
+    });
+    if (fit > 8) { line(s, x + 8, ry + 16 + 8 * laneH - 2, x + w - 8, ry + 16 + 8 * laneH - 2, "clk"); }
+    rect(s, x + w - 24, ry + 16, 10, h - 100, "scroll", 5); rect(s, x + w - 24, ry + 16, 10, (h - 100) * Math.min(fit, 22) / 22, "btn primary", 5);
+    var cx = tx + tw * (state.at || 0.41);
+    line(s, cx, ry + 12, cx, y + h - 8, "clk");
+    rect(s, cx - 30, y + h - 22, 60, 16, "btn primary", 3); text(s, cx, y + h - 10, state.clock || "20:27:40", "t s ink mono", "middle");
+  }
+  function yourIncidentMany(s, x, y, w, h) {
+    rect(s, x, y, w, h, "surf", 8);
+    text(s, x + 12, y + 20, "YOUR INCIDENT", "t eye"); text(s, x + w - 12, y + 20, "8 of 8 \u00B7 the most an incident holds", "t s b", "end");
+    rect(s, x + 12, y + 30, w - 24, 22, "field", 3); text(s, x + 20, y + 45, "Harbour Street stop, 20:25", "t s");
+    var ly = y + 62;
+    MANYDAY.slice(0, 8).forEach(function (c, i) { if (i % 2 === 0) { dot(s, x + 18, ly + 6, c.n, c.sq); text(s, x + 30, ly + 10, c.name, "t s"); } else { dot(s, x + w / 2 + 6, ly + 6, c.n, c.sq); text(s, x + w / 2 + 18, ly + 10, c.name, "t s"); ly += 18; } });
+    text(s, x + 12, ly + 14, "Span 20:25:10 to 20:38:17 \u00B7 13 min \u00B7 the handles or Set", "t s m");
+    btn(s, x + 12, ly + 24, 140, "Make the incident", true); btn(s, x + 160, ly + 24, 110, "Clear the ticks");
+  }
+  function deskMany(s, W, H, layout) {
+    var top = pageTop(s, W); var x = top.x, y = top.y + 8;
+    y = builderBar(s, x, y, W - x - 24, { n: 8, span: "20:25:10 to 20:38:17", clock: "20:27:40", built: 6, narrow: W < 1500 }) + 10;
+    var leftW = Math.round((W - x - 24) * 0.66), rightX = x + leftW + 12, rightW = W - rightX - 24, bottom = H - 12;
+    var tlH = H > 900 ? 318 : 200;
+    scrollingTimeline(s, x, y, leftW, tlH, { at: 0.41, clock: "20:27:40", laneH: H > 900 ? 20 : 18 });
+    videoWall(s, x, y + tlH + 10, leftW, bottom - (y + tlH + 10), { layout: layout, clock: "20:27:40", at: 0.41, playing: true });
+    var mapH = H > 900 ? 300 : 190; mapPanel(s, rightX, y, rightW, mapH, { ticked: DAY.map(function (c) { return c.name; }), clock: "20:27:40", short: true });
+    var yiH = H > 900 ? 190 : 196; yourIncidentMany(s, rightX, y + mapH + 10, rightW, yiH);
+    builtList(s, rightX, y + mapH + 10 + yiH + 10, rightW, bottom - (y + mapH + 10 + yiH + 10), { n: 8 });
+    line(s, 0, H, W, H, "fold"); text(s, W - 30, H - 10, "the window's foot at " + H, "foldtxt", "end");
+  }
+  (function () { deskMany(document.getElementById("fig-h"), 1912, 1034, "grid"); })();
+  (function () { deskMany(document.getElementById("fig-i"), 1912, 1034, "focus"); })();
+  (function () { deskMany(document.getElementById("fig-j"), 1366, 768, "grid"); })();
+
+  // ---- Direction 2: the map leads ----
+  (function () {
+    var s = document.getElementById("fig-f"); var W = 1912;
+    var top = pageTop(s, W); var x = top.x, y = top.y + 8, w = W - x - 24;
+    var mapH = 430;
+    rect(s, x, y, w, mapH, "surf", 8); ground(s, x + 1, y + 1, w - 2, mapH - 2);
+    rect(s, x + 1, y + 1, w - 2, 46, "veil", 0);
+    var bx = x + 10; bx = btn(s, bx, y + 10, 60, "\u25B6 Play", true); bx = btn(s, bx, y + 10, 44, "\u2039 1 s"); bx = btn(s, bx, y + 10, 44, "1 s \u203A"); text(s, bx + 6, y + 25, "20:27:40", "t big"); bx += 110; bx = btn(s, bx, y + 10, 120, "Within a circle"); bx = btn(s, bx, y + 10, 100, "Tick the near"); bx = btn(s, bx, y + 10, 150, "Day: 06 Nov 2025 \u25BE");
+    rect(s, x + 300, y + 60, w - 900, 6, "lane", 3); rect(s, x + 300 + (w - 900) * 0.41 - 5, y + 56, 10, 14, "cursor", 3);
+    el(s, "circle", { cx: x + w * 0.45, cy: y + mapH * 0.6, r: 110, "class": "ring" });
+    [[0.25, 0.55, 1, true], [0.42, 0.62, 2], [0.47, 0.58, 3], [0.6, 0.3, 4], [0.7, 0.75, 5], [0.3, 0.3, 2], [0.8, 0.5, 3]].forEach(function (p, i) { var c = DAY[i]; var px = x + w * p[0], py = y + mapH * p[1]; dot(s, px, py, c.n, c.sq); rect(s, px + 8, py - 8, c.name.length * 6.4 + 10, 16, "over", 8); text(s, px + 13, py + 4, c.name, "t s b"); });
+    rect(s, x + w - 330, y + 56, 320, mapH - 66, "over", 6);
+    text(s, x + w - 318, y + 76, "YOUR INCIDENT \u00B7 3 of 8", "t eye"); text(s, x + w - 170, y + 76, "Built on this day \u203A", "t s acc", "end");
+    ["Lee Fox", "Kit Vale", "Ash Kim"].forEach(function (n, i) { text(s, x + w - 318, y + 100 + i * 20, "\u25CF " + n + " \u00B7 inside the circle 20:25 to 20:38", "t s"); });
+    btn(s, x + w - 318, y + 170, 140, "Make the incident", true);
+    var wy = y + mapH + 10, wH = 230;
+    rect(s, x, wy, w, wH, "surf", 8); text(s, x + 12, wy + 20, "Pictures at 20:27:40 \u00B7 3 ticked", "t s b");
+    ["Lee Fox", "Kit Vale", "Ash Kim"].forEach(function (n, i) { var c = DAY.filter(function (d) { return d.name === n; })[0]; tile(s, x + 12 + i * 312, wy + 30, 300, wH - 42, c, { foot: "2 min 14 s in \u00B7 untick" }); });
+    var ly = wy + wH + 10;
+    rect(s, x, ly, w, 1034 - 12 - ly, "surf", 8); text(s, x + 12, ly + 20, "The lanes: 8 cameras \u00B7 three ticked \u00B7 scroll for the rest", "t s m");
+    DAY.slice(0, 3).forEach(function (c, i) { var cy = ly + 40 + i * 20; tick(s, x + 10, cy - 5, i > 0); dot(s, x + 32, cy, c.n, c.sq); text(s, x + 44, cy + 4, c.name, "t s b"); rect(s, x + 200, cy - 3, w - 230, 6, "lane", 3); line(s, x + 200 + (w - 230) * (c.long ? 0 : c.from), cy, x + 200 + (w - 230) * (c.long ? 1 : c.to), cy, "bar c" + c.n); });
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+  // ---- Direction 3: four steps ----
+  (function () {
+    var s = document.getElementById("fig-g"); var W = 1912;
+    var top = pageTop(s, W); var x = top.x, y = top.y + 8, w = W - x - 24;
+    ["1 When", "2 Who", "3 Check", "4 Make"].forEach(function (st, i) { var on = i === 1; rect(s, x + i * 230, y, 220, 30, on ? "btn primary" : "btn", 15); text(s, x + i * 230 + 110, y + 20, st, on ? "t s ink" : "t s m", "middle"); });
+    text(s, x + 940, y + 20, "20:18 to 20:48 on 06 Nov 2025 \u00B7 8 cameras ran in it", "t s m");
+    rect(s, x + 1300, y + 10, w - 1300, 8, "lane", 4); rect(s, x + 1300 + (w - 1300) * 0.78, y + 8, (w - 1300) * 0.08, 12, "win", 2);
+    y += 44;
+    rect(s, x, y, w, 1034 - 12 - y - 50, "surf", 8);
+    text(s, x + 12, y + 22, "WHO WAS THERE \u00B7 every camera that ran in the stretch, as it looked at 20:27:40 \u00B7 tick the ones that belong", "t eye");
+    var tw = 300, th = 200;
+    DAY.forEach(function (c, i) { var col = i % 5, row = Math.floor(i / 5); var tx = x + 12 + col * (tw + 14), ty = y + 36 + row * (th + 14); tile(s, tx, ty, tw, th, c, { foot: (i < 3 ? "ticked" : "tick"), on: i < 3 }); if (i === 3) { el(s, "circle", { cx: tx + 16, cy: ty + 16, r: 10, "class": "ring" }); text(s, tx + 32, ty + 20, "near Lee Fox", "t s acc"); } });
+    btn(s, x + w - 140, 1034 - 50, 128, "Next: Check \u203A", true); btn(s, x, 1034 - 50, 100, "\u2039 Back: When");
+    line(s, 0, 1034, W, 1034, "fold"); text(s, W - 30, 1024, "the window's foot at 1034", "foldtxt", "end");
+  })();
+
+})();
+</script>
+</body>
+</html>

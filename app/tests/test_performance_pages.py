@@ -510,7 +510,7 @@ def test_the_case_page_asks_a_handful_and_never_stats(owner, client, monkeypatch
     page = answer.content.decode()
     # The incident is read in the strip's Reader (Phase 12 chapter 7); the
     # page's lead counts it, and the lead's counts ask a handful more.
-    assert "1 incident" in page and 'id="strip-reader"' in page
+    assert "1 incident" in page and 'id="desk-yours"' in page
     assert count < 120, count
 
 

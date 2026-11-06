@@ -155,10 +155,11 @@ def test_the_bars_carry_their_zero_and_the_picker_rows_a_still(owner, a_case):
 
 def test_the_script_and_the_stylesheet_draw_the_stills():
     script = (HERE / "static" / "chronology.js").read_text(encoding="utf-8")
-    assert "function stills(root)" in script and "function stillsHtml" in script
-    assert "var STILLS_MOST = 6, STILLS_AT_ONCE = 8;" in script
-    assert '/still?t=" + Math.max(0, moment - (b.zero || 0)).toFixed(1)' in script
-    assert "more in the picker" in script
+    # The cards' stills and the lanes' pictures left with the desk (Phase 12
+    # chapter 10, v1.212.0): the loader stays for the incidents' list and the
+    # not-on-the-clock panel, the server cuts the frames as before.
+    assert "function stills(root)" in script and "function stillsHtml" not in script
+    assert "var STILLS_AT_ONCE = 8;" in script
     assert "IntersectionObserver" in script
     # Both sheets carry the still column, and the minute's read redraws
     # nothing while the day is unchanged.

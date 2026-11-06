@@ -23,6 +23,9 @@ CODE = HERE / "app"
 # Read by Django, by the test settings, or by the container's own start-up,
 # and not the office's to set in .env.
 NOT_THE_OFFICE_S = {
+    # The local walk's switch (docs/local-walk.md, v1.212.0): set by
+    # run_local.sh alone, never by compose, so no container ever sees it.
+    "APP_LOCAL_MEDIA",
     "APP_DATA_DIR",
     "DJANGO_SETTINGS_MODULE",
     "GUNICORN_THREADS",

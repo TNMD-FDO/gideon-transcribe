@@ -17,7 +17,11 @@ its own, filled with a fictional office.
   `app/static-collected/`, is ignored by git.
 - No media worker, no WhisperX, no engine, no mail and no directory: the
   pages that need them show their "not installed" or "not available"
-  states, which are themselves worth looking at. Nothing plays.
+  states, which are themselves worth looking at. Nothing plays, unless
+  you put real playback copies in the recordings' folders: `run_local.sh`
+  sets `APP_LOCAL_MEDIA`, and with it Django serves `/case-media/` itself
+  with byte ranges (`core/local_media.py`), so the Incidents tab's wall and
+  the Preview can play and seek. A server never sets it.
 
 ## The fictional office
 

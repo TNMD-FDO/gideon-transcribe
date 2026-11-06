@@ -77,13 +77,14 @@
   // longest inside first, up to the Admin's Most cameras in an incident.
   S.circleTicks = {};
   function most() { return (S.told && S.told.most) || 8; }
+  // Pick mode from v1.212.0 (chapter 10): every camera of the day is drawn,
+  // the ticked lit with their paths and the rest faint with none; nothing
+  // is hidden, so a press on any marker can tick it.
+  function pickedSet() { var wanted = {}; S.pick.forEach(function (id) { wanted[id] = true; }); var out = {}; S.cams.forEach(function (c) { if (wanted[c.id] || c.streams.some(function (s) { return wanted[s.id]; })) { out[c.id] = true; } }); return out; }
   function applyPick() {
     if (!PICK || !S.loaded) { return; }
     var wanted = {}; S.pick.forEach(function (id) { wanted[id] = true; });
     S.hidden = {};
-    S.cams.forEach(function (c) { if (!wanted[c.id]) { S.hidden[c.id] = true; } });
-    var empty = document.getElementById("map-pick-empty");
-    if (empty) { empty.hidden = S.pick.some(function (id) { return S.byId[id]; }); }
     // The clock sits where the strip's clock line is (chapter 9), else at
     // the first ticked camera's start, so every ticked marker is on the map
     // and not "before".
@@ -153,8 +154,8 @@
     return fetch(url, { credentials: "same-origin" }).then(function (a) { return a.json(); }).then(function (told) {
       S.told = told; S.day = told.day || ""; S.loaded = true;
       prepare();
-      // Pick mode: only the strip's ticked cameras are drawn, from the first reading.
-      if (PICK) { var picked = {}; S.pick.forEach(function (id) { picked[id] = true; }); S.hidden = {}; S.cams.forEach(function (c) { if (!picked[c.id]) { S.hidden[c.id] = true; } }); }
+      // Pick mode: every camera of the day is drawn from the first reading, the ticked lit.
+      if (PICK) { S.hidden = {}; }
       // The address may name a camera or an incident on another day than
       // the one the server chose: decided once, before the first drawing.
       if (!S.dayChosen) { S.dayChosen = true; var wanted = wantedDay(); if (wanted) { S.day = wanted; } }
@@ -580,7 +581,11 @@
   // Whole paths read strong; under markers or trails the whole path lies
   // faint, or not at all when "faint paths under" is unticked (chapter 6).
   function pathsOpacity() { return S.show === "whole" ? 0.9 : (S.faint ? 0.35 : 0); }
-  function hiddenFilter() { var ids = Object.keys(S.hidden); if (INC || !ids.length) { return null; } return ["!", ["in", ["get", "id"], ["literal", ids]]]; }
+  function hiddenFilter() {
+    // Pick mode (chapter 10): only the ticked cameras' paths are drawn.
+    if (PICK) { var picked = Object.keys(pickedSet()); return ["in", ["get", "id"], ["literal", picked]]; }
+    var ids = Object.keys(S.hidden); if (INC || !ids.length) { return null; } return ["!", ["in", ["get", "id"], ["literal", ids]]];
+  }
   function drawMarkers() {
     Object.keys(markers).forEach(function (id) { markers[id].remove(); });
     markers = {};
@@ -594,7 +599,7 @@
       node.innerHTML = "<i class='badge' aria-hidden='true'></i>";
       node.title = nameOf(cam) + (cam.unit || cam.wearer ? " · " + (cam.unit || cam.title) : "");
       // Under a circle (chapter 9): a press on a marker that passed inside toggles its tick.
-      node.addEventListener("click", function (e) { e.stopPropagation(); if (S.circle && S.hits && S.hits[cam.id]) { toggleCircleTick(cam); return; } select(cam); openPreview(cam); });
+      node.addEventListener("click", function (e) { e.stopPropagation(); if (S.circle && S.hits && S.hits[cam.id]) { toggleCircleTick(cam); return; } if (PICK) { try { window.dispatchEvent(new CustomEvent("desk-tick", { detail: { id: cam.id } })); } catch (err) { /* an old browser */ } return; } select(cam); openPreview(cam); });
       // A press on a marker is the marker's, not the circle's drag under it.
       node.addEventListener("mousedown", function (e) { if (S.circle) { e.stopPropagation(); } });
       var marker = new maplibregl.Marker({ element: node, anchor: "center" }).setLngLat([cam.fixes[0][2], cam.fixes[0][1]]).addTo(map);
@@ -634,11 +639,14 @@
     if (S.playing && m >= range[1]) { S.moment = range[1]; S.playing = false; drawTransport(); m = range[1]; }
     var clock = host.querySelector("#map-clock"); if (clock) { clock.textContent = hms(m); }
     var barClock = el.bar && el.bar.querySelector(".map-clock"); if (barClock) { barClock.textContent = hms(m); }
+    var picked = PICK ? pickedSet() : null;
     S.cams.forEach(function (cam) {
       var marker = markers[cam.id];
       if (!marker) { return; }
       var node = marker.getElement();
       var local = cam.onClock ? m - cam.zero.second : (cam.own !== undefined ? cam.own : null);
+      // Pick mode (chapter 10): an unticked camera is a faint marker with no trail.
+      if (picked) { node.classList.toggle("faint", !picked[cam.id]); node.title = nameOf(cam) + (picked[cam.id] ? " · ticked; press to untick" : " · press to tick"); }
       if (!shown(cam)) {
         // Unticked (chapter 6): no marker, no trail; the whole path is filtered off the paths layer.
         node.classList.add("before");
@@ -669,6 +677,7 @@
       var rowSpeed = host.querySelector(".map-row[data-cam='" + cam.id + "'] .spd");
       if (rowSpeed) { rowSpeed.textContent = moving ? speedWords : ""; }
       if (S.open === cam.id) { var where = host.querySelector(".map-where[data-cam='" + cam.id + "']"); if (where) { where.innerHTML = whereWords(cam, local, p); } }
+      if (picked && !picked[cam.id]) { clearTrail(cam); return; }
       if (S.show === "trails" && map && mapReady) {
         var index = lastIndex(cam, local);
         if (trailIndex[cam.id] !== index) {

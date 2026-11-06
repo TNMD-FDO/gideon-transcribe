@@ -165,7 +165,7 @@ def test_the_strip_json_and_the_tab(owner, a_case, three_cameras, client):
     assert "No incident built yet" in page and "cameras on the clock" in page
     assert 'id="incident-strip"' in page and 'data-mode="strip"' in page
     assert f"/case/{a_case.pk}/incidents/strip.json" in page
-    assert 'id="strip-reader"' in page and 'id="unclocked-host"' in page
+    assert 'id="desk-yours"' in page and 'id="unclocked-host"' in page
     assert 'id="forming-cards"' not in page
     # The clocks' offer is read in the day's reading, by its key.
     key = incidents.offer_key([one.pk, two.pk, three.pk])

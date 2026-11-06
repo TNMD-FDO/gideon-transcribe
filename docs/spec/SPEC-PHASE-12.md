@@ -28,6 +28,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 7. The Incidents tab as the day
 8. The Incidents tab as a builder
 9. The builder's span and clock line, and the releases after it (the near marks, the circle under the cap, the wall at eight, the two tools, the tab and the page tidied)
+10. The Incidents tab as a desk
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -484,6 +485,55 @@ Not built, by the build's reading of the drawing: the sound match offered "again
 ### Left to the next releases
 
 Nothing of the builder's drawing or of the tidy drawing. The chronology's own surety pills and the recordings list keep their words until looked at in their own turn.
+
+## 10. The Incidents tab as a desk (v1.212.0)
+
+### About
+
+The maintainer's word of 2026-11-06: the Incidents tab "has lost its way"; it should be "a panel that helps the user build incidents", where a person ticks several videos, scrubs to moments to help decide, and may find that watching this way is enough, so the tab is "a dynamic incident builder and review page" as well, with as many as eight videos playing. The drawing `docs/spec/mockups/phase-12-incident-builder-desk.html` (Direction 1, the desk, built out on 2026-11-06 with a scrolling strip, a wall of eight playing videos, Focus, and the laptop fit; twelve choices in its table) stands.
+
+### Principles
+
+- **Everything in view at once.** The strip over the wall on the left, the map over Your incident and Built on this day on the right. The desk takes the window's height under the case's head (`sizeDesk`: never under 560) and its boxes scroll inside themselves; the page itself does not scroll for the desk, except on a window too short to hold 560.
+- **The wall plays, nothing is cut.** A ticked camera is a video playing at the clock, in step with the others, with the incident page's rule for keeping step (a drift under half a second nudges the rate, more seeks). The lanes' pictures of chapter 9 are gone.
+- **Nothing is made until Make the incident.** The ticks, the clock line, the span and the name are remembered for the person on this browser per day (`localStorage`, `desk:<case>:<date>`), and the wall's layout per case, so the desk is also a place to watch several videos of a day together and leave. Nothing of this is kept on the server, and no audit row is written for watching.
+- **The glossary's words.** The lanes are the strip (a Timeline is the viewer's); the wall is the Wall; the Reader is gone.
+
+### The strip
+
+- Every lane of the day is drawn, in the builder's order (the ticked first, then by overlap with the span, then by start), inside a box that scrolls (`#chron-scroll`); the ticked lanes are held at its top (`position: sticky`, one lane's step each) over a rule, the rest scroll under them. The box's height is what is left of the column after the wall's share (`sizeDesk`: the wall keeps at least 58 % of the desk and never under 240), the held lanes and two more at the least. Show all and the twelve-lane cap are gone.
+- The ruler, the day line and the drag track stay above the box, held. The incidents' names, Your incident's tag, the two span handles and the clock line's label are in a names' row of their own above the box (`#chron-tags`, two rows tall so a name pushed to the foot still shows); the shaded columns, the bright build column and the clock's rule (`.clock-rule`) are in the lanes' box and scroll with the lanes. Dragging a handle or the clock line works as before (`wireBuild`), with the clock line also telling the wall (`desk-clock-set`).
+- A press on an incident's name lights its cameras' lanes (`.lit`) and its column and its row under the map, and again lets go. A press on a camera's name brings its tile forward on the wall when it is ticked, and ticks it when it is not; the Reader's reading of a camera is gone, its facts are on the lane's hover.
+- The foot is one line and a help mark. The not-on-the-clock row stays, as does its panel.
+
+### The wall (`app/static/incident-desk.js`)
+
+- One tile per ticked camera, in the ticks' order: its video (`media`, the playback copy's address the strip's rows now carry; `case_chronology.day_of` adds it in strip mode), its name and colour, how far into its video the clock is ("2 min 14 s in"), **sound** and **untick**, and a thin bar along the picture's foot that says where the clock is in the video and seeks on a press. A ticked camera whose copy is not ready, or a video not on the clock, is a blank tile with the reason. The strip tells the wall what to play by a `desk-cams` event (the cameras with where their playback starts on the day's clock and their run, the span, the clock line, the near cameras); for a vehicle folded into one lane the head stream plays over its own run (`run` on the bar), not the union.
+- One transport under the tiles: Play and Pause, 10 s back and forward, the speed (0.5, 1, 2, 4), the clock, and a scrub across the span with its ends labelled. The wall's clock is the incident page's (`anchorAt`, `anchorNow`, the speed); while it plays it tells the strip the clock every quarter second (`desk-clock`), and the strip moves its clock line and label in place and the map's markers with it; when it pauses, or a scrub or a step is let go, it tells `desk-clock-set` and the strip keeps the clock and draws again. Space plays and pauses, the arrows step a second and ten with shift, while a camera is ticked (the days' arrows then rest).
+- One tile carries the sound; **sound** on another switches. The sound starts on the first ticked camera and follows nothing by itself.
+- Grid and Focus, as on the incident page: a grid two across, four across from five; a press on a tile makes it the focus, one large with the rest in a strip under it, and the said line between them, what is being said on the focus camera at the clock from its transcript (`/recording/<id>/segments?words=0`, read once per camera), the line before and after it, each a press to go there; a press on the focus tile returns to the grid. The layout is remembered per case.
+- The near cameras (the map's answer, chapter 9) are offered under the tiles as faint chips, "Near at the clock line: <name> · tick", while there is room under the cap: the build's reading of the drawing's "faint tile", since a tile takes a grid slot and shrinks the others.
+- The two tools of v1.205.0 stay, in Your incident: **Tick everyone running now** and **Tick the near**.
+
+### The map
+
+Always there, beside the strip. In pick mode every camera of the day is drawn: the ticked lit with their paths and trails, the rest faint markers with no path (`.map-head.faint`, `hiddenFilter` in pick mode); a press on any marker ticks or unticks it (`desk-tick`). The pane is 190 to 320 tall (28 vh); Open the Map page stays.
+
+### Your incident and Built on this day
+
+- **Your incident** is a panel under the map sized for the most an incident holds, so eight fit without it growing or scrolling: the name, the ticked cameras in two columns with untick on each, the span, the two tools, the sitting, Make the incident and Clear the ticks (and Clear the span while one is set). With a span and nothing ticked it reads as Your span (the cameras that ran in it with a tick each, Tick all, Clear the span). With nothing ticked, one line of what to do. The lead's **Make the incident · N** (greyed until a tick) and **Clear the ticks** do the same; the lead's words of chapter 9 are gone.
+- **Built on this day** takes the rest of the column and scrolls: one row per incident of the day with a small bar of its span on the day's scale, its cameras, span and events, who built it, **Open**, **On map** and **Add the ticked** (the ticked cameras not in it, through the add door, within the cap); a press on its name lights its lanes and its column. **every day ▾** opens the lead's list of every incident in the case.
+
+### What is not
+
+No new store, no migration, no audit row: nothing is kept on the server for a desk that was only watched. The incident page keeps its own wall and its layouts; the Map page keeps its shapes. A tile's sound is the video's own; no mixing.
+
+### The build's readings, and what the walk showed
+
+- The case page's head (the name, the pills, the One reading box, the tabs and the lead) stands 376 px tall at the drawing's window of 1912 by 1034, against the drawing's 210, so the desk gets about 650 px and the wall about 320 at that window: a grid of five is 256 by 74 a tile, Focus gives the large tile about 80 px. On a docked monitor 1440 tall the wall has twice that. Folding the case's head on this tab, or a Larger wall press, is a question for the maintainer, not decided here.
+- On a 768-tall window the desk is 560 and the page scrolls by about 170 px.
+- The local walk needs the recordings' playback copies served with byte ranges, which Django's own server does not do: `core/local_media.py` answers `/case-media/` with ranges when `run_local.sh` sets `APP_LOCAL_MEDIA`, and nowhere else (`docs/local-walk.md`).
+- The still at the clock line is gone from the lanes and from Your incident; `stillUrl` and the stills' helpers left `chronology.js` with it, the stills' loader stays for the incidents' list and the not-on-the-clock panel.
 
 ## Appendix A. Audit rows added in Phase 12
 

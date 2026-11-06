@@ -30,7 +30,7 @@ from pathlib import Path
 
 from django.utils import timezone
 
-from core import audit, exports, incidents, prompts, settings_store
+from core import audit, exports, incidents, media_access, prompts, settings_store
 from core.chronology import FIGURE_COLOURS, spells
 
 CLOCK, HAND, DAY, FILE = "clock", "hand", "day", "file"
@@ -475,6 +475,10 @@ def day_of(
                 "surety": clock_surety(one),
                 "video": incidents.is_video(one),
                 "movable": how in (HAND, FILE, SOUND),
+                # Its playback copy (Phase 12 chapter 10, v1.212.0), so the
+                # Incidents tab's wall can play a ticked camera; "" until
+                # the copy is ready, when the wall says so instead.
+                "media": media_access.playback_url(one) if strip else "",
                 # Where its playback starts on the day's clock (v1.185.0),
                 # before midnight for a recording that crossed it, so a
                 # moment of the day is a moment into the recording for its
@@ -913,6 +917,10 @@ def _merge_streams(bars: list[dict], heads: dict) -> list[dict]:
             continue
         bar = dict(bar)
         bar["streams"] = [bar["id"]]
+        # The head's own run (v1.212.0), kept while the lane's span widens
+        # to the union, so the wall plays the head's video over its own
+        # minutes and not the other streams'.
+        bar["run"] = [bar["from"], bar["to"]]
         by_head[head] = bar
         out.append(bar)
     return out

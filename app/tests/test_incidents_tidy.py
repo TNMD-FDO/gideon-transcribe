@@ -189,7 +189,7 @@ def test_the_strip_fits_the_cameras_folds_a_gap_and_zooms_to_a_span():
         "function spanBox(d)",
         "function wireSpanBox()",
         "function wireSpanTrack(d)",
-        "function readerSpan(d)",
+        "function spanHtml(d)",
         "function incidentsMenu(",
         "function helpHtml(",
         "data-act='unfold'",
@@ -221,14 +221,14 @@ def test_the_strip_fits_the_cameras_folds_a_gap_and_zooms_to_a_span():
         'id="span-to"',
         'id="span-set"',
         'id="span-clear"',
-        'id="strip-reader"',
+        'id="desk-yours"',
+        'id="desk-built"',
         'id="unclocked-host"',
     ):
         assert wanted in page, wanted
     css = static("app.css")
-    # The Reader keeps its column from 1024, sticky; three columns from 2560.
-    assert '"strip reader" "unclocked reader" "map reader"' in css
-    assert '"strip map reader"' in css and "min-width: 2560px" in css
+    # The desk (v1.212.0): two columns by fractions, no breakpoint.
+    assert ".builder {" in css and ".builder-left, .builder-right {" in css
     for wanted in (
         ".span-box {",
         ".inc-list {",
@@ -237,7 +237,7 @@ def test_the_strip_fits_the_cameras_folds_a_gap_and_zooms_to_a_span():
         ".chron .col.build.set {",
         ".chron .track.strip",
         ".unclocked-row .uc",
-        ".reader .cam-row input.tk",
+        ".desk-panel .cam-row input.tk",
     ):
         assert wanted in css, wanted
 

@@ -871,8 +871,9 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     strip = static("chronology.js")
     # The day as the page (Phase 12 chapter 7): lanes, columns and a reader
     # in place of the Suggested row and the cards.
-    assert "function columns(d)" in strip and "function readerBuilder(d)" in strip
-    assert "function readerDraw(d)" in strip and "formingLane(" not in strip
+    # The Reader left in v1.212.0 (chapter 10): Your incident is a panel.
+    assert "function columns(d)" in strip and "function yoursHtml(d)" in strip
+    assert "function yoursDraw(d)" in strip and "formingLane(" not in strip
     assert "suggestedLane" not in strip and "cardHtml" not in strip
     assert "On the map" in strip and '"from their notes"' not in strip
     assert "&show=" in strip and "&circle=" not in strip and "data-tick='" in strip
@@ -884,7 +885,7 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert ".chron .legend { margin-top" in css
     # The strip is the day chips, the ruler, the named lanes and a foot; the
     # same day is read in the day's reading, never a column.
-    assert "dayChips() + ruler(d) + lanes(d) + unclockedRow() + stripFoot(d)" in strip
+    assert "dayChips() + ruler(d) + " in strip and "+ lanes(d) + " in strip
     # The builder (chapter 8): ticks, Your incident, no suggestions.
     assert "function tickSpan(d)" in strip and "suggestions(" not in strip
     assert "incident-ticks" in strip and "var PICK = host.dataset.pick" in script
@@ -894,14 +895,13 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "function spanOf(d)" in strip and "function clockLine(d)" in strip
     assert "data-hdl='0'" in strip and "data-clock" in strip
     assert "incident-clock" in strip and "function settleTags(box)" in strip
-    assert "function wireBuild(box, d)" in strip
-    assert "overlap(b, span) - overlap(a, span)" in strip and "class='film" in strip
-    assert '["date", state.day.date]' in strip and "function playAt(id, d)" in strip
+    assert "function wireBuild(tags, box, d)" in strip
+    assert "overlap(b, span) - overlap(a, span)" in strip and "class='film" not in strip
+    assert '["date", state.day.date]' in strip
     assert 'addEventListener("incident-clock"' in script and "S.pickAt" in script
-    assert ".chron .cols .clock-line {" in css and ".chron .cols .hdl {" in css
-    assert ".chron .lanes.building .lane-row {" in css
-    assert ".chron .lane-row .film {" in css
-    assert ".chron .col .tag.foot {" in css
+    assert ".chron .tags .clock-line {" in css and ".chron .tags .hdl {" in css
+    assert ".chron .lanes-scroll {" in css and ".chron .lane-row.held {" in css
+    assert ".chron .tags .tag.foot {" in css
     # The near marks (v1.202.0): the map answers from the paths it holds, the
     # strip rings the boxes in place.
     assert "function tellNear()" in script and "incident-near" in script

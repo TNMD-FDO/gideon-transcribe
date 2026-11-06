@@ -1,5 +1,7 @@
 """The pages and endpoints the app answers."""
 
+import os
+
 from django.urls import path
 
 from core import (
@@ -848,3 +850,14 @@ urlpatterns = [
     path("sign-in", views.sign_in, name="sign-in"),
     path("sign-out", views.sign_out, name="sign-out"),
 ]
+
+# A local walk alone (docs/local-walk.md): Django's own server serves the
+# recordings' playback copies when APP_LOCAL_MEDIA is set by run_local.sh, so
+# the wall and the Preview can play and seek. On a server Caddy serves them
+# and this never runs; the variable is set nowhere else.
+if os.environ.get("APP_LOCAL_MEDIA") == "1":
+    from django.urls import re_path
+
+    from core import local_media
+
+    urlpatterns.append(re_path(r"^case-media/(?P<path>.*)$", local_media.serve))
