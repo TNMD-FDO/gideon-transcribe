@@ -12,6 +12,7 @@ import io
 import zipfile
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import (
@@ -278,19 +279,45 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # events, Notes, Documents, Incidents, Clips, Speakers, Details.
     from core import proposals
 
-    proposed_on = proposals.tab_offered()
+    # What the case holds (Phase 12 chapter 12, v1.214.0), read once: a
+    # video lets the Proposed events, Documents and Incidents tabs show and
+    # offers Add path files; a path file read unlocks the Map and the rest.
+    held = cases.holds(case)
+    has_video = held["has_video"]
+    proposed_on = proposals.tab_offered() and has_video
     # The Map tab (Phase 12 chapter 1): the setting read once for the page.
-    maps_on = camera_paths.on()
+    maps_on = camera_paths.on() and held["has_path"]
     tabs = (
         ("search",)
         + (("proposed",) if proposed_on else ())
         + ("notes",)
-        + (("documents",) if documents.on() else ())
-        + (("incidents",) if incidents.on() else ())
+        + (("documents",) if documents.on() and has_video else ())
+        + (("incidents",) if incidents.on() and has_video else ())
         + (("map",) if maps_on else ())
         + ("clips", "speakers", "details")
     )
     tab = request.GET.get("tab") if request.GET.get("tab") in tabs else "recordings"
+    # A hidden tab asked for by address (an old link, a pill): the
+    # Recordings tab with one notice, never a dead page.
+    asked_tab = request.GET.get("tab", "")
+    if asked_tab and asked_tab not in tabs and asked_tab != "recordings":
+        if asked_tab == "map" and camera_paths.on():
+            messages.info(
+                request,
+                "No camera in this case has a path file yet, so there is no map "
+                "to show.",
+            )
+        elif asked_tab in ("proposed", "documents", "incidents") and not has_video:
+            messages.info(
+                request,
+                "This case holds sound recordings only, so it has no "
+                + {
+                    "proposed": "Proposed events",
+                    "documents": "Documents",
+                    "incidents": "Incidents",
+                }[asked_tab]
+                + " tab; it appears once a video is in the case.",
+            )
     # The Map is a page of its own (chapter 6.10, v1.210.0): the tab's
     # address goes there with its query, so On the map from a note, a hit
     # or an incident keeps landing at its moment.
@@ -366,6 +393,7 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     case_tabs = case_bar.bar(
         case,
         on=tab,
+        holds=held,
         counts={
             "recordings": len(rows),
             "proposed": proposed_count,
@@ -485,8 +513,12 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             **incidents_context,
             # The Map tab (Phase 12 chapter 1): drawn by map.js from map.json.
             "map_count": map_count,
-            # Add path files in the head (chapter 6, third release), on every tab.
-            "paths_door": bool(maps_on and role),
+            # Add path files in the head (chapter 6, third release), on every
+            # tab, once a video is in the case (chapter 12).
+            "paths_door": bool(camera_paths.on() and role and has_video),
+            # What the case holds, for the Details tab's words.
+            "holds": held,
+            "maps_setting_on": camera_paths.on(),
             **(
                 _map_context(case, request.user)
                 if tab == "map" or (tab in ("details", "incidents") and maps_on)
@@ -507,6 +539,15 @@ def map_page(request: HttpRequest, case_id) -> HttpResponse:
     if not camera_paths.on():
         raise Http404
     case = _their_case(request, case_id)
+    # Only once the case holds a path file (chapter 12): until then the
+    # Recordings tab, with one notice, so an old On the map link never dies.
+    held = cases.holds(case)
+    if not held["has_path"]:
+        messages.info(
+            request,
+            "No camera in this case has a path file yet, so there is no map to show.",
+        )
+        return redirect(reverse("case", args=[case.pk]))
     cases.note_activity(case, by=request.user)
     role = case.role_of(request.user)
     if role == "collaborator":
@@ -518,7 +559,7 @@ def map_page(request: HttpRequest, case_id) -> HttpResponse:
         {
             "case": case,
             "role": role,
-            "case_bar": case_bar.bar(case, on="map"),
+            "case_bar": case_bar.bar(case, on="map", holds=held),
             "map_count": map_count,
             "paths_door": bool(role),
             **_map_context(case, request.user),

@@ -325,6 +325,15 @@ def paths_add(request: HttpRequest, case_id) -> JsonResponse:
     files = request.FILES.getlist("files")
     if not files:
         return JsonResponse({"error": "Choose the path files first."}, status=400)
+    # A path file belongs beside a video (chapter 12): a case with none
+    # cannot take one.
+    from core import cases
+
+    if not cases.holds(case)["has_video"]:
+        return JsonResponse(
+            {"error": "Add a video to the case first: a path file belongs beside one."},
+            status=400,
+        )
     chosen = request.POST.getlist("chosen")
     chosen = chosen + [""] * (len(files) - len(chosen))
     uploads = []

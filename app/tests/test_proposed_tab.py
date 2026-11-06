@@ -96,6 +96,8 @@ def test_the_tab_is_in_the_bar_in_order_and_hides_with_the_proposer(
     person, a_case, client
 ):
     signed_in(client, person)
+    # The tab needs a video in the case (chapter 12, v1.214.0).
+    video(person, a_case, "BWC2-1")
     page = client.get(f"/case/{a_case.pk}").content.decode()
     # The bar, in the order given: Recordings, Search, Proposed events,
     # Notes, (Documents,) Incidents, Clips, Speakers, Details.

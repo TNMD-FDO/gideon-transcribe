@@ -179,6 +179,7 @@ def counts_for(cases, user=None) -> dict:
             "incidents": {"incidents": 0, **NO_INCIDENT_COUNTS},
             "incident_ids": [],
             "paths": 0,
+            "videos": 0,
         }
 
     # The recordings: how many, their kept sizes, the assignment counts, and
@@ -201,11 +202,19 @@ def counts_for(cases, user=None) -> dict:
             yours_left=Count("id", filter=mine & Q(reviewed_on__isnull=True)),
             # The cameras on the map (Phase 12 chapter 1), in the same query.
             paths=Count("id", filter=Q(camera_path__isnull=False)),
+            # The videos (chapter 12), as incidents.videos_of narrows them:
+            # a probe with a picture, or one that says nothing of its streams.
+            videos=Count(
+                "id",
+                filter=Q(probe__streams__contains=[{"codec_type": "video"}])
+                | ~Q(probe__has_key="streams"),
+            ),
         )
     ):
         case = out[row["case_id"]]
         case["recordings"] = row["n"]
         case["paths"] = row["paths"]
+        case["videos"] = row["videos"]
         case["size_bytes"] = row["total"] or 0
         case["assigned"] = row["assigned"]
         case["reviewed"] = row["reviewed"]
@@ -395,7 +404,9 @@ def pills(
     if counts["summaries"]:
         add(f"Summaries tonight: {counts['summaries']}", here)
 
-    if incidents.on():
+    # The incident pills only for a case with a video (chapter 12): an
+    # audio-only case has no Incidents tab to lead to.
+    if incidents.on() and counts.get("videos", 1):
         _incident_pills(
             counts["incidents"], f"{here}?tab=incidents", add, for_case=True
         )

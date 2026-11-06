@@ -36,6 +36,26 @@ WIPED_BY_OWNER = "owner"
 WIPED_BY_ADMIN = "admin"
 
 
+def holds(case) -> dict:
+    """What the case holds (Phase 12 chapter 12, v1.214.0), the one helper
+    the tabs, the head, the desk, the Map page, the take-in and the pills
+    follow: whether a recording of the case has a picture (the Incidents
+    tab's own judgement), whether one has a path file read (a Path row),
+    and how many path files wait for their video. Read once per page.
+    Nothing is set: a case moves between its states by itself."""
+    from core import camera_paths, incidents
+
+    has_video = any(
+        incidents.is_video(one) for one in incidents.videos_of(case.recordings.all())
+    )
+    has_path = camera_paths.on() and camera_paths.count(case) > 0
+    return {
+        "has_video": has_video,
+        "has_path": has_path,
+        "waiting": camera_paths.waiting_count(case) if camera_paths.on() else 0,
+    }
+
+
 def cases_root() -> Path:
     """Where every Case's files live, beside scratch/."""
     return Path(django_settings.DATA_DIR) / "cases"

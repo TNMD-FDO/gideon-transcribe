@@ -70,6 +70,8 @@ def video(person, case, title, lines=((0.0, "Step out."),)):
     return recording
 
 
+# The Map tab only once the case holds a path file (chapter 12, v1.214.0);
+# the helper's cases hold a video and no path file.
 ORDER = [
     "recordings",
     "search",
@@ -77,7 +79,6 @@ ORDER = [
     "notes",
     "documents",
     "incidents",
-    "map",
     "clips",
     "speakers",
     "details",
@@ -109,7 +110,6 @@ def test_the_helper_gives_the_tabs_in_order_with_their_counts(person, a_case):
         "search",
         "notes",
         "incidents",
-        "map",
         "speakers",
         "details",
     ]

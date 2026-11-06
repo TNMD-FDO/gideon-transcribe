@@ -1021,6 +1021,10 @@ _Avoid_: comparison layer (the shape it replaced), results page, report view
 What a Document says it is about, when it says anything (v1.213.0): an incident or a camera of the Case, chosen when it is added or from About… on the shelf, shown as a pill on its row. It steers what Gideon reads the document beside and which record is offered first at Compare, and decides nothing else; a document about nothing is read by the case's Gideon alone. Written in lower case on the pages ("about Harbour car park"), never as the Chronology's About.
 _Avoid_: home, linked to, the report for (the words of v1.71.0 to v1.212.0), tag, category
 
+**What the case holds**:
+The three states a Case is in by what it holds, read from its recordings and path files and never set (v1.214.0, Phase 12 chapter 12): **audio only** (no recording has a picture: six tabs, Recordings, Search, Notes, Clips, Speakers, Details, and no Add path files), **video** (at least one has: every tab the office's switches allow but Map, and Add path files in the head), and **unlocked** (at least one recording has a Path read from a Path file: the Map tab and the whole map feature set, the desk's small map and near tools among them). The Panel's switches stay the masters; the state only narrows further. A hidden tab's address answers with the Recordings tab and a notice. `cases.holds(case)` is the one helper.
+_Avoid_: unlock level, feature flag (that is a Panel switch), mode, tier, case type (that is a Recording's type)
+
 **Release**:
 A tagged version of the app published on GitHub with its notes, the only thing an installer ever installs or upgrades to. The notes always say whether the models or the database change.
 _Avoid_: version (that is the number), build, deploy

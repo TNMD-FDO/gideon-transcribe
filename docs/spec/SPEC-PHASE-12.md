@@ -30,6 +30,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 9. The builder's span and clock line, and the releases after it (the near marks, the circle under the cap, the wall at eight, the two tools, the tab and the page tidied)
 10. The Incidents tab as a desk
 11. The Documents tab as the case's landing place for its documents and comparisons
+12. What the case holds decides its tabs
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -593,6 +594,38 @@ The Documents' own rows: **Document added** (with `about` in place of `home`, an
 
 - The drop zone's words; the chips' exact counts; the bar's drawing from the counts; the picture gallery's thumbnail size.
 - The task's retry cadence for Compare when it is read.
+
+## 12. What the case holds decides its tabs (v1.214.0)
+
+### About
+
+The maintainer's ask of 2026-11-06: an audio-only case should carry only Recordings, Search, Notes, Speakers, Clips and Details, with no map; Add path files should be offered only once a video is in the case; the Map tab and everything that goes with it should appear only once the case has at least one valid path file, so a valid path file is a feature unlock for the case. The drawing `docs/spec/mockups/phase-12-case-unlocks.html` (the three states as case bars, every piece of the map feature with its rule, the words on the pages, six choices) stands; on the two tabs the build argued for keeping on an audio-only case, Proposed events and Documents, the maintainer's word is to hide both.
+
+### Principles
+
+- **What the case holds decides, nothing is set.** Three states, read from the recordings and the path files: **audio only** (no recording of the case has a picture, by the probe the Incidents tab already reads), **video** (at least one has), and **unlocked** (at least one recording of the case has a path file that was read: a Path row). A case moves between them by itself as recordings and path files come and go; nothing is pressed and nothing is kept.
+- **The Panel's switches stay the masters.** Maps off, Documents off, Incidents off, Clips off and the assistant off hide their tabs everywhere as before; the case's state only narrows further.
+- **One helper.** `cases.holds(case)` answers `has_video`, `has_path` and `waiting` (path files waiting for their video), read once per page and handed to the case bar, the case page, the Map page, the take-in and the pills; nobody asks twice.
+- **Nothing is a dead page.** A hidden tab's address answers with the Recordings tab and one notice; an old On the map link never breaks.
+
+### The states
+
+- **Audio only.** Six tabs: Recordings, Search, Notes, Clips (while on), Speakers, Details. Proposed events, Documents, Incidents and Map are hidden whatever the office's switches say. No Add path files in the head. The incident pills (not synced, events to check, proposed events waiting, memos) are not drawn on Home or the case page, since the tabs they lead to are absent. The Details tab's On the map line reads "none. This case holds sound recordings only; the Incidents and Map tabs appear once a video is in it."
+- **Video, no path file.** Every tab but Map, as the switches allow. **Add path files** in the head. No Map tab, no "cameras on the map" pill, no small map on the Incidents desk (its right column gives the room to Your incident and Built on this day) and no Tick the near or near marks there (Tick everyone running now stays), no On the map anywhere, no Map pane on an incident. The Details line reads "none yet", says what a path file is and that the Map tab appears with the first, and counts the path files waiting for their video; the Add path files button's title says the same.
+- **Unlocked.** The Map tab with its count, the pill, the desk's small map with its near tools, an incident's Map pane where a camera of it has a path, Save a picture, Within a circle, the readings told to Gideon and the memo: the whole feature set, as today. Most of it was already gated per camera (On the map, the readings, the pane); the rule adds the case level.
+
+### Where the rule reaches
+
+- `case_bar.bar` draws Proposed events, Documents and Incidents only with a video and Map only when unlocked (and the switches on); the case page's tab list follows, and a tab asked for by address that is hidden falls to Recordings with the notice ("This case holds sound recordings only, so it has no Incidents tab" and the like).
+- The Map page answers only when unlocked; otherwise it sends to the Recordings tab with "No camera in this case has a path file yet, so there is no map to show." The case page's `?tab=map` goes through it as before.
+- The take-in of path files (`case-paths-add`) refuses a case with no video: "Add a video to the case first: a path file belongs beside one."
+- The Incidents desk's small map is mounted only when unlocked; `chronology.js` draws Tick the near only while the map host is on the page.
+- `dashboard.pills` draws the incident pills only for a case with a video (the grouped query now counts the videos too); the "cameras on the map" pill was already hidden at zero.
+- A waiting path file (chapter 6) unlocks nothing; it is counted on the Details tab and the button's title until its video lands, when the Map appears by itself.
+
+### What is not
+
+No per-case setting, no store, no migration, no audit row. The incident page's Map pane, the On the map links and the readings keep their per-camera rules. The Panel's Status page, the basemap and the Maps setting are the office's, unchanged.
 
 ## Appendix A. Audit rows added in Phase 12
 

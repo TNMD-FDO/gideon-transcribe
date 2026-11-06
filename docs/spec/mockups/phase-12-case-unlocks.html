@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A case's tabs by what it holds: three states and the unlock rules</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0; --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff; --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3d1f1d; } }
+  :root[data-theme="dark"] { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3d1f1d; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding: 32px 16px 64px; }
+  .page { max-width: 1160px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; } h2 { font-size: 17px; margin: 0; } h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 84ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 14px; }
+  .muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .win { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .head .name { font-size: 18px; font-weight: 600; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.gone, .tabs span.gone { text-decoration: line-through; color: var(--bad); opacity: .8; }
+  .tabs { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs small { color: var(--muted); font-size: 11px; }
+  .tabs span.new { color: var(--ok); font-weight: 600; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 14px; } .caption p { margin: 0; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .t td.state { white-space: nowrap; }
+  .yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; } .same { color: var(--muted); }
+  .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 900px) { .three { grid-template-columns: 1fr; } }
+  .state-h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .line { font-size: 13px; }
+  ul.plain { margin: 4px 0 0; padding-left: 18px; } ul.plain li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, a new chapter proposed · a drawing for the maintainer's word · 2026-11-06</span>
+    <h1>A case's tabs follow what the case holds: audio only, video, and a path file as the unlock</h1>
+    <p class="lede">The ask of 2026-11-06: an audio-only case should carry only Recordings, Search, Notes, Speakers, Clips and Details, with no map; Add path files should be offered only once a video is in the case; the Map tab and everything that goes with it should appear only once the case has at least one valid path file, so a valid path file is a feature unlock for the case. Below: the three states as case bars, where every piece of the map feature shows today and the rule it would follow, and the choices. The fictional office throughout.</p>
+  </header>
+
+  <!-- Figure A: three states -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure A</span><h2>The case bar in three states: what the case holds decides the tabs, the Panel's switches still the master</h2></div>
+    <div class="three">
+      <div class="win">
+        <span class="state-h">1 · Audio only (no recording with a picture)</span>
+        <div class="head"><div><span class="eyebrow">Cases</span><div class="name">Pike calls</div></div><div class="pills"><span class="btn gone">Add path files</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="pills"><span class="pill warn">2 proposed events waiting</span><span class="pill">shared with 1</span></div>
+        <div class="tabs"><span class="on">Recordings <small>14</small></span><span>Search</span><span class="gone">Proposed events 2</span><span>Notes <small>9</small></span><span class="gone">Documents 1</span><span class="gone">Incidents</span><span class="gone">Map</span><span>Clips <small>3</small></span><span>Speakers <small>4</small></span><span>Details</span></div>
+        <p class="line muted">Six tabs, as asked. Struck: the four that go. <b>Proposed events</b> and <b>Documents</b> are the two to decide (choices 2 and 3): both work on words, not pictures, and this case has one of each.</p>
+      </div>
+      <div class="win">
+        <span class="state-h">2 · Video, no path file yet</span>
+        <div class="head"><div><span class="eyebrow">Cases</span><div class="name">Marsh Lane interview</div></div><div class="pills"><span class="btn">Add path files</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="pills"><span class="pill warn">1 incident not synced</span><span class="pill">shared with 1</span></div>
+        <div class="tabs"><span class="on">Recordings <small>6</small></span><span>Search</span><span>Proposed events <small>1</small></span><span>Notes <small>4</small></span><span>Documents <small>0</small></span><span>Incidents <small>1</small></span><span class="gone">Map 0</span><span>Clips <small>1</small></span><span>Speakers <small>2</small></span><span>Details</span></div>
+        <p class="line muted">A video is in the case, so <b>Add path files</b> is offered. No path file has been read yet, so no Map tab, no pill, no small map on the Incidents desk, no Map pane on an incident, no On the map anywhere.</p>
+      </div>
+      <div class="win">
+        <span class="state-h">3 · At least one valid path file: the unlock</span>
+        <div class="head"><div><span class="eyebrow">Cases</span><div class="name">Harbour Street stop</div></div><div class="pills"><span class="btn">Add path files</span><span class="btn primary">Add recordings</span></div></div>
+        <div class="pills"><span class="pill warn">2 incidents not synced</span><span class="pill acc">6 cameras on the map</span><span class="pill">shared with 1</span></div>
+        <div class="tabs"><span class="on">Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span>Documents <small>5</small></span><span>Incidents <small>3</small></span><span class="new">Map <small>6</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+        <p class="line muted">The Map tab appears with its count, the pill on Home and the case page, the desk's small map, an incident's Map pane, Save a picture, Within a circle, the near marks, the readings told to Gideon and the memo: the whole feature set, as today.</p>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What decides a state.</b> Audio only: no recording in the case has a picture (the probe's video stream, as the Incidents tab already judges it). Video: at least one has. The unlock: at least one recording of the case has a path file that was read (a Path row). A path file waiting for its video (chapter 6) does not unlock: it belongs to no recording yet.</p>
+      <p><b>The Panel's switches stay the master.</b> Maps off hides the Map tab everywhere as today; Documents off, Incidents off, Clips off, the assistant off likewise. The case's state only narrows further. A tab that is hidden still answers its address (choice 5), so an old link never breaks.</p>
+      <p><b>A case moves between states by itself.</b> The first video added turns Add path files on; the first path file read turns the Map on; a recording removed or a path file removed turns them off again. No setting per case, nothing to press.</p>
+    </div>
+  </section>
+
+  <!-- Figure B: every piece -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure B</span><h2>Every piece of the map feature, where it shows today, and the rule it would follow</h2></div>
+    <table class="t">
+      <tr><th style="width: 24%">Piece</th><th style="width: 30%">Today</th><th>The rule</th></tr>
+      <tr><td><b>The Map tab</b> in the case bar, on every page of the case</td><td>While Maps is on, with the count (0 shown)</td><td class="yes">Only with a valid path file (state 3)</td></tr>
+      <tr><td><b>The Map page</b> (<span class="mono">case/&lt;id&gt;/map</span>) and On the map addresses</td><td>Answers while Maps is on; empty when no file</td><td>Answers only in state 3; otherwise sends to the Recordings tab with the line "No camera in this case has a path file yet" (choice 5)</td></tr>
+      <tr><td><b>Add path files</b> in the case head, on every tab</td><td>While Maps is on and the person may add</td><td class="yes">Only with a video in the case (states 2 and 3); the take-in refuses a case with no video, with the reason</td></tr>
+      <tr><td><b>Waiting path files</b> (a file whose video is not in the case yet)</td><td>Counted on the Map page's lead and under its lanes</td><td>In state 2 the Map page is hidden, so the count rides on the Add path files button's title and the Details tab ("1 path file waiting for its video"); it unlocks nothing until its video lands (choice 4)</td></tr>
+      <tr><td><b>"N cameras on the map"</b> pill on Home and the case page</td><td>Only when the count is above zero</td><td class="same">Already the rule: hidden at zero</td></tr>
+      <tr><td><b>The small map</b> on the Incidents desk, Tick the near, the near marks, Build it on the Incidents tab</td><td>While Maps is on, whatever the case holds</td><td class="yes">Only in state 3; the desk's right column gives the map's room to Your incident and Built on this day</td></tr>
+      <tr><td><b>The Map pane</b> on the incident page, Larger map, Save a picture there</td><td>Only when a camera of the incident has a path file</td><td class="same">Already the rule</td></tr>
+      <tr><td><b>On the map</b> on notes, hits, chronology entries, incident rows, pictures</td><td>Only on a camera that has a path file</td><td class="same">Already the rule</td></tr>
+      <tr><td><b>The readings</b> told to Gideon, the memo, the comparison, the timeline report; the Readings list; Who was near here; where a line was said</td><td>Only when readings exist</td><td class="same">Already the rule</td></tr>
+      <tr><td><b>Save a picture</b>, <b>Within a circle</b>, the circle's incident</td><td>On the Map page and the pane</td><td class="same">Go with the page and the pane</td></tr>
+      <tr><td><b>Incidents</b> tab and the desk</td><td>While Incidents is on</td><td class="yes">Only with a video (states 2 and 3): an incident is cameras on one clock</td></tr>
+      <tr><td><b>Proposed events</b> tab</td><td>While the assistant's judgement is on or watch phrases are listed</td><td>Hidden in state 1 as asked, or kept (choice 2)</td></tr>
+      <tr><td><b>Documents</b> tab</td><td>While Documents is on</td><td>Hidden in state 1 as asked, or kept (choice 3)</td></tr>
+      <tr><td><b>Recordings, Search, Notes, Clips, Speakers, Details</b></td><td>Always (Clips while on)</td><td class="same">Always</td></tr>
+      <tr><td><b>The Panel's Status page</b>, the basemap, the Maps setting</td><td>Office-wide</td><td class="same">Unchanged: the office's, not a case's</td></tr>
+    </table>
+    <p class="small muted" style="margin-top: 10px">Most of the feature set is already gated per camera: a camera without a path file never shows On the map, a readings line or a map pane. The new rule is at the case level, and it reaches four things: the Map tab and page, Add path files, the desk's small map, and the audio-only tabs.</p>
+  </section>
+
+  <!-- Figure C: the words -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure C</span><h2>What the pages say in the states where a piece is absent</h2></div>
+    <div class="three">
+      <div class="win"><span class="state-h">State 1, Details tab</span><p class="line">Cameras on the map: <span class="muted">none. This case holds sound recordings only; the Incidents and Map tabs appear once a video is in it.</span></p></div>
+      <div class="win"><span class="state-h">State 2, Details tab and the button's title</span><p class="line">Cameras on the map: <span class="muted">none yet. A path file comes beside a body-worn or in-car video, with the video's name and the ending .vtt; add a folder's worth with <b>Add path files</b> and the Map tab appears.</span></p><p class="line muted">1 path file waiting for its video.</p></div>
+      <div class="win"><span class="state-h">An old On the map address in state 1 or 2</span><p class="line muted">The Recordings tab, with one notice: "No camera in this case has a path file yet, so there is no map to show."</p></div>
+    </div>
+  </section>
+
+  <!-- Choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Six to decide, in one table</h2></div>
+    <table class="t">
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn (the recommendation)</th><th>The other way</th></tr>
+      <tr><td>1</td><td>What "audio only" means</td><td>No recording of the case has a picture, by the probe the Incidents tab already reads (a video with no path file is still a video).</td><td>By the Recording type (Jail call, Interview), which a person may leave unset.</td></tr>
+      <tr><td>2</td><td>Proposed events on an audio-only case</td><td><b>Kept</b> while the office has it on: the proposer and the watch phrases read transcripts, and a jail call is where a watch phrase earns its keep. (Drawn struck in Figure A as asked; this is the one place the build argues.)</td><td>Hidden, as the ask lists it.</td></tr>
+      <tr><td>3</td><td>Documents on an audio-only case</td><td><b>Kept</b> while the office has it on: a report is read against a recording's transcript, and v1.213.0 just made a document the case's. (Drawn struck as asked; the second place the build argues.)</td><td>Hidden, as the ask lists it.</td></tr>
+      <tr><td>4</td><td>A waiting path file</td><td>Unlocks nothing; counted on the Add path files button's title and the Details tab until its video lands, when the Map appears by itself.</td><td>A waiting file unlocks the Map tab, which then shows the waiting list alone.</td></tr>
+      <tr><td>5</td><td>A hidden tab's address</td><td>The Map page answers only when unlocked; otherwise it sends to the Recordings tab with a notice. The Incidents tab's address on an audio-only case does the same. Nothing is a 404.</td><td>The page answers whatever the state, only the tab is hidden.</td></tr>
+      <tr><td>6</td><td>Where the rule lives</td><td>One helper, <span class="mono">cases.holds(case)</span>, answering has_video, has_path, waiting, read once per page and handed to the case bar, the case page, Home and the dashboard; the take-in and the Map page check it too.</td><td>Each page asks for itself.</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">The build's recommendation: the three states as drawn, with one helper deciding them, and the Map tab, the Map page, Add path files, the desk's small map and the Incidents tab following it. On Proposed events and Documents the build says what it thinks (keep them: they work on words) and does as you say.</p>
+    <p class="flag small" style="margin-top: 10px">What this is not: no per-case setting, no new store, no migration. The Panel's switches stay the office's masters; the state is read from what the case holds and changes as recordings and path files come and go. A new word for the glossary: the case's <b>holds</b> (or "what the case holds"), if the name stands.</p>
+  </section>
+
+</div>
+</body>
+</html>

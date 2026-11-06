@@ -39,6 +39,8 @@ def incidents_on(db):
 def test_the_tab_is_the_desk_and_the_reader_is_gone(client, db):
     person = User.objects.create_local_admin("desk", PASSWORD)
     case = Case.objects.create(owner=person, name="Harbour Street stop")
+    # The Incidents tab needs a video in the case (chapter 12, v1.214.0).
+    video(person, case, "BWC2-1")
     browser = signed_in(client, person)
     page = browser.get(f"/case/{case.pk}?tab=incidents").content.decode()
     for wanted in (

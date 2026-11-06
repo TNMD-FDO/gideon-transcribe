@@ -17,6 +17,32 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.214.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+What the case holds decides its tabs (Phase 12 chapter 12; the drawing
+`docs/spec/mockups/phase-12-case-unlocks.html`, at the maintainer's word of
+2026-11-06). Three states, read from the recordings and the path files and
+never set; the Panel's switches stay the masters.
+
+- **Audio only** (no recording has a picture): six tabs, Recordings,
+  Search, Notes, Clips, Speakers, Details. Proposed events, Documents,
+  Incidents and Map are hidden, Add path files is not offered, and the
+  incident pills are not drawn.
+- **Video, no path file yet:** every tab but Map; Add path files in the
+  head; no small map or near tools on the Incidents desk; the Details tab
+  says what a path file is and counts any waiting for their video.
+- **Unlocked** by the first path file read: the Map tab, the pill, the
+  desk's map and near tools, and the rest of the map feature as before.
+- A hidden tab's address answers with the Recordings tab and one notice;
+  the Map page does the same until the case is unlocked; the take-in of
+  path files refuses a case with no video, with the reason.
+- One helper, `cases.holds(case)`, read once per page.
+
 ## v1.213.0, 2026-11-06
 
 ```

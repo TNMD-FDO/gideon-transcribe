@@ -69,6 +69,13 @@ def static(name: str) -> str:
 
 
 def test_the_map_tab_is_in_the_bar_after_incidents_while_maps_are_on(person, a_case):
+    from core import camera_paths
+    from tests.test_camera_paths import body_file
+
+    # Only once the case holds a path file (chapter 12, v1.214.0).
+    camera = video(person, a_case, "BWC2-1")
+    assert "map" not in [t["key"] for t in case_bar.bar(a_case, on="map")["tabs"]]
+    camera_paths.add(camera, data=body_file(), filename="BWC2-1.vtt", by=person)
     keys = [t["key"] for t in case_bar.bar(a_case, on="map")["tabs"]]
     assert keys.index("map") == keys.index("incidents") + 1
     by_key = {t["key"]: t for t in case_bar.bar(a_case, on="map")["tabs"]}
@@ -80,10 +87,19 @@ def test_the_map_tab_is_in_the_bar_after_incidents_while_maps_are_on(person, a_c
 def test_the_map_is_a_page_of_its_own_and_the_tab_sends_there(client, person, a_case):
     """Chapter 6.10 (v1.210.0): the case bar's Map tab opens the page; the
     old tab address goes there with its query, so every On the map address
-    keeps landing at its moment."""
-    video(person, a_case, "BWC2-1")
+    keeps landing at its moment. Since chapter 12 (v1.214.0) the page
+    answers only once the case holds a path file; until then it sends to
+    the case with a notice."""
+    from core import camera_paths
+    from tests.test_camera_paths import body_file
+
+    camera = video(person, a_case, "BWC2-1")
     signed_in(client, person)
     page_url = reverse("case-map-page", args=[a_case.pk])
+    sent = client.get(page_url, follow=True)
+    assert 'id="case-map"' not in sent.content.decode()
+    assert "No camera in this case has a path file yet" in sent.content.decode()
+    camera_paths.add(camera, data=body_file(), filename="BWC2-1.vtt", by=person)
     asked = "?tab=map&recording=x&at=12.0"
     sent = client.get(reverse("case", args=[a_case.pk]) + asked)
     assert sent.status_code == 302
@@ -91,7 +107,7 @@ def test_the_map_is_a_page_of_its_own_and_the_tab_sends_there(client, person, a_
     page = client.get(page_url).content.decode()
     assert 'id="case-map"' in page and "vendor/maplibre-gl.js" in page
     assert "vendor/pmtiles.js" in page and "map.js" in page and "preview.js" in page
-    assert "No camera has a path file yet." in page
+    assert "1 with a path file" in page
     assert "No street map is installed" in page
     assert 'id="case-add-paths"' in page and "path-files.js" in page
     assert f'data-json="{reverse("case-map", args=[a_case.pk])}"' in page
@@ -820,7 +836,10 @@ def test_add_path_files_stands_in_the_case_head_on_every_tab(client, person, a_c
     from tests.test_camera_paths import body_file
 
     signed_in(client, person)
-    video(person, a_case, "BWC1-1")
+    camera = video(person, a_case, "BWC1-1")
+    # The Map page needs a path file read (chapter 12); the waiting one is
+    # not that.
+    camera_paths.add(camera, data=body_file(), filename="BWC1-1.vtt", by=person)
     camera_paths.keep_waiting(a_case, data=body_file(), filename="Z.vtt", by=person)
     for tab in ("", "?tab=notes", "?tab=map", "?tab=details"):
         got = client.get(reverse("case", args=[a_case.pk]) + tab, follow=True)

@@ -29,13 +29,28 @@ def _tab(key: str, name: str, icon: str, url: str, count=None, on: str = "") -> 
     }
 
 
-def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
+def bar(
+    case,
+    *,
+    on: str,
+    here: str = "",
+    counts: dict | None = None,
+    holds: dict | None = None,
+) -> dict:
     """The bar for a page of the case: `on` is the tab the page lives under
     (the case page passes the tab it shows), `here` the page's own name,
     empty on the case page itself. The case page hands the counts it has
     already gathered in `counts`, so it asks nothing twice; a deeper page
-    gives none and the helper counts."""
+    gives none and the helper counts. What the case holds (Phase 12
+    chapter 12, v1.214.0) narrows the tabs: Proposed events, Documents and
+    Incidents need a video in the case, Map a path file read; `holds` is
+    `cases.holds(case)` when the page has it already."""
+    from core import cases
+
     given = counts or {}
+    held = holds if holds is not None else cases.holds(case)
+    has_video = bool(held.get("has_video"))
+    has_path = bool(held.get("has_path"))
 
     def count(key: str, ask):
         return given[key] if key in given else ask()
@@ -52,7 +67,7 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
         ),
         _tab("search", "Search", "search", f"{base}?tab=search", None, on),
     ]
-    if proposals.tab_offered():
+    if proposals.tab_offered() and has_video:
         tabs.append(
             _tab(
                 "proposed",
@@ -78,7 +93,7 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
             on,
         )
     )
-    if documents.on():
+    if documents.on() and has_video:
         tabs.append(
             _tab(
                 "documents",
@@ -89,7 +104,7 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
                 on,
             )
         )
-    if incidents.on():
+    if incidents.on() and has_video:
         tabs.append(
             _tab(
                 "incidents",
@@ -104,8 +119,8 @@ def bar(case, *, on: str, here: str = "", counts: dict | None = None) -> dict:
             )
         )
     # The Map tab (Phase 12 chapter 1), after Incidents: the cameras with
-    # a path file counted.
-    if camera_paths.on():
+    # a path file counted; only once the case holds one (chapter 12).
+    if camera_paths.on() and has_path:
         tabs.append(
             _tab(
                 "map",
