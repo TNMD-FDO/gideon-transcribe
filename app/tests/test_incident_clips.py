@@ -721,7 +721,8 @@ def test_where_the_clip_shows_and_where_it_does_not(
     signed_in(client, person)
     # The case's Clips tab and the Clips page, with the Cameras column.
     page = client.get(f"/case/{incident.case_id}?tab=clips").content.decode()
-    assert "<th>Cameras</th>" in page and "2 cameras, Focus" in page
+    # The Cameras column folds under the title below 1600 wide (v1.216.0).
+    assert '<th class="fold">Cameras</th>' in page and "2 cameras, Focus" in page
     assert "from the event Asked out of the car" in page
     assert "22:01:07 to 22:01:27" in page and "Open the incident" in page
     assert "Open in viewer" not in page

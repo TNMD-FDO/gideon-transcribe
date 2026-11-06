@@ -595,7 +595,7 @@
     // at the head of its block, the clock the audio suggests.
     var mark = seg.clock ? (seg.clock.retimed ? " retimed" : " unsure") : "";
     var about = seg.clock && seg.clock.head ? (seg.clock.retimed ? " <span class='sg-about ok'>was " + clock(seg.clock.was) + "</span>" : " <span class='sg-about'>→ ~" + clock(seg.clock.about) + "</span>") : "";
-    return "<div class='sg-ctx-line " + cls + mark + "' data-start='" + (seg.clock ? seg.clock.play_from : seg.start) + "' data-end='" + (seg.clock ? seg.clock.play_to : seg.end) + "'><span class='t'>" + clock(seg.start) + about + "</span><span class='s' style='--speaker: " + escape(colourOf(seg.speaker)) + "'>" + escape(seg.speaker) + "</span><span>" + escape(seg.text) + "</span></div>";
+    return "<div class='sg-ctx-line " + cls + mark + "' data-start='" + (seg.clock ? seg.clock.play_from : seg.start) + "' data-end='" + (seg.clock ? seg.clock.play_to : seg.end) + "'><span class='t'>" + clock(seg.start) + about + "</span><span class='s' style='--speaker: " + escape(colourOf(seg.speaker)) + "' title='" + escape(seg.speaker) + "'>" + escape(seg.speaker) + "</span><span>" + escape(seg.text) + "</span></div>";
   }
   function renderContextForVoice(card) {
     if (!segments.length) { el.context.innerHTML = ""; return; }

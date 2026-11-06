@@ -4516,3 +4516,82 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .home-sect .team-row .team-words { min-width: 0; line-height: 1.4; }
 .home-sect .team-row.unseen .team-words b { color: var(--accent); }
 .home-sect .keep-line { border-top: 1px solid var(--line); }
+
+/* The case tabs walk (v1.216.0; the findings page of 2026-11-06, every tab
+   of a case at 1366 and 2560 with long fictional names and titles): the
+   seven places that broke reading and the nine that looked wrong, each a
+   rule or two here, numbered as the page numbers them. */
+/* 1. Where the rail is narrow, an item's pill drops under its words instead
+   of running into the page. */
+@media (max-width: 1399px) { .rail .item b { flex-wrap: wrap; } }
+/* 2. The case bar on the work pages: a tab never wraps in itself, the icons
+   go under 1600 as they do on the case page, and the page's own crumb is cut
+   with an ellipsis or takes a second line, so Details never leaves the edge. */
+.case-bar .tabs .tab { white-space: nowrap; flex: none; }
+.case-tabs .here { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1599px) {
+  .case-bar .tabs .tab .i { display: none; }
+  .case-bar .tabs .tab { padding-left: 10px; padding-right: 10px; }
+}
+@media (min-width: 1200px) and (max-width: 1599px) { .case-bar .tabs { flex-wrap: wrap; overflow-x: visible; } }
+/* 3. The incident page's work panel ends above the floating Ask Gideon
+   button, so a pane's last row (Save a picture, Larger map, the Details
+   pane's links) is never under it. */
+body.incident-page:has(.gideon-button) .inc-work { max-height: calc(100vh - 250px); }
+/* 4 and 5. A long title wraps in the Recording column at about 36rem rather
+   than pushing the table sideways; the words columns wrap with it (the
+   times and the date keep their line). */
+.case-page #recordings td.name { white-space: normal; min-width: 18rem; }
+.case-page #recordings td.state .pill { white-space: normal; }
+.case-page #recordings td.name > a, .case-page #recordings td.name > b { display: inline-block; max-width: 36rem; vertical-align: top; }
+.case-page #recordings td.notes, .case-page #recordings td.assigned, .case-page #recordings td.state, .case-page #recordings td.muted:not(.nowrap), .case-page #recordings td.incident { white-space: normal; }
+/* 6. A Details list's label column is capped, so a clip's long title as a
+   label wraps rather than crushing the values. */
+.kv { grid-template-columns: fit-content(16rem) minmax(0, 1fr); }
+.kv dt { overflow-wrap: anywhere; }
+/* 7. The transcript line's actions no longer hold 389 px for hidden words:
+   edit, speaker, note and where are their icons, their words in the title
+   (clip start keeps its words, which say where the clip stands), so the
+   words of the line get the measure at every width. */
+.seg .actions .w { display: none; }
+/* 12. Add a person opens its form under the button, which stays where it is. */
+.people-toolbar .add-person { position: relative; }
+.people-toolbar .add-person form.card { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; width: 38rem; max-width: calc(100vw - 220px); box-shadow: var(--shadow); }
+/* 14. The Speakers page's lines list: the name column takes a name up to
+   13rem and cuts a longer one with an ellipsis, the whole name in its title. */
+.sg-ctx-line { grid-template-columns: 44px minmax(0, max-content) minmax(0, 1fr); }
+.sg-ctx-line .s { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 15. The clips table under 1600: Cameras, Options and Size fold into a line
+   under the title; the date keeps one line; the buttons wrap in their cell
+   and never leave the box. */
+.clips-tbl .fold-line { display: none; }
+@media (max-width: 1599px) {
+  .clips-tbl .fold { display: none; }
+  .clips-tbl .fold-line { display: block; }
+}
+.clips-tbl td.saved { white-space: nowrap; }
+.clips-tbl td.acts .row { flex-wrap: wrap; justify-content: flex-end; }
+/* 16. The strip's incident tags are 16 px tall as drawn (the button base had
+   made them 34), so the foot row clears the top row where two share a start. */
+.chron .tags .tag { min-height: 0; height: 16px; line-height: 16px; }
+/* 19. The Cameras pane: a time never breaks across lines; the camera's name
+   wraps instead. */
+.inc-cameras th, .inc-cameras td.mono { white-space: nowrap; }
+.inc-cameras td:first-child { min-width: 9rem; }
+.inc-cameras td:nth-child(3) { min-width: 7.5rem; width: 11rem; }
+.inc-cameras td .pill { white-space: normal; }
+/* 22. The shelf's comparison row keeps a floor for its words, so the row
+   never collapses to a letter a line; a long about pill is cut with an
+   ellipsis; a menu's field shrinks to its menu. */
+.shelf-cmp { grid-template-columns: minmax(7rem, 11rem) minmax(7rem, 10rem) minmax(10rem, 1fr) auto; }
+.shelf-cmps { min-width: 28rem; }
+#documents td .pill.inc { max-width: 28rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+details.menu .menu-body input[type="text"], details.menu .menu-body input:not([type]), details.menu .menu-body select { min-width: 0; max-width: 100%; flex: 1 1 8rem; }
+details.menu .menu-body label.small { min-width: 0; max-width: 100%; }
+/* 23. The document page's eyebrow: each way is cut with an ellipsis at the
+   eyebrow's width, never under the page tools. */
+.doc-ways .btn { display: block; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+/* 24. The comparison against the case: the first cell wraps and a
+   recording's name breaks anywhere, so the claims keep the room. */
+.inc-events.compare-rows td.t, .compare-rows td.t { white-space: normal; }
+.compare-rows td.t .muted.small { overflow-wrap: anywhere; }

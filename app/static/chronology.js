@@ -200,7 +200,7 @@
     scroll.style.maxHeight = "";
     var other = host.getBoundingClientRect().height - scroll.getBoundingClientRect().height;
     var wallLeast = Math.max(240, Math.round(deskH * 0.58));
-    var least = (Math.min(ticked().length, most()) + 2) * LANE_STEP + 12;
+    var least = Math.max(6, Math.min(ticked().length, most()) + 2) * LANE_STEP + 12;
     scroll.style.maxHeight = Math.max(least, deskH - wallLeast - other - 10) + "px";
   }
   // The lead's span box (v1.207.0): two times and Set; Clear the span while one is set.
@@ -689,7 +689,7 @@
   // the clock line's time there, which stays: the span is said in the lead
   // and in the Reader as well, the time nowhere else on the strip.
   function settleTags(box) {
-    var tags = Array.prototype.slice.call(box.querySelectorAll(".col .tag"));
+    var tags = Array.prototype.slice.call(box.querySelectorAll(".tag:not(.build)"));
     if (!tags.length) { return; }
     var edge = box.getBoundingClientRect().right, placed = [];
     function hits(a, b) { var r = a.getBoundingClientRect(), s = b.getBoundingClientRect(); return r.width > 0 && s.width > 0 && r.left < s.right && s.left < r.right && r.top < s.bottom && s.top < r.bottom; }

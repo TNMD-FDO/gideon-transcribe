@@ -788,23 +788,23 @@
 
           {% if clips_here %}
             <div class="scroll-x">
-              <table class="tbl">
+              <table class="tbl clips-tbl">
                 <thead>
                   <tr>
-                    <th>Title</th><th>Recording</th><th>Cameras</th><th>Span</th><th>Length</th>
-                    <th>Options</th><th>Status</th><th>Size</th>
+                    <th>Title</th><th>Recording</th><th class="fold">Cameras</th><th>Span</th><th>Length</th>
+                    <th class="fold">Options</th><th>Status</th><th class="fold">Size</th>
                     <th>Saved</th><th>Saved by</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for clip in clips_here %}
                     <tr id="clip-{{ clip.id }}">
-                      <td class="name"><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}</td>
+                      <td class="name"><b>{{ clip.title }}</b>{% if clip.from_event %}<div class="muted small">{{ clip.from_event }}</div>{% endif %}<div class="muted small fold-line">{% if clip.cameras %}{{ clip.cameras }} &middot; {% endif %}{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}{% if clip.burn_captions or clip.include_excerpt %} &middot; {% endif %}{{ clip.size|filesizeformat }}</div></td>
                       <td class="muted">{{ clip.recording_title }}</td>
-                      <td class="muted">{{ clip.cameras }}</td>
+                      <td class="muted fold">{{ clip.cameras }}</td>
                       <td class="mono muted">{{ clip.span }}</td>
                       <td>{{ clip.length }}</td>
-                      <td class="muted">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
+                      <td class="muted fold">{% if clip.burn_captions %}captions burned{% if clip.include_excerpt %}, {% endif %}{% endif %}{% if clip.include_excerpt %}excerpt{% endif %}</td>
                       <td>
                         {% if clip.state == "ready" and not clip.stale %}
                           <span class="pill ok">Ready</span>
@@ -816,10 +816,10 @@
                           <span class="pill translate">Rendering</span>
                         {% endif %}
                       </td>
-                      <td>{{ clip.size|filesizeformat }}</td>
-                      <td class="muted">{{ clip.saved }}</td>
+                      <td class="fold">{{ clip.size|filesizeformat }}</td>
+                      <td class="muted saved">{{ clip.saved }}</td>
                       <td class="muted">{{ clip.saved_by }}</td>
-                      <td>
+                      <td class="acts">
                         <span class="row">
                           {% if clip.state == "ready" %}
                             <a href="/clip/{{ clip.id }}/download" class="btn small">Download</a>
@@ -966,7 +966,7 @@
           <div class="tbl-wrap">
           <table class="tbl as-cards{% if may_direct and not tools_open %} tools-folded{% endif %}" id="recordings">
             <thead>
-              <tr>{% if may_direct %}<th style="width: 28px" class="col-tick"><input type="checkbox" id="tick-all" aria-label="Tick every recording shown"></th>{% endif %}<th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th>{% if assignment_pills %}<th class="col-assigned">Assigned to</th>{% endif %}<th>Notes</th><th>Vision</th>{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
+              <tr>{% if may_direct %}<th style="width: 28px" class="col-tick"><input type="checkbox" id="tick-all" aria-label="Tick every recording shown"></th>{% endif %}<th>Recording</th>{% if any_type %}<th>Type</th>{% endif %}<th>State</th><th>Length</th><th>Speakers</th>{% if assignment_pills %}<th class="col-assigned">Assigned to</th>{% endif %}<th>Notes</th>{% if holds.has_video %}<th>Vision</th>{% endif %}{% if incidents_on %}<th>Incident</th>{% endif %}<th>Added</th><th></th></tr>
             </thead>
             <tbody>
               {% for recording in recordings %}
@@ -980,7 +980,7 @@
                   <td class="muted">{{ recording.speakers_in_words }}</td>
                   {% if assignment_pills %}<td class="assigned col-assigned">{% if recording.assigned_words %}{{ recording.assigned_words }}{% if recording.reviewed_words %} <span class="pill ok small">{{ recording.reviewed_words }}</span>{% endif %}{% else %}<span class="muted">nobody</span>{% endif %}</td>{% endif %}
                   <td class="muted notes">{% if recording.notes_words %}<a href="{% url 'case' case.pk %}?tab=notes" class="plain">{{ recording.notes_words }}</a>{% else %}none{% endif %}</td>
-                  <td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>
+                  {% if holds.has_video %}<td class="prepared">{% if recording.prepare_word %}<span class="pill {{ recording.prepare_tone }} small">{{ recording.prepare_word }}</span>{% endif %}</td>{% endif %}
                   {% if incidents_on %}
                     <td class="incident">{% if recording.incident_name %}<a href="{{ recording.incident_url }}">{{ recording.incident_name }}</a>{% elif recording.is_video_for_incidents %}<span class="muted">none</span>{% endif %}</td>
                   {% endif %}

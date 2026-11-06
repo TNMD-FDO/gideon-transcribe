@@ -264,7 +264,7 @@
       editButton.type = "button";
       editButton.className = "ghost tiny edit-row";
       editButton.title = "Correct this segment (E)";
-      editButton.innerHTML = icon("correct") + " edit";
+      editButton.innerHTML = icon("correct") + "<span class='w'> edit</span>";
       actions.appendChild(editButton);
 
       // Whose line is this (v1.142.0): the speaker picker on the line, where
@@ -274,7 +274,7 @@
         speakerButton.type = "button";
         speakerButton.className = "ghost tiny speaker-row";
         speakerButton.title = "Give this line to another speaker";
-        speakerButton.innerHTML = icon("person") + " speaker";
+        speakerButton.innerHTML = icon("person") + "<span class='w'> speaker</span>";
         actions.appendChild(speakerButton);
       }
 
@@ -283,7 +283,7 @@
       noteButton.type = "button";
       noteButton.className = "ghost tiny note-row";
       noteButton.title = segment.note ? "Change the note on this line (N)" : "A note on this line (N)";
-      noteButton.innerHTML = icon("note") + " note";
+      noteButton.innerHTML = icon("note") + "<span class='w'> note</span>";
       actions.appendChild(noteButton);
 
       // Where the camera was when this was said (Phase 12 chapter 4), from
@@ -293,7 +293,7 @@
         whereButton.type = "button";
         whereButton.className = "ghost tiny where-row";
         whereButton.title = "Where the camera was when this was said, and who was near";
-        whereButton.innerHTML = icon("map") + " where";
+        whereButton.innerHTML = icon("map") + "<span class='w'> where</span>";
         actions.appendChild(whereButton);
       }
 

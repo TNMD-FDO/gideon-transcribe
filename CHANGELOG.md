@@ -17,6 +17,53 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.216.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The case tabs walk's fixes. Every tab of a case and every page under a
+tab was walked at 1366 and at 2560 wide on the local demo, seeded with
+long fictional names and titles to stress the boxes; the walk found seven
+places that broke reading and nine that looked wrong, and the maintainer
+asked for both sets. Each is a rule or two in the stylesheet, with the
+findings' numbers kept in its comments and a test that pins them.
+
+What broke reading, fixed: a long title in the Recordings table wraps at
+about 36rem instead of pushing the whole table sideways (and an audio-only
+case's table no longer carries an empty Vision column); the recording
+page's Details list caps its label column, so a clip's long title as a
+label wraps rather than crushing the values to 65 px; a transcript line's
+edit, speaker, note and where buttons are their icons with their words in
+the title, so the line's words get the measure instead of a 121 px column
+at 1366; the clips table under 1600 folds Cameras, Options and Size into a
+line under the title and keeps its buttons inside the box; the Documents
+shelf's comparison row keeps a floor for its words, so it never collapses
+to a letter a line, a long about pill is cut with an ellipsis and the More
+menu's fields stay inside it; the document page's eyebrow cuts each way
+with an ellipsis instead of running under the page tools; and the
+comparison against the case wraps its first cell, so the claims keep the
+room at both widths.
+
+What looked wrong, fixed: a rail item's pill drops under its words below
+1400 instead of running 53 px into the page; the case bar on the work
+pages keeps every tab on one line, drops the icons under 1600 and cuts the
+page's crumb with an ellipsis, so Details never leaves the edge; the
+incident page's work panel ends above the floating Ask Gideon button; Add
+a person opens its form under the button, which stays where it is; the
+Speakers page's lines list caps the name column at 13rem with the whole
+name in its title; the strip's incident tags are 16 px tall as drawn, so
+tags that share a start settle into two rows instead of over one another
+(the build tag is left out of the settling, so it never hides an
+incident's name); the desk's lanes box holds six lanes at the least on the
+laptop; and the Cameras pane keeps a time on one line, gives the camera's
+name a floor and lets its pills wrap at words instead.
+
+The findings page and the walk's scripts live under `.claude/tools/walks/`
+on the maintainer's machine; the seeded case is the local demo's only.
+
 ## v1.215.0, 2026-11-06
 
 ```

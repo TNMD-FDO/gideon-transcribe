@@ -126,3 +126,41 @@ def test_the_chronology_paints_cameras_in_the_pages_tokens():
     assert "paint(e.colour)" in script and "paint(b.colour)" in script
     assert "e.colour ||" not in script and "+ b.colour +" not in script
     assert '.colour + "' not in script
+
+
+def test_the_case_tabs_walk_fixes_hold():
+    # The case tabs walk (v1.216.0): every tab of a case at 1366 and 2560 with
+    # long names and titles. The seven breaks and the nine that looked wrong,
+    # each pinned by the rule that fixed it.
+    for rule in (
+        "@media (max-width: 1399px) { .rail .item b { flex-wrap: wrap; } }",
+        ".case-bar .tabs .tab { white-space: nowrap; flex: none; }",
+        ".case-tabs .here { min-width: 0; max-width: 100%; overflow: hidden;",
+        ".inc-work { max-height: calc(100vh - 250px); }",
+        ".case-page #recordings td.name { white-space: normal; min-width: 18rem; }",
+        "#recordings td.name > b { display: inline-block; max-width: 36rem;",
+        ".kv { grid-template-columns: fit-content(16rem) minmax(0, 1fr); }",
+        ".seg .actions .w { display: none; }",
+        ".people-toolbar .add-person form.card { position: absolute;",
+        ".sg-ctx-line .s { max-width: 13rem; overflow: hidden;",
+        ".clips-tbl .fold { display: none; }",
+        ".chron .tags .tag { min-height: 0; height: 16px; line-height: 16px; }",
+        ".inc-cameras th, .inc-cameras td.mono { white-space: nowrap; }",
+        "minmax(7rem, 11rem) minmax(7rem, 10rem) minmax(10rem, 1fr) auto; }",
+        ".doc-ways .btn { display: block; max-width: 100%; min-width: 0;",
+        ".compare-rows td.t { white-space: normal; }",
+    ):
+        assert rule in CSS, rule
+    case = (TEMPLATES / "case.html").read_text(encoding="utf-8")
+    assert '<table class="tbl clips-tbl">' in case
+    assert case.count('class="fold"') == 4 and case.count('class="muted fold"') == 2
+    assert 'class="muted small fold-line"' in case
+    assert "{% if holds.has_video %}<th>Vision</th>{% endif %}" in case
+    static = APP / "static"
+    viewer = (static / "viewer.js").read_text(encoding="utf-8")
+    assert viewer.count("<span class='w'>") == 4
+    chronology = (static / "chronology.js").read_text(encoding="utf-8")
+    assert "Math.max(6, Math.min(ticked().length, most()) + 2)" in chronology
+    assert 'querySelectorAll(".tag:not(.build)")' in chronology
+    guided = (static / "speakers-guided.js").read_text(encoding="utf-8")
+    assert "title='\" + escape(seg.speaker) + \"'>" in guided
