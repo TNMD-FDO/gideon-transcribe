@@ -336,21 +336,21 @@ def test_wide_screens_are_used():
     columns = "minmax(0, var(--doc-picture)) minmax(280px, 1fr);"
     assert "grid-template-columns: " + columns in css
     home = (APP / "templates" / "home.html").read_text(encoding="utf-8")
-    # v1.115.0, the maintainer's pick: Cases on the left (Needs you first,
-    # each case's incidents under its row), This session on the right with
-    # Running now as its first line; the left column only with Cases on.
+    # v1.115.0, the maintainer's pick: Cases on the left, This session on
+    # the right with Running now as its first line; the left column only
+    # with Cases on. The desk (Phase 13 chapter 1, v1.215.0): Your work
+    # before the columns, Your team, lately under the cases, no Needs you
+    # and no row template for the incidents.
     assert '<div class="home-cols">' in home
     assert '<div class="col">' in home and '<div class="col side">' in home
     assert '<section class="home-sect" id="cases">' in home
-    assert '{% include "home-case-row.html" with row=row need=True %}' in home
-    order = ["ready-to-download", "cases", "needs-you", "this-session"]
-    order += ["running-now", "clips-line"]
+    assert "home-case-row.html" not in home and "needs-you" not in home
+    order = ["ready-to-download", "your-work", "cases", "team-lately"]
+    order += ["this-session", "running-now", "clips-line"]
     places = [home.find(f'id="{one}"') for one in order]
     assert places == sorted(places) and min(places) > 0
     assert ".home .home-cols > .col.side { flex: 2 1 0; }" in css
-    assert ".home-sect .row.sub {" in css and ".home-sect .group.warn {" in css
-    row = (APP / "templates" / "home-case-row.html").read_text(encoding="utf-8")
-    assert '<div class="row sub' in row and "{{ line.incident.name }}" in row
+    assert not (APP / "templates" / "home-case-row.html").exists()
     document = (APP / "templates" / "document.html").read_text(encoding="utf-8")
     assert "--doc-ratio: calc({{ rows.0.width }} / {{ rows.0.height }})" in document
 

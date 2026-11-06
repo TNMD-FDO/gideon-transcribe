@@ -67,9 +67,9 @@
           {% endif %}
         </div>
         <div class="grp">Places</div>
-        <a class="item{% if page == "home" %} on{% endif %}" href="{% url 'home' %}"{% if page == "home" %} aria-current="page"{% endif %} title="Home: what is running, and what needs you">
+        <a class="item{% if page == "home" %} on{% endif %}" href="{% url 'home' %}"{% if page == "home" %} aria-current="page"{% endif %} title="Home: your work, your cases, your team">
           <span class="ico">{% icon "home" %}</span>
-          <span class="words"><b>Home{% if ready_count %} <span class="pill small ok">{{ ready_count }} ready</span>{% endif %}</b><span class="line">What is running, and what needs you</span></span>
+          <span class="words"><b>Home{% if ready_count %} <span class="pill small ok">{{ ready_count }} ready</span>{% endif %}</b><span class="line">Your work, your cases, your team</span></span>
         </a>
         {% comment %}Bulk transcription (v1.173.0): files in, transcripts out, nothing kept; the pill says where this session's batch stands.{% endcomment %}
         <a class="item{% if page == "bulk" %} on{% endif %}" href="{% url 'bulk' %}"{% if page == "bulk" %} aria-current="page"{% endif %} title="Bulk transcription: files in, transcripts out, nothing kept">

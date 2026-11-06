@@ -5,13 +5,15 @@
 
 {% block content %}
   {% comment %}
-    Home (Phase 8 chapter 13): the greeting, the notices, then only the
-    sections that have something in them, in a fixed order: Ready to
-    download, Needs you, Running now, This session, Recent cases. Nothing
-    here is only a door; the rail's two actions are the doors.
+    Home as the desk (Phase 13 chapter 1, v1.215.0; Phase 8 chapter 13
+    before it): the greeting with the person's name, the notices, then only
+    the sections that have something in them, in a fixed order: Ready to
+    download, Your work, then Cases over Your team, lately beside This
+    session and Clips. Nothing here is amber and nothing is only a door; the
+    rail's two actions are the doors.
   {% endcomment %}
   <div class="page roomy workbench home">
-    <h1>{{ greeting }}</h1>
+    <h1>{{ greeting }}{% if person %}, {{ person }}{% endif %}</h1>
     {% if not transcription_installed %}
       <p class="notice warn">Transcription is not installed on this server yet. Recordings you upload are kept and transcribed when the card arrives.</p>
     {% elif not service_is_up %}
@@ -24,7 +26,7 @@
       <section class="home-sect ready" id="ready-to-download">
         <div class="head">
           <span class="ico">{% icon "download" %}</span>
-          <div><b>Ready to download</b><span class="cap">The transcripts of a batch that has finished. They are here until you press Done with these.</span></div>
+          <div><b>Ready to download</b></div>
         </div>
         {% for one in ready %}
           <div class="row ready-row" data-batch="{{ one.batch.pk }}">
@@ -39,13 +41,30 @@
       </section>
     {% endif %}
 
+    {% if work %}
+      {% comment %}Your work: what is assigned to the person and not yet reviewed, by case, with Next and the way to all of them.{% endcomment %}
+      <section class="home-sect" id="your-work">
+        <div class="head">
+          <span class="ico">{% icon "done" %}</span>
+          <div><b>Your work</b><span class="cap">Assigned to you and not yet reviewed.</span></div>
+        </div>
+        {% for row in work %}
+          <div class="row work-row" data-case="{{ row.case.pk }}">
+            <a href="{{ row.all_url }}" class="plain"><b>{{ row.case.name }}</b></a>
+            <span class="muted small">{{ row.words }}</span>
+            <span class="grow"></span>
+            <a href="{{ row.next_url }}" class="btn primary small" title="The oldest left, by when it was added">Next: {{ row.next_title|truncatechars:40 }}</a>
+            <a href="{{ row.all_url }}" class="btn ghost small">All {{ row.left }}</a>
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
     {% comment %}
-      Two columns from 1600 wide (v1.115.0, the maintainer's pick after the
-      October walk): Cases on the left, the ones with something to settle
-      first under Needs you and each case's incidents on a line under its
-      row; This session on the right with Running now as its first line and
-      the clips line last. Under 1600 the two are one list in that order.
-      Without Cases the right column alone takes the width.
+      Two columns from 1600 wide (v1.115.0): Cases over Your team, lately on
+      the left, This session and Clips on the right. Under 1600 the two are
+      one list in that order. Without Cases the right column alone takes the
+      width.
     {% endcomment %}
     <div class="home-cols">
     {% if cases_on %}
@@ -53,18 +72,23 @@
       <section class="home-sect" id="cases">
         <div class="head">
           <span class="ico">{% icon "case" %}</span>
-          <div><b>Cases</b><span class="cap">The ones with something to settle first, then every case you can open, by last activity. An incident sits under its case.</span></div>
+          <div><b>Cases</b><span class="cap">Every case you can open, by last activity.</span></div>
           <button type="button" class="btn small" id="open-new">New case</button>
           <a href="{% url 'cases' %}" class="btn ghost small">All cases</a>
         </div>
         {% include "new-case-box.html" %}
         {% if cases_rows %}
-          {% if needs %}
-            <div class="group warn" id="needs-you">Needs you</div>
-            {% for row in needs %}{% include "home-case-row.html" with row=row need=True %}{% endfor %}
-            {% if cases_rest %}<div class="group">The rest, by last activity</div>{% endif %}
-          {% endif %}
-          {% for row in cases_rest %}{% include "home-case-row.html" with row=row %}{% endfor %}
+          {% for row in cases_rows %}
+            {% comment %}A plain row (Phase 13 chapter 1): the name, what it holds and whom it is shared with, when it was last used, Open. No pills: the case's state is on its own page.{% endcomment %}
+            <div class="row case-row" data-case="{{ row.case.pk }}">
+              <a href="{{ row.url }}" class="plain"><b>{{ row.case.name }}</b></a>
+              {% if row.is_new %}<span class="pill small acc">new</span>{% endif %}
+              <span class="muted small facts">{{ row.recordings }} recording{{ row.recordings|pluralize }}{% if row.incidents %} &middot; {{ row.incidents }} incident{{ row.incidents|pluralize }}{% endif %}{% if row.team_words %} &middot; {{ row.team_words }}{% endif %}</span>
+              <span class="grow"></span>
+              <span class="muted small nowrap">{{ row.when|date:"j M" }}</span>
+              <a href="{{ row.url }}" class="btn small">Open</a>
+            </div>
+          {% endfor %}
         {% elif cases_line and "in the office" in cases_line %}
           {% url 'cases' as cases_url %}
           {% include "empty.html" with compact=True icon="case" title="None of yours yet" line=cases_line action="Everyone's cases" action_url=cases_url|add:"?who=everyone" %}
@@ -72,6 +96,36 @@
           {% include "empty.html" with compact=True icon="case" title="No cases yet" line="A case keeps a matter's recordings together, and keeps them after you sign out." action="New case" action_id="open-new-empty" %}
         {% endif %}
       </section>
+
+      {% if team.lines %}
+        {% comment %}
+          Your team, lately (Phase 13 chapter 1): what colleagues did in the
+          cases the person shares, from the records the app already keeps;
+          Seen folds it until something newer happens.
+        {% endcomment %}
+        <details class="home-sect team" id="team-lately"{% if team.new %} open{% endif %}>
+          <summary class="head">
+            <span class="ico">{% icon "people" %}</span>
+            <div><b>Your team, lately</b><span class="cap">{% if team.new %}What colleagues did in the cases you share, newest first.{% else %}Nothing new since you looked.{% endif %}</span></div>
+            {% if team.new %}
+              <form method="post" action="{% url 'home-team-seen' %}" class="inline-form">{% csrf_token %}<button type="submit" class="btn ghost small" title="Fold this until something newer happens">Seen</button></form>
+            {% endif %}
+          </summary>
+          {% for line in team.lines %}
+            <div class="row team-row{% if team.seen and line.when > team.seen %} unseen{% endif %}" data-kind="{{ line.kind }}">
+              <span class="who" aria-hidden="true">{{ line.initials }}</span>
+              <span class="grow team-words">
+                <b>{{ line.who }}</b>
+                {% if line.kind == "dictation" %}{{ line.words }} <a href="{{ line.url }}">{{ line.title }}</a>
+                {% elif line.kind == "asked" %}{{ line.words }} <a href="{{ line.case_url }}">{{ line.case }}</a>: <span class="muted">&ldquo;{{ line.question }}&rdquo;</span>
+                {% elif line.kind == "shared" %}shared <a href="{{ line.case_url }}">{{ line.case }}</a> with you
+                {% else %}{{ line.words }} <a href="{{ line.case_url }}">{{ line.case }}</a>{% endif %}
+              </span>
+              <span class="muted small nowrap">{{ line.when_words }}</span>
+            </div>
+          {% endfor %}
+        </details>
+      {% endif %}
     </div>
     {% endif %}
     <div class="col side">
@@ -79,7 +133,7 @@
     <section class="home-sect" id="this-session">
       <div class="head">
         <span class="ico">{% icon "upload" %}</span>
-        <div><b>This session</b><span class="cap">{{ keep_line }}</span></div>
+        <div><b>This session</b></div>
         <a href="{% url 'recordings' %}" class="btn ghost small">My recordings</a>
       </div>
       {% if running %}
@@ -107,6 +161,8 @@
       {% if recorded_here %}
         <p class="muted small empty-line"><a href="{% url 'recordings' %}#recorded-here">{{ recorded_here }} recorded here</a></p>
       {% endif %}
+      {% comment %}The keep-or-lose line, said once, at the foot (Phase 13 chapter 1: it had stood under the heading).{% endcomment %}
+      <p class="muted small empty-line keep-line">{{ keep_line }}</p>
     </section>
 
     {% if clips_count %}

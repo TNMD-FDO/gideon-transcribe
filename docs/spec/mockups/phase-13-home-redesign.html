@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home redesigned: three directions</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0; --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff; --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e;
+    --radius: 6px; --radius-lg: 8px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; } }
+  :root[data-theme="dark"] { --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1; --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding: 32px 16px 64px; }
+  .page { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; } h2 { font-size: 17px; margin: 0; } h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 84ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 14px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 14px; } .caption p { margin: 0; }
+  .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } .mono { font-family: var(--mono); } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  /* the window */
+  .win { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .win .topbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); background: var(--surface-2); }
+  .win .body { display: grid; grid-template-columns: 150px minmax(0, 1fr); }
+  .rail { border-right: 1px solid var(--line); background: var(--surface-2); padding: 10px 10px; font-size: 11px; display: flex; flex-direction: column; gap: 8px; }
+  .rail .act { border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 8px; text-align: center; background: var(--surface); }
+  .rail .act.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .rail .place { padding: 3px 6px; border-radius: 4px; } .rail .place.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .rail .place small { display: block; color: var(--muted); font-weight: 400; font-size: 10px; }
+  .content { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .greet { font-size: 20px; font-weight: 600; }
+  .notice { border-left: 3px solid var(--bad); background: var(--surface-2); padding: 6px 10px; font-size: 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .sect { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sect .h { display: flex; gap: 10px; align-items: baseline; }
+  .sect .h b { font-size: 14px; } .sect .h .cap { color: var(--muted); font-size: 12px; flex: 1; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 12px; padding: 5px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row .grow { flex: 1; } .row .name { font-weight: 600; font-size: 13px; color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 9px; min-height: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .cols { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; align-items: start; }
+  .cols .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .group { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 0 2px; }
+  .group.warn { color: var(--warn); }
+  .inc { padding-left: 22px; font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .fault { display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: var(--bad); color: #fff; font: 700 11px/18px var(--font); justify-content: center; vertical-align: middle; margin-left: 4px; }
+  .who { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 700 10px/20px var(--font); justify-content: center; flex: none; }
+  .who.b { background: var(--ok-soft); color: var(--ok); } .who.c { background: var(--warn-soft); color: var(--warn); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .card .name { font-weight: 600; font-size: 13px; color: var(--accent); }
+  .card .facts { color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; }
+  .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--ok); }
+  .lately { display: flex; flex-direction: column; gap: 0; }
+  .lately .ev { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .lately .ev:first-child { border-top: 0; }
+  .lately .ev .when { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  ul.plain { margin: 4px 0 0; padding-left: 18px; } ul.plain li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 13, a first chapter proposed · three directions for the maintainer's word · 2026-11-06</span>
+    <h1>Home redesigned: less to read, nothing that needs you, and what the team is doing, or not</h1>
+    <p class="lede">The ask of 2026-11-06: Home is confusing and should carry no Needs you information; how, if at all, could it carry information relevant to collaboration. Below: what Home holds today and where it hurts, what the app actually knows about colleagues (the only honest basis for a collaboration line), three directions drawn as whole pages, and the choices. The fictional office throughout: the cases <b>Harbour Street stop</b>, <b>Pike calls</b>, <b>Marsh Lane interview</b>; the colleagues <b>Pat Okonkwo</b> and <b>Sam Reyes</b>; the person looking is <b>test</b>.</p>
+  </header>
+
+  <!-- Figure 0 -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure 0</span><h2>Home today, and where it hurts</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Admin · Sign out</span></div>
+      <div class="body">
+        <div class="rail"><span class="act primary">Upload files</span><span class="act">Record now</span><span class="place on">Home <small>What is running, and what needs you</small></span><span class="place">Bulk transcription</span><span class="place">Cases</span><span class="place">My recordings</span><span class="place">Clips</span><span class="place">Voices</span></div>
+        <div class="content">
+          <div class="greet">Good evening</div>
+          <div class="notice">Transcription is not available right now. Uploading is paused until it is back; anything already in the line waits there.</div>
+          <div class="sect"><div class="h"><b>Ready to download</b><span class="cap">The transcripts of a batch that has finished. They are here until you press Done with these.</span></div><div class="row"><b>1 transcript ready</b><span class="muted">uploaded 4 Oct at 4:42 p.m.</span><span class="grow"></span><span class="btn primary">Download transcripts</span><span class="btn">Open the batch</span><span class="btn ghost">Done with these</span></div></div>
+          <div class="cols">
+            <div class="col">
+              <div class="sect">
+                <div class="h"><b>Cases</b><span class="cap">The ones with something to settle first, then every case you can open, by last activity. An incident sits under its case. <span class="fault">1</span></span><span class="btn">New case</span><span class="btn ghost">All cases</span></div>
+                <div class="group warn">Needs you <span class="fault">2</span></div>
+                <div class="row"><span class="name">Harbour Street stop</span><span class="pill">6 cameras on the map</span><span class="pill">shared with 1</span><span class="grow"></span><span class="muted">8 recordings · 6 Nov</span><span class="btn">Open</span></div>
+                <div class="inc">Harbour car park · 3 cameras <span class="pill ok">3 of 3 synced</span><span class="pill warn">1 proposed event waiting</span></div>
+                <div class="inc">Walk incident, 6 Nov · 2 cameras <span class="pill ok">2 of 2 synced</span></div>
+                <div class="inc">Harbour Street stop, 20:25 · 2 cameras <span class="pill ok">2 of 2 synced</span></div>
+                <div class="inc">Harbour Street stop, 20:25 · 1 camera <span class="pill ok">1 of 1 synced</span></div>
+                <div class="inc">Wall walk, 6 Nov · 6 cameras <span class="pill warn">5 of 6 synced</span><span class="pill warn">not synced</span> <span class="fault">3</span></div>
+                <div class="inc">Streams walk · 5 cameras <span class="pill warn">4 of 5 synced</span><span class="pill warn">not synced</span></div>
+                <div class="group">The rest, by last activity</div>
+                <div class="row"><span class="name">Demo: audio samples</span><span class="grow"></span><span class="muted">4 recordings · 6 Nov</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Pike calls</span><span class="pill">Summaries tonight: 12</span><span class="pill">1 of 12 reviewed</span><span class="pill">4 of 4 left for you</span><span class="pill">shared with 2</span> <span class="fault">4</span><span class="grow"></span><span class="muted">12 recordings · 6 Nov</span><span class="btn">Open</span></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="sect"><div class="h"><b>This session</b><span class="cap">These stay until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it.</span><span class="btn ghost">My recordings</span></div><div class="row"><span class="name">Voicemail_0412</span><span class="pill ok">Ready</span><span class="grow"></span><span class="muted mono">00:00:48 · uploaded 4 Oct at 4:42 p.m.</span><span class="btn">Open</span></div></div>
+              <div class="sect"><div class="h"><b>Clips</b><span class="cap"></span><span class="btn ghost">3 clips</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Where it hurts.</b> <span class="fault">1</span> Every section opens with a sentence to read before anything is used. <span class="fault">2</span> Needs you puts a case first because one incident has one pill, and the heading is amber before the person has done anything. <span class="fault">3</span> The incidents of every case are listed under its row with sync pills, so one case fills the screen with six lines of state that belong on the case's own page. <span class="fault">4</span> A row carries five kinds of pill in two tones, and the one that is about the person ("4 of 4 left for you") is lost among the case's.</p>
+      <p><b>What the app knows about colleagues</b>, which is all a collaboration line can be drawn from: who a case is shared with and when each last opened it; who is assigned which recordings, who reviewed which and when; who wrote each note and when; who asked Gideon what, on a case; a dictation sent to you. There is no message, no mention and no presence in the app, and nothing is proposed here that would need one.</p>
+    </div>
+  </section>
+
+  <!-- Direction A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A · your desk</span><h2>Your work first, then the cases as plain rows; nothing amber, nothing about the team</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Admin · Sign out</span></div>
+      <div class="body">
+        <div class="rail"><span class="act primary">Upload files</span><span class="act">Record now</span><span class="place on">Home <small>Your work, and your cases</small></span><span class="place">Bulk transcription</span><span class="place">Cases</span><span class="place">My recordings</span><span class="place">Clips</span><span class="place">Voices</span></div>
+        <div class="content">
+          <div class="greet">Good evening, test</div>
+          <div class="notice">Transcription is not available right now. Uploading is paused until it is back; anything already in the line waits there.</div>
+          <div class="sect"><div class="h"><b>Ready to download</b><span class="cap"></span></div><div class="row"><b>1 transcript ready</b><span class="muted">uploaded 4 Oct at 4:42 p.m.</span><span class="grow"></span><span class="btn primary">Download transcripts</span><span class="btn">Open the batch</span><span class="btn ghost">Done with these</span></div></div>
+          <div class="sect">
+            <div class="h"><b>Your work</b><span class="cap">What is assigned to you and not yet reviewed, by case.</span></div>
+            <div class="row"><span class="name">Pike calls</span><span class="muted">4 of 4 left for you</span><span class="grow"></span><span class="btn primary">Next: call 0417</span><span class="btn ghost">All four</span></div>
+            <div class="row"><span class="name">Marsh Lane interview</span><span class="muted">2 of 6 left for you · 1 noted by you</span><span class="grow"></span><span class="btn">Next: Interview, part 2</span><span class="btn ghost">Both</span></div>
+          </div>
+          <div class="cols">
+            <div class="col">
+              <div class="sect">
+                <div class="h"><b>Cases</b><span class="cap">Every case you can open, by last activity.</span><span class="btn">New case</span><span class="btn ghost">All cases</span></div>
+                <div class="row"><span class="name">Harbour Street stop</span><span class="muted">8 recordings · 6 incidents · shared with Pat</span><span class="grow"></span><span class="muted">6 Nov, you</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Demo: audio samples</span><span class="muted">4 recordings</span><span class="grow"></span><span class="muted">6 Nov, you</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Pike calls</span><span class="muted">12 recordings · shared with Pat and Sam</span><span class="grow"></span><span class="muted">6 Nov, Pat</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Marsh Lane interview</span><span class="muted">6 recordings · Sam's, shared with you</span><span class="grow"></span><span class="muted">4 Nov, Sam</span><span class="btn">Open</span></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="sect"><div class="h"><b>This session</b><span class="cap"></span><span class="btn ghost">My recordings</span></div><div class="row"><span class="muted">Running now</span><span class="pill">2 of 5 transcribed</span></div><div class="row"><span class="name">Voicemail_0412</span><span class="pill ok">Ready</span><span class="grow"></span><span class="muted mono">00:00:48 · 4 Oct</span><span class="btn">Open</span></div><div class="muted tiny">Kept until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it.</div></div>
+              <div class="sect"><div class="h"><b>Clips</b><span class="cap"></span><span class="btn ghost">3 clips</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>Your work replaces Needs you.</b> The one thing on Home that is about the person: the recordings assigned to them and not reviewed, by case, with <b>Next</b> (the oldest, as the recording page's Next offers it) and the way to all of them (the Recordings tab, Mine, not reviewed). Drawn only when something is assigned; a person with no assignments sees no section.</p>
+      <p><b>Cases are rows, not dashboards.</b> The name, what it holds in one muted line (recordings, incidents as a count, whom it is shared with by first name), when it was last used and by whom, Open. No state pills: a case's state is on its page's Dashboard line, where the person is about to act on it. The incidents' lines under each row go.</p>
+      <p><b>What leaves.</b> Needs you and the amber heading; every pill on a case row; the incident lines; the sentence under each section's heading (the rail's line already says what Home is for; the keep-or-lose line moves to small type at the foot of This session). The rail's line for Home becomes "Your work, and your cases".</p>
+    </div>
+  </section>
+
+  <!-- Direction B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction B · your desk and the team</span><h2>Direction A, plus one quiet section of what colleagues did lately in the cases you share</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Admin · Sign out</span></div>
+      <div class="body">
+        <div class="rail"><span class="act primary">Upload files</span><span class="act">Record now</span><span class="place on">Home <small>Your work, your cases, your team</small></span><span class="place">Bulk transcription</span><span class="place">Cases</span><span class="place">My recordings</span><span class="place">Clips</span><span class="place">Voices</span></div>
+        <div class="content">
+          <div class="greet">Good evening, test</div>
+          <div class="sect">
+            <div class="h"><b>Your work</b><span class="cap">What is assigned to you and not yet reviewed, by case.</span></div>
+            <div class="row"><span class="name">Pike calls</span><span class="muted">4 of 4 left for you</span><span class="grow"></span><span class="btn primary">Next: call 0417</span><span class="btn ghost">All four</span></div>
+            <div class="row"><span class="name">Marsh Lane interview</span><span class="muted">2 of 6 left for you</span><span class="grow"></span><span class="btn">Next: Interview, part 2</span><span class="btn ghost">Both</span></div>
+          </div>
+          <div class="cols">
+            <div class="col">
+              <div class="sect">
+                <div class="h"><b>Cases</b><span class="cap">Every case you can open, by last activity.</span><span class="btn">New case</span><span class="btn ghost">All cases</span></div>
+                <div class="row"><span class="name">Harbour Street stop</span><span class="muted">8 recordings · 6 incidents · shared with Pat</span><span class="grow"></span><span class="muted">6 Nov, you</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Pike calls</span><span class="muted">12 recordings · shared with Pat and Sam</span><span class="grow"></span><span class="muted">6 Nov, Pat</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Marsh Lane interview</span><span class="muted">6 recordings · Sam's, shared with you</span><span class="grow"></span><span class="muted">4 Nov, Sam</span><span class="btn">Open</span></div>
+                <div class="row"><span class="name">Demo: audio samples</span><span class="muted">4 recordings</span><span class="grow"></span><span class="muted">6 Nov, you</span><span class="btn">Open</span></div>
+              </div>
+              <div class="sect">
+                <div class="h"><b>Your team, lately</b><span class="cap">What colleagues did in the cases you share, newest first. Read from the case's own record; nothing is sent.</span><span class="btn ghost">Seen</span></div>
+                <div class="lately">
+                  <div class="ev"><span class="who">PO</span><span><b>Pat Okonkwo</b> reviewed 3 calls in <span class="name">Pike calls</span> and left 2 notes</span><span class="when">today, 14:10</span></div>
+                  <div class="ev"><span class="who b">SR</span><span><b>Sam Reyes</b> shared <span class="name">Marsh Lane interview</span> with you</span><span class="when">today, 09:32</span></div>
+                  <div class="ev"><span class="who">PO</span><span><b>Pat Okonkwo</b> asked Gideon about <span class="name">Pike calls</span>: "When was the phone handed over?"</span><span class="when">yesterday</span></div>
+                  <div class="ev"><span class="who b">SR</span><span><b>Sam Reyes</b> added 2 recordings to <span class="name">Harbour Street stop</span></span><span class="when">4 Nov</span></div>
+                  <div class="ev"><span class="who c">JL</span><span><b>Jordan Lee</b> sent you a dictation, <span class="name">Walk-through, 3 Nov</span></span><span class="when">3 Nov</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="sect"><div class="h"><b>This session</b><span class="cap"></span><span class="btn ghost">My recordings</span></div><div class="row"><span class="name">Voicemail_0412</span><span class="pill ok">Ready</span><span class="grow"></span><span class="muted mono">00:00:48 · 4 Oct</span><span class="btn">Open</span></div><div class="muted tiny">Kept until you sign out, or 8 hours after you stop working. Put a recording in a case to keep it.</div></div>
+              <div class="sect"><div class="h"><b>Clips</b><span class="cap"></span><span class="btn ghost">3 clips</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>What the team did, from what the app already records.</b> Five kinds of line and no others: reviewed (reviewed_by and reviewed_on), noted (the note's writer and time, folded per person per case per day: "left 2 notes"), shared with you (the Share's added_on), added recordings (who moved or uploaded them into a shared case), asked Gideon (a case chat turn by a colleague, with its question, which the drawer already shows to everyone). A dictation sent to you joins them. Each line opens where the thing is. Twenty at most, newest first; <b>Seen</b> folds the section to its heading until something new happens, remembered per person.</p>
+      <p><b>What it is not.</b> Not a feed of the person's own work (they know), not a mail, not a count of anything, not a place to write. It draws only from cases the person is on, so it shows nothing an Admin's audited look would not. An office of one person never sees the section.</p>
+      <p><b>Why it earns its place.</b> The Team block on a case's Details tab says who has what; nobody opens five cases to learn that Pat finished the calls. This is the one screen where "what happened while I was away" can be answered, and it is the only collaboration information the app can state truthfully.</p>
+    </div>
+  </section>
+
+  <!-- Direction C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction C · the cases as cards</span><h2>One grid of case cards, each with its team and its progress, your work inside the card</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Admin · Sign out</span></div>
+      <div class="body">
+        <div class="rail"><span class="act primary">Upload files</span><span class="act">Record now</span><span class="place on">Home <small>Your cases, and how far along each is</small></span><span class="place">Bulk transcription</span><span class="place">Cases</span><span class="place">My recordings</span><span class="place">Clips</span><span class="place">Voices</span></div>
+        <div class="content">
+          <div class="greet">Good evening, test</div>
+          <div class="cards">
+            <div class="card"><span class="name">Pike calls</span><div class="facts"><span class="who">T</span><span class="who">PO</span><span class="who b">SR</span><span>· 12 recordings · 11 notes</span></div><div class="bar"><i style="width: 8%"></i></div><div class="muted">1 of 12 reviewed · 4 left for you</div><div class="muted tiny">last used today by Pat</div><div class="facts"><span class="btn primary">Next: call 0417</span><span class="btn">Open</span></div></div>
+            <div class="card"><span class="name">Harbour Street stop</span><div class="facts"><span class="who">T</span><span class="who">PO</span><span>· 8 recordings · 6 incidents · 14 notes</span></div><div class="bar"><i style="width: 0%"></i></div><div class="muted">nothing assigned</div><div class="muted tiny">last used today by you</div><div class="facts"><span class="btn">Open</span></div></div>
+            <div class="card"><span class="name">Marsh Lane interview</span><div class="facts"><span class="who b">SR</span><span class="who">T</span><span>· 6 recordings · 4 notes</span></div><div class="bar"><i style="width: 66%"></i></div><div class="muted">4 of 6 reviewed · 2 left for you</div><div class="muted tiny">last used 4 Nov by Sam</div><div class="facts"><span class="btn primary">Next: Interview, part 2</span><span class="btn">Open</span></div></div>
+            <div class="card"><span class="name">Demo: audio samples</span><div class="facts"><span class="who">T</span><span>· 4 recordings</span></div><div class="bar"><i style="width: 0%"></i></div><div class="muted">nothing assigned</div><div class="muted tiny">last used today by you</div><div class="facts"><span class="btn">Open</span></div></div>
+          </div>
+          <div class="cols">
+            <div class="col"><div class="sect"><div class="h"><b>This session</b><span class="cap"></span><span class="btn ghost">My recordings</span></div><div class="row"><span class="name">Voicemail_0412</span><span class="pill ok">Ready</span><span class="grow"></span><span class="muted mono">00:00:48 · 4 Oct</span><span class="btn">Open</span></div></div></div>
+            <div class="col"><div class="sect"><div class="h"><b>Ready to download</b><span class="cap"></span></div><div class="row"><b>1 transcript ready</b><span class="grow"></span><span class="btn primary">Download transcripts</span><span class="btn ghost">Done with these</span></div></div><div class="sect"><div class="h"><b>Clips</b><span class="cap"></span><span class="btn ghost">3 clips</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>A card per case</b>: the team as initials, the counts, a bar of how far the review has come, the person's own left, who used it last, and Next. The collaboration is in the shape (whose case, who is on it, how far along) rather than in a list of events.</p>
+      <p><b>What it costs.</b> A person with twenty cases scrolls a wall of cards, and Ready to download, which the chapter put first for a reason, drops below them. The bar means nothing on a case where nothing is assigned, which is most of them today. The initials are a new drawing with no name on them until hovered.</p>
+    </div>
+  </section>
+
+  <!-- Choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Eight to decide, in one table</h2></div>
+    <table class="t">
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn (the recommendation)</th><th>The other way</th></tr>
+      <tr><td>1</td><td>Needs you</td><td>Gone, with the amber heading and every warning pill on Home. A case's state lives on its page's Dashboard line and in the Cases page's columns.</td><td>Kept as one quiet count on the row ("2 to settle"), never a heading.</td></tr>
+      <tr><td>2</td><td>Your work</td><td>The one section about the person: assigned and not reviewed, by case, with Next and the way to all; drawn only when something is assigned.</td><td>Folded into each case row as the one pill kept ("4 left for you").</td></tr>
+      <tr><td>3</td><td>The case rows</td><td>Name, one muted line (recordings, incidents as a count, shared with whom by first name), last used when and by whom, Open. No pills, no incident lines.</td><td>Keep the incident lines under each row, without their pills.</td></tr>
+      <tr><td>4</td><td>Collaboration on Home</td><td>Direction B's "Your team, lately": five kinds of line from what the app records (reviewed, noted, shared with you, added recordings, asked Gideon), plus a dictation sent to you; twenty at most; Seen folds it. Nothing is sent, nothing new is kept.</td><td>None (Direction A): the Team block on a case's Details is enough.</td></tr>
+      <tr><td>5</td><td>What is kept for it</td><td>One small thing per person: when they last pressed Seen, so the section stays folded until something newer happens. Everything else is read from the cases' own records.</td><td>Nothing kept: the section always open.</td></tr>
+      <tr><td>6</td><td>The words under the headings</td><td>Gone from Ready to download, Cases and This session; the keep-or-lose line becomes small type at the foot of This session; the rail's line for Home becomes "Your work, your cases, your team" (B) or "Your work, and your cases" (A).</td><td>Kept as today.</td></tr>
+      <tr><td>7</td><td>Who is in the greeting</td><td>"Good evening, test": the person's shown name, since the team section names colleagues.</td><td>The greeting alone, as today.</td></tr>
+      <tr><td>8</td><td>Where Running now goes</td><td>Stays as the first line of This session (a pill or two for the person's own batch, Process again, preparing, tonight).</td><td>Into Your work, as "running" rows.</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">The build's recommendation is <b>Direction B</b>: Direction A's quiet desk with one honest team section. Needs you goes; the person's own work comes first; the cases become rows that say what they hold and who touched them last; and the one screen that can answer "what happened while I was away" does so from records the app already keeps, without a feed, a mail or a message. If the office is one person, B is A: the team section is never drawn.</p>
+    <p class="flag small" style="margin-top: 10px">Two things said plainly. First, "no needs you information" removes the amber signal that put a case under Needs you when retention was about to delete it; the retention warning stays on the Cases page's column, in the nightly digest mail and on the case page, so nothing is lost but the Home copy. Second, Direction B reads other people's notes' times and Gideon questions on shared cases; the app already shows both to everyone on the case, so no new privacy is opened, but it is new to see them gathered. Both are the maintainer's calls.</p>
+  </section>
+
+</div>
+</body>
+</html>

@@ -105,6 +105,10 @@ class User(AbstractBaseUser):
     # "by hand", shown on the People page.
     unit_pinned = models.BooleanField(default=False)
     unit_how = models.CharField(max_length=200, blank=True, default="")
+    # Home as the desk (Phase 13 chapter 1, v1.215.0): when the person last
+    # pressed Seen on Your team, lately; the section stays folded until
+    # something newer happens.
+    team_seen_on = models.DateTimeField(null=True, blank=True)
 
     # The three sources of admin status. The group only ever adds: a manual
     # flag cannot demote a member of the Admin group, so removing a group

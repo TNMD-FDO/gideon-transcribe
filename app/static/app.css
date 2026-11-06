@@ -4503,3 +4503,16 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .cmp-sheet .doc-box.lit { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .toggle.order button { font-size: var(--t-small); }
 @media (max-width: 1100px) { .cmp-body { grid-template-columns: 1fr; } .cmp-page-col { position: static; max-height: none; } }
+
+/* Home as the desk (Phase 13 chapter 1, v1.215.0): Your work, the case rows,
+   Your team, lately. */
+.home-sect .case-row .facts, .home-sect .work-row .muted { min-width: 0; }
+.home-sect.team > summary.head { cursor: pointer; list-style: none; }
+.home-sect.team > summary.head::-webkit-details-marker { display: none; }
+.home-sect.team > summary.head .inline-form { margin-left: auto; align-self: center; }
+.home-sect.team:not([open]) > summary.head { border-bottom: 0; }
+.home-sect .team-row { align-items: flex-start; }
+.home-sect .team-row .who { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: var(--t-label); font-weight: 700; align-items: center; justify-content: center; flex: none; }
+.home-sect .team-row .team-words { min-width: 0; line-height: 1.4; }
+.home-sect .team-row.unseen .team-words b { color: var(--accent); }
+.home-sect .keep-line { border-top: 1px solid var(--line); }

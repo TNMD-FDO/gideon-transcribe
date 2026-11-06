@@ -149,11 +149,13 @@ def test_home_asks_a_handful_whatever_the_number_of_cases(owner, client, monkeyp
     monkeypatch.setattr(uploads, "used_bytes", lambda user: 0)
     signed_in(client, owner)
     seed_cases(owner, 5)
+    # The seeded cases assign a call to the person, so each case is on Your
+    # work as well (Phase 13 chapter 1): the count is the Cases section's.
     at_five, page = queries_for(client, reverse("home"))
-    assert page.content.decode().count("Matter ") == 5
+    assert page.content.decode().split('id="cases"', 1)[1].count("Matter ") == 5
     seed_cases(owner, 15)
     at_twenty, page = queries_for(client, reverse("home"))
-    assert page.content.decode().count("Matter ") == 20
+    assert page.content.decode().split('id="cases"', 1)[1].count("Matter ") == 20
     assert at_twenty < 60, (at_five, at_twenty)
     assert at_twenty <= at_five + 2, (at_five, at_twenty)
 

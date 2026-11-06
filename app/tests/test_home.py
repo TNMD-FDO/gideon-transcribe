@@ -23,6 +23,7 @@ from core.models import User
 from core.recordings import Batch, MediaState, Recording
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 from tests.helpers import signed_in
 
 APP = Path(__file__).resolve().parent.parent
@@ -104,12 +105,12 @@ def test_the_rail_on_every_page(client, ana, cases_on):
         page = client.get(where).content.decode()
         assert '<nav class="rail" aria-label="Main">' in page, where
         assert 'href="/upload"' in page and "Upload files" in page, where
-        assert "What is running, and what needs you" in page
+        assert "Your work, your cases, your team" in page
         assert "Kept for a matter, after sign-out" in page
         assert "This session only, then gone" in page
     home_page = client.get(reverse("home")).content.decode()
     assert 'aria-current="page"' in home_page
-    assert home_page.index('aria-current="page"') < home_page.index("What is running")
+    assert home_page.index('aria-current="page"') < home_page.index("Your work, your")
     # Record now waits on its setting.
     assert 'href="/record/new"' not in home_page
     settings_store.set_to("live_recording", True)
@@ -183,7 +184,7 @@ def test_a_batch_in_a_case_or_still_running_is_not_ready(client, ana, cases_on):
     assert "Ready to download" not in page
 
 
-def test_needs_you_and_recent_cases(client, ana, cases_on):
+def test_the_desk_lists_your_work_and_the_case_rows(client, ana, cases_on):
     settings_store.set_to("incidents", True)
     signed_in(client, ana)
     Case.objects.create(owner=ana, name="Quiet matter")
@@ -204,44 +205,35 @@ def test_needs_you_and_recent_cases(client, ana, cases_on):
         incident, {"at": "10", "text": "Step out", "to_check": "yes"}, by=ana
     )
     page = client.get(reverse("home")).content.decode()
-    # One cases list (v1.115.0): the ones that need the person first, under
-    # a Needs you heading, then the rest; each case's incidents on a line
-    # under its row with their own pills, so the case's row keeps only its
-    # own, and the incident's pill links to the incident.
-    assert 'id="needs-you"' in page
-    needs = page.split('id="needs-you"', 1)[1].split("The rest, by last activity", 1)[0]
-    assert "Busy matter" in needs and "1 event to check" in needs
-    assert "Quiet matter" not in needs
-    assert f'href="{incident.url()}">Stop</a>' in needs and "1 camera" in needs
-    pill = f'<a class="pill small warn" href="{incident.url()}">1 event to check'
-    assert pill in needs
-    # A proposal waiting for accept or dismiss is enough on its own (v1.86.2).
-    waiting = Case.objects.create(owner=ana, name="Waiting matter")
-    second = a_recording(ana, batch, "second", case=waiting)
-    second.stamp = dict(first.stamp)
-    second.recording_type = "Body camera"
-    second.save()
-    proposed_in = incidents.make(waiting, "Search", [second], by=ana)
-    chronology.Event.objects.create(
-        incident=proposed_in, at=20.0, text="Maybe", source="assistant", proposed=True
-    )
-    needs = (
-        client.get(reverse("home"))
-        .content.decode()
-        .split('id="needs-you"', 1)[1]
-        .split("The rest, by last activity", 1)[0]
-    )
-    assert "Waiting matter" in needs and "1 proposed event waiting" in needs
-    rest = page.split("The rest, by last activity", 1)[1]
-    assert "Quiet matter" in rest and "Busy matter" not in rest
+    # The desk (Phase 13 chapter 1, v1.215.0): no Needs you, no pill on a
+    # case's row, no incident line; every case a plain row saying what it
+    # holds, the one with an incident counting it.
+    assert 'id="needs-you"' not in page and "Needs you" not in page
+    assert "1 event to check" not in page and "The rest, by last activity" not in page
+    assert f'href="{incident.url()}"' not in page
+    rows = page.split('id="cases"', 1)[1]
+    assert "Busy matter" in rows and "Quiet matter" in rows
+    busy_row = rows.split("Busy matter", 1)[1].split('class="row case-row"', 1)[0]
+    assert "1 recording" in busy_row and "1 incident" in busy_row
     assert 'id="open-new"' in page and 'id="new-box"' in page
+    # Your work: assigned to the person and not reviewed, with Next and All.
+    assert 'id="your-work"' not in page
+    first.assigned_to = ana
+    first.save(update_fields=["assigned_to"])
+    page = client.get(reverse("home")).content.decode()
+    work = page.split('id="your-work"', 1)[1].split('id="cases"', 1)[0]
+    assert "Busy matter" in work and "1 of 1 left for you" in work
+    assert f'href="/recording/{first.pk}"' in work and "Next: first" in work
+    assert f"/case/{busy.pk}?who=me&amp;state=unreviewed" in work and "All 1" in work
+    first.reviewed_by = ana
+    first.reviewed_on = timezone.now()
+    first.save(update_fields=["reviewed_by", "reviewed_on"])
+    assert 'id="your-work"' not in client.get(reverse("home")).content.decode()
     # Every case is listed, not a capped few.
     for n in range(12):
         Case.objects.create(owner=ana, name=f"Matter {n}")
     page = client.get(reverse("home")).content.decode()
-    rest = page.split("The rest, by last activity", 1)[1]
-    assert rest.count("Matter ") == 12
-    assert "Quiet matter" in rest and "Busy matter" in page
+    assert page.split('id="cases"', 1)[1].count("Matter ") == 12
 
 
 def test_this_session_says_the_rule_once_and_leaves_cased_recordings_out(
@@ -284,7 +276,81 @@ def test_a_shared_case_shows_who_shared_it(client, ana, cases_on):
     sharing.grant(case, ana, ben)
     signed_in(client, ana)
     page = client.get(reverse("home")).content.decode()
-    assert "Warehouse" in page and "Shared by ben" in page
+    assert "Warehouse" in page and "shared with you by ben" in page
+    assert '<span class="pill small acc">new</span>' in page
+    # The owner's row names the colleagues.
+    other = Client()
+    signed_in(other, ben)
+    page = other.get(reverse("home")).content.decode()
+    assert "shared with ana" in page
+
+
+def test_your_team_lately_reads_the_records_and_seen_folds_it(client, ana, cases_on):
+    """Phase 13 chapter 1: what colleagues did in the shared cases, from the
+    reviewed, noted, added, shared and asked records; the person's own acts
+    never; Seen folds it until something newer happens; an office of one
+    sees nothing."""
+    from core.case_chat import CaseChat, CaseChatTurn
+    from core.notes import MomentNote
+
+    settings_store.set_to("sharing", True)
+    signed_in(client, ana)
+    assert 'id="team-lately"' not in client.get(reverse("home")).content.decode()
+    ben = User.objects.create_local_admin("ben", PASSWORD)
+    ben.display_name = "Ben Okonkwo"
+    ben.save(update_fields=["display_name"])
+    case = Case.objects.create(owner=ben, name="Warehouse")
+    sharing.grant(case, ana, ben)
+    batch = Batch.objects.create(user=ben)
+    now = timezone.now()
+    call = a_recording(ben, batch, "call 0417", case=case)
+    call.reviewed_by = ben
+    call.reviewed_on = now
+    call.save(update_fields=["reviewed_by", "reviewed_on"])
+    MomentNote.objects.create(
+        recording=call, at=10.0, note="Check this", note_by=ben, note_changed=now
+    )
+    MomentNote.objects.create(
+        recording=call, at=20.0, note="And this", note_by=ben, note_changed=now
+    )
+    # The person's own note is never listed.
+    MomentNote.objects.create(
+        recording=call, at=30.0, note="Mine", note_by=ana, note_changed=now
+    )
+    chat = CaseChat.objects.create(case=case, asked_by=ben, name="Phone?")
+    CaseChatTurn.objects.create(
+        chat=chat, number=1, question="When was the phone handed over?", asked_by=ben
+    )
+    page = client.get(reverse("home")).content.decode()
+    team = page.split('id="team-lately"', 1)[1]
+    assert (
+        " open>" in page.split('id="team-lately"', 1)[0][-40:] + team[:1]
+        or 'id="team-lately" open' in page
+    )
+    assert "Ben Okonkwo" in team and "Warehouse" in team
+    assert "reviewed 1 recording and left 2 notes and added 1 recording in" in team
+    assert "shared" in team and "with you" in team
+    assert "asked Gideon about" in team and "When was the phone handed over?" in team
+    assert "Mine" not in team and "today," in team
+    assert team.count('class="who"') == 3
+    # Seen folds it, and keeps nothing but the time on the account.
+    told = client.post(reverse("home-team-seen"))
+    assert told.status_code == 302
+    ana.refresh_from_db()
+    assert ana.team_seen_on is not None
+    page = client.get(reverse("home")).content.decode()
+    assert (
+        'id="team-lately" open' not in page and "Nothing new since you looked" in page
+    )
+    # Something newer opens it again.
+    later = timezone.now()
+    MomentNote.objects.create(
+        recording=call, at=40.0, note="Newer", note_by=ben, note_changed=later
+    )
+    page = client.get(reverse("home")).content.decode()
+    assert 'id="team-lately" open' in page
+    # The greeting names the person.
+    assert ", ana</h1>" in page or ", Ana" in page
 
 
 def test_my_recordings_lists_the_workspace_alone(client, ana, cases_on):

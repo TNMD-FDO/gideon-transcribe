@@ -17,6 +17,36 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.215.0, 2026-11-06
+
+```
+Models: unchanged
+Database: migrates
+```
+
+Home as the desk (Phase 13 chapter 1; the drawing
+`docs/spec/mockups/phase-13-home-redesign.html`, Direction B at the
+maintainer's word of 2026-11-06). Less to read, nothing amber, the person's
+own work first, and what the team did lately from the records the app
+already keeps.
+
+- **Needs you is gone**, with the amber heading, every pill on a case row
+  and the incident lines under each case. A case's state is on its own
+  page's Dashboard line and on the Cases page.
+- **Your work**: what is assigned to you and not yet reviewed, one row per
+  case, with Next (the oldest) and All N (Mine, not reviewed).
+- **Cases** are plain rows: the name, what the case holds and whom it is
+  shared with, when it was last used, Open.
+- **Your team, lately**: what colleagues did in the cases you share, newest
+  first, twenty lines from the last thirty days (reviewed, noted, added,
+  shared with you, asked Gideon, sent you a dictation); Seen folds it until
+  something newer happens, kept on your account (migration 0107, one
+  column). Nothing is sent, nothing new is recorded, your own acts are not
+  listed, and an office of one never sees it.
+- The greeting names the person; the sentences under the headings go; the
+  keep-or-lose line moves to the foot of This session; the rail's line for
+  Home reads "Your work, your cases, your team".
+
 ## v1.214.0, 2026-11-06
 
 ```

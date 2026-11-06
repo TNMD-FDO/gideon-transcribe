@@ -42,6 +42,7 @@ urlpatterns = [
     # Home (Phase 8 chapter 13) is where sign-in and the brand land; My
     # recordings is the working page beside it. /start is kept for old links.
     path("", home.home, name="home"),
+    path("home/team-seen", home.team_seen, name="home-team-seen"),
     path("recordings", pages.recordings, name="recordings"),
     path("upload", pages.upload, name="upload"),
     # Bulk transcription (v1.173.0): files in, transcripts out, nothing kept.
