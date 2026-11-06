@@ -408,7 +408,7 @@ def test_a_picture_of_the_map_is_kept_as_a_document_on_the_incident(
         },
     )
     assert told.status_code == 200, told.content
-    assert told.json()["words"] == "Saved as a Document on this incident."
+    assert told.json()["words"].startswith("Saved to the case's Documents tab, about ")
     document = incident.documents.get()
     assert document.kind == documents.PICTURE and document.is_picture
     assert document.state == documents.READY and document.pages == 1
@@ -418,7 +418,7 @@ def test_a_picture_of_the_map_is_kept_as_a_document_on_the_incident(
     page = document.page_rows.get()
     assert page.text == "" and page.paragraphs == [] and not page.ocr
     row = Row.objects.get(event="Document added")
-    assert row.details["kind"] == "picture" and row.details["home"] == "incident"
+    assert row.details["kind"] == "picture" and row.details["about"] == "incident"
     # Served as the one page it is, downloaded as the PNG it is.
     assert client.get(told.json()["url"]).status_code == 200
     got = client.get(reverse("document-download", args=[a_case.pk, document.pk]))
@@ -429,9 +429,10 @@ def test_a_picture_of_the_map_is_kept_as_a_document_on_the_incident(
         ]
         == "image/png"
     )
-    # Listed with the reports, never compared.
+    # Listed in the shelf's gallery, never compared.
     tab = client.get(reverse("case", args=[a_case.pk]) + "?tab=documents")
-    assert "A picture of the map" in tab.content.decode()
+    assert "Pictures of the map" in tab.content.decode()
+    assert 'id="pictures"' in tab.content.decode()
     settings_store.set_to("documents_compare", True)
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setattr(comparison, "on", lambda: True)
@@ -445,9 +446,15 @@ def test_a_picture_of_the_map_is_kept_as_a_document_on_the_incident(
     told = client.post(url, {"file": picture, "recording": str(camera.pk)})
     assert told.status_code == 200
     assert camera.documents.get().title == "Map"
+    # A picture about nothing is the case's (v1.213.0).
     nothing = io.BytesIO(a_png())
     nothing.name = "map.png"
-    assert client.post(url, {"file": nothing}).status_code == 400
+    told = client.post(url, {"file": nothing, "title": "Map at 14:21:50, 2 Nov 2026"})
+    assert told.status_code == 200
+    assert told.json()["words"] == "Saved to the case's Documents tab."
+    loose = documents.Document.objects.get(title="Map at 14:21:50, 2 Nov 2026")
+    assert loose.incident is None and loose.recording is None
+    assert documents.picture_map_url(loose).endswith("?day=2026-11-02&from=51710")
     not_png = io.BytesIO(b"%PDF-1.4 not a picture")
     not_png.name = "map.png"
     told = client.post(url, {"file": not_png, "incident": str(incident.pk)})

@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 from core import case_chat, documents, incident_chat, incidents, settings_store, tasks
+from core.audit import Row
 from core.case_chat import CaseChat, CaseChatTurn
 from core.cases import Case
 from core.documents import Document
@@ -93,10 +94,10 @@ LINES = (
 
 
 def a_report(person, case, *, incident=None, recording=None, title="Incident report"):
-    home = documents.home_of(case, incident=incident, recording=recording)
+    about = documents.about_of(case, incident=incident, recording=recording)
     report = documents.add(
         case,
-        home=home,
+        about=about,
         data=make_pdf(REPORT),
         filename="report.pdf",
         title=title,
@@ -224,43 +225,45 @@ def test_gideon_reads_the_report_and_cites_its_paragraphs(
 # The Report tab and the pages ---------------------------------------------------------
 
 
-def test_the_report_tab_is_there_only_while_a_document_is_linked(
+def test_the_report_tab_is_gone_and_details_keeps_the_reports_line(
     person, a_case, client
 ):
+    """v1.213.0 (Phase 12 chapter 11): the Report tab left the incident page
+    and the recording page; each Details keeps one line, Reports, and the
+    documents Gideon reads are in the incident's state for the citations."""
     first = video(person, a_case, "first", stamp=stamp("21:56:19", "BWC2-1"))
     second = video(person, a_case, "second", stamp=stamp("22:01:00", "BWC2-2"))
     incident = incidents.make(a_case, "Stop", [first, second], by=person)
     signed_in(client, person)
     page = client.get(f"/recording/{first.pk}").content.decode()
-    assert 'data-panel="report"' not in page
+    assert 'data-panel="report"' not in page and "report-panel.js" not in page
     report = a_report(person, a_case, incident=incident, recording=first)
-    assert report.home_kind() == "incident and recording"
+    assert report.about_kind() == "incident and recording"
     page = client.get(f"/recording/{first.pk}").content.decode()
-    assert 'data-panel="report">' in page and 'id="report-panel"' in page
-    assert f"/document/{report.pk}/state" in page and "report-panel.js" in page
-    # The Report tab stands on its own switch (v1.75.1): Clips off keeps it.
-    settings_store.set_to("clips_available", False)
-    page = client.get(f"/recording/{first.pk}").content.decode()
-    assert 'data-panel="report">' in page and 'data-panel="clips"' not in page
-    settings_store.set_to("clips_available", True)
+    assert 'data-panel="report"' not in page and 'id="report-panel"' not in page
+    assert "About this camera" in page and f'href="{report.url()}"' in page
+    assert "Compare a report with this camera" in page
     page = client.get(incident.url()).content.decode()
-    assert 'id="tab-report"' in page and 'id="panel-report"' in page
-    # Several documents on one tab are pills and one open at a time (v1.129.2).
+    assert 'id="tab-report"' not in page and 'id="panel-report"' not in page
+    assert 'id="layer-compare"' not in page and 'id="export-comparison"' not in page
+    assert "report-panel.js" not in page
+    # The old Report tab drawing is gone from the script; the comparison stays.
     panel_script = (
         Path(__file__).resolve().parents[1] / "static" / "report-panel.js"
     ).read_text(encoding="utf-8")
-    assert "report-pick" in panel_script and "data-pick-document" in panel_script
+    assert "report-pick" not in panel_script and "drawComparison" in panel_script
     state = client.get(f"{incident.url()}/state").json()["incident"]
     assert state["documents"][0]["id"] == str(report.pk)
     assert state["case_id"] == str(a_case.pk)
+    assert state["reports"]["about"][0]["id"] == str(report.pk)
     got = client.get(f"/case/{a_case.pk}/document/{report.pk}/state").json()
     assert got["title"] == "Incident report" and len(got["pages_rows"]) == 2
     assert got["pages_rows"][0]["paragraphs"][2]["text"].startswith("A small bag")
     assert got["pages_rows"][1]["picture"].endswith("/page/2.png")
-    assert got["home"] == "Stop and first"
-    # The document page's ways back.
+    assert got["home"] == "Stop and first" and got["about"] == "Stop and first"
+    # The document page's ways on: the shelf, what it is about.
     page = client.get(report.url()).content.decode()
-    assert "Back to the incident" in page and "Back to the recording" in page
+    assert "About the incident Stop" in page and "About the recording first" in page
     assert (
         f'href="{incident.url()}"' in page
         and f"/recording/{first.pk}?panel=details" in page
@@ -268,9 +271,12 @@ def test_the_report_tab_is_there_only_while_a_document_is_linked(
     assert f'href="/case/{a_case.pk}?tab=documents"' in page
 
 
-def test_adding_from_the_documents_tab_picks_the_home_and_relink_is_a_row(
+def test_adding_from_the_shelf_takes_an_optional_about_and_more_sets_it(
     person, a_case, client
 ):
+    """v1.213.0: the add page's one optional About in place of the two
+    radios; a document about nothing is allowed; More on the shelf's row sets
+    the about as one choice."""
     first = video(person, a_case, "first", stamp=stamp("21:56:19", "BWC2-1"))
     second = video(person, a_case, "second", stamp=stamp("22:01:00", "BWC2-2"))
     incident = incidents.make(a_case, "Stop", [first, second], by=person)
@@ -280,18 +286,18 @@ def test_adding_from_the_documents_tab_picks_the_home_and_relink_is_a_row(
     page = client.get(f"/case/{a_case.pk}/documents/add").content.decode()
     assert 'id="pick-incident"' in page and 'id="pick-recording"' in page
     assert ">Stop</option>" in page and ">first</option>" in page
-    assert "for an incident or a camera of this case" in page
-    # One question since v1.129.2: the whole incident, or one camera's own.
-    assert 'name="about" value="incident" checked' in page
+    assert 'name="about" value="nothing" checked' in page
+    assert 'name="about" value="incident"' in page
     assert 'name="about" value="recording"' in page
-    assert "This report is about" in page and "One camera's own report" in page
-    # From a Details tab the home arrives ticked.
+    assert "Compare when it is read" in page and 'name="compare" value="case"' in page
+    # From a Details address the about arrives chosen.
     page = client.get(
         f"/case/{a_case.pk}/documents/add?incident={incident.pk}"
     ).content.decode()
-    assert f'value="{incident.pk}"' in page and "this incident" in page
-    # Nothing picked is refused with the reason; both picked links both
-    # (an older form, or Re-link); with the question answered, one counts.
+    assert f'value="{incident.pk}" selected' in page and "about Stop" in page
+    assert 'name="about" value="incident" checked' in page
+    # With the choice made, one field counts; nothing chosen is allowed; an
+    # older form with both fields and no choice takes both.
     fields = {
         "title": "R",
         "file": io.BytesIO(make_pdf(REPORT)),
@@ -301,14 +307,18 @@ def test_adding_from_the_documents_tab_picks_the_home_and_relink_is_a_row(
     }
     fields["file"].name = "r.pdf"
     told = client.post(f"/case/{a_case.pk}/documents/add", fields)
-    assert told.status_code == 302 and told.url == incident.url()
+    assert told.status_code == 302 and told.url == f"/case/{a_case.pk}?tab=documents"
     only = Document.objects.get()
     assert only.incident == incident and only.recording is None
     only.delete()
-    fields = {"title": "R", "file": io.BytesIO(make_pdf(REPORT))}
+    fields = {"title": "R", "file": io.BytesIO(make_pdf(REPORT)), "about": "nothing"}
     fields["file"].name = "r.pdf"
-    page = client.post(f"/case/{a_case.pk}/documents/add", fields).content.decode()
-    assert "Say which incident or recording" in page and Document.objects.count() == 0
+    told = client.post(f"/case/{a_case.pk}/documents/add", fields)
+    assert told.status_code == 302
+    loose = Document.objects.get()
+    assert loose.incident is None and loose.recording is None
+    assert loose.about_name() == "" and loose.about_words() == ""
+    loose.delete()
     fields = {
         "title": "R",
         "file": io.BytesIO(make_pdf(REPORT)),
@@ -317,31 +327,40 @@ def test_adding_from_the_documents_tab_picks_the_home_and_relink_is_a_row(
     }
     fields["file"].name = "r.pdf"
     told = client.post(f"/case/{a_case.pk}/documents/add", fields)
-    assert told.status_code == 302 and told.url == incident.url()
+    assert told.status_code == 302
     document = Document.objects.get()
     assert document.incident == incident and document.recording == second
-    # Re-link on the row: two choices and a button, the current ones shown.
+    # More on the row: About as one choice, the current one shown; the two
+    # Re-link drop-downs are gone.
     tab = client.get(f"/case/{a_case.pk}?tab=documents").content.decode()
-    assert (
-        'class="row relink"' in tab and "<details" not in tab.split('id="documents"')[1]
-    )
-    assert f'value="{second.pk}" selected' in tab
+    assert 'class="row relink"' not in tab and 'class="menu document-more"' in tab
+    assert f'value="incident:{incident.pk}" selected' in tab
     told = client.post(
         f"/case/{a_case.pk}/document/{document.pk}/act",
-        {"action": "relink", "incident": "", "recording": str(first.pk)},
+        {"action": "about", "about_pick": f"recording:{first.pk}"},
     )
     assert told.status_code == 302
     document.refresh_from_db()
     assert document.incident is None and document.recording == first
     told = client.post(
         f"/case/{a_case.pk}/document/{document.pk}/act",
-        {"action": "relink", "incident": "", "recording": ""},
+        {"action": "about", "about_pick": "nothing"},
     )
     document.refresh_from_db()
-    assert document.recording == first  # refused: never loose
-    # The Details blocks say both homes.
+    assert document.recording is None and document.incident is None
+    assert Row.objects.filter(event="Document re-linked").count() == 2
+    # Rename, the title only.
+    told = client.post(
+        f"/case/{a_case.pk}/document/{document.pk}/act",
+        {"action": "rename", "title": "  The report, renamed  "},
+    )
+    document.refresh_from_db()
+    assert document.title == "The report, renamed"
+    assert Row.objects.get(event="Document renamed").details["was"] == "R"
+    # About nothing and compared with nothing: the incident's Gideon does not
+    # read it.
     assert (
-        "Incident report"
+        "The report, renamed"
         not in client.get(incident.url() + "/state")
         .json()["incident"]["documents"]
         .__str__()

@@ -1,11 +1,14 @@
-// The Report tab (Phase 8 chapter 4, part 2).
+// The comparison (Phase 8 chapter 4, part 3), drawn on the Comparison page
+// (Phase 12 chapter 11, v1.213.0).
 //
-// One drawing for two places: the incident page's work panel and the
-// recording page's work area. Each document linked there is drawn from its
-// state (every page's picture and words): the pages stacked at the panel's
-// width, the words under each page paragraph by paragraph with their
-// numbers, a page read by OCR saying so, and Open for the document's own
-// page. A press on a paragraph's box on the picture lights its words.
+// Until v1.212.0 this script also drew the Report tab of the incident page
+// and the recording page (the documents' pages stacked at the panel's
+// width) and the comparison as a layer over it; both left with the shelf,
+// and the drawing of a comparison is what stays: the state line with
+// Compare again and Comparison to Word, the marks as pills that filter, the
+// order (by time, by recording on a case comparison, by page), one row per
+// finding with the paragraph and the moment as citations, and on each row
+// Make it a note, a note and Dismiss. A moment plays in the Preview window.
 
 (function () {
   "use strict";
@@ -14,66 +17,6 @@
     return String(text === undefined || text === null ? "" : text)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-
-  function pct(part, whole) { return whole ? (100 * part / whole).toFixed(2) : "0"; }
-
-  function drawDocument(state, home) {
-    var html = "<section class='report-doc' data-document='" + escape(state.id) + "'>" +
-      "<div class='row' style='align-items: baseline; gap: 8px; flex-wrap: wrap'>" +
-      "<b class='grow'>" + escape(state.title) + "</b>" +
-      "<span class='muted small'>" + escape(state.pages_line) + "</span>" +
-      "<a class='btn small' href='" + escape(state.url) + "'>Open</a>" +
-      "<a class='btn small ghost' href='" + escape(state.download) + "'>Download</a>" +
-      "</div>";
-    // The comparison (part 3): against the home this panel belongs to, when
-    // the document is the report for it.
-    // A picture of the map (Phase 12 chapter 5) has no words to compare.
-    if (home && home.kind && state[home.kind] === home.id && state.kind !== "picture") {
-      html += "<div class='compare-box' data-comparison='" + escape(state.comparison) + "' data-compare='" + escape(state.compare) +
-        "' data-home='" + escape(home.kind) + "' data-home-id='" + escape(home.id) + "' data-title='" + escape(state.title) + "'>" +
-        (window.INCIDENT_PAGE ? "<button type='button' class='small' data-open-comparison>Compare with the report</button> <span class='muted small compare-said'></span>" : "") +
-        "</div>";
-    }
-    (state.pages_rows || []).forEach(function (page) {
-      html += "<figure class='report-sheet' style='aspect-ratio: " + page.width + " / " + page.height + "'>" +
-        "<img src='" + escape(page.picture) + "' alt='Page " + page.number + "' loading='lazy'>" +
-        "<figcaption class='muted small'>Page " + page.number + (page.ocr ? " &middot; read by OCR" : "") + (page.poor ? " &middot; <span class='warn-ink'>poorly read</span>" : "") + "</figcaption>";
-      (page.paragraphs || []).forEach(function (p) {
-        html += "<span class='doc-box' data-page='" + page.number + "' data-n='" + p.n + "' title='Page " + page.number + ", paragraph " + p.n + "' style='left: " +
-          pct(p.box[0], page.width) + "%; top: " + pct(p.box[1], page.height) + "%; width: " + pct(p.box[2] - p.box[0], page.width) + "%; height: " + pct(p.box[3] - p.box[1], page.height) + "%'></span>";
-      });
-      html += "</figure><div class='report-words'>";
-      if (page.poor) { html += "<p class='notice warn small'>This page was poorly read. Read the picture, not the words.</p>"; }
-      (page.paragraphs || []).forEach(function (p) {
-        html += "<p class='doc-para' data-page='" + page.number + "' data-n='" + p.n + "'><span class='doc-n muted small'>" + p.n + "</span> " + escape(p.text) + "</p>";
-      });
-      if (!(page.paragraphs || []).length) { html += "<p class='muted small'>No words were read from this page.</p>"; }
-      html += "</div>";
-    });
-    return html + "</section>";
-  }
-
-  // Open one document of several (v1.129.2): its pill lit, the others' pages hidden.
-  function show(root, id) {
-    Array.prototype.forEach.call(root.querySelectorAll("[data-pick-document]"), function (pill) { pill.classList.toggle("on", pill.dataset.pickDocument === id); });
-    Array.prototype.forEach.call(root.querySelectorAll(".report-doc"), function (doc) { doc.hidden = doc.dataset.document !== id; });
-  }
-
-  function light(root, page, n) {
-    Array.prototype.forEach.call(root.querySelectorAll(".lit"), function (one) { one.classList.remove("lit"); });
-    var within = root.querySelector(".report-doc:not([hidden])") || root;
-    var box = within.querySelector(".doc-box[data-page='" + page + "'][data-n='" + n + "']");
-    var line = within.querySelector(".doc-para[data-page='" + page + "'][data-n='" + n + "']");
-    if (box) { box.classList.add("lit"); }
-    if (line) { line.classList.add("lit"); line.scrollIntoView({ block: "center" }); }
-  }
-
-  // The comparison (Phase 8 chapter 4, part 3) ----------------------------------------------
-  //
-  // One drawing for the layer on the incident page and the block on the
-  // recording page: the state line, Compare (again), the marks as pills that
-  // filter, one row per finding with the paragraph and the moment as
-  // citations, and on each row Make it a note, a note and Dismiss.
 
   function cookie(name) {
     var found = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -89,18 +32,6 @@
 
   var comparisons = {};
 
-  // The Export menu's Comparison to Word (Phase 8 chapter 6): a link while a
-  // comparison is done, greyed with the reason until then.
-  function setExportLink(C) {
-    var link = document.getElementById("export-comparison");
-    var off = document.getElementById("export-comparison-off");
-    if (!link || !off) { return; }
-    var ready = !!(C && C.state === "done" && C.export_url);
-    link.hidden = !ready;
-    off.hidden = ready;
-    if (ready) { link.href = C.export_url; }
-  }
-
   function shorten(text, most) {
     text = String(text || "");
     if (text.length <= most) { return text; }
@@ -109,10 +40,11 @@
   }
   function quoted(text) { return escape(text).replace(/'/g, "&#39;"); }
 
-  function drawComparison(box, urls, setTitle) {
+  function drawComparison(box, urls, setTitle, hooks) {
     if (!box) { return; }
+    hooks = hooks || {};
     var key = urls.comparison + "?" + urls.home + "=" + urls.homeId;
-    var kept = comparisons[key] || { filter: "", timer: null };
+    var kept = comparisons[key] || { filter: "", order: "time", timer: null };
     comparisons[key] = kept;
     box.dataset.key = key;
     if (setTitle) { setTitle("Comparison, " + (urls.title || "")); }
@@ -124,20 +56,33 @@
         render();
         window.clearTimeout(kept.timer);
         if (state.busy) { kept.timer = window.setTimeout(load, 3000); }
+        if (hooks.loaded) { hooks.loaded(state); }
       });
+    }
+
+    function ordered(rows) {
+      var C = kept.state;
+      if (kept.order === "recording" && C.home === "case") {
+        return rows.slice().sort(function (a, b) { return (a.recording || "").localeCompare(b.recording || "") || ((a.at === null || a.at === undefined ? -1 : a.at) - (b.at === null || b.at === undefined ? -1 : b.at)); });
+      }
+      if (kept.order === "page") {
+        // By page (v1.213.0): the report's own order; a Not in the report
+        // finding has no page and comes last.
+        return rows.slice().sort(function (a, b) { return ((a.page || 9999) - (b.page || 9999)) || ((a.n || 0) - (b.n || 0)); });
+      }
+      return rows;
     }
 
     function render() {
       var C = kept.state;
       var counts = C.counts || {};
-      setExportLink(C);
-      var html = "<div class='row' style='gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px'>" +
+      var html = "<div class='row cmp-state' style='gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px'>" +
         "<button type='button' class='small' data-run" + (C.possible && !C.busy ? "" : " disabled") + " title='" + escape(C.why || "The assistant reads the report in windows of pages against the record; every finding cites the paragraph and the moment, and you mark them") + "'>" +
-        (C.state === "done" ? "Compare again" : "Compare with the report") + "</button>" +
+        (C.state === "done" ? "Compare again" : (C.busy ? "Comparing..." : "Compare")) + "</button>" +
         (C.state === "done" && C.export_url ? "<a class='btn small ghost' href='" + escape(C.export_url) + "'>Comparison to Word</a>" : "") +
         "<div class='muted small grow'>" +
         (C.busy && C.expectation && C.expectation.words
-          ? window.Expectation.html({ step: (C.words || "").replace(/\.\.\.$/, ""), state: C.state, expectation: C.expectation, inline: true, leaveable: false })
+          ? window.Expectation.html({ step: (C.words || "").replace(/\.\.\.$/, ""), state: C.state, expectation: C.expectation, inline: true, leaveable: true })
           : escape(C.words || (C.possible ? "" : C.why || "")) + (C.stale ? "; " + escape(C.stale) + ", Compare again to refresh" : "")) +
         "</div></div>";
       if (C.state === "done") {
@@ -146,22 +91,22 @@
           (C.marks || []).map(function (mark) {
             return "<button type='button' class='pill small " + mark.key + (kept.filter === mark.key ? " on" : "") + "' data-filter='" + mark.key + "'>" + escape(mark.words) + " (" + (counts[mark.key] || 0) + ")</button>";
           }).join("") +
-          // Against the case (v1.170.0): by day and time on the case's clock, or by recording.
-          (C.home === "case" ? "<span class='grow'></span><button type='button' class='pill small" + (kept.order === "recording" ? " on" : "") + "' data-order='recording'>By recording</button><button type='button' class='pill small" + (kept.order !== "recording" ? " on" : "") + "' data-order='time'>By day and time</button>" : "") +
-          "</div>";
-        var rows = (C.findings || []).filter(function (one) { return !kept.filter || one.mark === kept.filter; });
-        if (C.home === "case" && kept.order === "recording") {
-          rows = rows.slice().sort(function (a, b) { return (a.recording || "").localeCompare(b.recording || "") || ((a.at === null || a.at === undefined ? -1 : a.at) - (b.at === null || b.at === undefined ? -1 : b.at)); });
-        }
+          "<span class='grow'></span>" +
+          "<span class='toggle order' role='group' aria-label='The order'>" +
+          "<button type='button' class='small" + (kept.order === "time" ? " on" : "") + "' data-order='time'>" + (C.home === "case" ? "By day and time" : "By time") + "</button>" +
+          (C.home === "case" ? "<button type='button' class='small" + (kept.order === "recording" ? " on" : "") + "' data-order='recording'>By recording</button>" : "") +
+          "<button type='button' class='small" + (kept.order === "page" ? " on" : "") + "' data-order='page' title='The findings in the report&#39;s own order'>By page</button>" +
+          "</span></div>";
+        var rows = ordered((C.findings || []).filter(function (one) { return !kept.filter || one.mark === kept.filter; }));
         if (!rows.length) {
           html += "<p class='muted'>" + (C.findings && C.findings.length ? "Nothing with that mark." : "No findings: the report and the record gave the assistant nothing to set beside each other.") + "</p>";
         } else {
-          html += "<p class='muted small'>Every row cites the report's paragraph and the record's moment; read both before trusting a mark. A person marks the rows; nothing joins the chronology until you make it an event.</p>";
+          html += "<p class='muted small'>Every row cites the report's paragraph and the record's moment; read both before trusting a mark. A person marks the rows; nothing joins a recording until you make it a note.</p>";
           html += "<table class='inc-events compare-rows'><tbody>";
           rows.forEach(function (one) {
-            html += "<tr data-finding='" + escape(one.id) + "' class='" + (one.dismissed ? "dismissed" : "") + "'>" +
+            html += "<tr data-finding='" + escape(one.id) + "'" + (one.page ? " data-page='" + one.page + "' data-n='" + one.n + "'" : "") + " class='" + (one.dismissed ? "dismissed" : "") + "'>" +
               "<td class='t'><span class='pill small mark " + escape(one.mark) + "'>" + escape(one.mark_words) + "</span>" +
-              "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'" + (one.recording_id ? " data-recording='" + escape(one.recording_id) + "'" : "") + ">" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
+              "<div>" + (one.clock ? "<a class='cite play' href='#' data-at='" + one.at + "'" + (one.recording_id ? " data-recording='" + escape(one.recording_id) + "'" : "") + " title='Play this moment here'>" + escape(one.clock) + "</a>" : "<span class='muted small'>no moment</span>") + "</div>" +
               (one.recording ? "<div class='muted small'>" + escape(one.recording) + "</div>" : "") +
               (one.note_id ? "<div class='muted small'>a note on " + escape(one.note_on || "the recording") + "</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
@@ -169,7 +114,7 @@
               (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
               (one.note ? "<div class='small note'><b>Note:</b> " + escape(one.note) + "</div>" : "") +
               "<div class='acts'>" +
-              (C.can_make_note && !one.note_id ? "<button type='button' class='tiny primary' data-make='" + escape(one.id) + "'>Make it a note</button> " : "") +
+              (C.can_make_note && !one.note_id ? "<button type='button' class='tiny primary' data-make='" + escape(one.id) + "'>" + ((one.at === null || one.at === undefined) ? "Choose the moment" : "Make it a note") + "</button> " : "") +
               "<button type='button' class='tiny ghost' data-note='" + escape(one.id) + "'>Note</button> " +
               (one.dismissed ? "<button type='button' class='tiny ghost' data-undismiss='" + escape(one.id) + "'>Undo</button>" : "<button type='button' class='tiny ghost' data-dismiss='" + escape(one.id) + "'>Dismiss</button>") +
               "</div></td></tr>";
@@ -177,9 +122,12 @@
           html += "</tbody></table>";
         }
       } else if (!C.state) {
-        html += "<p class='muted'>Nothing yet. Compare with the report reads the report in windows of pages against the record and the chronology; every finding cites both sides.</p>";
+        html += "<p class='muted'>Nothing yet. Compare reads the report in windows of pages against the record; every finding cites both sides.</p>";
+      } else if (C.state === "failed") {
+        html += "<p class='muted'>The comparison did not finish. Compare again tries once more.</p>";
       }
       box.innerHTML = html;
+      if (hooks.rendered) { hooks.rendered(C); }
     }
 
     function act(fields) {
@@ -192,9 +140,15 @@
       });
     }
 
-    function seekTo(at) {
-      if (window.INCIDENT_PAGE && window.INCIDENT_PAGE.seek) { window.INCIDENT_PAGE.seek(at); }
-      else if (window.VIEWER && window.VIEWER.seek) { window.VIEWER.seek(at); }
+    // The moment of a finding on an incident's clock, as the Preview plays
+    // it: the finding names no recording, so the Preview opens on the
+    // incident's cameras at the time of day (all-cameras shape).
+    function playAt(play) {
+      if (play.dataset.recording && window.Preview && window.Preview.open) {
+        window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.at), from: play });
+        return;
+      }
+      if (hooks.playIncident) { hooks.playIncident(parseFloat(play.dataset.at), play); }
     }
 
     if (!box.dataset.bound) {
@@ -218,21 +172,10 @@
         var order = event.target.closest("[data-order]");
         if (order) { kept.order = order.dataset.order; render(); return; }
         var play = event.target.closest(".cite.play[data-at]");
-        if (play) {
-          event.preventDefault();
-          // On the case's layer (v1.170.0) the moment plays in the Preview's window.
-          if (play.dataset.recording && window.Preview && window.Preview.open) { window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.at), from: play }); return; }
-          seekTo(parseFloat(play.dataset.at));
-          return;
-        }
+        if (play) { event.preventDefault(); playAt(play); return; }
         var make = event.target.closest("[data-make]");
         if (make) {
           var finding = (kept.state.findings || []).filter(function (one) { return one.id === make.dataset.make; })[0];
-          if (finding && (finding.at === null || finding.at === undefined) && window.INCIDENT_PAGE) {
-            // Not on camera: the report has no clock, so the event box asks the moment.
-            window.INCIDENT_PAGE.addEvent(undefined, finding.claim, "[Report, page " + finding.page + ", paragraph " + finding.n + "] " + finding.paragraph);
-            return;
-          }
           if (finding && (finding.at === null || finding.at === undefined) && finding.recording_id && window.Preview && window.Preview.open) {
             // Choose the moment (v1.170.0): the Preview's window on the finding's recording, Make it a note here in its foot.
             var fields = { action: "make_note", finding: finding.id, home: urls.home };
@@ -240,10 +183,15 @@
             window.Preview.open({ recording: finding.recording_id, seconds: 0, from: make, finding: { claim: finding.claim, where: finding.recording, act: urls.act || (urls.comparison + "/act"), fields: fields, done: load } });
             return;
           }
-          act({ action: "make_note", finding: make.dataset.make }).then(function () {
-            if (window.INCIDENT_PAGE && window.INCIDENT_PAGE.refresh) { window.INCIDENT_PAGE.refresh(); }
-            UI.toast("On the chronology.");
-          });
+          if (finding && (finding.at === null || finding.at === undefined)) {
+            // Not on camera against an incident or a camera (v1.213.0): the
+            // report has no clock, so the moment is asked for in words; the
+            // app reads it on the record's clock.
+            UI.prompt({ title: "At what moment?", body: urls.home === "incident" ? "The time of day on the incident's clock, as hh:mm:ss." : "The time into the recording, as mm:ss or hh:mm:ss.", value: "", ok: "Make it a note" })
+              .then(function (text) { if (text !== null && text.trim()) { act({ action: "make_note", finding: finding.id, at_words: text.trim() }).then(function () { UI.toast("Noted."); }); } });
+            return;
+          }
+          act({ action: "make_note", finding: make.dataset.make }).then(function () { UI.toast("Noted on the recording."); });
           return;
         }
         var note = event.target.closest("[data-note]");
@@ -260,81 +208,8 @@
       });
     }
     load();
+    return { reload: load, state: function () { return kept.state; } };
   }
 
-  // Draw every document named by the box's data-documents (JSON: [{id, url,
-  // state}]) into it, once, when asked.
-  function draw(box) {
-    if (!box || box.dataset.drawn === "yes") { return; }
-    box.dataset.drawn = "yes";
-    var listed = [];
-    try { listed = JSON.parse(box.dataset.documents || "[]"); } catch (ignored) { listed = []; }
-    var home = box.dataset.home ? { kind: box.dataset.home, id: box.dataset.homeId } : null;
-    if (!listed.length) {
-      box.innerHTML = "<p class='muted'>No report is linked here yet. Add the report on the Details tab.</p>";
-      return;
-    }
-    box.innerHTML = "<p class='muted small'>Reading the report...</p>";
-    Promise.all(listed.map(function (one) {
-      return fetch(one.state).then(function (answer) { return answer.ok ? answer.json() : null; }).catch(function () { return null; });
-    })).then(function (states) {
-      // Several documents (v1.129.2): a row of pills, one per document with
-      // its page count, and one document open at a time; the first opens.
-      // One document draws as before, with no row.
-      var pills = "";
-      if (states.length > 1) {
-        pills = "<div class='report-pick row' style='gap: 6px; flex-wrap: wrap; margin-bottom: 8px'>" + states.map(function (state, index) {
-          var id = state ? state.id : listed[index].id;
-          var title = state ? state.title : (listed[index].title || "A document");
-          var pages = state && state.pages_line ? " <span class='muted'>" + escape(String(state.pages_line).split(",")[0]) + "</span>" : "";
-          return "<button type='button' class='pill small" + (index === 0 ? " on" : "") + "' data-pick-document='" + escape(id) + "'>" + escape(title) + pages + "</button>";
-        }).join("") + "</div>";
-      }
-      box.innerHTML = pills + states.map(function (state, index) {
-        if (!state) { return "<p class='muted report-doc' data-document='" + escape(listed[index].id) + "'" + (states.length > 1 && index > 0 ? " hidden" : "") + ">" + escape(listed[index].title || "A document") + " could not be read just now.</p>"; }
-        var html = drawDocument(state, home);
-        return states.length > 1 && index > 0 ? html.replace("<section class='report-doc'", "<section class='report-doc' hidden") : html;
-      }).join("");
-      // On the recording page the comparison sits under the document; on the
-      // incident page it opens as a layer from its button.
-      Array.prototype.forEach.call(box.querySelectorAll(".compare-box"), function (one) {
-        var urls = { comparison: one.dataset.comparison, compare: one.dataset.compare, act: one.dataset.comparison + "/act", home: one.dataset.home, homeId: one.dataset.homeId, title: one.dataset.title };
-        if (window.INCIDENT_PAGE) {
-          // The button's line says where the comparison stands without opening it.
-          fetch(urls.comparison + "?" + urls.home + "=" + urls.homeId).then(function (answer) { return answer.ok ? answer.json() : null; }).then(function (state) {
-            var said = one.querySelector(".compare-said");
-            if (said && state) { said.textContent = state.words || (state.possible ? "" : state.why || ""); }
-            if (state) { setExportLink(state); }
-            // The button says what pressing it does (v1.74.3): a comparison
-            // that exists is opened, not run again.
-            var opener = one.querySelector("[data-open-comparison]");
-            if (opener && state) {
-              var total = Object.keys(state.counts || {}).reduce(function (n, k) { return n + (state.counts[k] || 0); }, 0);
-              if (state.state === "done") { opener.textContent = "Open the comparison, " + (total ? total + " finding" + (total === 1 ? "" : "s") : "no findings"); }
-              else if (state.busy) { opener.textContent = "Comparison running, open it"; }
-              else if (state.state) { opener.textContent = "Open the comparison"; }
-            }
-          });
-        } else {
-          drawComparison(one, urls, null);
-        }
-      });
-    });
-    box.addEventListener("click", function (event) {
-      var pick = event.target.closest("[data-pick-document]");
-      if (pick) { show(box, pick.dataset.pickDocument); return; }
-      var open = event.target.closest("[data-open-comparison]");
-      if (open && window.INCIDENT_PAGE && window.INCIDENT_PAGE.openComparison) {
-        var holder = open.closest(".compare-box");
-        var urls = { comparison: holder.dataset.comparison, compare: holder.dataset.compare, act: holder.dataset.comparison + "/act", home: holder.dataset.home, homeId: holder.dataset.homeId, title: holder.dataset.title };
-        window.INCIDENT_PAGE.openComparison(function (layerBox, setTitle) { drawComparison(layerBox, urls, setTitle); });
-        return;
-      }
-      var target = event.target.closest(".doc-box, .doc-para");
-      if (!target) { return; }
-      light(box, target.dataset.page, target.dataset.n);
-    });
-  }
-
-  window.REPORT_PANEL = { draw: draw, drawComparison: drawComparison, show: show };
+  window.REPORT_PANEL = { drawComparison: drawComparison };
 })();

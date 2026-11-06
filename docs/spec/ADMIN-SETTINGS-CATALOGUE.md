@@ -244,9 +244,9 @@ The Documents page of the Settings group, built in v1.71.0 (part 1). Every row b
 
 | Setting | Type | Default | Phase | What it does | When changed |
 |---|---|---|---|---|---|
-| Documents | On or Off | On | 8 | People may add a PDF to an incident or a recording as the report about it (Add the report). | Off hides the Documents tab, Add the report and the Report tab; documents already there stay and are read by nothing. At once. |
+| Documents | On or Off | On | 8 | People may add a PDF to a case as a police report (Add a document on the Documents tab; until v1.212.0 Add the report on an incident or a recording). | Off hides the Documents tab, Add the report and the Report tab; documents already there stay and are read by nothing. At once. |
 | Largest document | pages, 1 to 500 | 60 | 8 | A PDF over it is refused at upload with the reason. | The next upload. |
-| Documents per incident or recording | documents, 1 to 20 | 3 | 8 | Add the report is refused with the reason at the count. | The next upload. |
+| Documents per case (Documents per incident or recording, key `documents_per_home`, 3, until v1.212.0) | documents, 1 to 50 | 12 | 8, renamed 12 (v1.213.0) | The most documents a case holds, reports and pictures of the map together; Add a document and Save a picture are refused with the reason at the count. A document belongs to the case from v1.213.0 (Phase 12 chapter 11), so the cap does too. | The next upload. |
 | Read scans with OCR | On or Off | On | 8 | A page without words of its own is read from its picture (Tesseract, English) and marked read by OCR. | The next upload; Off keeps and shows a scan and says its words were not read. |
 | Reading ceiling | paragraphs, 5 to 5,000 | 400 | 8 | The most paragraphs of documents a question reads whole; past it, only the paragraphs matching the question are read, and the answer says so. | The next question. |
 | Compare with the report | On or Off | On | 8 | The comparison: the report read in windows of pages against the record, every finding cited on both sides and marked. Needs the assistant. | Off hides Compare with the report; comparisons already made stay. |

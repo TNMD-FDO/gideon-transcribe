@@ -322,6 +322,13 @@ def state_json(incident: Incident, user) -> dict:
     with their recordings and transcripts, and every helper that read them
     again is handed the list (v1.134.0); the clock reads for all of them
     come from one query."""
+    from core import comparison
+
+    # The reports (v1.213.0): the documents about the incident and the
+    # comparisons against it, asked once each and shared by the citations'
+    # list and the Reports line.
+    about_docs = documents.for_incident(incident) if documents.on() else []
+    against = comparison.against_rows(incident) if documents.on() else []
     cameras = list(
         incident.cameras.select_related(
             "recording", "recording__transcript", "placed_by"
@@ -391,18 +398,28 @@ def state_json(incident: Incident, user) -> dict:
             "clip_longest": settings_store.longest_clip_seconds(),
             "clip_focus_most": media.FOCUS_MOST,
             "clip_most": media.WALL_MOST,
-            # The report for this incident (Phase 8 chapter 4, part 1), on Details.
+            # The reports (Phase 12 chapter 11, v1.213.0): what Gideon reads
+            # beside this incident, for the citations, and the Reports line
+            # on Details (the comparisons against it, the documents about it,
+            # the doors to the shelf). Add the report left with the Report tab.
             "documents_on": documents.on(),
             "case_id": str(incident.case_id),
             "documents": (
-                [documents.as_json(one) for one in documents.for_incident(incident)]
+                [
+                    documents.as_json(one)
+                    for one in documents.read_with(
+                        incident,
+                        about=about_docs,
+                        compared=[one.document for one in against],
+                    )
+                ]
                 if documents.on()
                 else []
             ),
-            "add_document_url": (
-                documents.add_url(incident.case, incident=incident)
+            "reports": (
+                comparison.details_line(incident, about=about_docs, comparisons=against)
                 if documents.on()
-                else ""
+                else None
             ),
         },
         "cameras": [

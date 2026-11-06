@@ -1,84 +1,76 @@
 {% extends "base.html" %}
-{% load static %}
-{% block title %}Add the report{% endblock %}
+{% load static icons %}
+{% block title %}Add a document{% endblock %}
 {% block content %}
   {% comment %}
-    Add the report (Phase 8 chapter 4, part 1): the upload page for one
-    document, headed for the incident or the recording it is about. It says
-    what fits before a file is chosen, and refuses with the reason.
+    Add a document (Phase 12 chapter 11, v1.213.0; Add the report until then,
+    Phase 8 chapter 4 part 1): one lighter page for a PDF kept with the case:
+    the file, a title, an optional about (an incident or a camera of the
+    case, or nothing), and whether to compare it once it is read. It says
+    what fits in one line, and refuses with the reason.
   {% endcomment %}
   <div class="page">
-    <header class="welcome">
-      <span class="crumb muted small"><a href="{% url 'case' case.pk %}">{{ case.name }}</a> &rsaquo; <a href="{{ home_url }}">{{ home_name }}</a></span>
-      <h1>Add the report</h1>
-      <p class="lead">
-        {% if home_name %}The police report for {{ home_kind }}, <b>{{ home_name }}</b>, as a PDF.{% else %}The police report for an incident or a camera of this case, as a PDF.{% endif %} It is read page by page and kept with the case, beside the cameras.
-      </p>
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'case' case.pk %}">{{ case.name }}</a> &rsaquo; <a href="{{ shelf_url }}">Documents</a></span>
+      <div class="line"><h1>Add a document</h1></div>
+      <p class="lead">A PDF kept with the case and read page by page, beside the cameras.{% if about_words %} It will be {{ about_words }}.{% endif %}</p>
     </header>
-
-    <div class="card" id="document-fits">
-      <h2 class="small m0 mb6">What fits</h2>
-      <ul class="plain document-rules">
-        <li><b>PDFs only.</b> A Word file is saved as a PDF first.</li>
-        <li><b>The report for {% if home_kind %}{{ home_kind }}{% else %}the incident or the camera it is about{% endif %}, nothing else.</b> A document is read beside the cameras, so a document about something else only slows the reading and clouds the answers.</li>
-        <li><b>Up to {{ most_pages }} pages.</b> A larger file is refused; cut a production down to the report that matters.</li>
-        <li><b>{{ per_home }} documents per incident or recording</b>{% if here %}; {{ home_kind }} has {{ here }}{% endif %}.</li>
-        {% if ocr %}<li><b>A scan is read by OCR</b>, and its words may carry mistakes; the page itself is always shown beside them.</li>{% elif ocr_missing %}<li><b>A scan is kept and shown</b>, but its words are not read: the OCR engine is not in this build.</li>{% else %}<li><b>A scan is kept and shown</b>, but its words are not read: OCR is off.</li>{% endif %}
-        <li><b>Nothing leaves the building.</b> The document is read by the office's own engine and kept with the case.</li>
-      </ul>
-    </div>
 
     {% if refused %}<p class="notice danger" id="document-refused">{{ refused }}</p>{% endif %}
 
     <form method="post" enctype="multipart/form-data" class="card" id="document-form">
       {% csrf_token %}
-      {% comment %}What the report is about (part 2; one question since v1.129.2): the whole incident, or one camera's own report. The field names incident and recording are the same; the choice says which one counts.{% endcomment %}
-      <div class="field" id="document-home">
-        <span>This report is about</span>
-        <label class="choice{% if not picked_recording %} on{% endif %}" id="about-incident">
-          <input type="radio" name="about" value="incident"{% if not picked_recording %} checked{% endif %}>
-          <span class="choice-words">
-            <b>The whole incident{% if picked_incident and home_name %}: {{ home_name }}{% endif %}</b>
-            <span class="why small muted">The report that tells the story of the event. Gideon reads it beside every camera, the Comparison checks it against the whole record, and it sits on the incident's Report tab.</span>
-            {% if not picked_incident %}
-              <select name="incident" id="pick-incident" class="small">
-                <option value="">Pick the incident</option>
-                {% for home in homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}">{{ home.name }}</option>{% endif %}{% endfor %}
-              </select>
-            {% else %}
-              <input type="hidden" name="incident" id="pick-incident" value="{{ picked_incident }}">
-            {% endif %}
-          </span>
-        </label>
-        <label class="choice{% if picked_recording %} on{% endif %}" id="about-camera">
-          <input type="radio" name="about" value="recording"{% if picked_recording %} checked{% endif %}>
-          <span class="choice-words">
-            <b>One camera's own report{% if picked_recording and home_name %}: {{ home_name }}{% endif %}</b>
-            <span class="why small muted">An officer's own report of what their camera saw. It is read beside that camera alone and sits on that recording's Report tab.</span>
-            {% if not picked_recording %}
-              <select name="recording" id="pick-recording" class="small">
-                <option value="">Pick the camera</option>
-                {% for home in homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}">{{ home.name }}</option>{% endif %}{% endfor %}
-              </select>
-            {% else %}
-              <input type="hidden" name="recording" id="pick-recording" value="{{ picked_recording }}">
-            {% endif %}
-          </span>
-        </label>
-        <p class="muted small m0 mt4">Most reports are about the whole incident. Pick the camera only when the report is one officer's account of their own footage.</p>
-      </div>
-      <label class="field">
-        <span>The PDF</span>
+      <label class="field drop add-drop" id="add-drop">
+        <span><b>The PDF.</b> Drop it here, or choose a file &middot; up to {{ most_pages }} pages &middot; a Word file is saved as a PDF first</span>
         <input type="file" name="file" accept="application/pdf,.pdf" required>
+        <span class="muted small" id="add-drop-name"></span>
       </label>
       <label class="field">
         <span>Title <span class="muted small">(the file's name unless you change it)</span></span>
         <input type="text" name="title" maxlength="200" placeholder="Incident report, 7 June 2025">
       </label>
-      <div class="row" style="gap: 8px; margin-top: 12px">
-        <button type="submit" class="primary">Add</button>
-        <a class="btn ghost" href="{{ home_url }}">Cancel</a>
+      {% comment %}About (v1.213.0): one optional choice in place of the two radios of v1.129.2 ("this report is about: the whole incident / one camera's own report"), which had to be answered.{% endcomment %}
+      <div class="field" id="document-about">
+        <span>About <span class="muted small">(optional)</span></span>
+        <div class="row about-choices gap6 wrap">
+          <label class="btn small choice-btn{% if not picked %} on{% endif %}"><input type="radio" name="about" value="nothing"{% if not picked %} checked{% endif %}> Nothing in particular</label>
+          {% if incidents_on %}<label class="btn small choice-btn{% if picked == 'incident' %} on{% endif %}"><input type="radio" name="about" value="incident"{% if picked == 'incident' %} checked{% endif %}> An incident</label>{% endif %}
+          <label class="btn small choice-btn{% if picked == 'recording' %} on{% endif %}"><input type="radio" name="about" value="recording"{% if picked == 'recording' %} checked{% endif %}> A camera</label>
+        </div>
+        <div class="row about-picks gap6 wrap mt6">
+          {% if incidents_on %}
+            <select name="incident" id="pick-incident" class="small" aria-label="The incident this document is about"{% if picked != 'incident' %} hidden{% endif %}>
+              <option value="">Pick the incident</option>
+              {% for home in abouts %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if home.id == picked_incident %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
+            </select>
+          {% endif %}
+          <select name="recording" id="pick-recording" class="small" aria-label="The camera this document is about"{% if picked != 'recording' %} hidden{% endif %}>
+            <option value="">Pick the camera</option>
+            {% for home in abouts %}{% if home.kind == "recording" %}<option value="{{ home.id }}"{% if home.id == picked_recording %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}
+          </select>
+        </div>
+        <span class="muted small">Tells Gideon which part of the case the document is about, and offers that record first when you compare. It can be changed later from the Documents tab.</span>
       </div>
+      {% if compare_on %}
+        {% comment %}Compare when it is read: off unless pressed, so an upload never starts a long reading by surprise; kept on no row, a delayed task asks once the reading is done.{% endcomment %}
+        <div class="field" id="document-compare">
+          <span>Compare when it is read</span>
+          <div class="row compare-choices gap6 wrap">
+            <label class="btn small choice-btn{% if compare_choice != 'case' and compare_choice != 'about' %} on{% endif %}"><input type="radio" name="compare" value="none"{% if compare_choice != 'case' and compare_choice != 'about' %} checked{% endif %}> Not yet</label>
+            <label class="btn small choice-btn{% if compare_choice == 'case' %} on{% endif %}"><input type="radio" name="compare" value="case"{% if compare_choice == 'case' %} checked{% endif %}> Against the case</label>
+            <label class="btn small choice-btn{% if compare_choice == 'about' %} on{% endif %}" id="compare-about-choice"{% if not picked %} hidden{% endif %}><input type="radio" name="compare" value="about"{% if compare_choice == 'about' %} checked{% endif %}> Against what it is about</label>
+          </div>
+          <span class="muted small">A comparison reads the report in windows of pages against the record and usually takes some minutes; you can start one from the Documents tab at any time.</span>
+        </div>
+      {% endif %}
+      <div class="row add-acts">
+        <button type="submit" class="primary">Add</button>
+        <a class="btn ghost" href="{{ shelf_url }}">Cancel</a>
+      </div>
+      <p class="muted small m0 mt12" id="document-fits">
+        <b>What fits:</b> PDFs only &middot; {{ most_pages }} pages at most &middot; {{ per_case }} documents a case (this case has {{ here }}) &middot; {% if ocr %}a scan is read by OCR and its words may carry mistakes, so the page itself is always shown beside them{% elif ocr_missing %}a scan is kept and shown, but its words are not read: the OCR engine is not in this build{% else %}a scan is kept and shown, but its words are not read: OCR is off{% endif %} &middot; nothing leaves the building: the document is read by the office's own engine and kept with the case.
+      </p>
     </form>
   </div>
+  <script src="{% static 'document-add.js' %}"></script>
 {% endblock %}

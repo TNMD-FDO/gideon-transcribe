@@ -343,7 +343,7 @@ def _has_path(recording) -> bool:
 
 def _page_context(request: HttpRequest, recording: Recording) -> dict:
     """What the viewer's page and its windows are drawn from."""
-    from core import exports
+    from core import comparison, exports
 
     transcript = getattr(recording, "transcript", None)
     # Ready, not merely present: the copy is written under another name until
@@ -431,17 +431,15 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         "has_notes": bool(
             transcript is not None and transcript.segments.exclude(note="").exists()
         ),
-        # The report for this recording (Phase 8 chapter 4, part 1), on Details.
+        # The reports (Phase 12 chapter 11, v1.213.0): the Reports line on
+        # Details, the comparisons against this camera and the documents
+        # about it, with the doors to the case's shelf. The Report tab and
+        # Add the report left with v1.212.0.
         "documents_on": documents.on() and bool(recording.case_id),
-        "documents": (
-            documents.for_recording(recording)
+        "reports": (
+            comparison.details_line(recording)
             if documents.on() and recording.case_id
-            else []
-        ),
-        "add_document_url": (
-            documents.add_url(recording.case, recording=recording)
-            if documents.on() and recording.case_id
-            else ""
+            else None
         ),
         "media_url": (f"{media_root(recording)}/{playback.name}" if playback else ""),
         # While the copy is still being written there is no file to judge

@@ -142,20 +142,26 @@
             processed. Printed on every export. Never the transcript itself.
           </p>
           <dl id="details" class="kv"></dl>
-          {% if documents_on %}
-            {% comment %}The report for this recording (Phase 8 chapter 4, part 1).{% endcomment %}
+          {% if documents_on and reports %}
+            {% comment %}
+              Reports (Phase 12 chapter 11, v1.213.0): the comparisons against
+              this camera with their counts, the documents about it, and the
+              doors to the case's Documents tab. The Report tab and Add the
+              report left with v1.212.0; documents live on the shelf.
+            {% endcomment %}
             <div id="recording-documents" class="documents-here">
-              <h3 class="small m0 mt12 mb4">The report</h3>
-              {% if documents %}
-                <ul class="plain">
-                  {% for one in documents %}
-                    <li><a href="{{ one.url }}">{{ one.title }}</a> <span class="muted small">{{ one.pages_line }}</span></li>
+              <h3 class="small m0 mt12 mb4">Reports</h3>
+              {% if reports.compared %}
+                <ul class="plain reports-line">
+                  {% for one in reports.compared %}
+                    <li><b>{{ one.title }}</b> compared with this camera: {% if one.state == "done" %}{{ one.words }}{% elif one.state == "failed" %}did not finish{% else %}running{% endif %}{% if one.stale %} <span class="pill small warn" title="Compare again to refresh">{{ one.stale }}</span>{% endif %} <a class="cite" href="{{ one.url }}">Open the comparison</a></li>
                   {% endfor %}
                 </ul>
               {% else %}
-                <p class="muted small m0 mb6">No report yet for this recording. Add the police report as a PDF and it is read beside the transcript.</p>
+                <p class="muted small m0 mb6">No report has been compared with this camera yet.</p>
               {% endif %}
-              <a class="btn small" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
+              {% if reports.about %}<p class="muted small m0 mb6">About this camera: {% for one in reports.about %}<a href="{{ one.url }}">{{ one.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+              <p class="small m0"><a href="{{ reports.shelf_url }}">The case's documents</a>{% if reports.on %} &middot; <a href="{{ reports.compare_url }}" id="compare-a-report">Compare a report with this camera &rsaquo;</a>{% endif %}</p>
             </div>
           {% endif %}
           <div id="marks" hidden>
@@ -164,10 +170,6 @@
           </div>
         </div>
 
-        {% if documents %}
-          {% comment %}The Report tab (Phase 8 chapter 4, part 2): the linked documents, drawn by report-panel.js from their state.{% endcomment %}
-          <div class="panel read" data-panel="report" hidden id="report-panel" data-home="recording" data-home-id="{{ recording.pk }}" data-documents='[{% for one in documents %}{"id": "{{ one.pk }}", "title": "{{ one.title|escapejs }}", "state": "{% url 'document-state' one.case_id one.pk %}"}{% if not forloop.last %},{% endif %}{% endfor %}]'></div>
-        {% endif %}
         <div class="panel" data-panel="details" hidden>
           <h2>Where the files live</h2>
           <p class="muted small">

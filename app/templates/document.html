@@ -24,9 +24,11 @@
     {% endcomment %}
     <header class="page-head">
       <span class="eyebrow doc-ways">
-        {% comment %}The case bar above reaches the case and its Documents tab (v1.171.0); the finer ways back stay.{% endcomment %}
-        {% if back_incident %}<a class="btn small ghost" href="{{ back_incident.url }}">{% icon "camera" %} Back to the incident</a>{% endif %}
-        {% if back_recording %}<a class="btn small ghost" href="{% url 'viewer' back_recording.pk %}?panel=details">{% icon "play" %} Back to the recording</a>{% endif %}
+        {% comment %}The case bar above reaches the case and its Documents tab (v1.171.0); the ways on (v1.213.0): what the document is about, and its comparisons' pages.{% endcomment %}
+        <a class="btn small ghost" href="{% url 'case' case.pk %}?tab=documents">&lsaquo; Documents</a>
+        {% if about_incident %}<a class="btn small ghost" href="{{ about_incident.url }}">{% icon "camera" %} About the incident {{ about_incident.name }}</a>{% endif %}
+        {% if about_recording %}<a class="btn small ghost" href="{% url 'viewer' about_recording.pk %}?panel=details">{% icon "play" %} About the recording {{ about_recording.title }}</a>{% endif %}
+        {% for cmp in comparisons %}<a class="btn small ghost" href="{{ cmp.url }}" title="{{ cmp.words }}">{% icon "text" %} Comparison against {{ cmp.against_words }}</a>{% endfor %}
       </span>
       <div class="line"><h1>{{ document.title }}</h1></div>
       <div class="acts">

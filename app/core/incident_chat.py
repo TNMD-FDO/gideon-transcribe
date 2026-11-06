@@ -178,11 +178,12 @@ def answer_incident_turn(turn_id, attempt: int = 1) -> None:
         from core import notes
 
         noted = notes.any_on_chronology(incident)
-        # The report for this incident (Phase 8 chapter 4, part 2).
+        # The reports for this incident (Phase 8 chapter 4, part 2): those
+        # about it and those compared with it (Phase 12 chapter 11).
         from core import documents
 
         papers, papers_note, named = documents.reading_block(
-            documents.for_incident(incident),
+            documents.read_with(incident),
             turn.question,
             heading="The report for this incident:",
         )

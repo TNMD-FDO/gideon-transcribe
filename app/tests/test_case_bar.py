@@ -134,7 +134,7 @@ def test_every_page_in_the_case_carries_the_bar_with_its_tab_lit(
     made = incidents.make(a_case, "Stop", [cam], by=person)
     report = documents.add(
         a_case,
-        home={"recording": cam},
+        about={"recording": cam},
         data=make_pdf(REPORT),
         filename="report.pdf",
         title="Incident report",
@@ -161,10 +161,11 @@ def test_every_page_in_the_case_carries_the_bar_with_its_tab_lit(
     assert 'id="case-bar"' in page and _lit(page) == "Incidents"
     assert "&rsaquo; Stop" in page
     assert "in the case <a" not in page and "Back to the case" not in page
-    # The document page: Documents lit; Back to the recording stays.
+    # The document page: Documents lit; the way on to what it is about
+    # (v1.213.0; Back to the recording until then).
     page = client.get(f"/case/{a_case.pk}/document/{report.pk}").content.decode()
     assert 'id="case-bar"' in page and _lit(page) == "Documents"
-    assert "Back to the recording" in page
+    assert "About the recording" in page
     assert 'title="Back to the case&#x27;s Documents tab"' not in page
     # The Notes page is the Notes tab's Page shape (v1.172.0): the old
     # address sends to the tab, whose own bar is the case page's.

@@ -174,10 +174,12 @@ def test_a_report_is_added_to_an_incident_read_split_and_drawn(person, a_case, c
     page = client.get(
         f"/case/{a_case.pk}/documents/add?incident={incident.pk}"
     ).content.decode()
-    assert "Add the report" in page and "PDFs only" in page and "Up to 60 pages" in page
-    assert "Nothing leaves the building" in page and "Stop" in page
+    assert "Add a document" in page and "PDFs only" in page
+    assert "60 pages at most" in page
+    assert "nothing leaves the building" in page and "Stop" in page
     told = add_report(client, a_case, incident=incident)
-    assert told.status_code == 302 and told.url == incident.url()
+    # Back to the shelf (v1.213.0), where the document now lives.
+    assert told.status_code == 302 and told.url == f"/case/{a_case.pk}?tab=documents"
     document = Document.objects.get()
     assert document.state == "ready" and document.pages == 2
     assert document.incident == incident and document.case == a_case
@@ -199,13 +201,20 @@ def test_a_report_is_added_to_an_incident_read_split_and_drawn(person, a_case, c
     # The row, never the words.
     row = Row.objects.get(event="Document added")
     assert row.object_label == "Incident report" and row.details["pages"] == 2
-    assert row.details["home"] == "incident"
+    assert row.details["about"] == "incident"
     assert "sedan" not in json.dumps(row.details).lower()
-    # The incident's state carries it for the Details tab.
+    # The incident's state carries the documents Gideon reads (about it or
+    # compared with it) and the Reports line for Details; Add the report
+    # left with the Report tab (v1.213.0).
     state = client.get(f"{incident.url()}/state").json()
     assert state["incident"]["documents"][0]["title"] == "Incident report"
     assert state["incident"]["documents"][0]["pages_line"] == "2 pages"
-    assert state["incident"]["add_document_url"].endswith(f"?incident={incident.pk}")
+    assert "add_document_url" not in state["incident"]
+    reports = state["incident"]["reports"]
+    assert reports["about"][0]["title"] == "Incident report"
+    assert reports["compared"] == []
+    assert reports["shelf_url"] == f"/case/{a_case.pk}?tab=documents"
+    assert reports["compare_url"].endswith(f"&against=incident:{incident.pk}")
 
 
 def test_a_report_is_added_to_a_recording_and_shown_on_its_details(
@@ -214,14 +223,16 @@ def test_a_report_is_added_to_a_recording_and_shown_on_its_details(
     recording = video(person, a_case, "first")
     signed_in(client, person)
     page = client.get(f"/recording/{recording.pk}").content.decode()
-    assert "No report yet for this recording" in page and "Add the report" in page
-    assert f"/case/{a_case.pk}/documents/add?recording={recording.pk}" in page
+    # The Reports line on Details (v1.213.0): nothing compared yet, the doors
+    # to the shelf; Add the report is gone.
+    assert "No report has been compared with this camera yet" in page
+    assert "The case's documents" in page and "Add the report" not in page
     told = add_report(client, a_case, recording=recording, title="  ")
-    assert told.status_code == 302 and told.url.startswith(f"/recording/{recording.pk}")
+    assert told.status_code == 302 and told.url == f"/case/{a_case.pk}?tab=documents"
     document = Document.objects.get()
     assert document.recording == recording and document.title == "report"
     page = client.get(f"/recording/{recording.pk}").content.decode()
-    assert f'href="{document.url()}"' in page and "2 pages" in page
+    assert f'href="{document.url()}"' in page and "About this camera" in page
 
 
 def test_what_does_not_fit_is_refused_with_the_reason(person, a_case, client):
@@ -239,20 +250,20 @@ def test_what_does_not_fit_is_refused_with_the_reason(person, a_case, client):
     page = add_report(client, a_case, recording=recording).content.decode()
     assert "has 2 pages; the most is 1" in page and Document.objects.count() == 0
     settings_store.set_to("documents_pages_most", 60)
-    # Over the count.
-    settings_store.set_to("documents_per_home", 1)
+    # Over the count: the cap is the case's (v1.213.0).
+    settings_store.set_to("documents_per_case", 1)
     assert add_report(client, a_case, recording=recording).status_code == 302
     page = add_report(client, a_case, recording=recording).content.decode()
-    assert "already has 1 documents" in page and Document.objects.count() == 1
-    # Never loose, and never to another case's recording: the page says why.
+    assert "This case already has 1 documents" in page and Document.objects.count() == 1
+    # No file, and never about another case's recording: the page says why.
     page = client.post(
         f"/case/{a_case.pk}/documents/add", {"title": "x"}
     ).content.decode()
-    assert "Say which incident or recording" in page
+    assert "Choose a PDF first" in page
     fields = {"recording": str(elsewhere.pk), "file": io.BytesIO(make_pdf(REPORT))}
     fields["file"].name = "r.pdf"
     page = client.post(f"/case/{a_case.pk}/documents/add", fields).content.decode()
-    assert "Say which incident or recording" in page and Document.objects.count() == 1
+    assert "not this case" in page and Document.objects.count() == 1
     # Off: the tab, the link and the page are gone; the document stays.
     settings_store.set_to("documents", False)
     page = client.get(f"/case/{a_case.pk}").content.decode()
@@ -264,7 +275,7 @@ def test_what_does_not_fit_is_refused_with_the_reason(person, a_case, client):
         == 404
     )
     assert (
-        "Add the report"
+        "Compare a report with"
         not in client.get(f"/recording/{recording.pk}").content.decode()
     )
     assert Document.objects.count() == 1
@@ -272,7 +283,7 @@ def test_what_does_not_fit_is_refused_with_the_reason(person, a_case, client):
     for key in (
         "documents",
         "documents_pages_most",
-        "documents_per_home",
+        "documents_per_case",
         "documents_ocr",
     ):
         assert settings_store.definition(key).page == "documents"
@@ -363,14 +374,16 @@ def test_the_documents_tab_lists_relinks_and_removes(person, a_case, client):
     incident = incidents.make(a_case, "Stop", [first, second], by=person)
     signed_in(client, person)
     page = client.get(f"/case/{a_case.pk}?tab=documents").content.decode()
-    assert 'Documents <span class="count">0</span>' in page and "None yet" in page
+    assert 'Documents <span class="count">0</span>' in page
+    assert "No documents yet" in page
     add_report(client, a_case, incident=incident)
     document = Document.objects.get()
     page = client.get(f"/case/{a_case.pk}?tab=documents").content.decode()
     assert 'Documents <span class="count">1</span>' in page
     assert "Incident report" in page and "2 pages" in page and ">Stop</a>" in page
-    assert f"/case/{a_case.pk}/document/{document.pk}/act" in page and "Re-link" in page
-    # Re-link to a recording, then remove; one row each, and the folder goes.
+    assert f"/case/{a_case.pk}/document/{document.pk}/act" in page and "About" in page
+    # About a recording instead (the old relink action still answers), then
+    # remove; one row each, and the folder goes.
     told = client.post(
         f"/case/{a_case.pk}/document/{document.pk}/act",
         {"action": "relink", "recording": str(first.pk)},

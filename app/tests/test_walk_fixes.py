@@ -239,7 +239,8 @@ def test_the_case_pages_actions_are_gathered():
     assert page.index('id="shared-with"') < page.index('class="case-foot"')
     assert page.index('class="case-foot"') < page.index('id="delete-case"')
     assert ".about-case .case-foot {" in css
-    assert 'class="row relink"' in page
+    # The document row's Re-link became About in More (v1.213.0).
+    assert "document-more.html" in page
 
 
 def test_the_users_pages_row_is_two_actions_and_more():

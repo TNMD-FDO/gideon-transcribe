@@ -37,9 +37,7 @@
         {% if state.memo.on %}<li><a id="export-memo" href="{% url 'incident-export' case.pk incident.pk 'memo' %}" hidden>{% icon "word" %} Memo to Word</a></li>{% endif %}
         {% comment %}The Timeline report (Phase 8 chapter 14): a plain link, greyed until the chronology has an event.{% endcomment %}
         {% if state.report.on %}{% if state.report.events %}<li><a id="export-report" href="{% url 'incident-export' case.pk incident.pk 'report' %}">{% icon "word" %} Timeline report (Word)</a></li>{% else %}<li><span class="muted" id="export-report-off" title="Add an event first">{% icon "word" %} Timeline report: add an event first</span></li>{% endif %}{% endif %}
-        {% comment %}The comparison's export (Phase 8 chapter 6): a link once a comparison is done, greyed until then.{% endcomment %}
-        <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
-        <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>
+        {% comment %}Comparison to Word moved to the Comparison page with v1.213.0 (Phase 12 chapter 11).{% endcomment %}
       </ul>
     </details>
   </div>
@@ -104,7 +102,6 @@
         {% if state.memo.on %}<button type="button" class="tab" data-panel="memo" title="Memo">{% icon "summary" %} <span class="w">Memo</span></button>{% endif %}
         <button type="button" class="tab" data-panel="cameras" title="Cameras">{% icon "camera" %} <span class="w">Cameras</span></button>
         {% if map_pane %}<button type="button" class="tab" data-panel="map" title="The cameras' paths on the map, following this clock">{% icon "map" %} <span class="w">Map</span></button>{% endif %}
-        <button type="button" class="tab" data-panel="report" id="tab-report" title="Report" hidden>{% icon "document" %} <span class="w">Report</span> <span class="count" id="report-count"></span></button>
         <button type="button" class="tab" data-panel="details" title="Details">{% icon "info" %} <span class="w">Details</span></button>
         {% if state.memo.on %}<button type="button" class="tiny ghost" id="two-panels" hidden title="The Memo beside the Chronology, on a very wide window">Two panels</button>{% endif %}
         {% comment %}Find (Phase 7 chapter 3): a hit is a moment; pressing it takes every camera there.{% endcomment %}
@@ -177,11 +174,6 @@
         <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="proposals-title">Proposed events</b><span class="grow"></span><span id="proposals-head-acts"></span></div>
         <div class="inc-proposals" id="proposals-box"></div>
       </div>
-      {% comment %}The comparison (Phase 8 chapter 4, part 3): the report against the record, one finding per row, both sides cited.{% endcomment %}
-      <div class="inc-layer" id="layer-compare" hidden>
-        <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Report</span></button><b id="compare-title">Comparison</b><span class="grow"></span><span id="compare-head-acts"></span></div>
-        <div class="inc-compare compare-box" id="compare-box"></div>
-      </div>
       <div class="inc-layer" id="layer-find" hidden>
         <div class="layer-head"><button type="button" class="back" data-back>&lsaquo; <span class="back-tab">Chronology</span></button><b id="find-title">Find</b><span class="grow"></span><span class="muted small">Enter: next, Shift+Enter: back</span></div>
         <div class="inc-find-hits" id="find-hits"></div>
@@ -190,7 +182,6 @@
         <div class="panel" id="panel-chronology" hidden></div>
         {% if state.memo.on %}<div class="panel" id="panel-memo" hidden></div>{% endif %}
         <div class="panel" id="panel-cameras" hidden></div>
-        <div class="panel" id="panel-report" hidden data-home="incident" data-home-id="{{ incident.pk }}"></div>
         <div class="panel" id="panel-details" hidden></div>
         {% if map_pane %}
           {% comment %}
@@ -277,7 +268,6 @@
   {{ event_words|json_script:"event-words" }}
   <script src="{% static 'paragraph-card.js' %}"></script>
   <script src="{% static 'event-card.js' %}"></script>
-  <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'expectation.js' %}"></script>
   <script src="{% static 'incident.js' %}"></script>
   {% if map_pane %}<script src="{% static 'vendor/maplibre-gl.js' %}"></script><script src="{% static 'vendor/pmtiles.js' %}"></script><script src="{% static 'map.js' %}"></script>{% endif %}

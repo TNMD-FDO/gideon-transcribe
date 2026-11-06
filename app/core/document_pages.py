@@ -1,6 +1,7 @@
-"""The pages of Documents (Phase 8 chapter 4, part 1): Add the report, the
-document page with its pictures beside its words, the pictures themselves,
-the download, and Re-link and Remove from the case's Documents tab."""
+"""The pages of Documents (Phase 8 chapter 4, part 1; the shelf of Phase 12
+chapter 11): Add a document, the document page with its pictures beside its
+words, the pictures themselves, the download, the Comparison page, and
+About, Rename and Remove from the case's Documents tab."""
 
 from __future__ import annotations
 
@@ -16,68 +17,88 @@ from core.case_pages import _on_or_404, _their_case
 from core.documents import READY, Document
 from core.recordings import Recording
 
+# How long Compare when it is read keeps asking after a document, before it
+# gives up quietly (the reading of a long scan can take minutes).
+COMPARE_WHEN_READ_WAIT_SECONDS = 30
+COMPARE_WHEN_READ_TRIES = 120
+MOMENT_WORDS = "Say the moment as hh:mm:ss (or mm:ss into a recording)."
+
 
 def _documents_on_or_404() -> None:
     if not documents.on():
         raise Http404("Documents are off.")
 
 
-def _home_from(request: HttpRequest, case, source) -> dict:
-    """The incident or recording named in the request, checked to be the case's."""
+def _about_from(request: HttpRequest, case, source) -> dict:
+    """The incident or recording the request names as what the document is
+    about, checked to be the case's; nothing when it names nothing."""
     incident = None
     recording = None
-    # The page asks one question since v1.129.2, "This report is about": the
-    # answer says which of the two fields counts. A request without it (the
-    # Documents tab's Re-link, an older form) is read as before.
+    # One choice since v1.213.0, "About": nothing, an incident, or a camera;
+    # a request without it (an older form, a Details tab's address) is read
+    # from whichever field is filled, as the form of v1.129.2 was.
     about = (source.get("about") or "").strip()
+    # The shelf's More menu (v1.213.0) picks the about as one choice,
+    # "nothing", "incident:<id>" or "recording:<id>".
+    pick = (source.get("about_pick") or "").strip()
+    if pick:
+        kind, _, pk = pick.partition(":")
+        if kind == "incident" and pk:
+            incident = incidents.Incident.objects.filter(pk=pk).first()
+        elif kind == "recording" and pk:
+            recording = Recording.objects.filter(pk=pk).first()
+        return documents.about_of(case, incident=incident, recording=recording)
+    if about == "nothing":
+        return {}
     if source.get("incident") and about != "recording":
         incident = incidents.Incident.objects.filter(pk=source.get("incident")).first()
     if source.get("recording") and about != "incident":
         recording = Recording.objects.filter(pk=source.get("recording")).first()
-    return documents.home_of(case, incident=incident, recording=recording)
+    return documents.about_of(case, incident=incident, recording=recording)
 
 
 @login_required
 def add(request: HttpRequest, case_id) -> HttpResponse:
-    """Add the report: the upload page for one document, headed for the
-    incident or the recording it is about, saying what fits first."""
+    """Add a document (v1.213.0; Add the report until then): the one page for
+    a PDF, its title, an optional about and whether to compare when read."""
     _on_or_404()
     _documents_on_or_404()
     case = _their_case(request, case_id)
     source = request.POST if request.method == "POST" else request.GET
-    # The home may be given (from a Details tab) or picked here (from the
-    # Documents tab): an incident, a recording, or both.
-    home: dict = {}
+    about: dict = {}
     refused = ""
     try:
-        home = _home_from(request, case, source)
+        about = _about_from(request, case, source)
     except documents.Refused as why:
         if request.method == "POST":
             refused = str(why)
-    back = f"/case/{case.pk}?tab=documents"
-    if "incident" in home:
-        back = home["incident"].url()
-    elif "recording" in home:
-        back = f"/recording/{home['recording'].pk}?panel=details"
+    shelf = f"/case/{case.pk}?tab=documents"
+    picked = ""
+    if "incident" in about:
+        picked = "incident"
+    elif "recording" in about:
+        picked = "recording"
     context = {
         "page": "cases",
         "here_case": home_page.here_case_for(request.user, case),
         "case": case,
-        "home_kind": documents.home_words(home) if home else "",
-        "home_name": " and ".join(
-            one.name if kind == "incident" else one.title for kind, one in home.items()
+        "case_bar": case_bar.bar(case, on="documents", here="Add a document"),
+        "about_words": documents.about_words(about),
+        "picked": picked,
+        "picked_incident": str(about["incident"].pk) if "incident" in about else "",
+        "picked_recording": (
+            str(about["recording"].pk) if "recording" in about else ""
         ),
-        "home_url": back,
-        "picked_incident": str(home["incident"].pk) if "incident" in home else "",
-        "picked_recording": str(home["recording"].pk) if "recording" in home else "",
-        "given": bool(source.get("incident") or source.get("recording"))
-        and request.method != "POST",
-        "homes": documents.homes_of(case),
+        "abouts": documents.abouts_of(case),
+        "incidents_on": incidents.on(),
         "most_pages": documents.most_pages(),
-        "per_home": documents.per_home(),
-        "here": documents.count_at(home) if home else 0,
+        "per_case": documents.per_case(),
+        "here": documents.count_in(case),
         "ocr": documents.ocr_on() and documents.ocr_installed(),
         "ocr_missing": documents.ocr_on() and not documents.ocr_installed(),
+        "compare_on": _compare_on(),
+        "compare_choice": (source.get("compare") or "none").strip(),
+        "shelf_url": shelf,
         "refused": refused,
     }
     if request.method == "POST":
@@ -90,7 +111,7 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
         try:
             document = documents.add(
                 case,
-                home=home,
+                about=about,
                 data=upload.read(),
                 filename=upload.name,
                 title=request.POST.get("title", ""),
@@ -100,38 +121,106 @@ def add(request: HttpRequest, case_id) -> HttpResponse:
         except documents.Refused as why:
             context["refused"] = str(why)
             return render(request, "document-add.html", context)
-        messages.success(
-            request,
-            f"{document.title} was added and is being read; it appears on "
-            f"{documents.home_words(home)}'s Details and on the case's Documents tab.",
-        )
-        return redirect(back)
+        said = f"{document.title} was added and is being read."
+        wanted = _compare_wanted(request.POST.get("compare", ""), about, case)
+        if wanted:
+            from core import comparison, tasks
+
+            tasks.compare_when_read.configure(
+                schedule_in={"seconds": COMPARE_WHEN_READ_WAIT_SECONDS}
+            ).defer(
+                document_id=str(document.pk),
+                against=comparison.against_key(wanted),
+                user_id=request.user.pk,
+                attempt=1,
+            )
+            said += (
+                f" It will be compared against {comparison.against_words(wanted)} "
+                "once it is read; the comparison appears under it on this tab."
+            )
+        messages.success(request, said)
+        return redirect(shelf)
     return render(request, "document-add.html", context)
 
 
+def _compare_on() -> bool:
+    from core import comparison
+
+    return comparison.on()
+
+
+def _compare_wanted(choice: str, about: dict, case):
+    """Compare when it is read: the record the add page asked for, or None."""
+    if not _compare_on():
+        return None
+    choice = (choice or "").strip()
+    if choice == "case":
+        return case
+    if choice == "about":
+        return about.get("incident") or about.get("recording")
+    return None
+
+
+def compare_when_read(document_id: str, against: str, user_id, attempt: int) -> None:
+    """The task's step: ask for the comparison once the document is read;
+    while it is still being read, ask again later; give up quietly on a
+    document that failed or went."""
+    from core import comparison, tasks
+    from core.models import User
+
+    document = Document.objects.filter(pk=document_id).select_related("case").first()
+    if document is None or document.state == documents.FAILED:
+        return
+    if document.state != READY:
+        if attempt < COMPARE_WHEN_READ_TRIES:
+            tasks.compare_when_read.configure(
+                schedule_in={"seconds": COMPARE_WHEN_READ_WAIT_SECONDS}
+            ).defer(
+                document_id=document_id,
+                against=against,
+                user_id=user_id,
+                attempt=attempt + 1,
+            )
+        return
+    home = comparison.home_from_key(document.case, against)
+    by = User.objects.filter(pk=user_id).first()
+    if home is None or by is None:
+        return
+    comparison.ask_for(document, home, by=by)
+
+
 def _compare_home(request: HttpRequest, document: Document, source):
-    """The incident or recording a comparison is against: one the document
-    is linked to, named in the request."""
-    if source.get("incident") and str(document.incident_id) == str(
-        source.get("incident")
-    ):
-        return document.incident
-    if source.get("recording") and str(document.recording_id) == str(
-        source.get("recording")
-    ):
-        return document.recording
-    # The whole case (Phase 10 chapter 4, v1.170.0): the document keeps its
-    # home; only the reading widens.
-    if source.get("case") and str(document.case_id) == str(source.get("case")):
-        return document.case
-    raise Http404(
-        "the comparison is against the incident, recording or case the report is for"
-    )
+    """The record a comparison is against: the case, or any incident or
+    recording of the document's case (v1.213.0; until then only the
+    document's own home), named in the request by field or by `against`."""
+    from core import comparison
+
+    case = document.case
+    if source.get("against"):
+        home = comparison.home_from_key(case, source.get("against"))
+        if home is None:
+            raise Http404("the comparison is against the case or something of it")
+        return home
+    if source.get("incident"):
+        found = incidents.Incident.objects.filter(
+            pk=source.get("incident"), case=case
+        ).first()
+        if found is None:
+            raise Http404("that incident is not this case's")
+        return found
+    if source.get("recording"):
+        found = Recording.objects.filter(pk=source.get("recording"), case=case).first()
+        if found is None:
+            raise Http404("that recording is not this case's")
+        return found
+    if source.get("case") and str(case.pk) == str(source.get("case")):
+        return case
+    raise Http404("the comparison is against the case or something of it")
 
 
 @login_required
 def comparison_state(request: HttpRequest, case_id, document_id) -> HttpResponse:
-    """The comparison for the layer: its state and its findings."""
+    """The comparison for the page: its state and its findings."""
     from django.http import JsonResponse
 
     from core import comparison
@@ -146,7 +235,7 @@ def comparison_state(request: HttpRequest, case_id, document_id) -> HttpResponse
 @login_required
 @require_POST
 def compare(request: HttpRequest, case_id, document_id) -> HttpResponse:
-    """Compare with the report: one run, on the llm queue."""
+    """Compare against a record: one run, on the llm queue."""
     from django.http import JsonResponse
 
     from core import comparison
@@ -154,9 +243,17 @@ def compare(request: HttpRequest, case_id, document_id) -> HttpResponse:
     document = _their_document(request, case_id, document_id)
     home = _compare_home(request, document, request.POST)
     made = comparison.ask_for(document, home, by=request.user)
+    # From the shelf's Compare against menu (v1.213.0), a plain form: the
+    # person lands on the Comparison page, which shows the run going.
+    to_page = request.POST.get("next") == "page"
     if made is None:
         _, why = comparison.possible(document, home)
+        if to_page:
+            messages.error(request, why or "The comparison cannot run.")
+            return redirect(f"/case/{document.case_id}?tab=documents")
         return JsonResponse({"error": why or "The comparison cannot run."}, status=400)
+    if to_page:
+        return redirect(comparison.page_url(document, home))
     return JsonResponse(comparison.as_json(made, document, home))
 
 
@@ -184,11 +281,19 @@ def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
         ok = comparison.set_note(made, finding, request.POST.get("note", ""))
     elif action == "make_note":
         at = request.POST.get("at", "")
+        moment = chronology.a_moment(at) if at not in ("", None) else None
+        # A moment typed in words (v1.213.0) for a Not on camera finding: a
+        # time of day on an incident's clock, or a time into a recording.
+        typed = request.POST.get("at_words", "").strip()
+        if moment is None and typed:
+            moment = _moment_from_words(typed, home)
+            if moment is None:
+                return JsonResponse({"error": MOMENT_WORDS}, status=400)
         try:
             comparison.make_note(
                 made,
                 finding,
-                at=chronology.a_moment(at) if at not in ("", None) else None,
+                at=moment,
                 by=request.user,
                 request=request,
             )
@@ -199,6 +304,27 @@ def comparison_act(request: HttpRequest, case_id, document_id) -> HttpResponse:
     if not ok:
         raise Http404("no such finding")
     return JsonResponse(comparison.as_json(made, document, home))
+
+
+def _moment_from_words(typed: str, home) -> float | None:
+    """ "hh:mm:ss" on an incident's clock as seconds into the incident, or
+    "mm:ss" / "hh:mm:ss" as seconds into a recording; None when unreadable."""
+    parts = typed.replace(".", ":").split(":")
+    try:
+        numbers = [int(one) for one in parts]
+    except ValueError:
+        return None
+    if not 2 <= len(numbers) <= 3 or any(one < 0 for one in numbers):
+        return None
+    if len(numbers) == 2:
+        numbers = [0, *numbers]
+    seconds = numbers[0] * 3600 + numbers[1] * 60 + numbers[2]
+    if isinstance(home, incidents.Incident):
+        if home.clock_zero is None:
+            return float(seconds)
+        # The short way round midnight, as the incident's own clock reads.
+        return float(incidents._wrapped(seconds - home.clock_zero))
+    return float(seconds)
 
 
 @login_required
@@ -237,8 +363,62 @@ def comparison_export(request: HttpRequest, case_id, document_id) -> HttpRespons
 
 
 @login_required
+def comparison_page(request: HttpRequest, case_id, document_id) -> HttpResponse:
+    """The Comparison page (Phase 12 chapter 11, v1.213.0): a page of its own
+    under the case bar with Documents lit, the report against its record,
+    the findings in the wide column and the report's page beside them."""
+    from core import comparison
+
+    document = _their_document(request, case_id, document_id)
+    if not comparison.on():
+        raise Http404("the comparison is off")
+    if document.kind == documents.PICTURE:
+        raise Http404("a picture of the map has no words to compare")
+    home = _compare_home(request, document, request.GET)
+    made = comparison.of(document, home)
+    told = comparison.as_json(made, document, home)
+    others = [
+        one
+        for one in comparison.shelf_rows(document)
+        if one["against"] != comparison.against_key(home)
+    ]
+    targets = [
+        one
+        for one in comparison.targets_of(document)
+        if not one["exists"] and one["key"] != comparison.against_key(home)
+    ]
+    return render(
+        request,
+        "comparison.html",
+        {
+            "page": "cases",
+            "case": document.case,
+            "case_bar": case_bar.bar(document.case, on="documents", here="Comparison"),
+            "here_case": home_page.here_case_for(request.user, document.case),
+            "document": document,
+            "against_key": comparison.against_key(home),
+            "against_words": told["against_words"],
+            "home_kind": told["home"],
+            "home_id": told["home_id"],
+            "state_url": (
+                f"/case/{document.case_id}/document/{document.pk}/comparison"
+                f"?against={comparison.against_key(home)}"
+            ),
+            "document_state_url": (
+                f"/case/{document.case_id}/document/{document.pk}/state"
+            ),
+            "others": others,
+            "targets": targets,
+            "shelf_url": f"/case/{document.case_id}?tab=documents",
+            "told": told,
+        },
+    )
+
+
+@login_required
 def state(request: HttpRequest, case_id, document_id) -> HttpResponse:
-    """The document for the Report tab: every page's picture and words."""
+    """The document for the Comparison page and the paragraph card: every
+    page's picture and words."""
     from django.http import JsonResponse
 
     document = _their_document(request, case_id, document_id)
@@ -282,6 +462,8 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
         lit = int(request.GET.get("para", 0))
     except ValueError:
         lit = 0
+    from core import comparison
+
     return render(
         request,
         "document.html",
@@ -297,9 +479,14 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
             "open_page": open_page,
             "lit": lit,
             "asked": request.GET.get("q", "").strip(),
-            # The ways back (part 2): the case, and the incident or recording.
-            "back_incident": document.incident,
-            "back_recording": document.recording,
+            # The ways on (v1.213.0): what it is about, and its comparisons.
+            "about_incident": document.incident,
+            "about_recording": document.recording,
+            "comparisons": (
+                comparison.shelf_rows(document)
+                if document.kind != documents.PICTURE
+                else []
+            ),
         },
     )
 
@@ -342,17 +529,29 @@ def download(request: HttpRequest, case_id, document_id) -> HttpResponse:
 @login_required
 @require_POST
 def act(request: HttpRequest, case_id, document_id) -> HttpResponse:
-    """Re-link or Remove, from the case's Documents tab; back to it after."""
+    """About, Rename or Remove, from the case's Documents tab; back to it after."""
     document = _their_document(request, case_id, document_id)
     action = request.POST.get("action", "")
     try:
-        if action == "relink":
-            home = _home_from(request, document.case, request.POST)
-            documents.relink(document, home, by=request.user, request=request)
+        if action in ("about", "relink"):
+            about = _about_from(request, document.case, request.POST)
+            documents.set_about(document, about, by=request.user, request=request)
+            words = documents.about_words(about)
             messages.success(
                 request,
-                f"{document.title} is now the report for {document.home_name()}.",
+                f"{document.title} is now {words}."
+                if words
+                else f"{document.title} is about nothing in particular now.",
             )
+        elif action == "rename":
+            was = document.title
+            documents.rename(
+                document,
+                request.POST.get("title", ""),
+                by=request.user,
+                request=request,
+            )
+            messages.success(request, f"{was} is now called {document.title}.")
         elif action == "remove":
             title = document.title
             documents.remove(document, by=request.user, request=request)

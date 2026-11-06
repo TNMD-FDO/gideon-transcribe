@@ -299,6 +299,16 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
         return redirect(
             reverse("case-map-page", args=[case.pk]) + (f"?{query}" if query else "")
         )
+    # The comparison against the case (v1.170.0) opened as a layer from
+    # ?compare=<document>; since v1.213.0 it is the Comparison page.
+    if tab == "documents" and request.GET.get("compare"):
+        return redirect(
+            reverse(
+                "document-comparison-page",
+                args=[case.pk, request.GET.get("compare")],
+            )
+            + "?against=case"
+        )
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
     if asked and not request.GET.get("tab"):
         tab = "search"
@@ -406,12 +416,20 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             ),
             # The Page shape's desk (v1.172.0), drawn by notes-page.js.
             **(notes_page.desk_context(request, case) if tab == "notes" else {}),
-            # Documents beside the cameras (Phase 8 chapter 4, part 1).
+            # The Documents tab as the shelf (Phase 12 chapter 11, v1.213.0):
+            # the reports with their comparisons, the pictures, the chips.
             "documents_on": documents.on(),
             "documents_count": documents_count,
-            "documents": _documents_with_exports(case) if tab == "documents" else [],
-            "document_homes": documents.homes_of(case) if tab == "documents" else [],
+            "shelf": documents.shelf(case) if tab == "documents" else None,
+            "document_abouts": documents.abouts_of(case) if tab == "documents" else [],
             "add_document_url": documents.add_url(case),
+            "documents_most_pages": documents.most_pages() if tab == "documents" else 0,
+            "compare_on": _compare_on() if tab == "documents" else False,
+            # Compare a report with this incident (from an incident's or a
+            # recording's Details): the record the shelf opens its menu on.
+            "shelf_against": request.GET.get("against", "")
+            if tab == "documents"
+            else "",
             "is_owner": role == "owner",
             "role": role,
             # The Case vocabulary block (Phase 9 chapter 2).
@@ -1665,37 +1683,7 @@ def add_recordings(request: HttpRequest, case_id) -> HttpResponse:
     return redirect(f"/upload?case={case.pk}")
 
 
-def _documents_with_exports(case) -> list:
-    """The case's documents, each carrying the address of its comparison's
-    Word export when one is done (Phase 8 chapter 6)."""
+def _compare_on() -> bool:
     from core import comparison
 
-    rows = documents.of_case(case)
-    for document in rows:
-        document.comparison_export = ""
-        # Against the case (Phase 10 chapter 4, v1.170.0): the state words
-        # and the export when done.
-        whole = comparison.of(document, case)
-        told = comparison.as_json(whole, document, case)
-        document.case_words = told.get("words") or (
-            "" if told.get("possible") else told.get("why", "")
-        )
-        document.case_state = told.get("state", "")
-        document.case_busy = bool(told.get("busy"))
-        document.case_findings = sum((told.get("counts") or {}).values())
-        document.case_comparison_export = (
-            told.get("export_url", "") if told.get("state") == "done" else ""
-        )
-        home = document.incident or document.recording
-        if home is None:
-            continue
-        made = comparison.of(document, home)
-        if made is not None and made.state == comparison.DONE:
-            kind = "incident" if document.incident_id else "recording"
-            document.comparison_export = (
-                reverse(
-                    "document-comparison-export", args=[document.case_id, document.pk]
-                )
-                + f"?{kind}={home.pk}"
-            )
-    return rows
+    return comparison.on()

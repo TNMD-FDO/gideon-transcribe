@@ -236,6 +236,18 @@ def compare_report(comparison_id: str, attempt: int = 1) -> None:
         comparison.compare(comparison_id, attempt=attempt)
 
 
+@app.task(queue="llm", name="compare_when_read")
+def compare_when_read(
+    document_id: str, against: str, user_id, attempt: int = 1
+) -> None:
+    """Compare when it is read (Phase 12 chapter 11, v1.213.0): the add page's
+    choice, asked for once the document's reading is done; while it is still
+    being read the task asks again later."""
+    from core import document_pages
+
+    document_pages.compare_when_read(document_id, against, user_id, attempt)
+
+
 @app.task(queue="llm", name="compare_report_case")
 def compare_report_case(comparison_id: str, attempt: int = 1) -> None:
     """Compare with the case (Phase 10 chapter 4, v1.170.0): one child run

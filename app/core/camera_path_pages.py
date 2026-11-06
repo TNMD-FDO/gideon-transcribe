@@ -243,7 +243,8 @@ def note_all(request: HttpRequest, case_id) -> JsonResponse:
 @require_POST
 def picture(request: HttpRequest, case_id) -> JsonResponse:
     """Save a picture of the map (chapter 5): the PNG the browser drew, kept
-    as a Document on the incident or the recording the picture is about."""
+    as a Document of the case, about the incident shown or the camera
+    pressed when there is one (chapter 11)."""
     from core import documents
     from core.incidents import Incident
 
@@ -272,10 +273,12 @@ def picture(request: HttpRequest, case_id) -> JsonResponse:
             pk=request.POST.get("recording"), case=case
         ).first()
     try:
-        home = documents.home_of(case, incident=incident, recording=recording)
+        # About the incident shown or the camera pressed when there is one;
+        # about nothing otherwise (v1.213.0): the picture is the case's.
+        about = documents.about_of(case, incident=incident, recording=recording)
         document = documents.add_picture(
             case,
-            home=home,
+            about=about,
             data=upload.read(),
             filename=upload.name or "map.png",
             title=request.POST.get("title", ""),
@@ -284,12 +287,14 @@ def picture(request: HttpRequest, case_id) -> JsonResponse:
         )
     except documents.Refused as refused:
         return JsonResponse({"error": str(refused)}, status=400)
+    words = documents.about_words(about)
     return JsonResponse(
         {
             "ok": True,
             "url": document.url(),
             "title": document.title,
-            "words": f"Saved as a Document on {documents.home_words(home)}.",
+            "words": "Saved to the case's Documents tab"
+            + (f", {words}." if words else "."),
         }
     )
 

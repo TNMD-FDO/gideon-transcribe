@@ -1390,6 +1390,8 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
             else ("case" if _is_case(home) else "recording")
         ),
         "home_id": str(home.pk),
+        "against_words": against_words(home),
+        "page_url": page_url(document, home),
         "can_make_note": True,
         "marks": [{"key": mark, "words": MARK_WORDS[mark]} for mark in MARKS],
     }
@@ -1493,6 +1495,203 @@ def as_json(comparison: Comparison | None, document: Document, home) -> dict:
         ]
         if comparison.state == DONE
         else [],
+    }
+
+
+# The shelf and the Comparison page (Phase 12 chapter 11, v1.213.0) -------------------
+
+
+def against_key(home) -> str:
+    """ "case", "incident:<id>" or "recording:<id>", as the page's address says it."""
+    if _is_case(home):
+        return "case"
+    kind = "incident" if isinstance(home, incidents.Incident) else "recording"
+    return f"{kind}:{home.pk}"
+
+
+def against_words(home) -> str:
+    """ "the case", the incident's name or the camera's title."""
+    if _is_case(home):
+        return "the case"
+    if isinstance(home, incidents.Incident):
+        return home.name
+    return home.title or home.original_filename
+
+
+def page_url(document: Document, home) -> str:
+    return (
+        reverse("document-comparison-page", args=[document.case_id, document.pk])
+        + f"?against={against_key(home)}"
+    )
+
+
+def home_from_key(case, key: str):
+    """The record a key names, checked to be the case's; None for a key that
+    names nothing of the case."""
+    key = (key or "").strip()
+    if key in ("", "case"):
+        return case
+    kind, _, pk = key.partition(":")
+    if kind == "incident":
+        return incidents.Incident.objects.filter(pk=pk, case=case).first()
+    if kind == "recording":
+        from core.recordings import Recording
+
+        return Recording.objects.filter(pk=pk, case=case).first()
+    return None
+
+
+def _bar(counts: dict) -> list[dict]:
+    """The four-colour bar's parts, as percentages that sum to 100."""
+    total = sum(counts.values()) or 0
+    if not total:
+        return []
+    return [
+        {
+            "key": mark,
+            "words": MARK_WORDS[mark],
+            "n": counts.get(mark, 0),
+            "pct": round(100 * counts.get(mark, 0) / total, 1),
+        }
+        for mark in MARKS
+        if counts.get(mark, 0)
+    ]
+
+
+def shelf_row(comparison: Comparison, document: Document) -> dict:
+    """One comparison as the shelf lists it under its report."""
+    home = comparison.home()
+    told = as_json(comparison, document, home)
+    counts = told.get("counts") or {}
+    total = sum(counts.values())
+    written = (
+        timezone.localtime(comparison.written_at) if comparison.written_at else None
+    )
+    when = f"{written.day} {written:%b %H:%M}" if written else ""
+    if comparison.state == DONE:
+        words = (
+            f"{total} finding{'' if total == 1 else 's'}: "
+            f"{counts.get(AGREES, 0)} agree, {counts.get(DIFFERS, 0)} differ, "
+            f"{counts.get(NOT_ON_CAMERA, 0)} not on camera, "
+            f"{counts.get(NOT_IN_REPORT, 0)} not in the report"
+        )
+    elif comparison.state == FAILED:
+        words = "did not finish"
+    else:
+        words = "running"
+    return {
+        "id": str(comparison.pk),
+        "against": against_key(home),
+        "against_words": against_words(home),
+        "kind": told["home"],
+        "state": comparison.state,
+        "busy": told["busy"],
+        "words": words,
+        "when": when,
+        "stale": told.get("stale") or "",
+        "counts": counts,
+        "total": total,
+        "bar": _bar(counts),
+        "url": page_url(document, home),
+        "export_url": told.get("export_url", "") if comparison.state == DONE else "",
+    }
+
+
+def shelf_rows(document: Document) -> list[dict]:
+    """Every comparison of a report (the parents alone, a case row's children
+    being its own), the case first, then by the record's name."""
+    rows = [
+        shelf_row(one, document)
+        for one in document.comparisons.filter(parent__isnull=True).select_related(
+            "incident", "recording", "case"
+        )
+    ]
+    rows.sort(key=lambda one: (one["kind"] != "case", one["against_words"].lower()))
+    return rows
+
+
+def targets_of(document: Document) -> list[dict]:
+    """The records a report could be read against (Compare against), each
+    with whether it can run and why not, and whether a comparison already
+    exists: the case, the case's incidents, the case's cameras with a
+    transcript."""
+    case = document.case
+    done = {
+        against_key(one.home())
+        for one in document.comparisons.filter(parent__isnull=True)
+    }
+    out = []
+
+    def one(home, kind):
+        can, why = possible(document, home)
+        return {
+            "key": against_key(home),
+            "kind": kind,
+            "name": against_words(home),
+            "possible": can,
+            "why": why,
+            "exists": against_key(home) in done,
+            "url": page_url(document, home),
+            "first": False,
+        }
+
+    out.append(one(case, "case"))
+    if incidents.on():
+        for incident in case.incidents.order_by("created"):
+            out.append(one(incident, "incident"))
+    for recording in case.recordings.select_related("transcript").order_by(
+        "created", "title"
+    ):
+        if getattr(recording, "transcript", None) is None:
+            continue
+        out.append(one(recording, "recording"))
+    # The about is offered first (the chapter's principle): it moves up under
+    # the case and wears a mark.
+    about = {against_key(document.incident)} if document.incident_id else set()
+    if document.recording_id:
+        about.add(against_key(document.recording))
+    for row in out:
+        row["first"] = row["key"] in about
+    out.sort(key=lambda row: (row["kind"] != "case", not row["first"]))
+    return out
+
+
+def against_rows(home) -> list[Comparison]:
+    """The comparisons against an incident or a recording (the parents
+    alone), newest first, each with its document."""
+    field = "incident" if isinstance(home, incidents.Incident) else "recording"
+    return list(
+        Comparison.objects.filter(**{field: home}, parent__isnull=True)
+        .select_related("document")
+        .order_by("-created")
+    )
+
+
+def details_line(home, *, about=None, comparisons=None) -> dict:
+    """The Reports line on an incident's or a recording's Details (Phase 12
+    chapter 11): the comparisons against it with their counts and stale
+    words, the documents about it, and the doors to the shelf. A page that
+    has the lists already hands them in."""
+    from core import documents as docs
+
+    is_incident = isinstance(home, incidents.Incident)
+    if comparisons is None:
+        comparisons = against_rows(home)
+    if about is None:
+        about = docs.for_incident(home) if is_incident else docs.for_recording(home)
+    compared = []
+    for one in comparisons:
+        row = shelf_row(one, one.document)
+        row["title"] = one.document.title
+        compared.append(row)
+    shelf = reverse("case", args=[home.case_id]) + "?tab=documents"
+    return {
+        "on": on(),
+        "compared": compared,
+        "about": [docs.as_json(one) for one in about],
+        "shelf_url": shelf,
+        "compare_url": f"{shelf}&against={against_key(home)}",
+        "words": "this incident" if is_incident else "this camera",
     }
 
 

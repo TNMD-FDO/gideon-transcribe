@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static icons %}
+{% block title %}Comparison: {{ document.title }}{% endblock %}
+{% block body_class %}case-page{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+  {% comment %}
+    The Comparison page (Phase 12 chapter 11, v1.213.0; the drawing
+    docs/spec/mockups/phase-12-documents-tab.html): a page of its own under
+    the case bar with Documents lit. The head names the report and the record
+    it is read against (against ▾ reaches this report's other comparisons and
+    the records not yet compared); the findings fill the wide column, drawn
+    by report-panel.js as the layers were; the report's page stands beside
+    them following the pressed finding; the moment plays in the Preview.
+  {% endcomment %}
+  <div class="page roomy cmp-page" id="comparison"
+       data-case="{{ case.pk }}" data-document="{{ document.pk }}"
+       data-state="{{ state_url }}" data-document-state="{{ document_state_url }}"
+       data-home="{{ home_kind }}" data-home-id="{{ home_id }}" data-title="{{ document.title }}"
+       data-compare="{% url 'document-compare' case.pk document.pk %}"
+       data-comparison="{% url 'document-comparison' case.pk document.pk %}"
+       data-against="{{ against_key }}">
+    <header class="page-head cmp-head">
+      <span class="eyebrow"><a href="{{ shelf_url }}">&lsaquo; Documents</a></span>
+      <div class="line">
+        <h1>{{ document.title }} <span class="muted cmp-against-word">against</span>
+          <details class="menu cmp-against" id="cmp-against">
+            <summary class="btn small" title="This report's other comparisons, and the records it has not been compared against yet">{{ against_words|capfirst }} {% icon "chevron-down" %}</summary>
+            <ul>
+              {% for other in others %}
+                <li><a href="{{ other.url }}">{{ other.against_words|capfirst }} <span class="muted small">{% if other.state == "done" %}{{ other.total }} finding{{ other.total|pluralize }}{% elif other.state == "failed" %}did not finish{% else %}running{% endif %}</span></a></li>
+              {% endfor %}
+              {% if others and targets %}<li class="sep"></li>{% endif %}
+              {% for target in targets %}
+                <li>
+                  {% if target.possible %}
+                    <form method="post" action="{% url 'document-compare' case.pk document.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="against" value="{{ target.key }}"><input type="hidden" name="next" value="page"><button type="submit" title="Read the report against {{ target.name }}">Compare against {{ target.name }}{% if target.first %} <span class="muted small">(what it is about)</span>{% endif %}</button></form>
+                  {% else %}
+                    <button type="button" disabled title="{{ target.why }}">Compare against {{ target.name }} <span class="muted small">{{ target.why }}</span></button>
+                  {% endif %}
+                </li>
+              {% endfor %}
+              {% if not others and not targets %}<li><span class="muted small cmp-menu-note">Nothing else to compare against yet.</span></li>{% endif %}
+            </ul>
+          </details>
+        </h1>
+      </div>
+      <div class="acts">
+        <a class="btn small ghost" href="{{ document.url }}">{% icon "document" %} Open the document</a>
+      </div>
+      <p class="lead muted small" id="cmp-lead">{{ document.pages_line }}{% if document.about_name %} &middot; about <a href="{{ document.about_url }}">{{ document.about_name }}</a>{% endif %}{% if document.added_by %} &middot; added by {{ document.added_by.shown_name }}, {{ document.created|date:"j M Y" }}{% endif %}</p>
+    </header>
+
+    <div class="cmp-body">
+      <div class="cmp-findings">
+        {% comment %}report-panel.js draws here: the state line with Compare again and To Word, the filter pills, the order, the rows.{% endcomment %}
+        <div class="compare-box" id="compare-box" data-home="{{ home_kind }}" data-home-id="{{ home_id }}"></div>
+      </div>
+      <aside class="cmp-page-col" id="cmp-page">
+        <div class="row cmp-page-head">
+          <b id="cmp-page-title">Page 1</b>
+          <span class="muted small grow" id="cmp-page-note"></span>
+          <button type="button" class="tiny" data-page-step="-1" title="The page before">&lsaquo;</button>
+          <button type="button" class="tiny" data-page-step="1" title="The page after">&rsaquo;</button>
+        </div>
+        <figure class="report-sheet cmp-sheet" id="cmp-sheet"><img id="cmp-sheet-img" alt="The report's page"></figure>
+        <p class="muted small m0">The page follows the finding pressed, its paragraph lit; press a paragraph on the page to find the findings that rest on it.</p>
+      </aside>
+    </div>
+  </div>
+  <script src="{% static 'paragraph-card.js' %}"></script>
+  <script src="{% static 'expectation.js' %}"></script>
+  <script src="{% static 'report-panel.js' %}"></script>
+  <script src="{% static 'preview.js' %}"></script>
+  <script src="{% static 'comparison-page.js' %}"></script>
+{% endblock %}

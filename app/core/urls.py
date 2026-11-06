@@ -364,6 +364,11 @@ urlpatterns = [
         name="document-comparison-act",
     ),
     path(
+        "case/<uuid:case_id>/document/<uuid:document_id>/comparison/page",
+        document_pages.comparison_page,
+        name="document-comparison-page",
+    ),
+    path(
         "case/<uuid:case_id>/document/<uuid:document_id>/comparison/export",
         document_pages.comparison_export,
         name="document-comparison-export",

@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Documents tab redesigned: three directions</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+    --text: #171b21; --muted: #5b6673;
+    --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+    --ok: #27683f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #f9e3e1;
+    --c1: #1f6fb2; --c2: #c2410c; --c3: #2e7d32; --c4: #8e24aa; --inc: #7b4ea3; --inc-soft: #efe7f7;
+    --ground: #eef1ea; --road: #ffffff; --road-edge: #d8ddd3;
+    --radius: 6px; --radius-lg: 8px; --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+      --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3d1f1d;
+      --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+      --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --surface: #1a1f26; --surface-2: #242b33; --line: #343d48; --text: #e7ebef; --muted: #98a4b1;
+    --accent: #5fadd8; --accent-soft: #1b3646; --accent-ink: #0b141b; --ok: #6fc28a; --ok-soft: #1c3526; --warn: #f0a850; --warn-soft: #3a2a12; --bad: #f28b82; --bad-soft: #3d1f1d;
+    --c1: #6fb1ea; --c2: #ff9a62; --c3: #7ed492; --c4: #d59cf0; --inc: #b79be0; --inc-soft: #2b2238; --shadow: 0 12px 32px rgba(0, 0, 0, .55);
+    --ground: #1e2328; --road: #2c333b; --road-edge: #3a434d;
+  }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); margin: 0; padding-block: 32px 64px; padding-inline: 16px; }
+  .page { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  h1 { font-size: 22px; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 14px; margin: 0; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lede { max-width: 84ch; color: var(--muted); margin: 0; }
+  .fig-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; }
+  .caption { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 28px; margin-top: 16px; }
+  .caption p { margin: 0; } .muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 11px; } .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; } b { font-weight: 600; }
+  .verdict { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .flag { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+  ol, ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; }
+  /* the window frame */
+  .win { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .win .topbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); background: var(--surface-2); }
+  .win .body { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+  .win .rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; padding: 12px 0; align-items: center; background: var(--surface-2); }
+  .win .rail i { width: 22px; height: 22px; border-radius: 6px; background: var(--line); display: block; } .win .rail i.on { background: var(--accent); }
+  .win .content { padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .casebar { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .casebar .name { font-size: 15px; font-weight: 600; }
+  .tabs { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .tabs span.on { color: var(--text); font-weight: 600; border-bottom: 2px solid var(--accent); margin-bottom: -7px; padding-bottom: 5px; }
+  .tabs small { color: var(--muted); font-size: 11px; }
+  .lead { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; font-size: 13px; }
+  .lead p { margin: 0; max-width: 80ch; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+  .btn.danger { color: var(--bad); }
+  .btn.tiny { min-height: 22px; font-size: 11px; padding: 1px 8px; }
+  .btn.on { background: var(--accent-soft); border-color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.acc { background: var(--accent-soft); color: var(--accent); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.inc { background: var(--inc-soft); color: var(--inc); }
+  .pill.on { background: var(--accent); color: var(--accent-ink); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+  .sect { display: flex; flex-direction: column; gap: 8px; }
+  .sect > .h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .sect > .h h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  table.tbl { border-collapse: collapse; width: 100%; font-size: 13px; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .tbl th, .tbl td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  .tbl th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; background: var(--surface-2); }
+  .tbl td .sub { color: var(--muted); font-size: 12px; }
+  .cmp { display: grid; grid-template-columns: 150px 150px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; font-size: 12px; padding: 4px 0; border-top: 1px dashed var(--line); }
+  .cmp:first-child { border-top: 0; }
+  .cmp .who { font-weight: 600; }
+  .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); min-width: 120px; }
+  .bar i { display: block; height: 100%; } .bar .a { background: var(--ok); } .bar .d { background: var(--bad); } .bar .n { background: var(--warn); } .bar .r { background: var(--accent); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .card .h { display: flex; gap: 8px; align-items: flex-start; } .card .h b { font-size: 13px; }
+  .cover { width: 56px; height: 72px; border: 1px solid var(--line); border-radius: 3px; background: repeating-linear-gradient(var(--surface) 0 5px, var(--surface-2) 5px 7px); flex: none; }
+  .cover.pic { background: var(--ground); width: 100%; height: 110px; position: relative; overflow: hidden; }
+  .cover.pic::before { content: ""; position: absolute; inset: 20% -10% auto -10%; height: 14px; background: var(--road); border: 1px solid var(--road-edge); transform: rotate(-12deg); }
+  .cover.pic::after { content: ""; position: absolute; left: 10%; top: 10%; width: 12px; height: 60%; background: var(--road); border: 1px solid var(--road-edge); transform: rotate(20deg); }
+  .cover.pic i { position: absolute; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--surface); } .cover.pic i.c1 { background: var(--c1); left: 40%; top: 50%; } .cover.pic i.c2 { background: var(--c2); left: 55%; top: 38%; } .cover.pic i.c4 { background: var(--c4); left: 70%; top: 60%; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius-lg); padding: 10px 14px; color: var(--muted); font-size: 12px; text-align: center; }
+  .fault { display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: var(--bad); color: #fff; font: 700 11px/18px var(--font); justify-content: center; vertical-align: middle; margin-left: 4px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+  .findings { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .find { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 12px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+  .find:first-child { border-top: 0; }
+  .find.lit { background: var(--accent-soft); }
+  .find .claim { font-size: 13px; }
+  .find .cite { color: var(--accent); }
+  .find .acts { display: flex; gap: 6px; margin-top: 2px; }
+  .mark { display: inline-flex; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+  .mark.a { background: var(--ok-soft); color: var(--ok); } .mark.d { background: var(--bad-soft); color: var(--bad); } .mark.n { background: var(--warn-soft); color: var(--warn); } .mark.r { background: var(--accent-soft); color: var(--accent); }
+  .sheet { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .pagepic { background: var(--surface); border: 1px solid var(--line); aspect-ratio: 8.5 / 11; position: relative; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .pagepic span { display: block; height: 7px; border-radius: 2px; background: var(--surface-2); }
+  .pagepic span.w60 { width: 60%; } .pagepic span.w80 { width: 80%; } .pagepic span.w90 { width: 90%; }
+  .pagepic .para { padding: 4px; border-radius: 3px; display: flex; flex-direction: column; gap: 5px; }
+  .pagepic .para.lit { outline: 2px solid var(--accent); background: var(--accent-soft); }
+  .preview { position: absolute; right: 16px; bottom: 16px; width: 300px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); font-size: 12px; overflow: hidden; }
+  .preview .bar2 { background: var(--c2); color: #fff; padding: 4px 10px; display: flex; justify-content: space-between; font-weight: 600; }
+  .preview .pic { height: 110px; background: linear-gradient(135deg, var(--surface-2), var(--line)); }
+  .preview .lines { padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .preview .lines .on { font-weight: 600; }
+  .rel { position: relative; }
+  .panel-tabs { display: flex; gap: 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+  .panel-tabs span.on { color: var(--text); font-weight: 600; }
+  .panel-tabs span.gone { text-decoration: line-through; color: var(--bad); }
+  .kv { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 10px; font-size: 12px; margin: 0; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  .field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+  .field .box { border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px; background: var(--surface); color: var(--muted); }
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 12px; }
+  .toggle span { padding: 3px 10px; } .toggle span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .t th, .t td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .t th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .ledger .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 8px 10px 4px; background: var(--surface-2); border-top: 1px solid var(--line); }
+  .ledger .row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 140px auto; gap: 10px; align-items: center; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+  .ledger { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+  .newcmp { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 12px; background: var(--surface-2); }
+  .sel { border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; background: var(--surface); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Phase 12, a new chapter proposed · three directions for the maintainer's word · 2026-11-06</span>
+    <h1>The Documents tab as the case's landing place for its documents and comparisons</h1>
+    <p class="lede">The ask of 2026-11-06: the Documents tab holds the reports used for comparisons inside incidents, and the pictures saved from the Map land there too; it should be the place where a person sees the saved pictures, adds the documents, and reads a report against the whole case or against an incident, so the document features leave the incident page, and a comparison is a sub-page under the tab. Below: what the tab and the incident page hold today and where it hurts, three directions for the tab, the comparison page and the add flow they share, the incident page afterwards, and the choices. The fictional office throughout: the case <b>Harbour Street stop</b>, its incidents <b>Harbour car park</b> and <b>Walk incident, 6 Nov</b>, the cameras <b>Lee Fox</b>, <b>Kit Vale</b>, <b>Ash Kim</b>, <b>Jo Marsh</b>.</p>
+  </header>
+
+  <!-- Figure 0: today -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Figure 0</span><h2>Today: a document lives on an incident or a camera, and its features are spread over four places</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Sign out · theme</span></div>
+      <div class="body">
+        <div class="rail"><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="content">
+          <div class="casebar"><span class="name">Harbour Street stop</span><span class="muted small">27 recordings · 3 incidents · 2 shared with</span></div>
+          <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span class="on">Documents <small>5</small></span><span>Incidents <small>3</small></span><span>Map <small>26</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+          <div class="lead"><p class="muted">5 documents in this case, each the report for an incident or a camera. A report is added here or from the incident's or the recording's <b>Details</b> tab, and is read beside the cameras it is about. <span class="fault">1</span></p><span class="btn">Add the report</span></div>
+          <table class="tbl">
+            <thead><tr><th>Document</th><th>Pages</th><th>The report for <span class="fault">2</span></th><th>Against the case <span class="fault">3</span></th><th>Added</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><b>Incident report, 6 Nov 2025</b><div class="sub">2025-11-06_incident_report.pdf</div></td><td>42 pages, 3 read by OCR</td><td>Harbour car park <span class="muted">(incident)</span></td><td><span class="pill ok">31 findings</span><div class="sub">12 agree, 6 differ, 9 not on camera, 4 not in the report</div><div style="margin-top:4px"><span class="btn tiny primary">Comparison</span> <span class="btn tiny ghost">To Word</span></div></td><td>D. Rowe<div class="sub">7 Nov 2025 09:14</div></td><td><span class="btn tiny">Open</span> <span class="btn tiny ghost">Comparison to Word</span> <span class="btn tiny danger">Remove</span><div style="margin-top:4px" class="sub">Re-link: <span class="sel">Harbour car park</span> <span class="sel">no camera</span> <span class="btn tiny">Re-link</span> <span class="fault">4</span></div></td></tr>
+              <tr><td><b>Use of force supplement, Officer Vale</b><div class="sub">supplement_vale.pdf</div></td><td>6 pages</td><td>Kit Vale <span class="muted">(recording)</span></td><td><span class="muted">not compared yet</span><div style="margin-top:4px"><span class="btn tiny">Compare with the case</span></div></td><td>D. Rowe<div class="sub">7 Nov 2025 09:20</div></td><td><span class="btn tiny">Open</span> <span class="btn tiny danger">Remove</span></td></tr>
+              <tr><td><b>Arrest report, Lee Fox</b><div class="sub">arrest_fox_scan.pdf</div></td><td>4 pages, read by OCR, 1 poorly read</td><td>Lee Fox <span class="muted">(recording)</span></td><td><span class="muted">not compared yet</span><div style="margin-top:4px"><span class="btn tiny">Compare with the case</span></div></td><td>A. Reyes<div class="sub">8 Nov 2025 16:02</div></td><td><span class="btn tiny">Open</span> <span class="btn tiny danger">Remove</span></td></tr>
+              <tr><td><b>Map at 20:27:40, 6 Nov 2025 · Harbour car park</b><div class="sub">map-20251106-202740.png</div></td><td>1 page</td><td>Harbour car park <span class="muted">(incident)</span></td><td><span class="muted">a picture, nothing to compare</span> <span class="fault">5</span></td><td>test<div class="sub">6 Nov 2025 21:10</div></td><td><span class="btn tiny">Open</span> <span class="btn tiny danger">Remove</span></td></tr>
+              <tr><td><b>Map at 20:31:05, 6 Nov 2025 · Kit Vale</b><div class="sub">map-20251106-203105.png</div></td><td>1 page</td><td>Kit Vale <span class="muted">(recording)</span></td><td><span class="muted">a picture, nothing to compare</span></td><td>test<div class="sub">6 Nov 2025 21:12</div></td><td><span class="btn tiny">Open</span> <span class="btn tiny danger">Remove</span></td></tr>
+            </tbody>
+          </table>
+          <div class="sheet" style="border-color: var(--accent)"><div><span class="btn tiny ghost">‹ Documents</span> <b>Comparison, Incident report, 6 Nov 2025</b> <span class="muted">against every recording of the case, one at a time</span> <span class="fault">6</span></div><div class="muted">… the findings as rows, under the table, on the same tab …</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <div>
+        <p><b>Where the features are, today.</b> On the incident page: a <b>Report</b> tab in the work panel (the linked reports' pages), <b>Add the report</b> on its Details tab, the <b>Comparison</b> layer over the Report tab, and <b>Comparison to Word</b> in Export. On the recording page: the same Report tab and Add the report. On the Documents tab: the list, Re-link, and the comparison against the case as a layer under the table. On the Map page and the incident's map pane: Save a picture, which needs an incident or a camera to keep the picture on.</p>
+      </div>
+      <div>
+        <p><b>Where it hurts.</b> <span class="fault">1</span> The lead sends a person elsewhere to add a document. <span class="fault">2</span> A document must belong to an incident or a camera: the home decides which comparison is possible, and a picture must be kept "on" something. <span class="fault">3</span> One column reads the comparison against the case; the incident's comparison of the same report is on another page and not shown here. <span class="fault">4</span> Re-link is two drop-downs on every row. <span class="fault">5</span> A picture sits in a table built for reports, with a column that says it has no words. <span class="fault">6</span> The findings open as a layer under the table: on a long list the layer is below the fold, and the report's page is a card press away.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Direction A -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction A · the shelf</span><h2>One page: the reports as rows with every comparison under each, the pictures as a gallery, Add a document as the page's action</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Sign out · theme</span></div>
+      <div class="body">
+        <div class="rail"><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="content">
+          <div class="casebar"><span class="name">Harbour Street stop</span><span class="muted small">27 recordings · 3 incidents · 2 shared with</span></div>
+          <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span class="on">Documents <small>5</small></span><span>Incidents <small>3</small></span><span>Map <small>26</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+          <div class="lead"><p class="muted">3 reports and 2 pictures of the map. A report is read against the whole case, an incident or one camera; every finding cites the report's paragraph and the record's moment, and nothing joins a recording until you make it a note.</p><span class="btn primary">Add a document</span></div>
+          <div class="chips"><span class="pill on">All 5</span><span class="pill">Reports 3</span><span class="pill">Pictures 2</span><span class="muted">·</span><span class="pill">Compared 2</span><span class="pill">Not yet compared 1</span><span class="pill warn">Stale 1</span></div>
+
+          <div class="sect">
+            <div class="h"><h3>Reports</h3><span class="muted tiny">newest first</span></div>
+            <table class="tbl">
+              <thead><tr><th style="width: 34%">Document</th><th>Comparisons</th><th style="width: 110px">Added</th><th style="width: 140px"></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><b>Incident report, 6 Nov 2025</b><div class="sub">42 pages, 3 read by OCR · about <span class="pill inc">Harbour car park</span></div></td>
+                  <td>
+                    <div class="cmp"><span class="who">The case</span><span class="bar"><i class="a" style="width:39%"></i><i class="d" style="width:19%"></i><i class="n" style="width:29%"></i><i class="r" style="width:13%"></i></span><span>31 findings: 12 agree, 6 differ, 9 not on camera, 4 not in the report · 7 Nov</span><span><span class="btn tiny primary">Open</span></span></div>
+                    <div class="cmp"><span class="who">Harbour car park</span><span class="bar"><i class="a" style="width:50%"></i><i class="d" style="width:17%"></i><i class="n" style="width:22%"></i><i class="r" style="width:11%"></i></span><span>18 findings · <span class="pill warn">a camera added since</span></span><span><span class="btn tiny">Open</span></span></div>
+                    <div class="cmp"><span class="btn tiny ghost">+ Compare against ▾</span><span class="muted tiny" style="grid-column: 2 / -1">the case · an incident · a camera</span></div>
+                  </td>
+                  <td class="small">D. Rowe<div class="sub">7 Nov 2025</div></td>
+                  <td><span class="btn tiny">Open</span> <span class="btn tiny ghost">Download</span> <span class="btn tiny ghost">More ▾</span></td>
+                </tr>
+                <tr>
+                  <td><b>Use of force supplement, Officer Vale</b><div class="sub">6 pages · about <span class="pill inc">Kit Vale</span></div></td>
+                  <td>
+                    <div class="cmp"><span class="who">Kit Vale</span><span class="bar"><i class="a" style="width:57%"></i><i class="d" style="width:14%"></i><i class="n" style="width:29%"></i></span><span>7 findings: 4 agree, 1 differs, 2 not on camera · 7 Nov</span><span><span class="btn tiny primary">Open</span></span></div>
+                    <div class="cmp"><span class="btn tiny ghost">+ Compare against ▾</span></div>
+                  </td>
+                  <td class="small">D. Rowe<div class="sub">7 Nov 2025</div></td>
+                  <td><span class="btn tiny">Open</span> <span class="btn tiny ghost">Download</span> <span class="btn tiny ghost">More ▾</span></td>
+                </tr>
+                <tr>
+                  <td><b>Arrest report, Lee Fox</b><div class="sub">4 pages, read by OCR, <span style="color: var(--warn)">1 poorly read</span> · about nothing yet</div></td>
+                  <td><div class="cmp"><span class="muted">Not compared yet</span><span class="btn tiny" style="grid-column: 2 / span 2; justify-self: start">Compare against ▾</span></div></td>
+                  <td class="small">A. Reyes<div class="sub">8 Nov 2025</div></td>
+                  <td><span class="btn tiny">Open</span> <span class="btn tiny ghost">Download</span> <span class="btn tiny ghost">More ▾</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="drop">Drop a PDF here to add it to the case · up to 60 pages · a scan is read by OCR · nothing leaves the building</div>
+          </div>
+
+          <div class="sect">
+            <div class="h"><h3>Pictures of the map</h3><span class="muted tiny">saved from the Map page or an incident's map pane with Save a picture; the markers at that moment, the day and time in the name</span></div>
+            <div class="gallery">
+              <div class="card"><div class="cover pic"><i class="c1"></i><i class="c2"></i><i class="c4"></i></div><div class="h"><b>Map at 20:27:40, 6 Nov 2025</b></div><div class="muted">about <span class="pill inc">Harbour car park</span> · saved by test, 6 Nov 21:10</div><div style="display:flex;gap:6px"><span class="btn tiny">Open</span><span class="btn tiny ghost">Download</span><span class="btn tiny ghost">On the map</span><span class="btn tiny ghost">More ▾</span></div></div>
+              <div class="card"><div class="cover pic"><i class="c4"></i><i class="c2"></i></div><div class="h"><b>Map at 20:31:05, 6 Nov 2025</b></div><div class="muted">about <span class="pill inc">Kit Vale</span> · saved by test, 6 Nov 21:12</div><div style="display:flex;gap:6px"><span class="btn tiny">Open</span><span class="btn tiny ghost">Download</span><span class="btn tiny ghost">On the map</span><span class="btn tiny ghost">More ▾</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>A document belongs to the case.</b> The home goes: a report is the case's, with an optional <b>about</b> (an incident or a camera) that no longer decides anything but what Gideon reads it beside and which record is offered first when you compare. The two Re-link drop-downs fold into <b>More ▾</b> (About…, Rename, Remove).</p>
+      <p><b>Every comparison of a report, one row each.</b> The case, an incident, a camera: as many as the person asked for, side by side under the report, each with its findings as a four-colour bar (agree, differ, not on camera, not in the report), its counts, when it was read, a stale pill, and <b>Open</b> to its page. <b>Compare against ▾</b> names the record: the case, each incident of the case, each camera with a transcript.</p>
+      <p><b>The pictures are a gallery</b>, the picture itself the thumbnail, with Open, Download and <b>On the map</b> (the Map page at that day and moment). A picture may be about an incident or a camera, or about nothing: Save a picture no longer needs something to keep the picture on.</p>
+      <p><b>Add a document</b> is the page's one primary, and a dropped PDF adds without a page. The chips narrow the shelf; a stale comparison is one chip away.</p>
+    </div>
+  </section>
+
+  <!-- Direction B -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction B · the cards</span><h2>Every document a card with its cover, reports and pictures in one grid, the comparisons as rows inside the card</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Sign out · theme</span></div>
+      <div class="body">
+        <div class="rail"><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="content">
+          <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span class="on">Documents <small>5</small></span><span>Incidents <small>3</small></span><span>Map <small>26</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+          <div class="lead"><p class="muted">3 reports and 2 pictures of the map. A report is read against the whole case, an incident or one camera; every finding cites both sides.</p><span class="btn primary">Add a document</span></div>
+          <div class="chips"><span class="pill on">All 5</span><span class="pill">Reports 3</span><span class="pill">Pictures 2</span><span class="pill warn">Stale 1</span><span class="muted tiny" style="margin-left:auto">newest first ▾</span></div>
+          <div class="cards">
+            <div class="card">
+              <div class="h"><span class="cover"></span><div><b>Incident report, 6 Nov 2025</b><div class="muted">42 pages, 3 read by OCR</div><div class="muted">about <span class="pill inc">Harbour car park</span> · D. Rowe, 7 Nov</div></div></div>
+              <div class="cmp" style="grid-template-columns: 110px minmax(0,1fr) auto"><span class="who">The case</span><span><span class="bar"><i class="a" style="width:39%"></i><i class="d" style="width:19%"></i><i class="n" style="width:29%"></i><i class="r" style="width:13%"></i></span><span class="tiny muted">31 findings · 7 Nov</span></span><span class="btn tiny primary">Open</span></div>
+              <div class="cmp" style="grid-template-columns: 110px minmax(0,1fr) auto"><span class="who">Harbour car park</span><span><span class="bar"><i class="a" style="width:50%"></i><i class="d" style="width:17%"></i><i class="n" style="width:22%"></i><i class="r" style="width:11%"></i></span><span class="tiny" style="color: var(--warn)">18 findings · stale</span></span><span class="btn tiny">Open</span></div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="btn tiny ghost">+ Compare against ▾</span><span class="btn tiny ghost" style="margin-left:auto">Open</span><span class="btn tiny ghost">More ▾</span></div>
+            </div>
+            <div class="card">
+              <div class="h"><span class="cover"></span><div><b>Use of force supplement, Officer Vale</b><div class="muted">6 pages</div><div class="muted">about <span class="pill inc">Kit Vale</span> · D. Rowe, 7 Nov</div></div></div>
+              <div class="cmp" style="grid-template-columns: 110px minmax(0,1fr) auto"><span class="who">Kit Vale</span><span><span class="bar"><i class="a" style="width:57%"></i><i class="d" style="width:14%"></i><i class="n" style="width:29%"></i></span><span class="tiny muted">7 findings · 7 Nov</span></span><span class="btn tiny primary">Open</span></div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="btn tiny ghost">+ Compare against ▾</span><span class="btn tiny ghost" style="margin-left:auto">Open</span><span class="btn tiny ghost">More ▾</span></div>
+            </div>
+            <div class="card">
+              <div class="h"><span class="cover"></span><div><b>Arrest report, Lee Fox</b><div class="muted">4 pages, read by OCR, <span style="color: var(--warn)">1 poorly read</span></div><div class="muted">about nothing yet · A. Reyes, 8 Nov</div></div></div>
+              <div class="muted">Not compared yet.</div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="btn tiny">Compare against ▾</span><span class="btn tiny ghost" style="margin-left:auto">Open</span><span class="btn tiny ghost">More ▾</span></div>
+            </div>
+            <div class="card"><div class="cover pic"><i class="c1"></i><i class="c2"></i><i class="c4"></i></div><div><b>Map at 20:27:40, 6 Nov 2025</b><div class="muted">a picture of the map · about <span class="pill inc">Harbour car park</span> · test, 6 Nov</div></div><div style="display:flex;gap:6px"><span class="btn tiny">Open</span><span class="btn tiny ghost">On the map</span><span class="btn tiny ghost" style="margin-left:auto">More ▾</span></div></div>
+            <div class="card"><div class="cover pic"><i class="c4"></i><i class="c2"></i></div><div><b>Map at 20:31:05, 6 Nov 2025</b><div class="muted">a picture of the map · about <span class="pill inc">Kit Vale</span> · test, 6 Nov</div></div><div style="display:flex;gap:6px"><span class="btn tiny">Open</span><span class="btn tiny ghost">On the map</span><span class="btn tiny ghost" style="margin-left:auto">More ▾</span></div></div>
+            <div class="card drop" style="justify-content:center">Drop a PDF here, or press Add a document</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>One grid, two kinds.</b> A report's card shows its first page as a cover; a picture's card is the picture. The comparisons are rows inside the card as in A, so nothing the shelf says is lost.</p>
+      <p><b>What it costs.</b> With a dozen reports the bars and counts are no longer in one column to scan down, and a card's width caps what a comparison row can say; the shelf's table reads faster once the case has more than a few. The look's rule (a row-per-thing table becomes cards under 700 px) already gives this shape on a narrow window, so B is what A turns into there.</p>
+    </div>
+  </section>
+
+  <!-- Direction C -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Direction C · two shapes, Documents | Comparisons</span><h2>The shelf of A, and a second shape that lists every comparison in the case by the record it was read against, with a new comparison started record first</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Sign out · theme</span></div>
+      <div class="body">
+        <div class="rail"><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="content">
+          <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span class="on">Documents <small>5</small></span><span>Incidents <small>3</small></span><span>Map <small>26</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+          <div class="lead"><p class="muted">4 comparisons in this case, 1 stale. A comparison reads one report against one record: the whole case, an incident, or a camera.</p><span class="toggle"><span>Documents</span><span class="on">Comparisons</span></span></div>
+          <div class="newcmp"><b>New comparison:</b> read <span class="sel">Arrest report, Lee Fox ▾</span> against <span class="sel">the case ▾</span> <span class="btn tiny primary">Compare</span> <span class="muted">usually about 9 minutes for the case; the page says as it goes</span></div>
+          <div class="ledger">
+            <div class="grp">The whole case · 27 recordings, 14 with a transcript</div>
+            <div class="row"><span><b>Incident report, 6 Nov 2025</b> <span class="muted">· 42 pages</span></span><span class="bar"><i class="a" style="width:39%"></i><i class="d" style="width:19%"></i><i class="n" style="width:29%"></i><i class="r" style="width:13%"></i></span><span class="muted">31 findings · 7 Nov</span><span class="btn tiny primary">Open</span></div>
+            <div class="grp">Harbour car park · incident, 3 cameras</div>
+            <div class="row"><span><b>Incident report, 6 Nov 2025</b></span><span class="bar"><i class="a" style="width:50%"></i><i class="d" style="width:17%"></i><i class="n" style="width:22%"></i><i class="r" style="width:11%"></i></span><span style="color: var(--warn)">18 findings · stale</span><span class="btn tiny">Open</span></div>
+            <div class="grp">Walk incident, 6 Nov · incident, 2 cameras</div>
+            <div class="row"><span class="muted">No report compared with this incident yet.</span><span></span><span></span><span class="btn tiny ghost">Compare a report ▾</span></div>
+            <div class="grp">Kit Vale · camera</div>
+            <div class="row"><span><b>Use of force supplement, Officer Vale</b></span><span class="bar"><i class="a" style="width:57%"></i><i class="d" style="width:14%"></i><i class="n" style="width:29%"></i></span><span class="muted">7 findings · 7 Nov</span><span class="btn tiny">Open</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The record first.</b> A person who thinks "what has been checked against the car park incident?" finds it in one glance, and an incident with nothing compared says so. The toggle is the Notes tab's pattern (Rows | Chronology | Page), kept by the browser per person.</p>
+      <p><b>What it costs.</b> A second shape to keep, and the same comparison shown twice (under its report on the shelf and under its record here). With three reports the ledger says little the shelf does not; it earns its place when a case has many reports and many incidents. Drawn so it can be a later release if wanted.</p>
+    </div>
+  </section>
+
+  <!-- The comparison page -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Shared by every direction · the comparison page</span><h2>A page of its own under the case bar: the findings beside the report's page, the paragraph following the finding pressed, the moment playing in the Preview</h2></div>
+    <div class="win">
+      <div class="topbar"><span>Gideon Transcribe</span><span>test · Sign out · theme</span></div>
+      <div class="body">
+        <div class="rail"><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="content rel">
+          <div class="casebar"><span class="name">Harbour Street stop</span></div>
+          <div class="tabs"><span>Recordings <small>27</small></span><span>Search</span><span>Proposed events <small>4</small></span><span>Notes <small>14</small></span><span class="on">Documents <small>5</small> <small>› Comparison</small></span><span>Incidents <small>3</small></span><span>Map <small>26</small></span><span>Clips <small>2</small></span><span>Speakers</span><span>Details</span></div>
+          <div class="lead" style="align-items: center">
+            <div><span class="eyebrow">‹ Documents</span><h2 style="font-size: 22px; margin-top: 2px">Incident report, 6 Nov 2025 <span class="muted" style="font-weight: 400">against</span> <span class="sel">the case ▾</span></h2><p class="muted">42 pages against 14 recordings with a transcript · 31 findings: 12 agree, 6 differ, 9 not on camera, 4 not in the report · read 7 Nov 2025 14:02, asked by D. Rowe · <span class="pill warn">1 recording landed since and is not yet compared</span></p></div>
+            <div style="display:flex;gap:6px"><span class="btn">Compare again</span><span class="btn ghost">To Word</span><span class="btn ghost">Open the document</span></div>
+          </div>
+          <div class="two">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="chips"><span class="pill on">All 31</span><span class="pill ok">Agrees 12</span><span class="pill bad">Differs 6</span><span class="pill warn">Not on camera 9</span><span class="pill acc">Not in the report 4</span><span style="margin-left:auto" class="toggle"><span class="on">By time</span><span>By recording</span><span>By page</span></span></div>
+              <p class="muted tiny" style="margin:0">Every row cites the report's paragraph and the record's moment; read both before trusting a mark. Nothing joins a recording until you make it a note.</p>
+              <div class="findings">
+                <div class="find"><div><span class="mark a">Agrees</span><div class="mono cite">6 Nov 20:25:40</div><div class="muted">Lee Fox</div></div><div><div class="claim">Officers arrived at the car park at about 20:25.</div><div class="cite tiny">page 2, paragraph 1 · "Units arrived on scene at approximately 2025 hours…"</div><div class="muted tiny">The camera starts at 20:25:10 with the car park in view.</div><div class="acts"><span class="btn tiny primary">Make it a note</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+                <div class="find lit"><div><span class="mark d">Differs</span><div class="mono cite">6 Nov 20:26:10</div><div class="muted">Lee Fox</div></div><div><div class="claim">The report says consent to search was given before the officer asked.</div><div class="cite tiny">page 4, paragraph 2 · "Driver consented to a search of the vehicle at which time…"</div><div class="muted tiny">The record has the question at 20:26:10 and no answer before the boot is opened at 20:27:30.</div><div class="acts"><span class="btn tiny primary">Make it a note</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+                <div class="find"><div><span class="mark n">Not on camera</span><div class="muted tiny">no moment</div><div class="muted">Kit Vale</div></div><div><div class="claim">A second officer radioed for a tow before the stop.</div><div class="cite tiny">page 3, paragraph 4</div><div class="muted tiny">No camera running then records a radio call for a tow.</div><div class="acts"><span class="btn tiny">Choose the moment</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+                <div class="find"><div><span class="mark r">Not in the report</span><div class="mono cite">6 Nov 20:33:02</div><div class="muted">Ash Kim</div></div><div><div class="claim">The driver asked for a lawyer at 20:33 and was not answered.</div><div class="cite tiny">the chronology's event 7, Ash Kim</div><div class="muted tiny">The report's account of the arrest does not mention the request.</div><div class="acts"><span class="btn tiny primary">Make it a note</span><span class="btn tiny ghost">Note</span><span class="btn tiny ghost">Dismiss</span></div></div></div>
+                <div class="find" style="color: var(--muted)"><div><span class="mark a">Agrees</span><div class="mono cite">6 Nov 20:38:17</div><div>Jo Marsh</div></div><div><div class="claim">… 27 more rows down the page …</div></div></div>
+              </div>
+            </div>
+            <div class="sheet">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><b>Page 4 of 42</b><span class="muted">read by OCR · <span class="cite" style="color: var(--accent)">Open the document here</span></span></div>
+              <div class="pagepic"><span class="w60"></span><span class="w90"></span><span class="w80"></span><div class="para"><span class="w90"></span><span class="w80"></span></div><div class="para lit"><span class="w90"></span><span class="w90"></span><span class="w60"></span></div><div class="para"><span class="w80"></span><span class="w90"></span></div><span class="w60"></span></div>
+              <div class="muted tiny">The page follows the finding pressed, its paragraph lit; ‹ › step the pages; a press on another paragraph lists the findings that rest on it.</div>
+            </div>
+          </div>
+          <div class="preview"><div class="bar2"><span>Lee Fox · 20:26:10</span><span>Close</span></div><div class="pic"></div><div class="lines"><span class="muted">20:26:04 Step out for me, please.</span><span class="on">20:26:10 Mind if I take a look in the boot?</span><span class="muted">20:26:17 [no answer heard]</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <p><b>The address.</b> <span class="mono">case/&lt;id&gt;/document/&lt;doc&gt;/comparison?against=case</span> (or <span class="mono">against=incident:&lt;id&gt;</span>, <span class="mono">against=recording:&lt;id&gt;</span>); the case bar's Documents tab lit with "› Comparison" after it, as the Map page sits under its tab. <b>Against ▾</b> in the title switches to this report's other comparisons, or starts a new one. The old <span class="mono">?tab=documents&amp;compare=</span> address lands here.</p>
+      <p><b>What is drawn</b> is what the layers draw today (the marks, the filter pills, the rows with Make it a note, Note, Dismiss, Choose the moment on a Not on camera finding, By recording for the case), with the report's page beside it so the paragraph is read in place instead of in a card; <b>By page</b> is new, the findings in the report's order. The moment plays in the Preview window (v1.166.0), never leaving the page.</p>
+      <p><b>Against an incident</b> the rows carry the incident's clock and the camera as today, and the moment plays every camera in the Preview's all-cameras shape; <b>against a camera</b> the recording alone. The reading itself (the windows, the second look, the child rows for the case) does not change.</p>
+    </div>
+  </section>
+
+  <!-- Add a document -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Shared · Add a document</span><h2>One lighter page: the PDF, a title, an optional about, and whether to compare at once</h2></div>
+    <div class="two" style="grid-template-columns: 1fr 1fr">
+      <div class="sheet">
+        <div><span class="eyebrow">Harbour Street stop › Documents</span><h3 style="font-size: 17px; margin-top: 2px">Add a document</h3><p class="muted" style="margin: 2px 0 0">A PDF kept with the case and read page by page, beside the cameras.</p></div>
+        <div class="drop" style="padding: 18px">Drop the PDF here, or choose a file · up to 60 pages · a Word file is saved as a PDF first</div>
+        <div class="field"><span>Title <span class="muted">(the file's name unless you change it)</span></span><div class="box">Incident report, 6 Nov 2025</div></div>
+        <div class="field"><span>About <span class="muted">(optional)</span></span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="btn tiny on">Nothing in particular</span><span class="btn tiny">An incident ▾</span><span class="btn tiny">A camera ▾</span></div><span class="muted tiny">Tells Gideon which part of the case the report is about, and offers that record first when you compare. It can be changed later.</span></div>
+        <div class="field"><span>Compare when it is read</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="btn tiny on">Not yet</span><span class="btn tiny">Against the case</span><span class="btn tiny">Against the incident it is about</span></div><span class="muted tiny">A comparison usually takes about 9 minutes against this case; you can start one from the shelf at any time.</span></div>
+        <div style="display:flex;gap:8px;margin-top:4px"><span class="btn primary">Add</span><span class="btn ghost">Cancel</span></div>
+        <div class="muted tiny">What fits: PDFs only · 60 pages at most · 12 documents a case (this case has 3) · a scan is read by OCR and its words may carry mistakes · nothing leaves the building.</div>
+      </div>
+      <div class="caption" style="margin-top: 0; grid-template-columns: 1fr">
+        <p><b>Two radios become one optional about.</b> Today the page asks "this report is about: the whole incident / one camera's own report" and must have an answer. Now a document is the case's; the about is a tag, and the one it had (the incident or camera it was linked to) is what every existing document gets on the upgrade.</p>
+        <p><b>Compare when it is read</b> saves the second visit for the common case (the incident report, read against the case); it is off unless pressed, so an upload never starts a nine-minute reading by surprise.</p>
+        <p><b>The settings.</b> "Documents per incident or recording" (3) becomes <b>Documents per case</b> (12 as shipped, the Admin's figure); Largest document, OCR, the reading ceiling and the comparison's figures stay. A dropped PDF on the shelf adds with the file's name and no about.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The incident page after -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">Shared · the incident page and the recording page afterwards</span><h2>The Report tab, Add the report and the Comparison layer leave; one line on Details says what was compared and opens it</h2></div>
+    <div class="two" style="grid-template-columns: 1fr 1fr">
+      <div class="sheet">
+        <div class="panel-tabs"><span>Chronology <small>11</small></span><span>Memo</span><span>Cameras <small>3</small></span><span>Map</span><span class="gone">Report 1</span><span class="on">Details</span></div>
+        <dl class="kv">
+          <dt>Cameras</dt><dd>3 · Lee Fox, Kit Vale, Ash Kim</dd>
+          <dt>Span</dt><dd class="mono">20:25:10 to 20:38:51</dd>
+          <dt>Built</dt><dd>by test, 6 Nov 2025, from the strip</dd>
+          <dt>Reports</dt><dd><b>Incident report, 6 Nov 2025</b> compared with this incident: 18 findings, <span class="pill warn">a camera added since</span> · <span style="color: var(--accent)">Open the comparison</span><div class="muted tiny" style="margin-top: 4px">About this incident: Incident report, 6 Nov 2025; Map at 20:27:40, 6 Nov 2025 · <span style="color: var(--accent)">The case's documents</span> · <span style="color: var(--accent)">Compare a report with this incident ›</span></div></dd>
+          <dt>Export</dt><dd class="muted">Chronology (Word, spreadsheet), Memo, Timeline report · <s>Comparison to Word</s> is on the comparison's page</dd>
+        </dl>
+        <div class="muted tiny" style="border-top: 1px solid var(--line); padding-top: 6px">The chronology's rows keep every note made from a report: "Note by D. Rowe, Lee Fox, from the report, page 4, paragraph 2", resting on the paragraph, the Paragraph card opening from it as today.</div>
+      </div>
+      <div class="caption" style="margin-top: 0; grid-template-columns: 1fr">
+        <p><b>What leaves the incident page</b>: the Report tab and its pages (the document page and the comparison page show them), Add the report on Details, the Comparison layer, Comparison to Word in Export. <b>What stays</b>: the note events from a report with their origin and the Paragraph card, the memo's reading of a rested-on paragraph, and Gideon's reading of the reports about this incident or compared with it.</p>
+        <p><b>Details gains one line</b>: the reports compared with this incident with their counts and a stale pill, Open the comparison, the documents about this incident, and <b>Compare a report with this incident ›</b>, which lands on the Documents tab with the record chosen (the shelf's menu open, or C's form filled). A person who starts from the incident still gets there in one press.</p>
+        <p><b>The recording page the same</b>: its Report tab and Add the report leave, its Details gets the same line, its comparison runs from the shelf against that camera. Both pages lose their one upload page for documents; <span class="mono">add-document?incident=</span> keeps working as the about pre-chosen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The choices -->
+  <section>
+    <div class="fig-head"><span class="eyebrow">The choices</span><h2>Twelve to decide, in one table</h2></div>
+    <table class="t">
+      <tr><th style="width: 28px">#</th><th style="width: 200px">Choice</th><th>Drawn (the recommendation)</th><th>The other way</th></tr>
+      <tr><td>1</td><td>Where a document lives</td><td>In the case, with an optional <b>about</b> (an incident or a camera) that steers Gideon's reading and the first offered record and decides nothing else. Every document's present link becomes its about on the upgrade.</td><td>Keep the home: a document belongs to an incident or a camera and only that record can be compared.</td></tr>
+      <tr><td>2</td><td>What a report is read against</td><td>The case, an incident, or a camera, chosen at Compare; a report keeps one comparison per record, side by side under it (the Comparison row already has the three homes; likely no migration).</td><td>One comparison per report, replaced each time the record changes.</td></tr>
+      <tr><td>3</td><td>Where a comparison opens</td><td>A page of its own under the case bar with the Documents tab lit, addressed by the report and the record; the old tab address lands there.</td><td>A layer under the shelf's table, as today.</td></tr>
+      <tr><td>4</td><td>The comparison page's shape</td><td>The findings in a wide column beside the report's page, the paragraph following the pressed finding; the moment in the Preview window; By time, By recording, By page.</td><td>The findings alone at the full width, the paragraph in its card on a press.</td></tr>
+      <tr><td>5</td><td>The incident page</td><td>The Report tab, Add the report, the Comparison layer and Comparison to Word leave; Details gains the reports line with Open the comparison and Compare a report with this incident ›.</td><td>Keep a read-only Report tab that lists and opens the reports about the incident.</td></tr>
+      <tr><td>6</td><td>The recording page</td><td>The same as the incident page: the Report tab and Add the report leave; Details gains the line.</td><td>Leave the recording page as it is; only the incident page changes.</td></tr>
+      <tr><td>7</td><td>What Gideon reads</td><td>The incident's Gideon reads the reports about the incident and the reports compared with it; the recording's the same for the camera; the case's every report, as today.</td><td>The incident's Gideon reads only reports compared with the incident.</td></tr>
+      <tr><td>8</td><td>Adding</td><td>Add a document as the shelf's primary, a drop zone on the shelf, one lighter page: the PDF, the title, the optional about, Compare when it is read (Not yet as shipped).</td><td>The add page as today, reached from the tab alone.</td></tr>
+      <tr><td>9</td><td>The pictures</td><td>A gallery under the reports, the picture as its thumbnail, Open, Download, On the map; a picture may be about nothing, so Save a picture no longer asks what to press. Reports first, pictures under.</td><td>Pictures in the reports' table, or pictures first on the tab.</td></tr>
+      <tr><td>10</td><td>The tab's shapes</td><td>One shape, the shelf (A), in the first release; the Comparisons ledger (C) drawn and held for a later release if the office asks for it.</td><td>Both shapes now (C), or the cards (B).</td></tr>
+      <tr><td>11</td><td>The cap</td><td>Documents per incident or recording (3) becomes Documents per case, 12 as shipped, the Admin's figure.</td><td>Keep the cap per record, counted by the about.</td></tr>
+      <tr><td>12</td><td>Stale</td><td>As today: a comparison whose record changed says so with Compare again; against the case it counts recordings landed since. The shelf and Details wear the pill; the chips find them.</td><td>The app re-runs a stale comparison by itself overnight.</td></tr>
+    </table>
+    <p class="verdict small" style="margin-top: 14px">The build's recommendation is <b>Direction A with the comparison page</b>, and the incident and recording pages giving up their document features (5 and 6). It answers the ask directly: one landing place for the documents and the pictures, a report read against the case or an incident at the person's choice, the comparison a page of its own under the tab, and the incident page one tab lighter. The data model carries most of it already (a Comparison has the case, the incident and the recording as homes; a Document has its incident and recording, which become the about), so the release is pages and words more than a migration. Direction C's ledger stays drawn for a day when a case has many reports; B is what A becomes on a narrow window.</p>
+    <p class="flag small" style="margin-top: 10px">Two things to say plainly. Phase 8 chapter 4 ruled out "a document for the whole case with no incident or recording" to keep the reading small; Phase 10 chapter 4 then read a report against the whole case, so the rule was already half gone, and this chapter ends it. And the glossary's Document entry, the Report tab entry and the Comparison entry would be amended, with one new word, the <b>Comparison page</b>; "about" needs an entry too if it stands.</p>
+  </section>
+
+</div>
+</body>
+</html>

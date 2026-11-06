@@ -85,7 +85,7 @@ def video(person, case, title, *, stamp=None, lines=()):
 def a_report(person, case, home):
     report = documents.add(
         case,
-        home=home,
+        about=home,
         data=make_pdf(REPORT),
         filename="report.pdf",
         title="Incident report",
@@ -221,12 +221,15 @@ def test_the_case_run_reads_every_recording_and_merges_by_the_clock(
     assert Row.objects.filter(event="Comparison run").count() == 3
     for row in Row.objects.all():
         assert "bag" not in json.dumps(row.details).lower()
-    # The Documents tab says where it stands and carries the layer.
+    # The Documents tab says where it stands and opens the Comparison page
+    # (v1.213.0); the old layer address lands there too.
     signed_in(client, person)
     page = client.get(f"/case/{a_case.pk}?tab=documents").content.decode()
-    assert "3 findings" in page and 'id="case-compare"' in page
-    assert "data-case-compare" in page and ">Comparison<" in page
-    assert "To Word" in page
+    assert "3 findings" in page and 'id="case-compare"' not in page
+    assert f"/document/{report.pk}/comparison/page?against=case" in page
+    assert ">The case<" in page
+    old = client.get(f"/case/{a_case.pk}?tab=documents&compare={report.pk}")
+    assert old.status_code == 302 and old.url.endswith("/comparison/page?against=case")
     # The acts on a merged finding reach the child.
     base = f"/case/{a_case.pk}/document/{report.pk}"
     act = f"{base}/comparison/act"

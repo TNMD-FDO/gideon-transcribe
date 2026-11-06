@@ -59,7 +59,7 @@
   // The layers (Phase 8 chapter 1): one job opened over the tab in the work
   // panel; the wall and the strip never move. A stack, because a clip can
   // open from an event; Back pops one and returns exactly.
-  var LAYERS = ["event", "clip", "sync", "proposals", "find", "compare"];
+  var LAYERS = ["event", "clip", "sync", "proposals", "find"];
   var layerStack = [];
   var layerReturn = null;
 
@@ -227,7 +227,6 @@
     drawMemo();
     drawCameras();
     drawDetails();
-    showReportTab();
     if (soundCamera && !cameraById(soundCamera)) { soundCamera = null; soundPinned = false; }
     if (!soundCamera && wallCameras().length) { soundCamera = (layout === "focus" && focusCamera) ? focusCamera : wallCameras()[0].id; }
     drawSoundChoice();
@@ -2557,43 +2556,34 @@
       html += "<dt>" + escape(cam.camera_id) + "</dt><dd>" + (cam.clock ? escape(cam.clock) : "no stamp read") + (cam.file_time ? "; the file says " + escape(cam.file_time) : "") + "</dd>";
     });
     html += "</dl>";
-    // The report for this incident (Phase 8 chapter 4, part 1).
-    if (I.documents_on) {
-      html += "<h3 style='font-size: var(--t-body); margin: 14px 0 6px'>The report</h3>";
-      if (I.documents && I.documents.length) {
-        html += "<ul class='plain'>" + I.documents.map(function (one) {
-          return "<li><a href='" + escape(one.url) + "'>" + escape(one.title) + "</a> <span class='muted small'>" + escape(one.pages_line) + "</span></li>";
-        }).join("") + "</ul>";
-      } else {
-        html += "<p class='muted small' style='margin: 0 0 6px'>No report yet for this incident. Add the police report as a PDF and it is kept beside the cameras.</p>";
-      }
-      html += "<a class='btn small' href='" + escape(I.add_document_url) + "' id='add-document'>" +
-        (I.documents && I.documents.length ? "Add another report" : "Add the report") + "</a>";
+    // Reports (Phase 12 chapter 11, v1.213.0): the comparisons against this
+    // incident with their counts, the documents about it, and the doors to
+    // the case's Documents tab. The Report tab, Add the report and the
+    // Comparison layer left with v1.212.0; the documents live on the shelf.
+    if (I.documents_on && I.reports) {
+      html += reportsHtml(I.reports);
     }
     box.innerHTML = html;
   }
 
-  // The Report tab (Phase 8 chapter 4, part 2): shown while a document is
-  // linked, drawn from the documents' state by the shared panel script.
-  function drawReport() {
-    var box = document.getElementById("panel-report");
-    var I = S.incident;
-    if (!box || !I) { return; }
-    var listed = (I.documents || []).map(function (one) {
-      return { id: one.id, title: one.title, state: "/case/" + I.case_id + "/document/" + one.id + "/state" };
-    });
-    var wanted = JSON.stringify(listed);
-    if (box.dataset.documents !== wanted) { box.dataset.documents = wanted; box.dataset.drawn = ""; }
-    if (window.REPORT_PANEL) { window.REPORT_PANEL.draw(box); }
-  }
-  function showReportTab() {
-    var tab = document.getElementById("tab-report");
-    var count = document.getElementById("report-count");
-    var I = S.incident;
-    if (!tab || !I) { return; }
-    var n = (I.documents || []).length;
-    tab.hidden = !(I.documents_on && n);
-    if (count) { count.textContent = n; }
+  function reportsHtml(R) {
+    var html = "<h3 style='font-size: var(--t-body); margin: 14px 0 6px'>Reports</h3>";
+    if (R.compared && R.compared.length) {
+      html += "<ul class='plain reports-line'>" + R.compared.map(function (one) {
+        var state = one.state === "done" ? escape(one.words) : (one.state === "failed" ? "did not finish" : "running");
+        return "<li><b>" + escape(one.title) + "</b> compared with this incident: " + state +
+          (one.stale ? " <span class='pill small warn' title='Compare again to refresh'>" + escape(one.stale) + "</span>" : "") +
+          " <a class='cite' href='" + escape(one.url) + "'>Open the comparison</a></li>";
+      }).join("") + "</ul>";
+    } else {
+      html += "<p class='muted small' style='margin: 0 0 6px'>No report has been compared with this incident yet.</p>";
+    }
+    if (R.about && R.about.length) {
+      html += "<p class='muted small' style='margin: 0 0 6px'>About this incident: " + R.about.map(function (one) { return "<a href='" + escape(one.url) + "'>" + escape(one.title) + "</a>"; }).join(", ") + ".</p>";
+    }
+    html += "<p class='small' style='margin: 0'><a href='" + escape(R.shelf_url) + "'>The case's documents</a>" +
+      (R.on ? " &middot; <a href='" + escape(R.compare_url) + "' id='compare-a-report'>Compare a report with this incident &rsaquo;</a>" : "") + "</p>";
+    return html;
   }
 
   // Tabs ------------------------------------------------------------------------------------
@@ -2602,8 +2592,7 @@
   function showTab(name) {
     if (layerStack.length) { closeLayers(); }
     Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) { tab.classList.toggle("on", tab.dataset.panel === name); });
-    ["chronology", "memo", "cameras", "report", "details", "map"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
-    if (name === "report") { drawReport(); }
+    ["chronology", "memo", "cameras", "details", "map"].forEach(function (one) { var panel = document.getElementById("panel-" + one); if (panel) { panel.hidden = one !== name && !(twoPanels && one === "memo"); } });
     if (name === "chronology") { currentEventId = null; markCurrentEvent(now()); }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".inc-work .tab"), function (tab) {
@@ -2652,13 +2641,7 @@
     // One sitting (Phase 8 chapter 9): what Gideon reads, for the drawer's head.
     sittingLine: sittingLine,
     addEvent: function (at, line, note) { openEventBox({ at: at, text: line || "", note: note || "", source: "person" }); },
-    refresh: function () { refresh(); },
-    // The comparison (Phase 8 chapter 4, part 3) opens as a layer over the Report tab.
-    openComparison: function (draw) {
-      openLayer("compare");
-      var title = document.getElementById("compare-title");
-      draw(document.getElementById("compare-box"), function (words) { if (title) { title.textContent = words; } });
-    }
+    refresh: function () { refresh(); }
   };
 
   // Go ---------------------------------------------------------------------------------------

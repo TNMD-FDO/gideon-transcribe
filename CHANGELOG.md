@@ -17,6 +17,56 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.213.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Documents tab as the case's landing place for its documents and
+comparisons (Phase 12 chapter 11; the drawing
+`docs/spec/mockups/phase-12-documents-tab.html`, Direction A with the
+comparison page, at the maintainer's word of 2026-11-06). A document belongs
+to the case, a report is read against the case, an incident or a camera at
+the person's choice, the comparison is a page of its own, and the incident
+page and the recording page give up their document features.
+
+- **A document belongs to the case.** It may say what it is about (an
+  incident or a camera, or nothing), which steers what Gideon reads it
+  beside and which record is offered first at Compare, and decides nothing
+  else. Every document's old home becomes its about on the upgrade; no
+  migration.
+- **The shelf.** The Documents tab lists the reports as rows with every
+  comparison made of each under it (the record, a four-colour bar of the
+  findings, the counts, when, a stale pill, Open) and Compare against ▾ (the
+  case, each incident, each camera with a transcript, greyed with the
+  reason); More ▾ holds About, Rename and Remove in place of the two Re-link
+  drop-downs; chips narrow the shelf; a PDF dropped on the shelf adds
+  itself. The pictures of the map are a gallery under the reports with On
+  the map.
+- **The Comparison page** (`case/<id>/document/<doc>/comparison/page`):
+  the findings beside the report's page, the paragraph following the pressed
+  finding, By time, By recording or By page, the moment in the Preview,
+  Compare again and Comparison to Word in the head, against ▾ to the
+  report's other comparisons. The old `?tab=documents&compare=` address
+  lands here.
+- **Add a document** is one lighter page: the PDF, the title, an optional
+  about, and Compare when it is read (off unless pressed; a delayed task asks
+  for the comparison once the reading is done).
+- **Gone from the incident page and the recording page:** the Report tab,
+  Add the report, the Comparison layer and Comparison to Word. Details keeps
+  one line, Reports, with the comparisons against it, Open the comparison
+  and Compare a report with this incident.
+- **Gideon** on an incident or a recording reads the reports about it and
+  the reports compared with it; on the case every report, as before.
+- **Save a picture** no longer needs an incident or a camera to keep the
+  picture on.
+- **The setting** Documents per incident or recording (3) is Documents per
+  case (12 as shipped, `documents_per_case`).
+- Audit: Document added and Document re-linked carry `about` in place of
+  `home`; Document renamed is new.
+
 ## v1.212.0, 2026-11-06
 
 ```

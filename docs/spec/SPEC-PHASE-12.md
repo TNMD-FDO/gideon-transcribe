@@ -29,6 +29,7 @@ Nothing in this document is office-specific. The sample readings here are invent
 8. The Incidents tab as a builder
 9. The builder's span and clock line, and the releases after it (the near marks, the circle under the cap, the wall at eight, the two tools, the tab and the page tidied)
 10. The Incidents tab as a desk
+11. The Documents tab as the case's landing place for its documents and comparisons
 
 Appendix A. Audit rows added in Phase 12
 Appendix B. Settings added or changed in Phase 12
@@ -535,6 +536,64 @@ No new store, no migration, no audit row: nothing is kept on the server for a de
 - The local walk needs the recordings' playback copies served with byte ranges, which Django's own server does not do: `core/local_media.py` answers `/case-media/` with ranges when `run_local.sh` sets `APP_LOCAL_MEDIA`, and nowhere else (`docs/local-walk.md`).
 - The still at the clock line is gone from the lanes and from Your incident; `stillUrl` and the stills' helpers left `chronology.js` with it, the stills' loader stays for the incidents' list and the not-on-the-clock panel.
 
+## 11. The Documents tab as the case's landing place for its documents and comparisons (v1.213.0)
+
+### About
+
+The maintainer's ask of 2026-11-06: the Documents tab holds the reports used for comparisons inside incidents, and the pictures saved from the Map land there too; it should be the place where a person sees the saved pictures, adds the documents, and reads a report against the whole case or against an incident, so the document features leave the incident page, and a comparison is a sub-page under the tab. The drawing `docs/spec/mockups/phase-12-documents-tab.html` (today's faults, three directions, the comparison page and the add flow they share, the incident page afterwards, twelve choices) stands: Direction A, the shelf, with the comparison page, and the incident and recording pages giving up their document features.
+
+### Principles
+
+- **A document belongs to the case.** Until this release a Document had a home, an Incident or a Recording, and the home decided which comparison was possible and where the document's features lived. Now a Document is the Case's; it may say what it is **about** (an incident or a camera of the case, or nothing), and the about steers only what Gideon reads it beside and which record is offered first when a person compares. Phase 8 chapter 4 ruled out a document for the whole case; Phase 10 chapter 4 read a report against the whole case all the same, and this chapter ends the rule.
+- **A comparison names its record.** A report is read against the whole case, against an incident, or against one camera, at the person's choice when they press Compare; a report keeps one comparison per record, side by side under it, each replaced only by its own Compare again. The reading itself (the windows of pages, the four marks, the check against the record's lines, the child rows for the case) does not change.
+- **One landing place.** The Documents tab is where documents arrive, where the pictures of the map are seen, and where every comparison in the case is reached. The incident page and the recording page keep nothing of the feature but one line on Details and the note events a comparison made.
+- **A comparison is a page of its own** under the case bar, with the Documents tab lit, so the findings and the report's page are read side by side and the page is never below a table's fold.
+- **The glossary's words.** Document, Comparison, Finding, Paragraph, Note, Preview as before; the new page is the **Comparison page**; a document's about is written in lower case on the pages ("about Harbour car park") so it never reads as the Chronology's About.
+
+### The shelf (the Documents tab)
+
+- **The lead** says what the case holds ("3 reports and 2 pictures of the map") and how a report is read; **Add a document** is the page's one primary, and the chips under the lead narrow the shelf: All, Reports, Pictures, Compared, Not yet compared, Stale (a chip is drawn only when it has something to show).
+- **Reports** are a table, newest first (`#documents`, a card table under 700 px as every row-per-thing table is): the document (its title, its pages line, what it is about as a pill that opens the incident or the recording), its **comparisons**, who added it and when, and Open, Download and **More ▾** (About…, Rename, Remove, each a plain form, Remove asking first). The two Re-link drop-downs are gone; About… is one choice (nothing, an incident of the case, a camera of the case) in the same row.
+- **The comparisons** of a report are rows inside its cell, one per record it was read against: the record's name ("The case", the incident's name, the camera's title), a four-colour bar of the findings (agree, differ, not on camera, not in the report, in that order, in the marks' colours), the counts in words, when it was written, a stale pill ("the chronology changed since", "a camera added since", "N recordings landed since") where `stale_words` says so, running or did not finish while it is, and **Open** to its page (the primary button on the newest done comparison). Under them **Compare against ▾**: the case, then each incident of the case, then each camera with a transcript, each greyed with the reason when the comparison cannot run against it (`comparison.possible`); a press asks for the comparison and opens its page, which shows it running.
+- **The drop zone** under the table takes one PDF dropped on it and adds it with the file's name as its title and no about, through the add page's own form (the browser fills the file field and submits; no new address). It says what fits in one line.
+- **Pictures of the map** are a gallery under the reports (`#pictures`): the picture itself as the thumbnail, its title (the time of day and the day, as Save a picture names it), what it is about if anything, who saved it and when, and Open, Download, **On the map** (the Map page at that day and moment, read from the title) and More ▾ (About…, Rename, Remove). A picture is never compared and never in the reports' table.
+- **The address** `?tab=documents` is unchanged; `?tab=documents&compare=<document>` (v1.170.0) lands on the Comparison page against the case.
+
+### The Comparison page
+
+- **The address** is `case/<id>/document/<doc>/comparison/page?against=case` (or `against=incident:<id>`, `against=recording:<id>`), `document_pages.comparison_page`, the template `comparison.html`: the same guards as the document page; 404 while Documents or Compare with the report are off; the case bar above with Documents lit and "Comparison" as the page's own name. The record must be the case or an incident or recording of the case; a document of another case is 404.
+- **The head**: ‹ Documents, the title as "<the report> against <the record> ▾", where **against ▾** is a menu of this report's other comparisons (each with its counts) and the records it has not been compared against yet (Compare against…, greyed with the reason where it cannot run); the state line as the layers drew it (pages against cameras or recordings, the counts, when written, the cut-short, dropped and checked words, the stale words); **Compare again**, **To Word** (the comparison's export, moved here from the incident's and the recording's Export menus) and **Open the document**.
+- **The findings** fill the wide column: the marks as pills that filter (All and the four), the order (By time; By recording on a case comparison, as v1.170.0 had it; **By page**, new, the findings in the report's order), and one row per finding as `report-panel.js` draws them today (the mark, the moment as a citation, the recording, the claim, the paragraph citation, the why, the office's note, and Make it a note, Note, Dismiss or Undo; Choose the moment on a Not on camera finding). A press on the moment plays it in the Preview window (every camera, as the Preview's all-cameras shape, when the record is an incident; the recording alone otherwise); nothing leaves the page.
+- **The report's page** stands beside the findings in a narrow sticky column (`.cmp-page`): the page picture with its paragraph boxes drawn, following the finding pressed with its paragraph lit, ‹ › stepping the pages, "Page N of M" and read by OCR where it was, and a press on a paragraph's box lights the findings that rest on it. Under 1100 px the column goes under the findings. The paragraph card still opens from a citation pressed elsewhere; here the page is already open.
+- **Nothing new is kept.** The page reads the comparison endpoint (`comparison?<kind>=<id>`) and the document's state endpoint, as the layers did; the acts post to the same addresses. The one change under them: `_compare_home` accepts any incident or recording of the document's case, not only the document's home.
+
+### Add a document
+
+- **One lighter page** (`document-add.html`): the eyebrow (the case, Documents), the title Add a document, the PDF (a drop zone that is the file field), the title, **About** (Nothing in particular, as shipped; an incident of the case; a camera of the case, each a plain choice with its picker), **Compare when it is read** (Not yet, as shipped; Against the case; Against the incident it is about, offered only with an incident chosen), Add and Cancel, and the what-fits line in small type (PDFs only, the page ceiling, the case's cap with the count so far, OCR, nothing leaves the building). `add-document?incident=<id>` and `?recording=<id>` still arrive from the incident's and the recording's Details with the about pre-chosen.
+- **Compare when it is read** is kept on no row: the add view defers `tasks.compare_when_read` (the llm queue, `schedule_in` thirty seconds) with the document, the record and the person; the task asks for the comparison when the document is ready, re-schedules itself while it is still being read (up to an hour), and gives up quietly on a document that failed to read. Nothing starts a nine-minute reading by surprise: the choice is off unless pressed.
+- **The cap** is **Documents per case** (`documents_per_case`, 12 as shipped, 1 to 50), in place of Documents per incident or recording, which goes; a picture of the map counts as before. The refusal says "This case already has N documents, the most the Admin allows."
+- **Save a picture** (chapter 5, amended) no longer needs an incident or a camera: the picture is the case's, about the incident shown or the camera pressed when there is one, and the toast says "Saved to the case's Documents tab" (with "about <name>" when it has one). The title keeps the time of day and the day, and the record's name after a middle dot when there is one.
+
+### The incident page and the recording page afterwards
+
+- **Gone from the incident page**: the Report tab and its pages, Add the report on Details, the Comparison layer, Comparison to Word on the Export menu, and the `report-panel.js` script. **Gone from the recording page**: the Report tab, The report block on Details with Add the report, Comparison to Word on its Export menu, and the script.
+- **Details gains one line on each**, "Reports": the reports compared with this incident (or this camera) with their counts and the stale pill, **Open the comparison** on each, the documents about it, **The case's documents** (the shelf) and **Compare a report with this incident ›** (the shelf with the record chosen: `?tab=documents&against=incident:<id>`, which opens the Compare against menu on the first report that can be read against it, or says to add one).
+- **What stays**: the note events a comparison made, with their origin ("from the report, page 4, paragraph 2") and the paragraph card opening from the citation; the memo's reading of a rested-on paragraph; Gideon's reading of the reports.
+- **What Gideon reads** (Phase 8 chapter 4 part 2, amended): the incident's Gideon reads the reports about the incident and the reports compared with it (`documents.read_with(incident)`), the recording's Gideon the same for the camera, the case's Gideon every report in the case as before. The incident's state carries that list as `documents` for the citations' sake, with no add address.
+
+### What is not
+
+No new store and no migration: a Document's incident and recording fields are its about, as every document already has them; a Comparison already carries the case, the incident or the recording as its home. No bulk Accept. A picture is never compared. The Comparisons ledger (Direction C) and the cards (B) are drawn and not built; B is what the shelf becomes under 700 px by the look's rule.
+
+### Audit rows
+
+The Documents' own rows: **Document added** (with `about` in place of `home`, and the kind), **Document re-linked** keeps its name for the about changed, **Document renamed** (new, the title only), **Document removed**, **Comparison run** and **comparison exported** as before.
+
+### Left to the build
+
+- The drop zone's words; the chips' exact counts; the bar's drawing from the counts; the picture gallery's thumbnail size.
+- The task's retry cadence for Compare when it is read.
+
 ## Appendix A. Audit rows added in Phase 12
 
 | Row | Category | Details kept | Never |
@@ -546,6 +605,7 @@ No new store, no migration, no audit row: nothing is kept on the server for a de
 | Reading offered to the chronology (chapter 3) | Recordings | the recording, the case, the reading's kind | a position, a time |
 | Path file kept waiting (chapter 6) | Recordings | the case, the source (body or car), the cue count | the wearer, the unit, a position, the file's name |
 | Waiting path file removed / Waiting path files removed (chapter 6) | Recordings | the case, the count | a name, a position |
+| Document renamed (chapter 11) | Cases | the document, the case, the new title | a word of the document |
 
 The basemap's route writes no row; the map's reading writes the case page's own Admin access row and nothing else; a note from the map writes the note's usual row; a picture of the map (chapter 5) writes the Documents' own "Document added" with `kind: picture` and never a position. Chapter 6's first release writes nothing new: ticks, the circle and the leaders live in the browser. Its second release writes the notes' own rows, one per camera for Note on all shown, never the words.
 
@@ -554,6 +614,7 @@ The basemap's route writes no row; the map's reading writes the case page's own 
 | Setting | Page | Shipped | What it does |
 |---|---|---|---|
 | Maps | Features | On | A case's Map tab shows each camera's path from its path file on a map, with a clock; a path file is added from the Map tab. Needs Folder management. Off hides the Map tab, the path endpoints and the street map; path files already there stay. At once. |
+| Documents per case (chapter 11; in place of Documents per incident or recording) | Documents | 12 | The most documents a case holds, reports and pictures of the map together; Add a document and Save a picture are refused with the reason at the count. The next upload. |
 
 ## Sources
 

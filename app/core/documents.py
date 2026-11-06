@@ -1,10 +1,16 @@
 """Documents beside the cameras, part 1 (Phase 8 chapter 4).
 
-A Document is a PDF added to an Incident or a Recording as the police report
-about it, kept in the Case. At upload, on the media queue, each page's words
+A Document is a PDF kept in a Case as a police report, or a picture of the
+Map (Phase 12 chapter 5). At upload, on the media queue, each page's words
 are read with their positions (a scan read by OCR and marked so), split into
 numbered Paragraphs by the gaps on the page, and the page is drawn to a
 picture. The page is the truth; the words are a reading.
+
+From v1.213.0 (Phase 12 chapter 11) a Document belongs to the Case alone and
+may say what it is about (an incident or a camera of the case, or nothing);
+the about steers what Gideon reads it beside and which record a comparison
+offers first, and decides nothing else. Until then the same two fields were
+the document's home, which decided which comparison was possible.
 
 Nothing new to install: the PDF reader, the page renderer and the OCR engine
 are packages in the app image, on the CPU. No retrieval store, no embeddings.
@@ -62,8 +68,9 @@ class Document(models.Model):
     case = models.ForeignKey(
         "core.Case", on_delete=models.CASCADE, related_name="documents"
     )
-    # Its home: the incident or the recording it is the report about. One of
-    # the two, never neither.
+    # What it is about (v1.213.0): an incident or a camera of the case, or
+    # nothing. Until v1.212.0 the same fields were its home, one of the two
+    # and never neither.
     incident = models.ForeignKey(
         "core.Incident",
         on_delete=models.SET_NULL,
@@ -126,7 +133,8 @@ class Document(models.Model):
     def url(self) -> str:
         return reverse("document", args=[self.case_id, self.pk])
 
-    def home_name(self) -> str:
+    def about_name(self) -> str:
+        """What the document is about, by name; "" when nothing."""
         names = []
         if self.incident_id:
             names.append(self.incident.name)
@@ -134,20 +142,25 @@ class Document(models.Model):
             names.append(self.recording.title)
         return " and ".join(names)
 
-    def home_url(self) -> str:
+    def about_url(self) -> str:
         if self.incident_id:
             return self.incident.url()
         if self.recording_id:
             return reverse("viewer", args=[self.recording_id])
         return ""
 
-    def home_kind(self) -> str:
+    def about_kind(self) -> str:
         kinds = []
         if self.incident_id:
             kinds.append("incident")
         if self.recording_id:
             kinds.append("recording")
         return " and ".join(kinds)
+
+    def about_words(self) -> str:
+        """ "about Harbour car park", or "" when about nothing."""
+        name = self.about_name()
+        return f"about {name}" if name else ""
 
     def pages_line(self) -> str:
         """ "42 pages, read by OCR, 3 poorly read" as the tab says it."""
@@ -199,8 +212,10 @@ def most_pages() -> int:
     return int(settings_store.get("documents_pages_most"))
 
 
-def per_home() -> int:
-    return int(settings_store.get("documents_per_home"))
+def per_case() -> int:
+    """Documents per case (v1.213.0; Documents per incident or recording until
+    then): the most a case holds, reports and pictures together."""
+    return int(settings_store.get("documents_per_case"))
 
 
 def ocr_on() -> bool:
@@ -219,31 +234,40 @@ class Refused(Exception):
     """Why a file was not added, in words for the page."""
 
 
-def home_of(case, *, incident=None, recording=None) -> dict:
-    """What a document is the report about: an incident, a recording, or
-    both, each checked to be the case's; never neither."""
-    home = {}
-    if incident is not None and incident.case_id == case.pk:
-        home["incident"] = incident
-    if recording is not None and recording.case_id == case.pk:
-        home["recording"] = recording
-    if not home:
-        raise Refused("Say which incident or recording the report is about.")
-    return home
+def about_of(case, *, incident=None, recording=None) -> dict:
+    """What a document is about: an incident, a recording, both, or nothing
+    (v1.213.0), each checked to be the case's. One of another case is
+    refused with the reason."""
+    about = {}
+    if incident is not None:
+        if incident.case_id != case.pk:
+            raise Refused("That incident is not this case's.")
+        about["incident"] = incident
+    if recording is not None:
+        if recording.case_id != case.pk:
+            raise Refused("That recording is not this case's.")
+        about["recording"] = recording
+    return about
 
 
-def count_at(home: dict) -> int:
-    """The most documents any one of the homes already has."""
-    return max(
-        (Document.objects.filter(**{kind: one}).count() for kind, one in home.items()),
-        default=0,
-    )
+def count_in(case) -> int:
+    """How many documents the case already holds, pictures included."""
+    return Document.objects.filter(case=case).count()
 
 
-def home_words(home: dict) -> str:
-    return " and ".join(
-        f"this {kind}" if kind == "incident" else "this recording" for kind in home
-    )
+def _room_or_refused(case) -> None:
+    if count_in(case) >= per_case():
+        raise Refused(
+            f"This case already has {per_case()} documents, the most the Admin allows."
+        )
+
+
+def about_words(about: dict) -> str:
+    """ "about Stop", "about Stop and BWC2-1", or "" for nothing."""
+    names = [
+        one.name if kind == "incident" else one.title for kind, one in about.items()
+    ]
+    return f"about {' and '.join(names)}" if names else ""
 
 
 def page_count(data: bytes) -> int:
@@ -256,17 +280,13 @@ def page_count(data: bytes) -> int:
         pdf.close()
 
 
-def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request=None):
+def add(case, *, about: dict, data: bytes, filename: str, title: str, by, request=None):
     """Keep the PDF, count its pages against the ceiling, and queue the reading."""
     if not on():
         raise Refused("Documents are off.")
     if not data.startswith(b"%PDF"):
         raise Refused("Only a PDF can be added; save the file as a PDF first.")
-    if count_at(home) >= per_home():
-        raise Refused(
-            f"{home_words(home).capitalize()} already has {per_home()} documents, "
-            "the most the Admin allows."
-        )
+    _room_or_refused(case)
     try:
         pages = page_count(data)
     except Exception:  # noqa: BLE001 - any failure reads as an unusable file
@@ -288,8 +308,8 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
         size_bytes=len(data),
         pages=pages,
         added_by=by,
-        incident=home.get("incident"),
-        recording=home.get("recording"),
+        incident=about.get("incident"),
+        recording=about.get("recording"),
     )
     document.folder.mkdir(parents=True, exist_ok=True)
     document.original_path.write_bytes(data)
@@ -303,7 +323,7 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
         object_id=document.pk,
         object_label=document.title,
         pages=pages,
-        home=document.home_kind(),
+        about=document.about_kind(),
     )
     from core import cases, tasks
 
@@ -313,23 +333,20 @@ def add(case, *, home: dict, data: bytes, filename: str, title: str, by, request
 
 
 def add_picture(
-    case, *, home: dict, data: bytes, filename: str, title: str, by, request=None
+    case, *, about: dict, data: bytes, filename: str, title: str, by, request=None
 ):
     """Save a picture of the map (Phase 12 chapter 5): one PNG the browser
-    drew, kept as a Document of one page on the incident or recording it is
-    about, ready at once since there are no words to read. Counted against
-    the same ceiling as the reports; never compared."""
+    drew, kept as a Document of one page, about the incident shown or the
+    camera pressed when there is one (v1.213.0: or about nothing), ready at
+    once since there are no words to read. Counted against the case's cap;
+    never compared."""
     if not on():
         raise Refused("Documents are off.")
     if not data.startswith(b"\x89PNG\r\n\x1a\n"):
         raise Refused("Only a picture of the map can be saved here.")
     if len(data) > PICTURE_MOST:
         raise Refused("That picture is too large to keep.")
-    if count_at(home) >= per_home():
-        raise Refused(
-            f"{home_words(home).capitalize()} already has {per_home()} documents, "
-            "the most the Admin allows."
-        )
+    _room_or_refused(case)
     try:
         from PIL import Image
 
@@ -353,8 +370,8 @@ def add_picture(
         read_at=timezone.now(),
         read_version=READ_VERSION,
         added_by=by,
-        incident=home.get("incident"),
-        recording=home.get("recording"),
+        incident=about.get("incident"),
+        recording=about.get("recording"),
     )
     document.folder.mkdir(parents=True, exist_ok=True)
     document.original_path.write_bytes(data)
@@ -382,7 +399,7 @@ def add_picture(
         object_label=document.title,
         pages=1,
         kind=PICTURE,
-        home=document.home_kind(),
+        about=document.about_kind(),
     )
     from core import cases
 
@@ -620,11 +637,51 @@ def count(case) -> int:
 
 
 def for_incident(incident) -> list[Document]:
+    """The documents about the incident."""
     return list(incident.documents.order_by("-created"))
 
 
 def for_recording(recording) -> list[Document]:
+    """The documents about the recording."""
     return list(recording.documents.order_by("-created"))
+
+
+def compared_with(home) -> list[Document]:
+    """The reports with a comparison against the incident or recording
+    (v1.213.0), the newest comparison first."""
+    from core.incidents import Incident
+
+    field = "incident" if isinstance(home, Incident) else "recording"
+    seen: dict = {}
+    for document in (
+        Document.objects.filter(
+            **{f"comparisons__{field}": home, "comparisons__parent__isnull": True}
+        )
+        .select_related("incident", "recording")
+        .order_by("-comparisons__created")
+    ):
+        seen.setdefault(document.pk, document)
+    return list(seen.values())
+
+
+def read_with(home, *, about=None, compared=None) -> list[Document]:
+    """What Gideon reads beside an incident or a recording (Phase 12 chapter
+    11): the reports about it and the reports compared with it, each once,
+    pictures left out since they have no words. A page that has the lists
+    already hands them in, so nothing is asked twice."""
+    from core.incidents import Incident
+
+    if about is None:
+        about = (
+            for_incident(home) if isinstance(home, Incident) else for_recording(home)
+        )
+    if compared is None:
+        compared = compared_with(home)
+    out: dict = {}
+    for document in list(about) + list(compared):
+        if document.kind == REPORT:
+            out.setdefault(document.pk, document)
+    return list(out.values())
 
 
 def as_json(document: Document) -> dict:
@@ -636,22 +693,16 @@ def as_json(document: Document) -> dict:
         "kind": document.kind,
         "pages_line": document.pages_line(),
         "pages": document.pages,
+        "about": document.about_name(),
+        "about_url": document.about_url(),
     }
 
 
-def relink(document: Document, home: dict, *, by, request=None) -> None:
-    others = {
-        kind: one
-        for kind, one in home.items()
-        if one.pk
-        != (document.incident_id if kind == "incident" else document.recording_id)
-    }
-    if others and count_at(others) >= per_home():
-        raise Refused(
-            f"{home_words(others).capitalize()} already has {per_home()} documents."
-        )
-    document.incident = home.get("incident")
-    document.recording = home.get("recording")
+def set_about(document: Document, about: dict, *, by, request=None) -> None:
+    """About... on the shelf (v1.213.0; Re-link until then): what the document
+    is about, or nothing. The audit row keeps its old name."""
+    document.incident = about.get("incident")
+    document.recording = about.get("recording")
     document.save(update_fields=["incident", "recording"])
     audit.write(
         audit.Category.CASES,
@@ -662,7 +713,31 @@ def relink(document: Document, home: dict, *, by, request=None) -> None:
         object_type="document",
         object_id=document.pk,
         object_label=document.title,
-        home=document.home_kind(),
+        about=document.about_kind(),
+    )
+    from core import cases
+
+    cases.note_activity(document.case, by=by)
+
+
+def rename(document: Document, title: str, *, by, request=None) -> None:
+    """Rename, from the shelf's More menu (v1.213.0): the title only."""
+    title = " ".join(str(title or "").split())[:TITLE_MOST]
+    if not title:
+        raise Refused("Give the document a title.")
+    was = document.title
+    document.title = title
+    document.save(update_fields=["title"])
+    audit.write(
+        audit.Category.CASES,
+        "Document renamed",
+        actor=by,
+        request=request,
+        affected_user=document.case.owner if document.case.owner_id != by.pk else None,
+        object_type="document",
+        object_id=document.pk,
+        object_label=title,
+        was=was,
     )
     from core import cases
 
@@ -700,29 +775,116 @@ def add_url(case, *, incident=None, recording=None) -> str:
     return base
 
 
-def homes_of(case) -> list[dict]:
-    """The case's incidents and recordings, for the pickers."""
-    homes = []
+def abouts_of(case) -> list[dict]:
+    """The case's incidents and recordings, for the About pickers."""
+    abouts = []
     if incidents.on():
         for incident in case.incidents.order_by("created"):
-            homes.append(
+            abouts.append(
                 {"kind": "incident", "id": str(incident.pk), "name": incident.name}
             )
     for recording in case.recordings.order_by("created"):
-        homes.append(
+        abouts.append(
             {"kind": "recording", "id": str(recording.pk), "name": recording.title}
         )
-    return homes
+    return abouts
 
 
-# The Report tab (part 2) --------------------------------------------------------------
+# The shelf (Phase 12 chapter 11) ------------------------------------------------------
+
+
+def shelf(case) -> dict:
+    """The Documents tab as the shelf (v1.213.0): the reports with every
+    comparison made of each and the records each could still be read
+    against, the pictures of the map, and the chips' counts."""
+    from core import comparison
+
+    reports = []
+    pictures = []
+    stale = compared = not_yet = 0
+    for document in of_case(case):
+        row = {
+            "document": document,
+            "about": document.about_name(),
+            "about_url": document.about_url(),
+            "about_pill": document.about_words(),
+            "download": reverse(
+                "document-download", args=[document.case_id, document.pk]
+            ),
+        }
+        if document.kind == PICTURE:
+            row["map_url"] = picture_map_url(document)
+            pictures.append(row)
+            continue
+        row["comparisons"] = comparison.shelf_rows(document)
+        row["targets"] = comparison.targets_of(document)
+        row["is_stale"] = any(
+            one["stale"] for one in row["comparisons"] if one["state"] == "done"
+        )
+        if row["comparisons"]:
+            compared += 1
+        else:
+            not_yet += 1
+        if row["is_stale"]:
+            stale += 1
+        reports.append(row)
+    return {
+        "reports": reports,
+        "pictures": pictures,
+        "counts": {
+            "all": len(reports) + len(pictures),
+            "reports": len(reports),
+            "pictures": len(pictures),
+            "compared": compared,
+            "not_yet": not_yet,
+            "stale": stale,
+        },
+        "most": per_case(),
+        "room": max(0, per_case() - len(reports) - len(pictures)),
+    }
+
+
+_PICTURE_TITLE = re.compile(
+    r"^Map at (\d{2}):(\d{2}):(\d{2}), (\d{1,2}) ([A-Z][a-z]{2}) (\d{4})"
+)
+_MONTHS = (
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+)
+
+
+def picture_map_url(document: Document) -> str:
+    """On the map (v1.213.0): the Map page at the picture's day and moment,
+    read from the title Save a picture gave it; "" when the title is another."""
+    found = _PICTURE_TITLE.match(document.title or "")
+    if not found or found.group(5) not in _MONTHS:
+        return ""
+    hour, minute, second, day, month, year = found.groups()
+    date = f"{year}-{_MONTHS.index(month) + 1:02d}-{int(day):02d}"
+    seconds = int(hour) * 3600 + int(minute) * 60 + int(second)
+    base = reverse("case-map-page", args=[document.case_id])
+    return f"{base}?day={date}&from={seconds}"
+
+
+# The document's state (part 2; the Comparison page and the paragraph card) ------------
 
 
 def state_json(document: Document) -> dict:
-    """The document as the Report tab draws it: every page's picture and words."""
+    """The document as the Comparison page and the paragraph card draw it:
+    every page's picture and words."""
     return {
         **as_json(document),
-        "home": document.home_name(),
+        "home": document.about_name(),
         "download": reverse("document-download", args=[document.case_id, document.pk]),
         # The comparison (part 3): where the layer asks and runs.
         "comparison": reverse(

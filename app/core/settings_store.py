@@ -275,12 +275,14 @@ def _rows() -> list[Definition]:
             kind=TOGGLE,
             default=True,
             what_it_does=(
-                "People may add a PDF to an incident or a recording as the "
-                "report about it (Add the report)."
+                "People may add a PDF to a case as a police report (Add a "
+                "document on the Documents tab) and read it against the case, "
+                "an incident or a camera."
             ),
             when_changed=(
-                "Off hides the Documents tab, Add the report and the Report tab; "
-                "documents already there stay and are read by nothing. At once."
+                "Off hides the Documents tab, Add a document and the Reports line "
+                "on Details; documents already there stay and are read by "
+                "nothing. At once."
             ),
         ),
         Definition(
@@ -297,16 +299,23 @@ def _rows() -> list[Definition]:
             when_changed="The next upload.",
         ),
         Definition(
-            key="documents_per_home",
+            # Documents per case (v1.213.0, Phase 12 chapter 11), in place of
+            # Documents per incident or recording (documents_per_home, 3): a
+            # document belongs to the case now, so the cap does too.
+            key="documents_per_case",
             page=DOCUMENTS,
-            name="Documents per incident or recording",
+            name="Documents per case",
             kind=NUMBER,
-            default=3,
+            default=12,
             least=1,
-            most=20,
+            most=50,
             unit="documents",
             needs="documents",
-            what_it_does="Add the report is refused with the reason at the count.",
+            what_it_does=(
+                "The most documents a case holds, reports and pictures of the map "
+                "together; Add a document and Save a picture are refused with the "
+                "reason at the count."
+            ),
             when_changed="The next upload.",
         ),
         Definition(

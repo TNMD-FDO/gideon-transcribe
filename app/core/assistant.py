@@ -1306,11 +1306,12 @@ def answer_turn(turn_id, attempt: int = 1) -> None:
             if digest
             else []
         )
-        # The report for this recording (Phase 8 chapter 4, part 2).
+        # The reports for this recording (Phase 8 chapter 4, part 2): those
+        # about it and those compared with it (Phase 12 chapter 11).
         from core import documents
 
         papers, papers_note, named = documents.reading_block(
-            documents.for_recording(recording) if recording.case_id else [],
+            documents.read_with(recording) if recording.case_id else [],
             turn.question,
             heading="The report for this recording:",
         )

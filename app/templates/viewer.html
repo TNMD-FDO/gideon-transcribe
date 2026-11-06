@@ -101,9 +101,7 @@
                   <li><a href="{% url 'export' recording.pk 'word' %}?spoken=1">{% icon "word" %} Export to Word, with the words as spoken</a></li>
                   <li><a href="{% url 'export' recording.pk 'text' %}?spoken=1">{% icon "text" %} Export as text, with the words as spoken</a></li>
                 {% endif %}
-                {% comment %}The comparison's export (Phase 8 chapter 6): a link once this camera's report is compared.{% endcomment %}
-                <li><a id="export-comparison" href="#" hidden>{% icon "word" %} Comparison to Word</a></li>
-                <li><span class="muted" id="export-comparison-off" title="Compare with the report first" hidden>{% icon "word" %} Comparison to Word: compare with the report first</span></li>
+                {% comment %}Comparison to Word moved to the Comparison page with v1.213.0 (Phase 12 chapter 11).{% endcomment %}
               </ul>
             </details>
           {% endif %}
@@ -312,8 +310,6 @@
           {% if clips_available %}
             <button type="button" class="tab" data-panel="clips">{% icon "clip" %} Clips</button>
           {% endif %}
-          {% comment %}The Report tab stands on its own switch (v1.75.1): an office with Clips off still has its reports.{% endcomment %}
-          {% if documents %}<button type="button" class="tab" data-panel="report">{% icon "document" %} Report <span class="count">{{ documents|length }}</span></button>{% endif %}
           {% if assistant.summary and transcript %}
             <button type="button" class="tab" data-panel="summary">{% icon "summary" %} Summary</button>
           {% endif %}
@@ -542,7 +538,6 @@
   <script src="{% static 'again.js' %}"></script>
   <script src="{% static 'paragraph-card.js' %}"></script>
   <script src="{% static 'event-card.js' %}"></script>
-  <script src="{% static 'report-panel.js' %}"></script>
   <script src="{% static 'preview.js' %}"></script>
   <script src="{% static 'picker.js' %}"></script>
   <script src="{% static 'viewer.js' %}"></script>

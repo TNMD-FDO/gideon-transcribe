@@ -119,59 +119,121 @@
           <div id="case-proposed" class="chron" data-mode="proposed" data-case="{{ case.pk }}" data-json="{% url 'case-proposed' case.pk %}" data-act="{% url 'case-proposed-act' case.pk %}" data-running="{% url 'case-chronology-running' case.pk %}" data-export=""></div>
         {% elif tab == "documents" %}
           {% comment %}
-            The Documents tab (Phase 8 chapter 4, part 1): every document in
-            the case, newest first, with its pages, what it is the report for,
-            who added it; Open, Re-link and Remove. Nothing is added here: a
-            document is added from the incident or the recording it is about.
+            The Documents tab as the shelf (Phase 12 chapter 11, v1.213.0; the
+            drawing docs/spec/mockups/phase-12-documents-tab.html, Direction A):
+            the reports as rows with every comparison made of each under it,
+            the pictures of the map as a gallery, Add a document as the page's
+            action and a drop zone. A document belongs to the case; a report is
+            read against the case, an incident or a camera at the person's
+            choice, and the comparison opens on a page of its own.
           {% endcomment %}
-          <div class="row" style="align-items: center; margin: 14px 0 8px; gap: 8px">
+          <div class="row shelf-lead">
             <p class="lead grow m0">
-              {% if documents %}{{ documents|length }} document{{ documents|length|pluralize }} in this case, each the report for an incident or a camera.{% else %}None yet.{% endif %}
-              A report is added here or from the incident's or the recording's <b>Details</b> tab, and is read beside the cameras it is about.
+              {% if shelf.counts.all %}{% if shelf.counts.reports %}{{ shelf.counts.reports }} report{{ shelf.counts.reports|pluralize }}{% endif %}{% if shelf.counts.reports and shelf.counts.pictures %} and {% endif %}{% if shelf.counts.pictures %}{{ shelf.counts.pictures }} picture{{ shelf.counts.pictures|pluralize }} of the map{% endif %}.{% else %}No documents yet.{% endif %}
+              A report is read against the whole case, an incident or one camera; every finding cites the report's paragraph and the record's moment, and nothing joins a recording until you make it a note.{% if not shelf.counts.all %} A picture saved from the Map page lands here too.{% endif %}
             </p>
-            <a class="btn small" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add the report</a>
+            {% if role %}<a class="btn small primary" id="add-document" href="{{ add_document_url }}">{% icon "document" %} Add a document</a>{% endif %}
           </div>
-          {% if documents %}
-            <div class="card scroll-x">
-              <table class="tbl as-cards" id="documents">
-                <thead><tr><th>Document</th><th>Pages</th><th>The report for</th><th>Against the case</th><th>Added</th><th></th></tr></thead>
-                <tbody>
-                  {% for one in documents %}
-                    <tr class="document-row" data-state="{{ one.state }}">
-                      <td><a href="{{ one.url }}"><b>{{ one.title }}</b></a><div class="muted small">{{ one.original_filename }}</div></td>
-                      <td class="small{% if one.state == 'failed' %} warn-ink{% endif %}">{{ one.pages_line }}</td>
-                      <td class="small">{% if one.home_name %}<a href="{{ one.home_url }}">{{ one.home_name }}</a> <span class="muted">({{ one.home_kind }})</span>{% else %}<span class="muted">nothing yet</span>{% endif %}</td>
-                      {% comment %}Against the case (Phase 10 chapter 4, v1.170.0): the comparison read against every recording of the case, one at a time, its findings on one layer under the table.{% endcomment %}
-                      <td class="small">
-                        {% if one.is_picture %}<span class="muted">a picture, nothing to compare</span>{% else %}
-                        {% if one.case_state == "done" %}<span class="pill small ok">{{ one.case_findings }} finding{{ one.case_findings|pluralize }}</span>{% elif one.case_busy %}<span class="pill small warn">running</span>{% elif one.case_state == "failed" %}<span class="pill small warn">did not finish</span>{% else %}<span class="muted">not compared yet</span>{% endif %}
-                        {% if one.case_words %}<div class="muted tiny">{{ one.case_words|truncatechars:120 }}</div>{% endif %}
-                        <div class="mt4"><button type="button" class="btn small{% if one.case_state == 'done' %} primary{% endif %}" data-case-compare data-comparison="{% url 'document-comparison' case.pk one.pk %}" data-compare="{% url 'document-compare' case.pk one.pk %}" data-title="{{ one.title }}" title="The report read against every recording of the case that has a transcript, one at a time; every finding cites the paragraph and the moment">{% if one.case_state == "done" %}Comparison{% elif one.case_busy %}Comparison, running{% else %}Compare with the case{% endif %}</button>
-                        {% if one.case_comparison_export %}<a class="btn small ghost" href="{{ one.case_comparison_export }}">{% icon "word" %} To Word</a>{% endif %}</div>
-                        {% endif %}
-                      </td>
-                      <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
-                      <td class="nowrap">
-                        <a class="btn small" href="{{ one.url }}">Open</a>
-                        {% if one.comparison_export %}<a class="btn small ghost" href="{{ one.comparison_export }}">{% icon "word" %} Comparison to Word</a>{% endif %}
-                        <form class="inline-form" method="post" action="{% url 'document-act' case.pk one.pk %}" data-confirm="Remove {{ one.title }} and its pages from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
-                        {% comment %}Re-link (part 2): a plain choice on the row, no pop-up.{% endcomment %}
-                        <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="row relink" style="gap: 4px; margin-top: 6px; flex-wrap: wrap">{% csrf_token %}<input type="hidden" name="action" value="relink">
-                          <select name="incident" class="small" aria-label="The incident this is the report for"><option value="">no incident</option>{% for home in document_homes %}{% if home.kind == "incident" %}<option value="{{ home.id }}"{% if one.incident_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}</select>
-                          <select name="recording" class="small" aria-label="The camera this is the report for"><option value="">no camera</option>{% for home in document_homes %}{% if home.kind == "recording" %}<option value="{{ home.id }}"{% if one.recording_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }}</option>{% endif %}{% endfor %}</select>
-                          <button type="submit" class="btn small">Re-link</button>
-                        </form>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+          {% if shelf.counts.all %}
+            <div class="row search-kinds shelf-chips" id="shelf-chips">
+              <button type="button" class="pill small on" data-shelf-filter="all">All ({{ shelf.counts.all }})</button>
+              {% if shelf.counts.reports %}<button type="button" class="pill small" data-shelf-filter="reports">Reports ({{ shelf.counts.reports }})</button>{% endif %}
+              {% if shelf.counts.pictures %}<button type="button" class="pill small" data-shelf-filter="pictures">Pictures ({{ shelf.counts.pictures }})</button>{% endif %}
+              {% if shelf.counts.compared %}<button type="button" class="pill small" data-shelf-filter="compared">Compared ({{ shelf.counts.compared }})</button>{% endif %}
+              {% if shelf.counts.not_yet %}<button type="button" class="pill small" data-shelf-filter="not-yet">Not yet compared ({{ shelf.counts.not_yet }})</button>{% endif %}
+              {% if shelf.counts.stale %}<button type="button" class="pill small warn" data-shelf-filter="stale">Stale ({{ shelf.counts.stale }})</button>{% endif %}
             </div>
-            {% comment %}The comparison against the case (v1.170.0): one layer under the table for the document pressed, drawn by report-panel.js as the incident's and the recording's are, with Documents as its Back.{% endcomment %}
-            <div id="case-compare" class="card compare-layer" hidden data-case="{{ case.pk }}">
-              <div class="row" style="align-items: baseline; gap: 10px; margin-bottom: 8px"><button type="button" class="btn small ghost" data-case-compare-back>&lsaquo; Documents</button><b id="case-compare-title" class="grow"></b><span class="muted small">against every recording of the case, one at a time</span></div>
-              <div class="compare-box" id="case-compare-box" data-home="case" data-home-id="{{ case.pk }}"></div>
-            </div>
+          {% endif %}
+
+          <section class="shelf-section" id="shelf-reports" data-shelf="reports">
+            {% if shelf.reports %}
+              <h2 class="shelf-h">Reports</h2>
+              <div class="card scroll-x shelf-card">
+                <table class="tbl as-cards" id="documents">
+                  <thead><tr><th>Document</th><th>Comparisons</th><th>Added</th><th></th></tr></thead>
+                  <tbody>
+                    {% for row in shelf.reports %}
+                      {% with one=row.document %}
+                      <tr class="document-row" data-state="{{ one.state }}" data-kind="report" data-compared="{% if row.comparisons %}yes{% else %}no{% endif %}" data-stale="{% if row.is_stale %}yes{% else %}no{% endif %}">
+                        <td>
+                          <a href="{{ one.url }}"><b>{{ one.title }}</b></a>
+                          <div class="muted small{% if one.state == 'failed' %} warn-ink{% endif %}">{{ one.pages_line }}{% if row.about %} &middot; about <a class="pill small inc" href="{{ row.about_url }}" title="What this document is about">{{ row.about }}</a>{% else %} &middot; <span class="muted">about nothing in particular</span>{% endif %}</div>
+                        </td>
+                        <td class="shelf-cmps">
+                          {% for cmp in row.comparisons %}
+                            {% comment %}One row per record the report was read against: the four-colour bar, the counts, when, a stale pill, Open.{% endcomment %}
+                            <div class="shelf-cmp" data-state="{{ cmp.state }}">
+                              <span class="who">{{ cmp.against_words|capfirst }}</span>
+                              <span class="bar" title="{{ cmp.words }}">{% for part in cmp.bar %}<i class="{{ part.key }}" style="width: {{ part.pct }}%" title="{{ part.n }} {{ part.words|lower }}"></i>{% endfor %}</span>
+                              <span class="small cmp-words">{% if cmp.state == "done" %}{{ cmp.words }}{% if cmp.when %} &middot; {{ cmp.when }}{% endif %}{% if cmp.stale %} <span class="pill small warn" title="Compare again to refresh">{{ cmp.stale }}</span>{% endif %}{% elif cmp.state == "failed" %}<span class="pill small warn">did not finish</span>{% else %}<span class="pill small warn">running</span>{% endif %}</span>
+                              <a class="btn small{% if forloop.first and cmp.state == 'done' %} primary{% endif %}" href="{{ cmp.url }}">Open</a>
+                            </div>
+                          {% empty %}
+                            <div class="muted small">Not compared yet.</div>
+                          {% endfor %}
+                          {% if compare_on and one.state == "ready" and role %}
+                            {% comment %}Compare against: the case, each incident, each camera with a transcript; a plain form each, greyed with the reason where it cannot run. Posting takes the person to the comparison's page, which shows it running.{% endcomment %}
+                            <details class="menu compare-against" data-document="{{ one.pk }}">
+                              <summary class="btn small ghost">{% if row.comparisons %}+ Compare against{% else %}Compare against{% endif %} {% icon "chevron-down" %}</summary>
+                              <ul>
+                                {% for target in row.targets %}
+                                  <li>
+                                    {% if target.exists %}
+                                      <a href="{{ target.url }}" title="Already compared; opens it">{{ target.name|capfirst }} <span class="muted small">(open)</span></a>
+                                    {% elif target.possible %}
+                                      <form method="post" action="{% url 'document-compare' case.pk one.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="against" value="{{ target.key }}"><input type="hidden" name="next" value="page"><button type="submit" data-compare-against="{{ target.key }}" title="Read the report against {{ target.name }}; usually some minutes, the page says as it goes">{{ target.name|capfirst }}{% if target.first %} <span class="muted small">(what it is about)</span>{% endif %}</button></form>
+                                    {% else %}
+                                      <button type="button" disabled title="{{ target.why }}">{{ target.name|capfirst }} <span class="muted small">{{ target.why }}</span></button>
+                                    {% endif %}
+                                  </li>
+                                {% endfor %}
+                              </ul>
+                            </details>
+                          {% endif %}
+                        </td>
+                        <td class="small nowrap">{% if one.added_by %}{{ one.added_by.shown_name }}<br>{% endif %}<span class="muted">{{ one.created|date:"j M Y H:i" }}</span></td>
+                        <td class="nowrap shelf-acts">
+                          <a class="btn small" href="{{ one.url }}">Open</a>
+                          <a class="btn small ghost" href="{{ row.download }}">{% icon "download" %} Download</a>
+                          {% if role %}{% include "document-more.html" with one=one row=row %}{% endif %}
+                        </td>
+                      </tr>
+                      {% endwith %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endif %}
+            {% if role %}
+              {% comment %}The drop zone: one PDF dropped adds it with the file's name and no about, through the add page's own form.{% endcomment %}
+              <form method="post" enctype="multipart/form-data" action="{{ add_document_url }}" id="document-drop" class="drop shelf-drop" title="Drop a PDF here, or press to choose one">{% csrf_token %}
+                <input type="hidden" name="about" value="nothing"><input type="file" name="file" accept="application/pdf,.pdf" hidden>
+                <span>{% icon "document" %} Drop a PDF here to add it to the case &middot; up to {{ documents_most_pages }} pages &middot; {{ shelf.room }} of {{ shelf.most }} places left &middot; nothing leaves the building</span>
+              </form>
+            {% endif %}
+          </section>
+
+          {% if shelf.pictures %}
+            <section class="shelf-section" id="shelf-pictures" data-shelf="pictures">
+              <div class="row shelf-pics-head"><h2 class="shelf-h grow">Pictures of the map</h2><span class="muted small">saved with Save a picture on the Map page or an incident's map pane; the markers at that moment, the day and time in the name</span></div>
+              <div class="shelf-gallery" id="pictures">
+                {% for row in shelf.pictures %}
+                  {% with one=row.document %}
+                  <div class="card shelf-picture" data-kind="picture">
+                    <a href="{{ one.url }}" class="shelf-thumb" title="Open the picture"><img src="{% url 'document-picture' case.pk one.pk 1 %}" alt="{{ one.title }}" loading="lazy"></a>
+                    <div><b>{{ one.title }}</b></div>
+                    <div class="muted small">{% if row.about %}about <a class="pill small inc" href="{{ row.about_url }}">{{ row.about }}</a> &middot; {% endif %}{% if one.added_by %}saved by {{ one.added_by.shown_name }}, {% endif %}{{ one.created|date:"j M Y H:i" }}</div>
+                    <div class="row shelf-acts">
+                      <a class="btn small" href="{{ one.url }}">Open</a>
+                      <a class="btn small ghost" href="{{ row.download }}">{% icon "download" %} Download</a>
+                      {% if row.map_url %}<a class="btn small ghost" href="{{ row.map_url }}" title="The Map page at this day and moment">{% icon "map" %} On the map</a>{% endif %}
+                      {% if role %}{% include "document-more.html" with one=one row=row %}{% endif %}
+                    </div>
+                  </div>
+                  {% endwith %}
+                {% endfor %}
+              </div>
+            </section>
           {% endif %}
         {% elif tab == "notes" %}
           {% comment %}
@@ -1035,8 +1097,8 @@
   <script src="{% static 'chronology.js' %}"></script>
   {% comment %}The Incidents tab's wall (Phase 12 chapter 10, v1.212.0): the ticked cameras playing in step under the timeline.{% endcomment %}
   {% if tab == "incidents" %}<script src="{% static 'incident-desk.js' %}"></script>{% endif %}
-  <script src="{% static 'report-panel.js' %}"></script>
-  <script src="{% static 'case-compare.js' %}"></script>
+  {% comment %}The shelf (Phase 12 chapter 11, v1.213.0): the chips, the drop zone, Compare a report with this incident.{% endcomment %}
+  {% if tab == "documents" %}<script src="{% static 'documents-shelf.js' %}"></script>{% endif %}
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
   {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}

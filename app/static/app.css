@@ -4436,3 +4436,70 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .desk-built .built-row .mini { display: block; position: relative; height: 5px; margin: 3px 0; border-radius: 3px; background: var(--surface-2); }
 .desk-built .built-row .mini i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); opacity: 0.6; }
 .desk-built .built-row .acts { margin-top: 2px; }
+
+/* The Documents tab as the shelf (Phase 12 chapter 11, v1.213.0): the reports
+   with their comparisons under each, the pictures of the map as a gallery,
+   the chips, the drop zone, and the Comparison page beside the report's page. */
+.shelf-h { font-size: var(--t-heading); margin: 14px 0 8px; }
+/* The Compare against menu opens below its row: the card must not clip it. */
+.card.shelf-card { overflow: visible; }
+.shelf-lead { align-items: flex-start; margin: 14px 0 8px; gap: 8px; }
+.shelf-chips { margin-bottom: 10px; }
+.shelf-pics-head { align-items: baseline; gap: 8px; }
+.cmp-page-head { align-items: baseline; gap: 8px; }
+.cmp-menu-note { display: block; padding: 4px 10px; }
+.add-acts { gap: 8px; margin-top: 12px; }
+.shelf-section[hidden] { display: none; }
+.shelf-cmps { min-width: 22rem; }
+.shelf-cmp { display: grid; grid-template-columns: minmax(7rem, 11rem) minmax(7rem, 10rem) minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 5px 0; border-top: 1px dashed var(--line); }
+.shelf-cmp:first-child { border-top: 0; padding-top: 0; }
+.shelf-cmp .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shelf-cmp .cmp-words { min-width: 0; }
+.shelf-cmp .bar, .cmp-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); min-width: 7rem; }
+.shelf-cmp .bar i { display: block; height: 100%; }
+.shelf-cmp .bar i.agrees { background: var(--ok); }
+.shelf-cmp .bar i.differs { background: var(--warn); }
+.shelf-cmp .bar i.not_on_camera { background: var(--muted); }
+.shelf-cmp .bar i.not_in_report { background: var(--accent); }
+.compare-against { margin-top: 6px; display: inline-block; }
+.compare-against > ul { min-width: 18rem; }
+.compare-against form.inline-form { display: block; }
+.compare-against button[disabled] { opacity: 0.6; cursor: default; }
+.compare-against button[disabled] .muted { display: block; font-size: var(--t-label); }
+.shelf-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.document-more .menu-body { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; min-width: 18rem; }
+.document-more form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.document-more form label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
+.document-more .document-rename input { min-width: 12rem; }
+.shelf-drop { margin-top: 10px; padding: 12px 16px; cursor: pointer; font-size: var(--t-small); color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.shelf-drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.shelf-drop.busy { opacity: 0.7; }
+.shelf-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.shelf-picture { display: flex; flex-direction: column; gap: 6px; font-size: var(--t-small); }
+.shelf-picture .shelf-thumb { display: block; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface-2); aspect-ratio: 16 / 10; }
+.shelf-picture .shelf-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.shelf-picture b { font-size: var(--t-body); }
+.reports-line li { margin: 0 0 4px; }
+/* Add a document: the choices as pressed buttons, the drop zone as the file field. */
+.choice-btn { cursor: pointer; }
+.choice-btn input { position: absolute; opacity: 0; pointer-events: none; }
+.choice-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.add-drop { padding: 18px; text-align: center; cursor: pointer; }
+.add-drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.add-drop input[type="file"] { margin: 8px auto 0; }
+/* The Comparison page. */
+.cmp-page .cmp-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cmp-page .cmp-against-word { font-weight: 400; }
+.cmp-page .cmp-against > summary { font-size: var(--t-body); font-weight: 600; }
+.cmp-page .cmp-against > ul { min-width: 20rem; }
+.cmp-page .cmp-against form.inline-form { display: block; }
+.cmp-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
+.cmp-findings { min-width: 0; }
+.cmp-findings .compare-rows tr.lit td { background: var(--accent-soft); }
+.cmp-findings .compare-rows tr { cursor: pointer; }
+.cmp-page-col { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 8px; }
+.cmp-sheet { margin: 0; }
+.cmp-sheet .doc-box { cursor: pointer; }
+.cmp-sheet .doc-box.lit { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.toggle.order button { font-size: var(--t-small); }
+@media (max-width: 1100px) { .cmp-body { grid-template-columns: 1fr; } .cmp-page-col { position: static; max-height: none; } }

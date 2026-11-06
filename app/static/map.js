@@ -399,7 +399,7 @@
         "<button type='button' class='tiny' data-act='fit'>Fit all</button>" +
         (pinnedCount() ? "<span class='pill small acc'>" + plural(pinnedCount(), "name") + " pinned</span>" : "") +
         "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
-        (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a Document on the incident'>Save a picture</button>" : "") +
+        (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about this incident'>Save a picture</button>" : "") +
         "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
       return;
     }
@@ -423,7 +423,7 @@
         "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
         (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
         "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>" +
-        (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a Document on the incident shown, or on the camera pressed'>Save a picture</button>" : "") +
+        (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about the incident shown or the camera pressed when there is one'>Save a picture</button>" : "") +
         "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
       "</div></details>" +
       dayChips() +
@@ -1734,11 +1734,13 @@
   // elements, not part of the canvas), a band under it with the title, the
   // scale and the map's attribution, then one PNG kept as a Document on the
   // incident shown, or on the camera pressed.
+  // What the picture is about (chapter 11, v1.213.0): the incident shown, or
+  // the camera pressed; nothing when neither, and the picture is the case's.
   function pictureHome() {
     if (S.scope) { return { incident: S.scope.id, words: S.scope.name }; }
     var cam = S.selected ? S.selected.cam : (S.pressed ? S.byId[S.pressed] : (S.lit ? S.byId[S.lit] : null));
     if (cam) { return { recording: cam.id, words: cam.title }; }
-    return null;
+    return { words: "" };
   }
   function pictureTitle(m) { return "Map at " + hms(m) + (S.day ? ", " + dayWords(S.day) : ""); }
   // The names and the tiles as the person laid them out, with their lines
@@ -1776,7 +1778,6 @@
   function savePicture() {
     if (!map || !mapReady) { toast("The map is not drawn yet.", true); return; }
     var home = pictureHome();
-    if (!home) { toast("Press a camera's row or marker first: the picture is kept as a Document on it, or on the incident when the map is opened from one.", true); return; }
     var m = now();
     map.once("render", function () {
       try {
@@ -1805,7 +1806,7 @@
         ctx.fillStyle = token("--surface"); ctx.fillRect(0, y0, out.width, band);
         ctx.strokeStyle = token("--line"); ctx.lineWidth = ratio; ctx.beginPath(); ctx.moveTo(0, y0 + 0.5); ctx.lineTo(out.width, y0 + 0.5); ctx.stroke();
         ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(12 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.fillText(pictureTitle(m) + " · " + home.words, 10 * ratio, mid);
+        ctx.fillText(pictureTitle(m) + (home.words ? " · " + home.words : ""), 10 * ratio, mid);
         var sc = el.pane.querySelector(".maplibregl-ctrl-scale");
         if (sc && sc.offsetWidth) {
           var w = sc.offsetWidth * ratio, sx = out.width / 2 - w / 2;
@@ -1816,7 +1817,7 @@
         out.toBlob(function (blob) {
           if (!blob) { toast("The picture could not be drawn.", true); return; }
           var form = new FormData();
-          form.append("file", blob, "map.png"); form.append("title", pictureTitle(m) + ", " + home.words);
+          form.append("file", blob, "map.png"); form.append("title", pictureTitle(m) + (home.words ? " · " + home.words : ""));
           if (home.incident) { form.append("incident", home.incident); }
           if (home.recording) { form.append("recording", home.recording); }
           postForm(host.dataset.picture, form).then(function (told) { toast(told.words || "Saved."); }).catch(function (err) { toast(err.message, true); });
@@ -1854,7 +1855,9 @@
     var p = new URLSearchParams(location.search);
     var ids = (p.get("show") || "").split(",").filter(Boolean), from = parseFloat(p.get("from")), to = parseFloat(p.get("to"));
     var cams = ids.map(function (id) { return S.byId[id]; }).filter(Boolean);
-    if (!cams.length) { return; }
+    // A moment alone (On the map from a picture of the map, v1.213.0): the
+    // clock goes there with every camera of the day drawn.
+    if (!cams.length) { if (!isNaN(from)) { seek(from); } return; }
     var asked = {}; cams.forEach(function (c) { asked[c.id] = true; });
     S.hidden = {}; dayCams().forEach(function (c) { if (!asked[c.id]) { S.hidden[c.id] = true; } }); afterTicks();
     if (!isNaN(from)) { seek(from); }

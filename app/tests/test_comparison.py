@@ -101,7 +101,7 @@ def video(person, case, title, *, stamp=None, lines=()):
 def a_report(person, case, home, title="Incident report"):
     report = documents.add(
         case,
-        home=home,
+        about=home,
         data=make_pdf(REPORT),
         filename="report.pdf",
         title=title,
@@ -800,8 +800,10 @@ def test_a_finding_is_dismissed_noted_and_made_an_event_that_rests_on_the_paragr
     )
     assert "Differs" in text and "Check the audio." in text and "21:57:17" in text
     assert Row.objects.get(event="comparison exported").details["kind"] == "comparison"
-    # Not against a home the report is not for.
-    assert client.get(f"{base}/comparison?recording={first.pk}").status_code == 404
+    # Against any camera of the case (v1.213.0; until then only the report's
+    # own home): nothing compared yet there, and possible.
+    other = client.get(f"{base}/comparison?recording={first.pk}").json()
+    assert other["state"] == "" and other["possible"] is True
 
 
 def test_the_comparison_runs_against_a_recording_and_refuses_when_it_cannot(
@@ -942,18 +944,18 @@ def test_the_pages_carry_the_card_and_the_export_links(
     stop, person, client, monkeypatch
 ):
     """The incident page and the case page load the paragraph card's script;
-    the incident page's Export menu holds Comparison to Word, greyed until a
-    comparison is done; the Documents tab row gains the link once one is;
-    Gideon's panel has its handle."""
+    Comparison to Word left the incident page's Export menu for the
+    Comparison page (v1.213.0); the shelf's row gains the comparison once one
+    is done; Gideon's panel has its handle."""
     incident, report, first = stop
     signed_in(client, person)
     page = client.get(incident.url()).content.decode()
     assert "paragraph-card.js" in page and 'id="gideon-grip"' in page
-    assert 'id="export-comparison"' in page and 'id="export-comparison-off"' in page
+    assert 'id="export-comparison"' not in page
     documents_tab = client.get(
         f"/case/{incident.case_id}?tab=documents"
     ).content.decode()
-    assert "Comparison to Word" not in documents_tab
+    assert "Not compared yet" in documents_tab
     made = comparison.ask_for(report, incident, by=person)
     engine_answering(monkeypatch, [findings_json(), findings_json()])
     comparison.compare(made.pk)
@@ -962,10 +964,16 @@ def test_the_pages_carry_the_card_and_the_export_links(
     documents_tab = client.get(
         f"/case/{incident.case_id}?tab=documents"
     ).content.decode()
-    assert "Comparison to Word" in documents_tab
-    assert (
-        f"/document/{report.pk}/comparison/export?incident={incident.pk}"
-        in documents_tab
-    )
+    page_url = f"/document/{report.pk}/comparison/page?against=incident:{incident.pk}"
+    assert page_url in documents_tab and "Not compared yet" not in documents_tab
+    got = client.get(f"/case/{incident.case_id}{page_url}")
+    assert got.status_code == 200
+    page = got.content.decode()
+    assert "comparison-page.js" in page and "paragraph-card.js" in page
+    state = client.get(
+        f"/case/{incident.case_id}/document/{report.pk}/comparison"
+        f"?against=incident:{incident.pk}"
+    ).json()
+    assert state["export_url"].endswith(f"/comparison/export?incident={incident.pk}")
     case_page = client.get(f"/case/{incident.case_id}").content.decode()
     assert "paragraph-card.js" in case_page

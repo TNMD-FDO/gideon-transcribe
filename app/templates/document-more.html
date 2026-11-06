@@ -1,0 +1,28 @@
+{% load icons %}
+{% comment %}
+  More on a document's row (Phase 12 chapter 11, v1.213.0): About..., Rename
+  and Remove, each a plain form; the two Re-link drop-downs of v1.71.0 fold
+  in here. Remove asks first through the app's own dialog.
+{% endcomment %}
+<details class="menu document-more">
+  <summary class="btn small ghost" title="About, Rename, Remove">More {% icon "chevron-down" %}</summary>
+  <div class="menu-body document-more-body">
+    <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="document-about">{% csrf_token %}<input type="hidden" name="action" value="about">
+      <label class="small">About
+        <select name="about_pick" class="small" aria-label="What this document is about">
+          <option value="nothing"{% if not one.incident_id and not one.recording_id %} selected{% endif %}>nothing in particular</option>
+          {% for home in document_abouts %}
+            <option value="{{ home.kind }}:{{ home.id }}"{% if home.kind == "incident" and one.incident_id|stringformat:"s" == home.id %} selected{% elif home.kind == "recording" and one.recording_id|stringformat:"s" == home.id %} selected{% endif %}>{{ home.name }} <span class="muted">({% if home.kind == "incident" %}incident{% else %}camera{% endif %})</span></option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="hidden" name="about" value=""><input type="hidden" name="incident" value=""><input type="hidden" name="recording" value="">
+      <button type="submit" class="btn small">Set</button>
+    </form>
+    <form method="post" action="{% url 'document-act' case.pk one.pk %}" class="document-rename">{% csrf_token %}<input type="hidden" name="action" value="rename">
+      <label class="small">Rename <input type="text" name="title" class="small" maxlength="200" value="{{ one.title }}" aria-label="The document's title"></label>
+      <button type="submit" class="btn small">Save</button>
+    </form>
+    <form class="inline-form" method="post" action="{% url 'document-act' case.pk one.pk %}" data-confirm="Remove {{ one.title }}{% if not one.is_picture %} and its pages{% endif %} from the case?" data-confirm-title="Remove this document?" data-confirm-ok="Remove">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="btn small danger">Remove</button></form>
+  </div>
+</details>
