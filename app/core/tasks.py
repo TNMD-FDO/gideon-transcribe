@@ -484,6 +484,13 @@ def keep_the_queue_moving(timestamp: int) -> None:
     again = documents.read_again_the_old()
     if again:
         log.info("%d document(s) read again after a splitter change", again)
+    # A path file read by an older parser is read again (chapter 6.11,
+    # v1.211.0): the jump rules reach the files already on the case.
+    from core import camera_paths
+
+    again = camera_paths.read_again_the_old()
+    if again:
+        log.info("%d path file(s) read again after a parser change", again)
 
     # A speaker check left queued with no task behind it (v1.56.1).
     from core import speaker_check

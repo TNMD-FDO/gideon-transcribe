@@ -168,10 +168,12 @@
     (S.told.cameras || []).forEach(function (cam) {
       cam.fixes = (cam.fixes || []).slice().sort(function (a, b) { return a[0] - b[0]; });
       cam.segments = [];
+      // A jump the parser kept (v1.211.0) breaks the line: no stroke across the city.
+      var jumpAt = {}; (cam.marks || []).forEach(function (m) { if (m[1] === "jump") { jumpAt[m[0]] = true; } });
       var run = [];
       for (var i = 0; i < cam.fixes.length; i++) {
         var f = cam.fixes[i];
-        if (run.length && (f[0] - run[run.length - 1][0] > GAP || inGap(cam, run[run.length - 1][0], f[0]))) { cam.segments.push(run); run = []; }
+        if (run.length && (f[0] - run[run.length - 1][0] > GAP || inGap(cam, run[run.length - 1][0], f[0]) || jumpAt[f[0]])) { cam.segments.push(run); run = []; }
         run.push(f);
       }
       if (run.length) { cam.segments.push(run); }
@@ -908,6 +910,7 @@
     var spanWords = cam.onClock ? hm(cam.zero.second) + " to " + hm(cam.zero.second + (cam.length || 0)) : elapsed(cam.length || 0) + " long";
     var streams = cam.streams.length ? "<span class='streams'><span>stream 1</span>" + cam.streams.map(function (s, i) { return "<span>stream " + (i + 2) + "</span>"; }).join("") + "</span>" : "";
     var facts = "<div class='facts'><b>" + esc(cam.unit || cam.title) + "</b><span>" + (cam.source === "car" ? "in-car" : "body camera") + "</span>" + suretyPill(cam) + "<span class='mono'>" + spanWords + "</span>" + streams +
+      (cam.dropped ? "<span class='muted' title='Fixes the camera could not have made: a far-off point its file reports without a lock, left out'>" + cam.dropped + (cam.dropped === 1 ? " fix" : " fixes") + " left out as jumps</span>" : "") +
       (!cam.onClock ? "<button type='button' class='tiny' data-act='own' data-cam='" + cam.id + "'>" + (cam.own !== undefined ? "Hide it" : "Show on its own") + "</button>" : "") + "</div>" +
       (cam.own !== undefined ? "<input type='range' class='own-bar' data-cam='" + cam.id + "' min='0' max='" + Math.round(cam.length || 0) + "' value='" + Math.round(cam.own) + "'>" : "");
     var where = cam.onClock && cam.fixes.length ? "<div class='facts map-where' data-cam='" + cam.id + "'>" + whereWords(cam, now() - cam.zero.second, positionAt(cam, now() - cam.zero.second)) + "</div>" : "";
@@ -936,7 +939,7 @@
     return html + "</ul>";
   }
   function offerButton(cam, ev) {
-    if (ev.kind === "camera") { return ""; }
+    if (ev.kind === "camera" || ev.kind === "dropped" || ev.kind === "jump") { return ""; }
     var until = (ev.until === null || ev.until === undefined) ? "" : ev.until;
     if (!S.told.may_offer) { return "<span class='muted small' title='" + esc(S.told.offer_why || "") + "'>offer withheld</span>"; }
     return "<button type='button' class='tiny ghost' data-act='offer' data-cam='" + cam.id + "' data-t='" + ev.t + "' data-until='" + until + "' data-words='" + esc(ev.words) + "' title='A proposed event on the recording at this moment; it waits on the Proposed events tab for Accept or Dismiss'>Offer to the chronology</button>";

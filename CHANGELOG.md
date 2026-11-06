@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.211.0, 2026-11-05
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Phase 12 chapter 6.11: the jump rules. On the office's own server a camera's path drew a fan of straight lines across the city: its file reports one far-off position every so often between its real fixes, and the parser joined every consecutive pair. Three rules in the parser now, each said in the readings so nothing is hidden:
+
+- **A far point the file keeps returning to** (the same coordinate three times or more, each time far from the fixes around it) is a stale fix the camera reports without a lock, and every occurrence is left out.
+- **A fix far from both its neighbours** while they agree with each other is a glitch and is left out.
+- **A jump that remains** between two real stretches is kept but never drawn as a line.
+
+The camera's reading says "N fixes left out as jumps" and each one is a reading with its distance ("A fix 9.2 km away left out", "Jumped 9.2 km: the line is not drawn"); the chat's readings block says the same. The map fits the real route again. The parser's version moves to 2 and the minute task reads every path file already on the cases again with the new rules; the documents' re-read had that step, the paths' did not until now.
+
 ## v1.210.0, 2026-11-05
 
 ```

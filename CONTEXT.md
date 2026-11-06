@@ -606,7 +606,7 @@ A camera's positions over its Recording, read from the Path file beside the vide
 _Avoid_: track, trace, route, GPS log, trajectory
 
 **Fix**:
-One reading of where a camera was: a second of its Recording, a latitude and a longitude from its Path file. A stretch with none ("no fix") is the camera indoors or out of sight of the sky; the app draws nothing there. Phase 12 chapter 1.
+One reading of where a camera was: a second of its Recording, a latitude and a longitude from its Path file. A stretch with none ("no fix") is the camera indoors or out of sight of the sky; the app draws nothing there. A fix the camera could not have made (a far-off point its file keeps returning to, or one fix kilometres from its neighbours) is a **jump** and is left out, with a reading that says so (chapter 6.11, v1.211.0); a jump the app keeps is never drawn as a line. Phase 12 chapter 1.
 _Avoid_: point, waypoint, ping, location (that is a place, not a reading), coordinate (on a page)
 
 **Path file**:

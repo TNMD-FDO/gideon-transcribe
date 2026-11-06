@@ -50,9 +50,17 @@ STILL_METRES = 15.0
 STILL_SECONDS = 120.0
 # Together: two cameras within this many metres of each other.
 NEAR_METRES = 50.0
+# A jump (chapter 6.11, v1.211.0): two consecutive fixes further apart than
+# this many metres a second is not the camera moving. A fix far from both
+# its neighbours is a glitch and is left out; a coordinate that recurs this
+# many times while far from the fixes around it is a stale "home" fix the
+# camera reports without a lock, and every occurrence is left out; a jump
+# between two real stretches is kept but never drawn as a line.
+JUMP_METRES_PER_SECOND = 70.0
+HOME_FIX_TIMES = 3
 FLAGS = ("mic", "low battery", "lights", "siren", "brakes", "crash", "aux", "bookmark")
 CAR_KEYS = ("patrolSpeed", "lights", "siren", "brakes")
-READ_VERSION = 1
+READ_VERSION = 2
 # The file name's twelve digits, which the exporting camera writes as UTC.
 NAME_MINUTE = re.compile(r"_(\d{12})_")
 TIMING = re.compile(
@@ -397,6 +405,8 @@ def parse(text: str) -> Parsed:
         parsed.gaps.append([run_start, round(parsed.length, 1)])
     if not seen:
         raise Refused("No cue in that file carries a camera reading.")
+    parsed.fixes, jumps = clean_fixes(parsed.fixes)
+    parsed.marks.extend(jumps)
     if first_moment is not None:
         parsed.clock_start = first_moment[0] - dt.timedelta(seconds=first_moment[1])
         if last_moment is not None:
@@ -405,6 +415,87 @@ def parse(text: str) -> Parsed:
                 abs((last_start - parsed.clock_start).total_seconds()) <= AGREE_SECONDS
             )
     return parsed
+
+
+def _too_fast(a: list, b: list) -> float | None:
+    """The metres between two fixes when the step between them is faster
+    than any vehicle, else None."""
+    metres = metres_between((a[1], a[2]), (b[1], b[2]))
+    seconds = max(1.0, float(b[0]) - float(a[0]))
+    return metres if metres / seconds > JUMP_METRES_PER_SECOND else None
+
+
+def clean_fixes(fixes: list) -> tuple[list, list]:
+    """The three jump rules (chapter 6.11, v1.211.0): the fixes kept, and
+    the marks that say what was left out or broken.
+
+    A coordinate that recurs HOME_FIX_TIMES times or more while far from
+    the fixes around it is left out everywhere ("dropped"); a fix far from
+    both its neighbours while they are near each other is left out
+    ("dropped"); a jump that remains between two real stretches is marked
+    ("jump") so the map breaks the line there. Nothing is invented: the
+    marks carry the metres, the readings say so."""
+    marks: list = []
+    if len(fixes) < 2:
+        return list(fixes), marks
+    # Rule 3: the repeated far point.
+    seen: dict = {}
+    for index, one in enumerate(fixes):
+        seen.setdefault((one[1], one[2]), []).append(index)
+    home: set = set()
+    for key, where in seen.items():
+        if len(where) < HOME_FIX_TIMES:
+            continue
+        far = 0
+        for index in where:
+            before = fixes[index - 1] if index > 0 else None
+            after = fixes[index + 1] if index + 1 < len(fixes) else None
+            if (before is not None and _too_fast(before, fixes[index]) is not None) or (
+                after is not None and _too_fast(fixes[index], after) is not None
+            ):
+                far += 1
+        if far * 3 >= len(where) * 2:
+            home.add(key)
+    kept: list = []
+    for one in fixes:
+        if (one[1], one[2]) in home:
+            before = kept[-1] if kept else None
+            metres = (
+                metres_between((before[1], before[2]), (one[1], one[2]))
+                if before is not None
+                else 0.0
+            )
+            marks.append([one[0], "dropped", round(metres)])
+            continue
+        kept.append(one)
+    # Rule 2: a spike between two neighbours that agree with each other.
+    again = True
+    while again and len(kept) >= 3:
+        again = False
+        for index in range(1, len(kept) - 1):
+            a, b, c = kept[index - 1], kept[index], kept[index + 1]
+            away = _too_fast(a, b)
+            if (
+                away is not None
+                and _too_fast(b, c) is not None
+                and _too_fast(a, c) is None
+            ):
+                marks.append([b[0], "dropped", round(away)])
+                del kept[index]
+                again = True
+                break
+    # Rule 1: a jump kept between two real stretches breaks the line.
+    for index in range(1, len(kept)):
+        away = _too_fast(kept[index - 1], kept[index])
+        if away is not None:
+            marks.append([kept[index][0], "jump", round(away)])
+    marks.sort(key=lambda m: m[0])
+    return kept, marks
+
+
+def dropped_count(path) -> int:
+    """How many of the file's fixes the jump rules left out."""
+    return sum(1 for m in path.marks or [] if m[1] == "dropped")
 
 
 def stem_of(name: str) -> str:
@@ -1202,6 +1293,11 @@ FLAG_WORDS = {
 }
 
 
+def _km(metres) -> str:
+    metres = float(metres or 0)
+    return f"{metres / 1000:.1f} km" if metres >= 1000 else f"{int(round(metres))} m"
+
+
 def events_of(path: CameraPath) -> list[dict]:
     """The readings that are moments, in order: the camera's start and end,
     each flag turning on and off (an on carries how long until the off),
@@ -1217,6 +1313,23 @@ def events_of(path: CameraPath) -> list[dict]:
         if key == "speed":
             if top_speed is None or value > top_speed[1]:
                 top_speed = (t, value)
+            continue
+        # The jump rules (chapter 6.11): what was left out, and where the
+        # line breaks; each with the metres, so nothing is hidden.
+        if key in ("dropped", "jump"):
+            events.append(
+                {
+                    "t": t,
+                    "kind": key,
+                    "value": value,
+                    "words": (
+                        f"A fix {_km(value)} away left out"
+                        if key == "dropped"
+                        else f"Jumped {_km(value)}: the line is not drawn"
+                    ),
+                    "until": None,
+                }
+            )
             continue
         on_words, off_words = FLAG_WORDS.get(key, (key, ""))
         if value:
@@ -1339,6 +1452,12 @@ def readings_words(path: CameraPath, zero: dict | None) -> list[str]:
             out.append(f"{one['words'].lower()} {_spell_words(one['t'], None, zero)}")
     for start, end in path.gaps or []:
         out.append(f"no fix {_spell_words(start, end, zero)}")
+    left_out = dropped_count(path)
+    if left_out:
+        out.append(
+            f"{left_out} fix{'' if left_out == 1 else 'es'} left out as jumps the "
+            "camera could not have made"
+        )
     return out
 
 
@@ -1611,6 +1730,7 @@ def map_of(case, *, day: str = "", viewer) -> dict:
             "bounds": path.bounds,
             "fixes": path.fixes,
             "marks": path.marks,
+            "dropped": dropped_count(path),
             "gaps": path.gaps,
             "speed_unit": path.speed_unit,
             "events": events_of(path),
@@ -1985,6 +2105,9 @@ def words(path: CameraPath | None) -> str:
         return ""
     kind = "in-car" if path.source == CAR else "body camera"
     out = f"{path.fix_count:,} fixes over {_minutes(path.length)}, {kind}"
+    left_out = dropped_count(path)
+    if left_out:
+        out += f" ({left_out} left out as jumps)"
     if path.clock_start is not None:
         out += ", clock from its file"
     return out
