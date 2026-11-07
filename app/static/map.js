@@ -1200,7 +1200,7 @@
     var without = S.told.videos_without_path || [];
     if (without.length) {
       html += "<details class='map-fold' " + (today.length ? "" : "open") + "><summary>No path file: " + plural(without.length, "video") + "</summary>" +
-        without.map(function (v) { return "<div class='map-row dim' data-video='" + v.id + "'><span class='dot' style='background: var(--muted)'></span><div><b>" + esc(v.title) + "</b><div class='facts'>no path file</div></div><div class='acts'>" + (host.dataset.edit ? "<label class='tiny btn'>Add a path file<input type='file' accept='.vtt,text/vtt' hidden data-add-one='" + v.id + "'></label>" : "") + "</div></div>"; }).join("") + "</details>";
+        without.map(function (v) { return "<div class='map-row dim' data-video='" + v.id + "'><span class='tk-none'></span><span class='dot' style='background: var(--muted)'></span><div><b>" + esc(v.title) + "</b><div class='facts'>no path file</div></div><div class='acts'>" + (host.dataset.edit ? "<label class='tiny btn'>Add a path file<input type='file' accept='.vtt,text/vtt' hidden data-add-one='" + v.id + "'></label>" : "") + "</div></div>"; }).join("") + "</details>";
     }
     html += waitingFold();
     // The forming offer's block at the list's foot (join 1) went in v1.197.0;
@@ -1612,8 +1612,8 @@
       "<div class='acts'><input type='search' class='small' id='map-waiting-find' placeholder='Find by file name' value='" + esc(S.waitingFind || "") + "'>" +
       (host.dataset.edit ? "<button type='button' class='tiny ghost danger' data-act='waiting-remove-all'>Remove all waiting</button>" : "") + "</div>";
     shown.slice(0, 50).forEach(function (one) {
-      html += "<div class='map-row waiting' data-waiting='" + one.id + "'><span class='nm mono small' title='" + esc(one.file) + "'>" + esc(one.file) + "</span><span class='muted small'>" + esc(one.kind) + " · " + plural(one.cues, "cue") + "</span>" +
-        "<span class='tail'>" + (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='waiting-remove' data-url='" + esc(one.remove_url) + "'>Remove</button>" : "") + "</span></div>" +
+      html += "<div class='map-row waiting' data-waiting='" + one.id + "'><span class='tk-none'></span><span class='dot' style='background: var(--muted)'></span><span class='nm mono small' title='" + esc(one.file) + "'>" + esc(one.file) + "</span>" +
+        "<span class='tail'><span class='muted small'>" + esc(one.kind) + " · " + plural(one.cues, "cue") + "</span>" + (host.dataset.edit ? "<button type='button' class='tiny ghost' data-act='waiting-remove' data-url='" + esc(one.remove_url) + "'>Remove</button>" : "") + "</span></div>" +
         (one.flagged ? "<div class='map-open small'><span class='pill warn small'>Flagged</span> Matches <b>" + esc(one.flagged_title) + "</b> by name, but: " + esc(one.flagged) + (host.dataset.edit ? " <button type='button' class='tiny' data-act='waiting-add-anyway' data-url='" + esc(one.add_anyway_url) + "'>Add anyway</button>" : "") + "</div>" : "");
     });
     if (shown.length > 50) { html += "<div class='fold muted small'>" + (shown.length - 50) + " more: find by name to narrow the list.</div>"; }

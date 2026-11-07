@@ -4595,3 +4595,62 @@ details.menu .menu-body label.small { min-width: 0; max-width: 100%; }
    recording's name breaks anywhere, so the claims keep the room. */
 .inc-events.compare-rows td.t, .compare-rows td.t { white-space: normal; }
 .compare-rows td.t .muted.small { overflow-wrap: anywhere; }
+
+/* The production walk (v1.217.0; the findings page of 2026-11-06, the whole
+   site on the office's server at 1366, 2560 and 3440, by a probe and by
+   eye): the nine the maintainer picked first, numbered as the page numbers
+   them. */
+/* 8. The recording page's transcript under 1800 wide: a line's actions take
+   no width until the line is hovered, when they sit as a small toolbar at
+   the line's right end over the end of its first row; the line being
+   spoken, whose actions always show, puts them on a row of their own. The
+   words get the whole measure at every width. */
+@media (max-width: 1799px) {
+  .panel.read #transcript .seg { position: relative; grid-template-columns: 5.5em 9em minmax(0, 1fr); }
+  body.no-speakers .panel.read #transcript .seg { grid-template-columns: 5.5em minmax(0, 1fr); }
+  .panel.read #transcript .seg .actions { position: absolute; right: 6px; top: 3px; grid-column: auto; background: var(--surface-2); border-radius: 4px; padding: 1px 2px; }
+  .panel.read #transcript .seg.here .actions { position: static; grid-column: 3; grid-row: 2; justify-self: end; background: transparent; padding: 0; }
+  body.no-speakers .panel.read #transcript .seg.here .actions { grid-column: 2; }
+}
+/* 10. The shelf's Document column keeps a floor of 16rem, so a report's
+   title and its about pill never squeeze to 120 px beside the comparisons
+   (the card scrolls sideways if the two floors do not fit). */
+#documents th:first-child, #documents td:first-child { min-width: 16rem; }
+/* 11 and 12. A map picture's card: the gallery's columns are 18rem at the
+   least, the name breaks anywhere as a last resort, its about pill is cut
+   with an ellipsis, and the card's More menu opens under the card at the
+   card's width, never past its edge. */
+.shelf-gallery { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+.shelf-picture > div { min-width: 0; overflow-wrap: anywhere; }
+.shelf-picture .pill.inc { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.shelf-picture { position: relative; }
+.shelf-picture .document-more { position: static; }
+.shelf-picture .document-more .menu-body { left: 0; right: 0; top: calc(100% + 4px); min-width: 0; max-width: none; }
+/* 14. The Notes desk at laptop height: the left column grows with the
+   mounted Preview instead of cutting its card, and the Preview's lines
+   scroll in a box of their own. */
+@media (max-height: 760px) {
+  #case-notes-desk .np-left { max-height: none; }
+  #case-notes-desk .preview-card.mounted .preview-lines { max-height: 30vh; }
+}
+/* 15. A lane's name in the strip is cut at its end with an ellipsis (a
+   button centres what overflows it, which cut the start), and the camera
+   id in small type gives way first. */
+.chron .lane-row .lane-name .w { display: flex; justify-content: flex-start; align-items: center; min-width: 48px; }
+.chron .lane-row .lane-name .w > span { display: block; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chron .lane-row .lane-name small { flex-shrink: 6; }
+/* 17. The map's help opens with its right edge at the ? and never wider than
+   the window (left: 0 from the shared help rule had won over right: 0). */
+.map-help > div { left: auto; right: 0; max-width: calc(100vw - 48px); }
+/* 18. A map row without a tick box (a camera with no path file, a path file
+   still waiting) keeps an empty first cell, so its name takes the name
+   column and not the dot's. */
+.map-row .tk-none { display: block; width: 14px; height: 14px; }
+/* 20. The Panel's Users page under 1600: the Create form drops under the
+   table, which gets the width; the Raise for a while form wraps inside its
+   cell at every width. */
+@media (min-width: 1280px) and (max-width: 1599px) { .panes.users { grid-template-columns: minmax(0, 1fr); } }
+.quota-raise-form .form { max-width: 100%; min-width: 0; }
+.quota-raise-form .form label { display: flex; gap: 4px; align-items: center; min-width: 0; max-width: 100%; flex-wrap: wrap; }
+.quota-raise-form .form input[type=text] { width: 100%; min-width: 0; flex: 1 1 6rem; }
+.quota-raise-form .form button { max-width: 100%; white-space: normal; }

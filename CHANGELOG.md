@@ -17,6 +17,45 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.217.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The production walk's first fixes. The whole site was walked on the
+office's server at 1366, 2560 and 3440 wide, dark and light, by a probe
+that measured every page and pressed every safe control and by eye; the
+walk found one place that broke reading, fourteen that looked wrong and
+eleven nits, and the maintainer asked for the first group: the one break
+and eight of the wrong, each a rule or two in the stylesheet or a line in
+a script, numbered as the findings page numbers them and pinned by a test.
+
+What broke reading, fixed: on the recording page under 1800 wide a
+transcript line's actions take no width until the line is hovered, when
+they sit as a small toolbar at the line's right end (the line being spoken
+puts them on a row of their own), so the words get the whole measure
+instead of 87 px on a video at 1366 (8).
+
+What looked wrong, fixed: the Documents shelf's Document column keeps a
+floor of 16rem beside the comparisons (10); a map picture's card on the
+shelf breaks a long name, cuts its about pill with an ellipsis and opens
+its More menu under the card at the card's width (11, 12); the Notes desk
+at laptop height lets its left column grow with the mounted Preview, whose
+lines scroll in a box of their own, instead of cutting the card (14); a
+lane's name in the strip is cut at its end with an ellipsis and the camera
+id gives way first, where a button had cut the start (15); the map's help
+opens with its right edge at the ? instead of running off the window (17);
+a map row without a tick box, a camera with no path file or a path file
+still waiting, keeps an empty first cell so its name takes the name column
+and not the dot's (18); and the Panel's Users page drops its Create form
+under the table below 1600 and wraps the Raise for a while form inside its
+cell (20).
+
+The findings page and the walk's scripts live under `.claude/tools/walks/`
+on the maintainer's machine; nothing of a case is in them.
+
 ## v1.216.0, 2026-11-06
 
 ```

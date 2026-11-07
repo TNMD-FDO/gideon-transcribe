@@ -164,3 +164,33 @@ def test_the_case_tabs_walk_fixes_hold():
     assert 'querySelectorAll(".tag:not(.build)")' in chronology
     guided = (static / "speakers-guided.js").read_text(encoding="utf-8")
     assert "title='\" + escape(seg.speaker) + \"'>" in guided
+
+
+def test_the_production_walk_fixes_hold():
+    # The production walk (v1.217.0): the whole site on the office's server
+    # at 1366, 2560 and 3440, by a probe and by eye. The one break and the
+    # eight that looked wrong the maintainer picked first, each pinned by the
+    # rule or the line that fixed it.
+    for rule in (
+        "#transcript .seg { position: relative; grid-template-columns: 5.5em 9em",
+        "#transcript .seg .actions { position: absolute; right: 6px; top: 3px;",
+        "#transcript .seg.here .actions { position: static; grid-column: 3;",
+        "#documents th:first-child, #documents td:first-child { min-width: 16rem; }",
+        ".shelf-gallery { grid-template-columns: repeat(auto-fill, minmax(18rem",
+        ".shelf-picture .document-more .menu-body { left: 0; right: 0;",
+        "#case-notes-desk .np-left { max-height: none; }",
+        ".chron .lane-row .lane-name .w > span { display: block; flex: 1 1 auto;",
+        ".map-help > div { left: auto; right: 0; max-width: calc(100vw - 48px); }",
+        ".map-row .tk-none { display: block; width: 14px; height: 14px; }",
+        "(max-width: 1599px) { .panes.users { grid-template-columns: minmax(0, 1fr);",
+        ".quota-raise-form .form input[type=text] { width: 100%; min-width: 0;",
+    ):
+        assert rule in CSS, rule
+    static = APP / "static"
+    map_js = (static / "map.js").read_text(encoding="utf-8")
+    cell = "<span class='tk-none'></span>"
+    cell += "<span class='dot' style='background: var(--muted)'></span>"
+    assert map_js.count(cell) == 2
+    chronology = (static / "chronology.js").read_text(encoding="utf-8")
+    name = '\'><span>" + esc(b.name || shortName(b)) + "</span></button>"'
+    assert name in chronology
