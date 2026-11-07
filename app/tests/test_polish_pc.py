@@ -194,3 +194,25 @@ def test_the_production_walk_fixes_hold():
     chronology = (static / "chronology.js").read_text(encoding="utf-8")
     name = '\'><span>" + esc(b.name || shortName(b)) + "</span></button>"'
     assert name in chronology
+
+
+def test_the_ultrawide_measure_holds():
+    # The ultrawide measure (v1.218.0): the drawing's figures 3, 4 and 6 for
+    # the production walk's findings 4, 19 and 3, with 5, 6 and 9 riding.
+    for rule in (
+        "@media (min-width: 1800px) { .case-page #recordings { width: auto; } }",
+        ".search-hits .hit-words { max-width: 90ch; }",
+        "minmax(0, max-content) minmax(0, 90ch); }",
+        "(max-width: 1599px) { body.gideon-open .shell > main { padding-right: 0; } }",
+        ".case-page #recordings td.prepared { min-width: 7rem; }",
+        ".case-page #recordings td.prepared .pill { white-space: nowrap; }",
+    ):
+        assert rule in CSS, rule
+    case = (TEMPLATES / "case.html").read_text(encoding="utf-8")
+    chevron = '<a href="{% url \'viewer\' recording.pk %}" class="plain">'
+    chevron += '<span class="chev" aria-hidden="true">&#8250;</span> <b>'
+    assert chevron in case
+    assert '<td><div class="hit-words">{{ hit.text }}' in case
+    viewer = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
+    assert "var short = window.innerHeight < 900 || window.innerWidth < 1280;" in viewer
+    assert "var folded = short ? true : (remembered ?" in viewer

@@ -1231,7 +1231,11 @@
   if (caseFold && caseRail) {
     var remembered = null;
     try { remembered = window.localStorage.getItem("caserail-fold"); } catch (error) { remembered = null; }
-    var folded = remembered ? remembered === "folded" : (window.innerHeight < 900 || window.innerWidth < 1280);
+    // v1.218.0 (the production walk's 9): on a short or narrow window the list
+    // starts folded whatever was remembered, so the transcript is in view;
+    // Show opens it for the page. A tall window keeps the remembered choice.
+    var short = window.innerHeight < 900 || window.innerWidth < 1280;
+    var folded = short ? true : (remembered ? remembered === "folded" : false);
     var showFold = function () {
       caseRail.classList.toggle("folded", folded);
       caseFold.setAttribute("aria-expanded", folded ? "false" : "true");

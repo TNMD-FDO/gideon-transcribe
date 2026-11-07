@@ -283,7 +283,11 @@ def test_the_small_placement_items_of_the_walk():
     assert 'getElementById("case-filter")' in script and "row.hidden" in script
     for name in ("case.html", "recordings.html"):
         page = (APP / "templates" / name).read_text(encoding="utf-8")
-        assert 'class="plain"><b>{{ recording.title }}</b></a>' in page, name
+        # The bold title inside its plain link; on the case page the chevron
+        # sits inside the link too (v1.218.0), so the pin stops at the title.
+        assert (
+            'class="plain">' in page and "<b>{{ recording.title }}</b></a>" in page
+        ), name
     assert ".tbl tr.pick a.plain { color: inherit;" in css
     viewer = (APP / "templates" / "viewer.html").read_text(encoding="utf-8")
     assert '<span class="cast-tools">' in viewer

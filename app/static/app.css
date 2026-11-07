@@ -4654,3 +4654,30 @@ details.menu .menu-body label.small { min-width: 0; max-width: 100%; }
 .quota-raise-form .form label { display: flex; gap: 4px; align-items: center; min-width: 0; max-width: 100%; flex-wrap: wrap; }
 .quota-raise-form .form input[type=text] { width: 100%; min-width: 0; flex: 1 1 6rem; }
 .quota-raise-form .form button { max-width: 100%; white-space: normal; }
+
+/* The ultrawide measure (v1.218.0; the drawing ultrawide-measure.html of
+   2026-11-06, figures 3, 4 and 6 at the maintainer's word, with 5, 6 and 9
+   riding): the production walk's findings 4, 19, 3, 5, 6 and 9. */
+/* 4. On a screen of 1800 and more the Recordings table is as wide as its
+   rows and no wider: every column takes its content, the title column grows
+   with the longest title up to its 36rem, and Open sits right after Added
+   instead of at the far edge of the screen. */
+@media (min-width: 1800px) { .case-page #recordings { width: auto; } }
+/* 19. On a screen of 1600 and more a search hit's words and a line on the
+   Speakers page keep a measure of 90 characters, left-aligned; the time and
+   the name keep their columns. */
+@media (min-width: 1600px) {
+  .search-hits .hit-words { max-width: 90ch; }
+  .sg-ctx-line { grid-template-columns: 44px minmax(0, max-content) minmax(0, 90ch); }
+}
+/* 3. Below 1600 the open drawer never docks: it floats over the page's right
+   edge as the window it already is (420 px), and the page keeps its width
+   underneath; from 1600 it docks as before (v1.112.0). */
+@media (min-width: 1280px) and (max-width: 1599px) { body.gideon-open .shell > main { padding-right: 0; } }
+/* 5. The chevron sits inside the title's link, so a long title wraps after
+   it instead of dropping whole to the line below. (The template change.) */
+.case-page #recordings td.name .chev { margin-right: 2px; }
+/* 6. The Vision column keeps a floor of 7rem and its pill one line, so a
+   video's row is never three lines tall for the pill alone. */
+.case-page #recordings td.prepared { min-width: 7rem; }
+.case-page #recordings td.prepared .pill { white-space: nowrap; }

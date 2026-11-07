@@ -17,6 +17,40 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.218.0, 2026-11-06
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The ultrawide measure. The production walk's three findings that wanted a
+drawing before a build (4, 19 and 3) were drawn as seven figures, and the
+maintainer took the drawing's pick, with three small findings riding along
+(5, 6 and 9). Each is a rule or two in the stylesheet, a line in a template
+or a script, numbered as the findings page numbers them and pinned by a
+test.
+
+On a screen of 1800 and more the Recordings table is as wide as its rows
+and no wider: every column takes its content, the title column grows with
+the longest title up to its 36rem, and Open sits right after Added instead
+of at the far edge of the screen (4). On a screen of 1600 and more a
+search hit's words and a line on the Speakers page keep a measure of 90
+characters, left-aligned, with the time and the name in their columns
+(19). Below 1600 the open Ask Gideon drawer never docks: it floats over the
+page's right edge as the window it already is, and the page keeps its
+width underneath; from 1600 it docks as before (3).
+
+Riding along: the chevron sits inside a recording's title link, so a long
+title wraps after it instead of dropping whole to the line below (5); the
+Vision column keeps a floor of 7rem and its pill one line (6); and on a
+window under 900 px tall the recording page's list of the case's
+recordings starts folded whatever was remembered, so the transcript is in
+view, with Show opening it for the page (9).
+
+The drawing lives at `.claude/tools/preview/ultrawide-measure.html` on the
+maintainer's machine, beside the earlier ones.
+
 ## v1.217.0, 2026-11-06
 
 ```
