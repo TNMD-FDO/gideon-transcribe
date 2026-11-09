@@ -1,7 +1,7 @@
 """The three columns from 2200 wide (Phase 13 chapter 2, release 4,
 v1.224.0; the drawing phase-13-recording-page.html, figure 4): the case
 column at the left, the words in the middle, the stage at the right with
-its grip on the left edge, and the Map tab beside the Transcript."""
+its grip on the left edge."""
 
 from __future__ import annotations
 
@@ -83,11 +83,9 @@ def test_the_rules_the_scripts_and_the_grip_hold():
     assert "@media (min-width: 2200px) {\n  .desk.in-case:not(.sound) {" in CSS
     assert '"case body stage";' in CSS and '"case body";' in CSS
     assert ".desk.in-case:not(.sound) .stagegrip { right: auto; left: -5px; }" in CSS
-    two = ".panels.two { display: grid; grid-template-columns: minmax(0, 1fr)"
-    assert two in CSS
-    assert 'var THREE_COLUMNS = window.matchMedia("(min-width: 2200px)");' in VIEWER
-    assert 'var beside = which === "map" && THREE_COLUMNS.matches' in VIEWER
-    assert 'panels.classList.toggle("two", beside);' in VIEWER
+    # The map beside the words of v1.224.0 went with v1.225.0 (the map in the
+    # stage); nothing of the two-panel work area is left.
+    assert ".panels.two" not in CSS and "THREE_COLUMNS" not in VIEWER
     assert "function momentHref(link)" in VIEWER
     assert ".case-column-list a[data-start]" in VIEWER
     assert "(onTheRight ? -1 : 1) * (event.clientX - stageFromX)" in VIEWER

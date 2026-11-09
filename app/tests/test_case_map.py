@@ -501,7 +501,8 @@ def test_the_list_ticks_cameras_and_remembers_them_per_person_per_case():
     script = static("map.js")
     assert "data-tick='" in script and 'id="map-tick-all"' in script.replace("'", '"')
     assert 'remember("map-hidden-" + CASE' in script
-    assert "function shown(cam) { return CLOCKED || !S.hidden[cam.id]; }" in script
+    # INC alone since v1.225.0: the recording page ticks its own others.
+    assert "function shown(cam) { return INC || !S.hidden[cam.id]; }" in script
     # The strip, the events and Fit shown follow the ticks; the clock's span does not.
     assert "var range = span(), cams = laneCams();" in script
     assert "shownCams().forEach(function (cam) {" in script

@@ -2251,8 +2251,6 @@
   }
 
   var panels = document.getElementById("panels");
-  // The three columns (v1.224.0): from 2200 wide, in a case.
-  var THREE_COLUMNS = window.matchMedia("(min-width: 2200px)");
 
   function rememberTab(what) {
     try {
@@ -2263,23 +2261,17 @@
   function openTab(which, keep) {
     if (!panels) { return; }
     if (!document.querySelector('.tab[data-panel="' + which + '"]')) { which = "transcript"; }
-    // From 2200 wide (v1.224.0, the three columns) the Map tab opens beside
-    // the Transcript instead of replacing it, as the incident page's two
-    // panels do; the words stay in view against the map.
-    var beside = which === "map" && THREE_COLUMNS.matches && !!panels.querySelector('.panel[data-panel="transcript"]');
     Array.prototype.forEach.call(
       panels.querySelectorAll(".panel"),
-      function (panel) { panel.hidden = !(panel.dataset.panel === which || (beside && panel.dataset.panel === "transcript")); }
+      function (panel) { panel.hidden = panel.dataset.panel !== which; }
     );
-    panels.classList.toggle("two", beside);
     panels.dataset.open = which;
     Array.prototype.forEach.call(
       document.querySelectorAll(".tab"),
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
-    // The Map tab stays on the page (v1.223.0): it follows this page's player.
-    if (openWindowButton) { openWindowButton.hidden = which === "transcript" || which === "map"; }
+    if (openWindowButton) { openWindowButton.hidden = which === "transcript"; }
     // `keep` is for restoring what was already chosen, which is not itself a
     // choice and must not overwrite one.
     if (!keep) { rememberTab(which); }
@@ -2288,10 +2280,6 @@
   window.VIEWER.openTab = openTab;
   // The name the clip tool and the assistant knew it by.
   window.VIEWER.openSheet = openTab;
-  // Crossing 2200 with the Map tab open: the two panels join or part.
-  if (THREE_COLUMNS.addEventListener) {
-    THREE_COLUMNS.addEventListener("change", function () { if (panels && panels.dataset.open === "map") { openTab("map", true); } });
-  }
 
   var openWindowButton = document.getElementById("open-window");
   Array.prototype.forEach.call(

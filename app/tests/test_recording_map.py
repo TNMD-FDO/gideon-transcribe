@@ -137,13 +137,15 @@ def test_the_page_carries_the_tab_the_panel_and_the_host(
     around = a_recording(person, a_case, "BWC-around")
     signed_in(client, person)
     page = client.get(f"/recording/{own.pk}").content.decode()
-    assert 'data-panel="map"' in page and 'id="rec-map-panel" data-shape="own"' in page
+    # The map in the stage (v1.225.0): no Map tab; the stage's map and switch.
+    assert 'data-panel="map"' not in page
+    assert 'id="stage-map" data-shape="own"' in page and 'id="stage-switch"' in page
     assert (
         'data-clock-start="51600.0" data-clock-date="2025-11-06" data-own="1"' in page
     )
     assert 'data-clock="recording"' in page and 'data-day="2025-11-06"' in page
     assert f'data-recording="{own.pk}"' in page
-    assert 'id="said-list"' in page and 'id="rec-map-cap"' in page
+    assert 'id="map-now"' in page and "said-list" not in page
     assert "recording-map.js" in page and "map.js" in page
     assert 'class="pill small tab-mark"' not in page
     # The around shape: the mark on the tab and the notice above the map.
@@ -161,7 +163,7 @@ def test_no_tab_without_a_map_and_the_details_offer(person, a_case, client, maps
     call = a_recording(person, a_case, "Call", picture=False)
     signed_in(client, person)
     page = client.get(f"/recording/{alone.pk}").content.decode()
-    assert 'data-panel="map"' not in page and "rec-map-panel" not in page
+    assert "stage-map" not in page and 'id="stage-switch"' not in page
     # The watcher still runs, so a file that lands brings the tab.
     assert 'id="recording-map-script"' in page and 'data-shape=""' in page
     assert client.get(f"/recording/{alone.pk}/map-shape").json() == {"shape": ""}
@@ -169,7 +171,7 @@ def test_no_tab_without_a_map_and_the_details_offer(person, a_case, client, maps
     assert told["words"] == "none yet · not on the case's clock"
     assert told["url"] == f"/case/{a_case.pk}?tab=map"
     page = client.get(f"/recording/{call.pk}").content.decode()
-    assert 'data-panel="map"' not in page
+    assert "stage-map" not in page
     assert client.get(f"/recording/{call.pk}/details").json()["camera_file"] == {}
 
 
@@ -200,24 +202,28 @@ def test_the_scripts_and_the_stylesheet_hold_the_pieces():
     assert "if (REC) { recStart(); }" in MAP and "if (REC) { recTick(m); }" in MAP
     assert "function goToCamera(cam)" in MAP and "window.CaseMap = {" in MAP
     assert "data-act='here'" in MAP
-    # recording-map.js: the clock, the list, the card, the watcher.
+    assert "function recHidden()" in MAP and 'remember("map-rec-others-" + CASE' in MAP
+    assert "data-other='" in MAP and 'case "others-all"' in MAP
+    # recording-map.js: the clock, the switch, the card, the watcher.
     assert "window.RecordingClock = {" in REC
     assert "start + player.currentTime" in REC and "lineIndex: hereIndex" in REC
-    assert 'document.getElementById("said-list")' in REC
+    assert 'document.getElementById("stage-switch")' in REC
+    assert 'window.localStorage.setItem("stage-mode", mode)' in REC
     assert 'document.getElementById("rec-map-waiting")' in REC
     assert "script.dataset.shapeUrl" in REC and "}, 30000);" in REC
     # The host include takes the recording and the day from the page.
     assert "{% if map_recording %}{{ map_recording }}" in HOST
     assert "{% if map_day %}{{ map_day }}" in HOST
     # viewer.js: the tab stays on the page, the timeline's ticks, the row.
-    assert 'which === "transcript" || which === "map"' in VIEWER
     assert "height - 3, 1, 3);" in VIEWER
     assert "function drawCameraFile(told)" in VIEWER
     for rule in (
-        ".panels .panel.rec-map-panel { padding: 0; display: flex;",
-        ".rec-map { display: grid; grid-template-columns: minmax(0, 1fr) 320px;",
-        ".said-row.nofix .pip { border-color: var(--muted); border-style: dashed; }",
+        ".desk:not(.sound) .stage-map { display: flex; flex-direction: column;",
+        ".stage-map .map-foot { position: absolute; top: 0; left: 0; right: 0;",
+        '.stage[data-mode="picture"] .stage-map { display: none; }',
+        '.stage[data-mode="map"] .thumb { display: none; }',
+        ".map-now { position: absolute; left: 8px; right: 8px; bottom: 44px;",
         ".rec-map-waiting { display: flex;",
-        ".tabbar .tab .tab-mark {",
+        ".tab-mark { height: 16px;",
     ):
         assert rule in CSS, rule

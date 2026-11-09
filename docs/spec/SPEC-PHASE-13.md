@@ -147,7 +147,37 @@ the tab bar's end. The pages say "the case's recordings", never siblings.
   after this one first (Phase 9 chapter 3's rule), with Open; absent when
   there is none.
 
-### Release 3: the Map tab (v1.223.0)
+### Amended by v1.225.0: the map in the stage
+
+On 2026-11-09, with the four releases live, the maintainer found the Map
+tab's layout unnatural, wanted the whole transcript tracking with the
+dots (not a seven-line list), and wanted other recordings on the map only
+when chosen. Three directions were drawn in
+`docs/spec/mockups/recording-map-desk.html` and Direction A taken:
+
+- **The map stands in the stage,** under the picture and the transport,
+  following the player as release 3 had it; the Transcript keeps its whole
+  column, untouched, and its lines are the dots: a line pressed moves the
+  marker and the filled pip, a pip pressed scrolls the transcript to its
+  line and plays from it. The Map tab, its panel, the Said here list and
+  the map-beside-the-words of release 4 are gone.
+- **A switch in the transport,** Picture · Map · Both, Both to start where
+  there is a map, remembered in the browser; popping the picture out leaves
+  the stage to the map. The shape marks (around, file waiting) stand with
+  the switch; the waiting file's card and the around notice above the map.
+- **One slim bar on the map's top edge:** This camera (lit; a press centres
+  on it and follows it again), Others (the other cameras of the day, none
+  drawn to start; a tick draws one, grey, with its distance from this
+  camera at the moment; All and None; remembered for the case, apart from
+  the case Map tab's own ticks), then the trails, the events and More (Fit
+  all, Tidy names, Save a picture). On a camera with no file of its own
+  (the around shape) Others starts with every camera chosen.
+- **The Now line** stands on the map's foot with the moment and the time
+  of day.
+- The map is not drawn under 1280 wide, where the stage is not a column.
+  Release 3's four shapes, its pips and its shape watcher are unchanged.
+
+### Release 3: the Map tab (v1.223.0, as first built)
 
 - **The map, following the player.** The case's map script (Phase 12
   chapter 1) draws into a host on the recording page in a recording mode

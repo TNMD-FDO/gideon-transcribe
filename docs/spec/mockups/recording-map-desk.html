@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The map, cleaned up</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --ok: #2f7d4f; --ok-soft: #e4f2e9; --warn: #9a5b06; --warn-soft: #fbefd9;
+  --danger: #b3261e; --now: #ffe58a; --well: #171b21;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+a { color: var(--accent); text-decoration: none; }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p { margin: 6px 0; color: var(--muted); max-width: 95ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ol, .brief ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 3px; }
+.fig { margin-top: 44px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin: 0 0 12px; color: var(--muted); max-width: 95ch; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.frame .at { position: absolute; top: 8px; right: 10px; font-size: var(--t-label); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; z-index: 5; }
+.callout { position: absolute; font-size: 12px; color: var(--warn); background: var(--surface); border: 1px solid var(--warn); border-radius: 3px; padding: 1px 6px; z-index: 6; white-space: nowrap; }
+.screen { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); }
+.screen .page { transform-origin: 0 0; display: flex; background: var(--bg); }
+.screen.w1366 { height: calc(647px * 0.8); } .screen.w1366 .page { width: 1366px; height: 647px; transform: scale(0.8); }
+.screen.w2560 { height: calc(1219px * 0.44); } .screen.w2560 .page { width: 2560px; height: 1219px; transform: scale(0.44); }
+.rail { width: 148px; flex: none; background: var(--surface); border-right: 1px solid var(--line); padding: 14px 10px; box-sizing: border-box; font-size: var(--t-small); }
+.rail .it { padding: 6px 8px; border-radius: var(--radius); color: var(--muted); } .rail .it.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.main { flex: 1 1 auto; min-width: 0; padding: 10px 16px 0; box-sizing: border-box; display: flex; flex-direction: column; }
+.crumbs { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.casetabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.casetabs span { padding: 6px 10px; color: var(--muted); font-size: var(--t-small); white-space: nowrap; } .casetabs span.on { color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; }
+.btn { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: var(--t-small); white-space: nowrap; box-sizing: border-box; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+.btn.tiny { height: 22px; padding: 0 7px; font-size: var(--t-label); }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: var(--t-label); white-space: nowrap; }
+.pill.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.head { display: flex; align-items: center; gap: 10px; margin: 4px 0 6px; min-width: 0; }
+.head h1 { font-size: 19px; margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .acts { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; }
+.search { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--muted); font-size: var(--t-small); width: 180px; box-sizing: border-box; }
+.walker { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); height: 26px; flex: none; font-size: var(--t-small); }
+.walker span { padding: 0 8px; display: inline-flex; align-items: center; height: 100%; }
+.walker span.arrow { border-right: 1px solid var(--line); color: var(--accent); font-size: 15px; width: 26px; padding: 0; justify-content: center; }
+.walker span.arrow.last { border-right: 0; border-left: 1px solid var(--line); }
+.timeline { height: 40px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); position: relative; margin: 4px 0 8px; overflow: hidden; }
+.timeline .wave { position: absolute; inset: 8px 0; background: repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 5px); opacity: .9; mask-image: linear-gradient(180deg, transparent, #000 40%, #000 60%, transparent); }
+.timeline .head-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+.body { display: grid; gap: 12px; flex: 1 1 auto; min-height: 0; }
+.body.desk { grid-template-columns: 400px minmax(0, 1fr); }
+.body.three { grid-template-columns: 300px minmax(0, 1fr) 760px; }
+.stage { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.video { background: var(--well); border-radius: var(--radius); aspect-ratio: 16 / 9; position: relative; flex: none; }
+.video.small { aspect-ratio: 16 / 7; }
+.video .popout { position: absolute; top: 6px; right: 6px; font-size: var(--t-label); color: #fff; background: rgba(0,0,0,.55); border-radius: 3px; padding: 1px 6px; }
+.transport { display: flex; gap: 6px; align-items: center; font-size: var(--t-small); color: var(--muted); flex-wrap: wrap; flex: none; }
+.transport .clock { font-family: var(--mono); color: var(--text); }
+.now { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: var(--t-small); flex: none; }
+.now .lbl { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.now .who { color: #b8521a; font-weight: 600; }
+.caselist { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: var(--t-small); overflow: hidden; }
+.caselist .h { padding: 6px 10px; background: var(--surface-2); display: flex; justify-content: space-between; color: var(--muted); }
+.caselist .r { padding: 6px 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
+.caselist .r.here { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+.caselist .r b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.caselist .r .muted { flex: none; }
+.caselist .r.not b { color: var(--muted); font-weight: 400; }
+.work { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.tabbar { display: flex; gap: 2px; border-bottom: 1px solid var(--line); background: var(--surface-2); padding: 0 6px; align-items: center; flex: none; }
+.tabbar .tab { padding: 8px 12px; color: var(--muted); font-size: var(--t-small); } .tabbar .tab.on { color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; background: var(--surface); }
+.tabbar .grow { flex: 1; }
+.tabbar .follow { font-size: var(--t-label); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.speakers { display: flex; gap: 6px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: var(--t-small); flex: none; }
+.speakers .lbl { color: var(--muted); font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; }
+.speakers .chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; font-size: var(--t-label); }
+.speakers .chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.lines { padding: 6px 12px 0; overflow: hidden; flex: 1 1 auto; min-height: 0; }
+.seg { display: grid; grid-template-columns: 52px 150px minmax(0, 1fr); gap: 0 12px; padding: 6px 8px 6px 10px; border-left: 3px solid var(--line); margin-bottom: 4px; font-size: var(--t-small); align-items: baseline; }
+.seg.tight { grid-template-columns: 44px minmax(0, 1fr); }
+.seg.tight .who { grid-column: 2; text-align: left; font-size: var(--t-label); }
+.seg.tight .w { grid-column: 2; }
+.seg .t { font-family: var(--mono); color: var(--muted); }
+.seg .who { font-weight: 600; text-align: right; }
+.seg.a { border-left-color: var(--accent); } .seg.a .who { color: var(--accent); }
+.seg.g { border-left-color: var(--ok); } .seg.g .who { color: var(--ok); }
+.seg.o { border-left-color: #b8521a; } .seg.o .who { color: #b8521a; }
+.seg.here { background: var(--now); }
+.seg .pipdot { grid-column: 1; grid-row: 1 / span 2; justify-self: end; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); background: #fff; align-self: start; margin-top: 3px; box-sizing: border-box; }
+.seg.here .pipdot { background: var(--accent); }
+.seg.nofix .pipdot { border-color: var(--muted); border-style: dashed; }
+/* The map. */
+.map { position: relative; background: #e7ebe4; overflow: hidden; }
+.map .road { position: absolute; background: #fff; border: 1px solid #d5d9d2; }
+.map .block { position: absolute; background: #dfe4da; border-radius: 2px; }
+.map svg.path { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.map .scale { position: absolute; left: 10px; bottom: 8px; font-size: 10px; color: var(--muted); background: rgba(255,255,255,.8); padding: 1px 6px; border-radius: 3px; }
+.map .zoom { position: absolute; right: 8px; top: 40px; width: 24px; height: 48px; background: #fff; border: 1px solid var(--line); border-radius: 4px; }
+.mapbar { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.6)); font-size: var(--t-label); z-index: 2; }
+.mapbar .grow { flex: 1; }
+.mapbar .btn.tiny { background: rgba(255,255,255,.95); }
+.nowcap { position: absolute; left: 8px; right: 8px; bottom: 8px; background: rgba(255,255,255,.95); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 10px; font-size: var(--t-small); display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: baseline; z-index: 2; }
+.nowcap .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.nowcap .t { font-family: var(--mono); color: var(--muted); } .nowcap .who { color: #b8521a; font-weight: 600; }
+.oldbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border-top: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); background: var(--surface); }
+.oldbar .btn.tiny { height: 20px; }
+.seg3 { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.seg3 span { padding: 2px 8px; font-size: var(--t-label); color: var(--muted); } .seg3 span.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.menu-draw { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 6px; font-size: var(--t-small); z-index: 7; width: 300px; }
+.menu-draw .r { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; }
+.menu-draw .r.dim { color: var(--muted); }
+.menu-draw .r i.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.menu-draw .r .m { margin-left: auto; color: var(--muted); font-size: var(--t-label); }
+.menu-draw .sep { border-top: 1px solid var(--line); margin: 4px 0; }
+.menu-draw .foot { padding: 4px 8px; color: var(--muted); font-size: var(--t-label); display: flex; gap: 10px; }
+.tick { width: 13px; height: 13px; border: 1px solid var(--muted); border-radius: 3px; display: inline-block; background: #fff; }
+.tick.on { background: var(--accent); border-color: var(--accent); }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; padding: 14px 18px; font-size: var(--t-small); color: var(--muted); }
+.keys b { color: var(--text); display: block; margin-bottom: 2px; }
+.pick { margin-top: 44px; padding: 14px 18px; border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+.pick p { margin: 6px 0; max-width: 100ch; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+</style>
+<div class="wrap">
+  <div class="intro">
+    <h1>The map, cleaned up</h1>
+    <p>The ask (2026-11-09, after v1.224.1): the Map tab shows up now, but the layout does not feel natural; the whole transcript should track in a panel along with the dots on the map, so any line is a press away (the Said here list of seven lines is not that); and other recordings should be on the map only when chosen.</p>
+    <div class="brief">
+      <b>What is on the page today (figure 1) and why it does not sit right</b>
+      <ol>
+        <li>The Map tab replaces the Transcript. The map gets a <i>Said here</i> list of seven lines beside it, a second, lesser transcript: no notes, no clips, no edits, no scrolling to a line of choice.</li>
+        <li>The map's bar is the case Map tab's bar laid under the map: a count, This camera, Markers | Trails | Paths, six event ticks, Fit all, Tidy names, Save a picture. Three rows of controls under a map that is itself only 300 px tall on a laptop.</li>
+        <li>Every camera of the day is drawn from the start. On a stop with five cameras the reader's own camera is one dot among five, and the others' names and trails crowd it.</li>
+        <li>The Now caption is a fourth row under the bar, far from the map it describes.</li>
+      </ol>
+    </div>
+    <p>Two directions follow for where the map lives, then the pieces they share: this camera alone with an Others menu, one slim bar on the map, the Now line on the map, and the whole transcript tracking with the dots. The words are made up.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 1. Today, at 1366 by 647, the Map tab pressed</h2>
+    <div class="frame"><span class="at">1366 by 647, as it is</span>
+      <div class="screen w1366"><div class="page">
+        <div class="rail"><div class="it">Home</div><div class="it">Bulk transcription</div><div class="it on">Cases</div><div class="it">My recordings</div><div class="it">Clips</div><div class="it">Voices</div></div>
+        <div class="main">
+          <div class="crumbs">Cases · Harbour Street stop</div>
+          <div class="casetabs"><span>Recordings 8</span><span>Search</span><span>Notes 19</span><span>Documents 5</span><span>Incidents 6</span><span>Map 6</span><span>Clips 4</span><span>Speakers 5</span><span>Details</span></div>
+          <div class="head"><span class="walker"><span class="arrow">‹</span><span>6 of 8 ▾</span><span class="arrow last">›</span></span><h1>Officer3_202511062025_BWC-3-0 Harbour Street car park…</h1><span class="acts"><span class="search">⌕ Find in transcript</span><span class="btn">All cameras</span><span class="btn primary">New clip</span><span class="btn">Export ⌄</span><span class="btn">More ⌄</span></span></div>
+          <div class="timeline"><div class="wave"></div><div class="head-mark" style="left: 16%"></div></div>
+          <div class="body desk">
+            <div class="stage"><div class="video"><span class="popout">Pop out</span></div><div class="transport"><span class="btn">Play</span><span class="btn">↺ 3s</span><span class="btn">−5s</span><span class="btn">+5s</span><span class="clock">1:09 / 13:00</span></div><div class="now"><span class="lbl">Now</span><span class="mono muted">1:09</span><span><b class="who">Morgan Whitfield</b> It's in the glove box. Can I reach for it?</span></div></div>
+            <div class="work">
+              <div class="tabbar"><span class="tab">Transcript</span><span class="tab on">Map</span><span class="tab">Clips</span><span class="tab">Summary</span><span class="tab">Details</span><span class="grow"></span><span class="follow">Following <span class="btn tiny ghost">pause</span></span></div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 260px; flex: 1 1 auto; min-height: 0">
+                <div style="display: flex; flex-direction: column; min-height: 0">
+                  <div class="map" style="flex: 1 1 auto; min-height: 0">
+                    <div class="block" style="left: 6%; top: 10%; width: 30%; height: 26%"></div><div class="block" style="left: 50%; top: 8%; width: 44%; height: 30%"></div><div class="block" style="left: 6%; top: 56%; width: 36%; height: 36%"></div>
+                    <div class="road" style="left: 0; top: 42%; width: 100%; height: 12%"></div><div class="road" style="left: 42%; top: 0; width: 10%; height: 100%"></div>
+                    <svg class="path" viewBox="0 0 400 225" preserveAspectRatio="none">
+                      <polyline points="20,110 120,108 180,105 220,110 262,122" fill="none" stroke="#0f5e86" stroke-width="3"/><circle cx="262" cy="122" r="6" fill="#0f5e86" stroke="#fff" stroke-width="2"/>
+                      <polyline points="300,60 310,120 330,170" fill="none" stroke="#c2410c" stroke-width="2"/><circle cx="310" cy="120" r="5" fill="#c2410c" stroke="#fff" stroke-width="2"/>
+                      <polyline points="60,160 140,170 200,190" fill="none" stroke="#2e7d32" stroke-width="2"/><circle cx="140" cy="170" r="5" fill="#2e7d32" stroke="#fff" stroke-width="2"/>
+                      <circle cx="350" cy="40" r="5" fill="#8e24aa" stroke="#fff" stroke-width="2"/><circle cx="90" cy="60" r="5" fill="#00838f" stroke="#fff" stroke-width="2"/>
+                      <text x="270" y="140" font-family="IBM Plex Sans" font-size="10" fill="#0f5e86" font-weight="600">BWC-3-0</text><text x="318" y="112" font-family="IBM Plex Sans" font-size="10" fill="#c2410c">Sam Roe · 12 mph</text><text x="148" y="166" font-family="IBM Plex Sans" font-size="10" fill="#2e7d32">BWC-1-0</text><text x="358" y="44" font-family="IBM Plex Sans" font-size="10" fill="#8e24aa">BWC-2-0</text><text x="98" y="64" font-family="IBM Plex Sans" font-size="10" fill="#00838f">BWC-5-0</text>
+                    </svg>
+                    <span class="scale">50 m</span>
+                  </div>
+                  <div class="oldbar"><span>5 of 5 in view</span><span class="btn tiny">This camera</span><span class="seg3"><span>Markers</span><span class="on">Trails</span><span>Paths</span></span><span>☑ on and off ☑ lights ☑ siren ☑ mic ☐ bookmarks ☑ notes</span><span class="btn tiny">Fit all</span><span class="btn tiny ghost">Tidy names</span><span class="btn tiny">Save a picture</span></div>
+                  <div class="oldbar" style="border-top: 1px solid var(--line)"><span class="lbl" style="text-transform: uppercase; letter-spacing: .06em">Now</span><span class="mono">1:09 · 14:21:09</span><b style="color: #b8521a">Morgan Whitfield</b> It's in the glove box. Can I reach for it?</div>
+                </div>
+                <div style="border-left: 1px solid var(--line); font-size: var(--t-small); display: flex; flex-direction: column">
+                  <div style="padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between"><span>Said here</span><span style="text-transform: none; letter-spacing: 0; color: var(--accent)">whole transcript</span></div>
+                  <div class="lines" style="padding: 6px 8px">
+                    <div class="seg g tight"><span class="pipdot"></span><span class="who">Speaker 2 · 0:41</span><span class="w">Dale, can you get his licence while I run the plate?</span></div>
+                    <div class="seg g tight"><span class="pipdot"></span><span class="who">Speaker 2 · 0:55</span><span class="w">Licence and insurance, please.</span></div>
+                    <div class="seg o tight here"><span class="pipdot"></span><span class="who">Morgan Whitfield · 1:09</span><span class="w">It's in the glove box. Can I reach for it?</span></div>
+                    <div class="seg g tight"><span class="pipdot"></span><span class="who">Speaker 2 · 1:23</span><span class="w">Go ahead, slowly.</span></div>
+                    <div class="seg a tight"><span class="pipdot"></span><span class="who">Det. Sgt. Okonkwo-F… · 1:37</span><span class="w">Plate comes back clean. Registered to a Morgan Whitfield.</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <span class="callout" style="left: 470px; top: 330px">three rows of controls under a 300 px map</span>
+      <span class="callout" style="left: 820px; top: 180px">seven lines, not the transcript</span>
+      <span class="callout" style="left: 500px; top: 230px">five cameras from the start</span>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 2. Direction A: the map joins the picture in the stage; the Transcript keeps its whole column</h2>
+    <p class="why">Pressing Map no longer swaps the words away. The map takes its place in the stage under the picture and the transport, the Now line becomes the map's own caption, and the Transcript tab stays where it is with every line, note, clip and edit it has: it tracks the sound as it always has, and now its lines are the dots. The reader presses any line to go there; the marker and the filled pip move with it. On a laptop the stage is 400 px wide: the picture, then the transport, then a 300 px map; on the ultrawide the stage is 740 px and the map tall. The Map tab becomes a switch in the stage (Picture · Map · Both) rather than a tab that hides the words; the picture can also pop out as today, which leaves the whole stage to the map.</p>
+    <div class="frame"><span class="at">1366 by 647, Direction A, Both</span>
+      <div class="screen w1366"><div class="page">
+        <div class="rail"><div class="it">Home</div><div class="it">Bulk transcription</div><div class="it on">Cases</div><div class="it">My recordings</div><div class="it">Clips</div><div class="it">Voices</div></div>
+        <div class="main">
+          <div class="crumbs">Cases · Harbour Street stop</div>
+          <div class="casetabs"><span>Recordings 8</span><span>Search</span><span>Notes 19</span><span>Documents 5</span><span>Incidents 6</span><span>Map 6</span><span>Clips 4</span><span>Speakers 5</span><span>Details</span></div>
+          <div class="head"><span class="walker"><span class="arrow">‹</span><span>6 of 8 ▾</span><span class="arrow last">›</span></span><h1>Officer3_202511062025_BWC-3-0 Harbour Street car park…</h1><span class="acts"><span class="search">⌕ Find in transcript</span><span class="btn">All cameras</span><span class="btn primary">New clip</span><span class="btn">Export ⌄</span><span class="btn">More ⌄</span></span></div>
+          <div class="timeline"><div class="wave"></div><div class="head-mark" style="left: 16%"></div></div>
+          <div class="body desk">
+            <div class="stage">
+              <div class="video small"><span class="popout">Pop out</span></div>
+              <div class="transport"><span class="btn">Play</span><span class="btn">↺ 3s</span><span class="btn">−5s</span><span class="btn">+5s</span><span class="clock">1:09 / 13:00</span><span class="seg3" style="margin-left: auto"><span>Picture</span><span>Map</span><span class="on">Both</span></span></div>
+              <div class="map" style="flex: 1 1 auto; min-height: 200px; border: 1px solid var(--line); border-radius: var(--radius)">
+                <div class="mapbar"><span class="pill on">This camera</span><span class="btn tiny">Others ▾ <span class="muted">0 of 4</span></span><span class="grow"></span><span class="btn tiny">Trails ▾</span><span class="btn tiny">Events ▾</span><span class="btn tiny">⋯</span></div>
+                <div class="block" style="left: 6%; top: 10%; width: 30%; height: 26%"></div><div class="block" style="left: 50%; top: 8%; width: 44%; height: 30%"></div><div class="block" style="left: 6%; top: 56%; width: 36%; height: 36%"></div>
+                <div class="road" style="left: 0; top: 42%; width: 100%; height: 12%"></div><div class="road" style="left: 42%; top: 0; width: 10%; height: 100%"></div>
+                <svg class="path" viewBox="0 0 400 225" preserveAspectRatio="none"><polyline points="20,110 120,108 180,105 220,110 262,122 300,126" fill="none" stroke="#0f5e86" stroke-width="3"/><circle cx="120" cy="108" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="180" cy="105" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="220" cy="110" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="300" cy="126" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="262" cy="122" r="7" fill="#0f5e86" stroke="#fff" stroke-width="2"/></svg>
+                <div class="nowcap"><span class="lbl">Now</span><span class="t">1:09 · 14:21:09</span><span><span class="who">Morgan Whitfield</span> It's in the glove box. Can I reach for it?</span></div>
+                <span class="scale">50 m</span>
+              </div>
+            </div>
+            <div class="work">
+              <div class="tabbar"><span class="tab on">Transcript</span><span class="tab">Clips</span><span class="tab">Summary</span><span class="tab">Details</span><span class="grow"></span><span class="follow">Following <span class="btn tiny ghost">pause</span></span></div>
+              <div class="speakers"><span class="lbl">Speakers (4) ▾</span><span class="chip"><i style="background: var(--accent)"></i> Det. Sgt. Okonkwo-F…</span><span class="chip"><i style="background: #b8521a"></i> Morgan Whitfield</span><span class="chip"><i style="background: var(--ok)"></i> Speaker 2</span></div>
+              <div class="lines">
+                <div class="seg g"><span class="t">0:55</span><span class="who">Speaker 2</span><span>Licence and insurance, please.</span></div>
+                <div class="seg o here"><span class="t">1:09</span><span class="who">Morgan Whitfield</span><span>It's in the glove box. Can I reach for it?</span></div>
+                <div class="seg g"><span class="t">1:23</span><span class="who">Speaker 2</span><span>Go ahead, slowly.</span></div>
+                <div class="seg a"><span class="t">1:37</span><span class="who">Det. Sgt. Okonkwo-F…</span><span>Plate comes back clean. Registered to a Morgan Whitfield.</span></div>
+                <div class="seg o"><span class="t">1:51</span><span class="who">Morgan Whitfield</span><span>That's me. Morgan.</span></div>
+                <div class="seg g"><span class="t">2:05</span><span class="who">Speaker 2</span><span>Morgan, have you had anything to drink tonight?</span></div>
+                <div class="seg o"><span class="t">2:19</span><span class="who">Morgan Whitfield</span><span>Two beers with dinner, about eight o'clock.</span></div>
+                <div class="seg a"><span class="t">2:33</span><span class="who">Det. Sgt. Okonkwo-F…</span><span>Step out of the car for me, please.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <span class="callout" style="left: 150px; top: 452px">this camera alone; Others ▾ adds the rest</span>
+      <span class="callout" style="left: 560px; top: 300px">the whole transcript, tracking; the lines are the dots</span>
+    </div>
+    <div class="frame" style="margin-top: 12px"><span class="at">2560 by 1219, Direction A, the three columns</span>
+      <div class="screen w2560"><div class="page">
+        <div class="rail" style="font-size: 15px; width: 190px"><div class="it">Home</div><div class="it">Bulk transcription</div><div class="it on">Cases</div><div class="it">My recordings</div><div class="it">Clips</div><div class="it">Voices</div></div>
+        <div class="main" style="padding: 14px 24px 0">
+          <div class="crumbs" style="font-size: 13px">Cases · Harbour Street stop</div>
+          <div class="casetabs" style="font-size: 15px"><span>Recordings 8</span><span>Search</span><span>Notes 19</span><span>Documents 5</span><span>Incidents 6</span><span>Map 6</span><span>Clips 4</span><span>Speakers 5</span><span>Details</span></div>
+          <div class="head"><span class="walker" style="height: 32px; font-size: 15px"><span class="arrow">‹</span><span>6 of 8 ▾</span><span class="arrow last">›</span></span><h1 style="font-size: 26px">Officer3_202511062025_BWC-3-0 Harbour Street car park, passenger side, continued after the breath test…</h1><span class="acts"><span class="search" style="height: 32px; width: 240px; font-size: 15px">⌕ Find in transcript</span><span class="btn" style="height: 32px; font-size: 15px">All cameras</span><span class="btn primary" style="height: 32px; font-size: 15px">New clip</span><span class="btn" style="height: 32px; font-size: 15px">Export ⌄</span><span class="btn" style="height: 32px; font-size: 15px">More ⌄</span></span></div>
+          <div class="timeline" style="height: 56px"><div class="wave"></div><div class="head-mark" style="left: 16%"></div></div>
+          <div class="body three" style="font-size: 15px">
+            <div class="caselist" style="font-size: 15px"><div class="h"><span>This case · 8 recordings</span><span>Download all</span></div><div class="r"><b>Officer1_202511062025_BWC-1-0</b><span class="muted">7:02</span></div><div class="r"><b>Officer2_202511062025_BWC-2-0</b><span class="muted">6:48</span></div><div class="r here"><b>Officer3_202511062025_BWC-3-0 Harbour Street…</b><span class="muted">13:00</span></div><div class="r"><b>Unit 9082 in-car, front</b><span class="muted">21:40</span></div><div class="r not"><b>Officer4_202511062025_BWC-4-0</b><span class="muted">in the queue</span></div><div class="r"><b>Call_20251107_0915 Recorded line…</b><span class="muted">12:05</span></div></div>
+            <div class="work">
+              <div class="tabbar" style="font-size: 15px"><span class="tab on" style="font-size: 15px">Transcript</span><span class="tab" style="font-size: 15px">Clips</span><span class="tab" style="font-size: 15px">Summary</span><span class="tab" style="font-size: 15px">Details</span><span class="grow"></span><span class="follow" style="font-size: 13px">Following <span class="btn tiny ghost">pause</span></span></div>
+              <div class="speakers" style="font-size: 15px"><span class="lbl">Speakers</span><span class="chip" style="font-size: 13px"><i style="background: var(--accent)"></i> Det. Sgt. Bartholomew Okonkwo-Fitzwilliam-Castellanos</span><span class="chip" style="font-size: 13px"><i style="background: #b8521a"></i> Morgan Whitfield</span><span class="chip" style="font-size: 13px"><i style="background: var(--ok)"></i> Speaker 2</span><span class="chip" style="font-size: 13px"><i style="background: #7a4fa8"></i> Speaker 4</span></div>
+              <div class="lines" style="font-size: 15px; max-width: 1040px">
+                <div class="seg g" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">0:13</span><span class="who">Speaker 2</span><span>Your tail light's out and you crossed the line twice back there.</span></div>
+                <div class="seg o" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">0:27</span><span class="who">Morgan Whitfield</span><span>I was looking for the turning, that's all.</span></div>
+                <div class="seg a" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">0:41</span><span class="who">Det. Sgt. Okonkwo-Fitzwilliam-Castellanos</span><span>Dale, can you get his licence while I run the plate?</span></div>
+                <div class="seg g" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">0:55</span><span class="who">Speaker 2</span><span>Licence and insurance, please.</span></div>
+                <div class="seg o here" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">1:09</span><span class="who">Morgan Whitfield</span><span>It's in the glove box. Can I reach for it?</span></div>
+                <div class="seg g" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">1:23</span><span class="who">Speaker 2</span><span>Go ahead, slowly.</span></div>
+                <div class="seg a" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">1:37</span><span class="who">Det. Sgt. Okonkwo-Fitzwilliam-Castellanos</span><span>Plate comes back clean. Registered to a Morgan Whitfield.</span></div>
+                <div class="seg o" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">1:51</span><span class="who">Morgan Whitfield</span><span>That's me. Morgan.</span></div>
+                <div class="seg g" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">2:05</span><span class="who">Speaker 2</span><span>Morgan, have you had anything to drink tonight?</span></div>
+                <div class="seg o" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">2:19</span><span class="who">Morgan Whitfield</span><span>Two beers with dinner, about eight o'clock.</span></div>
+                <div class="seg a" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">2:33</span><span class="who">Det. Sgt. Okonkwo-Fitzwilliam-Castellanos</span><span>Step out of the car for me, please.</span></div>
+                <div class="seg o" style="font-size: 15px; grid-template-columns: 60px 220px 1fr"><span class="t">2:47</span><span class="who">Morgan Whitfield</span><span>Is this really necessary?</span></div>
+              </div>
+            </div>
+            <div class="stage">
+              <div class="video small"><span class="popout">Pop out</span></div>
+              <div class="transport" style="font-size: 15px"><span class="btn" style="height: 30px; font-size: 15px">Play</span><span class="btn" style="height: 30px; font-size: 15px">↺ 3s</span><span class="btn" style="height: 30px; font-size: 15px">−5s</span><span class="btn" style="height: 30px; font-size: 15px">+5s</span><span class="clock">1:09 / 13:00</span><span class="seg3" style="margin-left: auto; font-size: 13px"><span style="font-size: 13px">Picture</span><span style="font-size: 13px">Map</span><span class="on" style="font-size: 13px">Both</span></span></div>
+              <div class="map" style="flex: 1 1 auto; min-height: 320px; border: 1px solid var(--line); border-radius: var(--radius)">
+                <div class="mapbar" style="font-size: 13px"><span class="pill on" style="font-size: 13px; height: 24px">This camera</span><span class="btn tiny" style="height: 26px; font-size: 13px">Others ▾ <span class="muted">1 of 4</span></span><span class="grow"></span><span class="btn tiny" style="height: 26px; font-size: 13px">Trails ▾</span><span class="btn tiny" style="height: 26px; font-size: 13px">Events ▾</span><span class="btn tiny" style="height: 26px; font-size: 13px">⋯</span></div>
+                <div class="block" style="left: 6%; top: 10%; width: 30%; height: 26%"></div><div class="block" style="left: 50%; top: 8%; width: 44%; height: 30%"></div><div class="block" style="left: 6%; top: 56%; width: 36%; height: 36%"></div><div class="block" style="left: 56%; top: 60%; width: 38%; height: 32%"></div>
+                <div class="road" style="left: 0; top: 42%; width: 100%; height: 12%"></div><div class="road" style="left: 42%; top: 0; width: 10%; height: 100%"></div>
+                <svg class="path" viewBox="0 0 400 225" preserveAspectRatio="none"><polyline points="20,110 120,108 180,105 220,110 262,122 300,126 340,124" fill="none" stroke="#0f5e86" stroke-width="3"/><circle cx="120" cy="108" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="180" cy="105" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="220" cy="110" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="300" cy="126" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="340" cy="124" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="262" cy="122" r="7" fill="#0f5e86" stroke="#fff" stroke-width="2"/><polyline points="300,60 310,120 330,170" fill="none" stroke="#9a9a9a" stroke-width="2" stroke-dasharray="4 3"/><circle cx="310" cy="120" r="5" fill="#9a9a9a" stroke="#fff" stroke-width="2"/><text x="318" y="112" font-family="IBM Plex Sans" font-size="10" fill="#5b6673">unit 9082 · 30 m</text></svg>
+                <div class="nowcap" style="font-size: 15px"><span class="lbl">Now</span><span class="t">1:09 · 14:21:09</span><span><span class="who">Morgan Whitfield</span> It's in the glove box. Can I reach for it?</span></div>
+                <span class="scale">50 m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <span class="callout" style="left: 760px; top: 300px">one other camera chosen in Others, drawn grey with its distance</span>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 3. Direction B: the Map tab stays, but it stands beside the whole transcript at every width</h2>
+    <p class="why">The Map tab keeps its place in the work area, and what v1.224.0 does from 2200 wide happens at every width: the Transcript panel never leaves. The work area splits, the words on the left in the laptop's compact lines, the map on the right, the Said here list gone. The stage keeps the picture as today. On a laptop the work area is 822 px, so the words get about 380 and the map about 440; narrower words than Direction A, but the map is larger and the picture is untouched. The map's bar, the Others menu and the Now caption are the same as in A.</p>
+    <div class="frame"><span class="at">1366 by 647, Direction B, Map pressed</span>
+      <div class="screen w1366"><div class="page">
+        <div class="rail"><div class="it">Home</div><div class="it">Bulk transcription</div><div class="it on">Cases</div><div class="it">My recordings</div><div class="it">Clips</div><div class="it">Voices</div></div>
+        <div class="main">
+          <div class="crumbs">Cases · Harbour Street stop</div>
+          <div class="casetabs"><span>Recordings 8</span><span>Search</span><span>Notes 19</span><span>Documents 5</span><span>Incidents 6</span><span>Map 6</span><span>Clips 4</span><span>Speakers 5</span><span>Details</span></div>
+          <div class="head"><span class="walker"><span class="arrow">‹</span><span>6 of 8 ▾</span><span class="arrow last">›</span></span><h1>Officer3_202511062025_BWC-3-0 Harbour Street car park…</h1><span class="acts"><span class="search">⌕ Find in transcript</span><span class="btn">All cameras</span><span class="btn primary">New clip</span><span class="btn">Export ⌄</span><span class="btn">More ⌄</span></span></div>
+          <div class="timeline"><div class="wave"></div><div class="head-mark" style="left: 16%"></div></div>
+          <div class="body desk">
+            <div class="stage"><div class="video"><span class="popout">Pop out</span></div><div class="transport"><span class="btn">Play</span><span class="btn">↺ 3s</span><span class="btn">−5s</span><span class="btn">+5s</span><span class="clock">1:09 / 13:00</span></div><div class="now"><span class="lbl">Now</span><span class="mono muted">1:09</span><span><b class="who">Morgan Whitfield</b> It's in the glove box. Can I reach for it?</span></div></div>
+            <div class="work">
+              <div class="tabbar"><span class="tab on">Transcript</span><span class="tab on">Map</span><span class="tab">Clips</span><span class="tab">Summary</span><span class="tab">Details</span><span class="grow"></span><span class="follow">Following <span class="btn tiny ghost">pause</span></span></div>
+              <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); flex: 1 1 auto; min-height: 0">
+                <div class="lines" style="padding: 6px 8px; border-right: 1px solid var(--line)">
+                  <div class="seg g tight"><span class="t">0:55</span><span class="who">Speaker 2</span><span class="w">Licence and insurance, please.</span></div>
+                  <div class="seg o tight here"><span class="t">1:09</span><span class="who">Morgan Whitfield</span><span class="w">It's in the glove box. Can I reach for it?</span></div>
+                  <div class="seg g tight"><span class="t">1:23</span><span class="who">Speaker 2</span><span class="w">Go ahead, slowly.</span></div>
+                  <div class="seg a tight"><span class="t">1:37</span><span class="who">Det. Sgt. Okonkwo-F…</span><span class="w">Plate comes back clean. Registered to a Morgan Whitfield.</span></div>
+                  <div class="seg o tight"><span class="t">1:51</span><span class="who">Morgan Whitfield</span><span class="w">That's me. Morgan.</span></div>
+                  <div class="seg g tight"><span class="t">2:05</span><span class="who">Speaker 2</span><span class="w">Morgan, have you had anything to drink tonight?</span></div>
+                  <div class="seg o tight"><span class="t">2:19</span><span class="who">Morgan Whitfield</span><span class="w">Two beers with dinner, about eight o'clock.</span></div>
+                  <div class="seg a tight"><span class="t">2:33</span><span class="who">Det. Sgt. Okonkwo-F…</span><span class="w">Step out of the car for me, please.</span></div>
+                </div>
+                <div class="map">
+                  <div class="mapbar"><span class="pill on">This camera</span><span class="btn tiny">Others ▾ <span class="muted">0 of 4</span></span><span class="grow"></span><span class="btn tiny">Trails ▾</span><span class="btn tiny">Events ▾</span><span class="btn tiny">⋯</span></div>
+                  <div class="block" style="left: 6%; top: 10%; width: 30%; height: 26%"></div><div class="block" style="left: 50%; top: 8%; width: 44%; height: 30%"></div><div class="block" style="left: 6%; top: 56%; width: 36%; height: 36%"></div><div class="block" style="left: 56%; top: 60%; width: 38%; height: 32%"></div>
+                  <div class="road" style="left: 0; top: 42%; width: 100%; height: 12%"></div><div class="road" style="left: 42%; top: 0; width: 10%; height: 100%"></div>
+                  <svg class="path" viewBox="0 0 400 225" preserveAspectRatio="none"><polyline points="20,110 120,108 180,105 220,110 262,122 300,126 340,124" fill="none" stroke="#0f5e86" stroke-width="3"/><circle cx="120" cy="108" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="180" cy="105" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="220" cy="110" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="300" cy="126" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="340" cy="124" r="3.5" fill="#fff" stroke="#0f5e86" stroke-width="2"/><circle cx="262" cy="122" r="7" fill="#0f5e86" stroke="#fff" stroke-width="2"/></svg>
+                  <div class="nowcap"><span class="lbl">Now</span><span class="t">1:09 · 14:21:09</span><span><span class="who">Morgan Whitfield</span> It's in the glove box. Can I reach for it?</span></div>
+                  <span class="scale">50 m</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <span class="callout" style="left: 620px; top: 118px">Transcript and Map both lit: the words never leave</span>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 4. One bar on the map, and Others</h2>
+    <p class="why">The same in both directions. The controls go onto the map's top edge as one slim bar, and the Now line onto its foot, so the map is the whole pane. Left to right: <b>This camera</b> (lit; a press centres on it and follows it again), <b>Others ▾</b> (the other cameras of the day, none chosen to start; a tick draws one, grey, with its distance from this camera; All and None; the choice remembered for the case), then <b>Trails ▾</b> (Markers only · Trails · Whole paths), <b>Events ▾</b> (the six ticks that were a row of their own), and <b>⋯</b> (Fit, Tidy names, Save a picture, the readings). The camera's events still draw as pips of their own kind when ticked. On a recording with no file of its own (the "around" shape) Others starts with every camera chosen, since that is what the map is for there, and the bar says so.</p>
+    <div class="frame" style="height: 300px; background: var(--surface)">
+      <div style="padding: 16px 18px"><div class="map" style="height: 60px; border: 1px solid var(--line); border-radius: var(--radius)"><div class="mapbar"><span class="pill on">This camera</span><span class="btn tiny on">Others ▾ <span>1 of 4</span></span><span class="grow"></span><span class="btn tiny">Trails ▾</span><span class="btn tiny">Events ▾</span><span class="btn tiny">⋯</span></div></div></div>
+      <div class="menu-draw" style="left: 120px; top: 56px">
+        <div class="r dim" style="font-size: var(--t-label); text-transform: uppercase; letter-spacing: .06em">Other cameras this day</div>
+        <div class="r"><span class="tick on"></span><i class="dot" style="background: #c2410c"></i> Sam Roe, unit 9082 <span class="m">in-car · 30 m away</span></div>
+        <div class="r"><span class="tick"></span><i class="dot" style="background: #2e7d32"></i> BWC-1-0 <span class="m">body camera · 410 m</span></div>
+        <div class="r"><span class="tick"></span><i class="dot" style="background: #8e24aa"></i> BWC-2-0 <span class="m">body camera · 12 m</span></div>
+        <div class="r"><span class="tick"></span><i class="dot" style="background: #00838f"></i> BWC-5-0 <span class="m">body camera · no fix now</span></div>
+        <div class="sep"></div>
+        <div class="foot"><a>All</a><a>None</a><span style="margin-left: auto">remembered for this case</span></div>
+      </div>
+      <span class="callout" style="left: 460px; top: 90px">a chosen camera is a press away: open it at this moment</span>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 5. The lines and the dots, one thing</h2>
+    <p class="why">The transcript's own lines carry the map: every line said where the camera had a fix is a pip on the path; the line being spoken is the filled pip and the lit line; a press on a line seeks the sound, and the marker and the pip move; a press on a pip lights the line and scrolls the transcript to it, with Following paused as any press pauses it and Resume a press away. A hovered pip shows its line; a hovered line shows nothing new, since it is the transcript. A line said with no fix has no pip and nothing else changes for it. The timeline's ticks at the lines' starts stay.</p>
+    <div class="two">
+      <div class="frame" style="background: var(--surface); padding: 10px 12px; font-size: var(--t-small)">
+        <b>A press on a line</b>
+        <ol class="small muted" style="margin: 6px 0 0; padding-left: 18px"><li>the sound seeks there, Following on;</li><li>the line lights as today;</li><li>the marker moves to where the camera was;</li><li>the pip of that line fills, the last one empties;</li><li>the map pans if the marker left the view.</li></ol>
+      </div>
+      <div class="frame" style="background: var(--surface); padding: 10px 12px; font-size: var(--t-small)">
+        <b>A press on a pip</b>
+        <ol class="small muted" style="margin: 6px 0 0; padding-left: 18px"><li>the sound seeks to the line's start;</li><li>the transcript scrolls to the line and lights it;</li><li>the pip fills;</li><li>Following resumes from there.</li></ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="pick">
+    <p><b>My pick:</b> Direction A, the map in the stage with the picture. It answers all three asks at once: the whole transcript tracks because it is the transcript, untouched, in its own column; the layout is natural because everything about the camera (its picture, its transport, its line, its place) is one column and everything said is the other; and the map starts with this camera alone, Others a menu away. It also restores what figure 4 of the first drawing showed for the ultrawide, the picture and the map stacked in the stage. The cost is a smaller map on a laptop (400 by about 300 px) unless the picture is popped out or the switch is set to Map alone; the ultrawide's 740 px stage has room for both. Direction B keeps the larger map at the price of narrower words on a laptop, and still leaves the Map tab as a mode to be in rather than a view that is simply there.</p>
+    <p><b>If A is taken,</b> the Map tab goes (its panel, the Said here list and the map-beside-the-transcript of v1.224.0 with it), the stage gains the switch Picture · Map · Both with Both remembered as the default where there is a map, the map's bar and the Others menu are built as figure 4, and the transcript's lines gain the pips' behaviour of figure 5. The four shapes of the tab become the four shapes of the stage's switch: no switch for a recording without a map, "around" starting with Others all chosen, "file waiting" with the card above the map.</p>
+  </div>
+</div>
+</html>

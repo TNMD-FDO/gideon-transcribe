@@ -233,6 +233,15 @@
             </label>
           {% endif %}
           <label><input type="checkbox" id="follow" checked> Follow</label>
+          {% if map_tab %}
+            {% comment %}Picture, Map or Both in the stage (v1.225.0), Both to start where there is a map; remembered in this browser.{% endcomment %}
+            <span class="stage-switch" id="stage-switch" role="group" aria-label="What the stage shows">
+              <button type="button" data-mode="picture" title="The picture alone">Picture</button>
+              <button type="button" data-mode="map" title="The map alone">Map</button>
+              <button type="button" data-mode="both" class="on" title="The picture over the map">Both</button>
+            </span>
+            {% if map_tab.shape == "around" %}<span class="pill small tab-mark" title="This camera has no path file of its own; the map shows the cameras that do">around</span>{% elif map_tab.shape == "waiting" %}<span class="pill small warn tab-mark" title="A path file is waiting for this camera">file waiting</span>{% endif %}
+          {% endif %}
         <p id="player-trouble" class="problem" hidden></p>
         {% if not media_url and not is_video %}
           <p class="preparing muted small">
@@ -258,6 +267,37 @@
         <span id="now-text" class="grow"></span>
       </div>
       {% comment %}The case's recordings stood here under the video from Phase 8 chapter 1 until v1.221.0; they are the recording walker's list in the head now (Phase 13 chapter 2).{% endcomment %}
+      {% if map_tab %}
+        {% comment %}
+          The map in the stage (Phase 13 chapter 2, v1.225.0; the drawing
+          recording-map-desk.html, Direction A): the case's map script on a host
+          under the picture and the transport, following this page's player
+          through window.RecordingClock (recording-map.js); this camera lit and
+          alone until Others are chosen, a pip on its path for every line where
+          it was said, one slim bar on the map's top edge and the Now line on
+          its foot. The switch in the transport shows the picture, the map or
+          both. The shape decides what stands above the map: the waiting file's
+          card, or the around notice. The Map tab of v1.223.0 and its Said here
+          list went with this.
+        {% endcomment %}
+        <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
+        <div class="stage-map" id="stage-map" data-shape="{{ map_tab.shape }}" data-clock-start="{{ map_tab.second|default_if_none:'' }}" data-clock-date="{{ map_tab.day }}" data-own="{% if map_tab.own %}1{% endif %}">
+          {% if map_tab.shape == "waiting" %}
+            <div class="rec-map-waiting" id="rec-map-waiting" data-add="{% url 'case-paths-waiting-add-anyway' recording.case_id map_tab.waiting.id %}" data-remove="{% url 'case-paths-waiting-remove' recording.case_id map_tab.waiting.id %}">
+              <b>A path file is waiting for this camera.</b>
+              <span class="small">{{ map_tab.waiting.file }} &middot; {{ map_tab.waiting.kind }} &middot; {{ map_tab.waiting.cues }} reading{{ map_tab.waiting.cues|pluralize }}{% if map_tab.waiting.flagged %} &middot; {{ map_tab.waiting.flagged }}{% endif %}</span>
+              <span class="grow"></span>
+              <button type="button" class="small primary" data-waiting="add" title="Make it this camera's path file">Add anyway</button>
+              <button type="button" class="small ghost" data-waiting="remove" title="Take the waiting file off the case">Remove</button>
+              <span class="muted small" id="rec-map-waiting-said"></span>
+            </div>
+          {% elif map_tab.shape == "around" %}
+            <p class="notice small rec-map-around m0">This camera has no path file, so its own place is not known; the map shows the cameras of the case that do, at this moment. <a href="{% url 'case' recording.case_id %}?tab=map">Add its path file on the case's Map tab</a>.</p>
+          {% endif %}
+          {% include "map-host.html" with case=recording.case map_clock="recording" map_recording=recording.pk map_day=map_tab.day map_name=recording.title map_around=map_tab.shape %}
+          <p class="map-now" id="map-now"><span class="lbl">Now</span><span class="mono muted" id="map-now-clock"></span><span class="grow" id="map-now-words"></span></p>
+        </div>
+      {% endif %}
       {% if is_video %}
         <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
              role="separator" aria-label="Resize the stage" tabindex="0"></div>
@@ -320,10 +360,6 @@
         <div class="tabbar" role="tablist">
           {% comment %}Phase 8 chapter 1: the tabs as a bar of sections; the Gideon tab went, the panel is Gideon's place.{% endcomment %}
           <button type="button" class="tab on" data-panel="transcript">{% icon "text" %} Transcript</button>
-          {% if map_tab %}
-            {% comment %}The Map tab (Phase 13 chapter 2, release 3, v1.223.0; figures 6 and 9): there when there is a map worth drawing for this recording, marked by its shape.{% endcomment %}
-            <button type="button" class="tab" data-panel="map">{% icon "map" %} Map{% if map_tab.shape == "around" %} <span class="pill small tab-mark" title="This camera has no path file of its own; the map shows the cameras that do">around</span>{% elif map_tab.shape == "waiting" %} <span class="pill small warn tab-mark" title="A path file is waiting for this camera on the case's Map tab">file waiting</span>{% endif %}</button>
-          {% endif %}
           {% if clips_available %}
             <button type="button" class="tab" data-panel="clips">{% icon "clip" %} Clips</button>
           {% endif %}
@@ -499,42 +535,6 @@
           The tabs' panels, in a file of their own, because a tab opened in
           its own window is drawn from the same markup with one panel shown.
         {% endcomment %}
-        {% if map_tab %}
-          {% comment %}
-            The Map panel (Phase 13 chapter 2, release 3, v1.223.0; the drawing
-            phase-13-recording-page.html, figures 6 and 9): the case's map
-            script on a host of its own, following this page's clock through
-            window.RecordingClock (recording-map.js) as it follows the
-            incident page's; this camera's path lit and its marker on the
-            playhead, the other cameras of the day drawn, a pip on the path
-            for every line where it was said; beside it the Said here list,
-            under it the Now caption. The shape decides what stands above
-            the map: the waiting file's card, or the around notice.
-          {% endcomment %}
-          <link rel="stylesheet" href="{% static 'vendor/maplibre-gl.css' %}">
-          <div class="panel rec-map-panel" data-panel="map" id="rec-map-panel" data-shape="{{ map_tab.shape }}" data-clock-start="{{ map_tab.second|default_if_none:'' }}" data-clock-date="{{ map_tab.day }}" data-own="{% if map_tab.own %}1{% endif %}" hidden>
-            {% if map_tab.shape == "waiting" %}
-              <div class="rec-map-waiting" id="rec-map-waiting" data-add="{% url 'case-paths-waiting-add-anyway' recording.case_id map_tab.waiting.id %}" data-remove="{% url 'case-paths-waiting-remove' recording.case_id map_tab.waiting.id %}">
-                <b>A path file is waiting for this camera.</b>
-                <span class="small">{{ map_tab.waiting.file }} &middot; {{ map_tab.waiting.kind }} &middot; {{ map_tab.waiting.cues }} reading{{ map_tab.waiting.cues|pluralize }}{% if map_tab.waiting.flagged %} &middot; {{ map_tab.waiting.flagged }}{% endif %}</span>
-                <span class="grow"></span>
-                <button type="button" class="small primary" data-waiting="add" title="Make it this camera's path file">Add anyway</button>
-                <button type="button" class="small ghost" data-waiting="remove" title="Take the waiting file off the case">Remove</button>
-                <span class="muted small" id="rec-map-waiting-said"></span>
-              </div>
-            {% elif map_tab.shape == "around" %}
-              <p class="notice small rec-map-around m0">This camera has no path file, so its own place is not known; the map shows the cameras of the case that do, at this moment. <a href="{% url 'case' recording.case_id %}?tab=map">Add its path file on the case's Map tab</a>.</p>
-            {% endif %}
-            <div class="rec-map">
-              {% include "map-host.html" with case=recording.case map_clock="recording" map_recording=recording.pk map_day=map_tab.day map_name=recording.title %}
-              <aside class="said-here" id="said-here" aria-label="Lines said around this moment">
-                <div class="said-head"><span>Said here</span><button type="button" class="ghost tiny" id="said-whole">whole transcript</button></div>
-                <ol class="said-list" id="said-list"></ol>
-              </aside>
-            </div>
-            <p class="rec-map-cap" id="rec-map-cap"><span class="lbl">Now</span><span class="mono muted" id="rec-map-cap-clock"></span><span class="grow" id="rec-map-cap-words"></span></p>
-          </div>
-        {% endif %}
         {% include "viewer-panels.html" %}
         </div>
       </div>

@@ -4771,46 +4771,59 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
 .followstate[data-paused="yes"] .is-paused { display: inline-flex; }
 .followstate .tiny { min-height: 0; height: 22px; }
 
-/* The Map tab on the recording page, release 3 of the redrawing (Phase 13
-   chapter 2, v1.223.0; the drawing's figures 6 and 9): the tab's mark, the
-   panel as the map pane with the Said here list beside it and the Now
-   caption under it, the waiting file's card and the around notice above
-   it, and the pips' hover words. */
-.tabbar .tab .tab-mark { margin-left: 4px; height: 16px; padding: 0 5px; font-size: var(--t-label); }
-.panels .panel.rec-map-panel { padding: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.rec-map { display: grid; grid-template-columns: minmax(0, 1fr) 320px; flex: 1 1 auto; min-height: 0; }
-.rec-map .map-tab.map-inc { display: flex; flex-direction: column; min-height: 0; gap: 0; }
-.rec-map .map-tab.map-inc .map-wrap { flex: 1 1 auto; min-height: 0; display: block; }
-.rec-map .map-tab.map-inc .map-pane { height: 100%; min-height: 300px; }
-.rec-map .map-tab.map-inc .map-foot { flex: none; }
-@media (max-width: 1099px) { .rec-map { grid-template-columns: minmax(0, 1fr); } .said-here { display: none; } }
-.said-here { border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; font-size: var(--t-small); }
-.said-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.said-head .tiny { text-transform: none; letter-spacing: 0; }
-.said-list { list-style: none; margin: 0; padding: 6px 8px; overflow: auto; flex: 1 1 auto; min-height: 0; }
-.said-row button { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid var(--line); border-radius: 0 var(--radius) var(--radius) 0; padding: 5px 8px; margin: 0 0 4px; color: var(--text); font: inherit; cursor: pointer; min-height: 0; }
-.said-row button:hover { background: var(--surface-2); }
-.said-row .pip { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); margin-top: 3px; box-sizing: border-box; }
-.said-row.here button { background: var(--accent-soft); border-left-color: var(--accent); }
-.said-row.here .pip { background: var(--accent); }
-.said-row.nofix .pip { border-color: var(--muted); border-style: dashed; }
-.said-row .who { font-size: var(--t-label); color: var(--muted); font-weight: 600; }
-.said-row .w { font-size: var(--t-small); }
-.rec-map-cap { flex: none; display: flex; gap: 8px; align-items: baseline; margin: 0; padding: 6px 12px; border-top: 1px solid var(--line); font-size: var(--t-small); }
-.rec-map-cap .lbl { font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.rec-map-cap .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rec-map-cap .who { font-weight: 600; }
-.rec-map-waiting { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--warn-soft); font-size: var(--t-small); }
-.rec-map-waiting .grow { flex: 1 1 auto; }
-.rec-map-around { padding: 8px 12px; border-bottom: 1px solid var(--line); border-radius: 0; }
-.map-said-pop .maplibregl-popup-content { font-size: var(--t-small); padding: 6px 10px; max-width: 320px; color: var(--text); background: var(--surface); }
+/* The map in the stage (Phase 13 chapter 2, v1.225.0; the drawing
+   recording-map-desk.html, Direction A, in place of the Map tab of
+   v1.223.0): under the picture and the transport, the case's map pane
+   with one slim bar on its top edge and the Now line on its foot; the
+   switch in the transport shows the picture, the map or both; the waiting
+   file's card and the around notice stand above the map. Nothing of it is
+   drawn under 1280 wide, where the stage is not a column. */
+.stage-map, .stage-switch { display: none; }
+.tab-mark { height: 16px; padding: 0 5px; font-size: var(--t-label); }
+@media (min-width: 1280px) {
+  .desk:not(.sound) .stage-map { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 240px; position: relative; border-top: 1px solid var(--line); }
+  .stage-map #case-map { position: relative; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 0; }
+  .stage-map .map-tab.map-inc .map-wrap { flex: 1 1 auto; min-height: 0; display: block; }
+  .stage-map .map-tab.map-inc .map-pane { height: 100%; min-height: 220px; }
+  .stage-map .map-foot { position: absolute; top: 0; left: 0; right: 0; z-index: 3; padding: 6px 8px; gap: 6px; flex-wrap: nowrap; overflow: visible; background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface) 55%, transparent)); font-size: var(--t-label); }
+  .stage-map .map-foot .btn.tiny, .stage-map .map-foot .pill.small { background: var(--surface); }
+  .stage-map .map-foot details.menu .menu-body { top: calc(100% + 4px); min-width: 18rem; max-width: min(24rem, calc(100vw - 48px)); font-size: var(--t-small); }
+  .stage-map .map-foot details.map-others .menu-body { left: 0; right: auto; }
+  .stage-map .map-foot details.map-trails .menu-body, .stage-map .map-foot details.map-evs .menu-body, .stage-map .map-foot details.map-more .menu-body { right: 0; left: auto; min-width: 12rem; }
+  .stage-map .map-foot .map-ev { display: flex; flex-direction: column; gap: 4px; }
+  .stage-map .map-foot #map-show { display: flex; flex-direction: column; gap: 2px; }
+  .stage-map .map-foot #map-show button { justify-content: flex-start; text-align: left; }
+  .map-others-h { text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--t-label); padding: 2px 4px 4px; }
+  .map-other { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 2px 8px; align-items: center; padding: 4px 4px; border-radius: var(--radius); cursor: pointer; }
+  .map-other:hover { background: var(--surface-2); }
+  .map-other .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .map-other .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .map-other .small { grid-column: 3; }
+  .map-others-foot { gap: 8px; align-items: center; padding: 4px 4px 0; border-top: 1px solid var(--line); margin-top: 4px; }
+  .map-others-foot .muted { margin-left: auto; }
+  .map-now { position: absolute; left: 8px; right: 8px; bottom: 44px; z-index: 3; margin: 0; display: flex; gap: 8px; align-items: baseline; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 95%, transparent); font-size: var(--t-small); }
+  .map-now .lbl { font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .map-now .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .map-now .who { font-weight: 600; }
+  .rec-map-waiting { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--warn-soft); font-size: var(--t-small); flex: none; }
+  .rec-map-waiting .grow { flex: 1 1 auto; }
+  .rec-map-around { padding: 8px 12px; border-bottom: 1px solid var(--line); border-radius: 0; flex: none; }
+  .stage-switch { display: inline-flex; margin-left: auto; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .stage-switch button { border: 0; border-radius: 0; background: transparent; padding: 2px 8px; min-height: 0; font-size: var(--t-label); color: var(--muted); cursor: pointer; }
+  .stage-switch button + button { border-left: 1px solid var(--line); }
+  .stage-switch button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .stage[data-mode="picture"] .stage-map { display: none; }
+  .stage[data-mode="map"] .thumb { display: none; }
+  .stage[data-mode="map"] #now, .stage[data-mode="both"] #now { display: none; }
+  .map-said-pop .maplibregl-popup-content { font-size: var(--t-small); padding: 6px 10px; max-width: 320px; color: var(--text); background: var(--surface); }
+}
 
 /* The three columns from 2200 wide, release 4 of the redrawing (Phase 13
    chapter 2, v1.224.0; the drawing's figure 4): in a case, the case's
    recordings in a column of their own at the left, the words in the middle
    at their measure, the stage at the right with the grip on its left edge;
-   the Map tab opens beside the Transcript instead of replacing it. Under
-   2200 nothing changes: the column is not drawn and the walker is the list. */
+   the map in the stage with the picture (v1.225.0). Under 2200 nothing
+   changes: the column is not drawn and the walker is the list. */
 .case-column { display: none; }
 @media (min-width: 2200px) {
   .desk.in-case:not(.sound) {
@@ -4844,18 +4857,4 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
   .case-column-list li.notyet .row-not { color: var(--muted); }
   .case-column-foot { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
   .case-column-foot b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  .panels.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
-  .panels.two > .panel { min-height: 0; }
-  .panels.two > .panel.read { overflow-y: auto; }
-  .panels.two > .panel.rec-map-panel { border-left: 1px solid var(--line); }
-  /* Beside the map the words take the half panel as a laptop's column would:
-     the actions as the hover toolbar of v1.217.0, not a column of their own;
-     and the map has the words beside it already, so the Said here list goes. */
-  .panels.two .panel.read #transcript .seg { position: relative; grid-template-columns: 5.5em 9em minmax(0, 1fr); }
-  body.no-speakers .panels.two .panel.read #transcript .seg { grid-template-columns: 5.5em minmax(0, 1fr); }
-  .panels.two .panel.read #transcript .seg .actions { position: absolute; right: 6px; top: 3px; grid-column: auto; background: var(--surface-2); border-radius: 4px; padding: 1px 2px; }
-  .panels.two .panel.read #transcript .seg.here .actions { position: static; grid-column: 3; grid-row: 2; justify-self: end; background: transparent; padding: 0; }
-  body.no-speakers .panels.two .panel.read #transcript .seg.here .actions { grid-column: 2; }
-  .panels.two .said-here { display: none; }
-  .panels.two .rec-map { grid-template-columns: minmax(0, 1fr); }
 }

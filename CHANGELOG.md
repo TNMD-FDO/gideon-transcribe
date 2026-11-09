@@ -17,6 +17,40 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.225.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The map joins the picture in the stage. The Map tab of v1.223.0 swapped
+the words away and set a seven-line list beside the map; the maintainer
+asked for the whole transcript to track with the dots, a layout that
+reads naturally, and other recordings only when chosen. Drawn in
+`recording-map-desk.html` and taken as Direction A:
+
+- The map stands in the stage under the picture and the transport, and
+  the Transcript keeps its whole column, untouched: it tracks the sound as
+  it always has, and its lines are the dots on the map. Press a line and
+  the marker and the filled pip move; press a pip and the transcript
+  scrolls to the line and plays from it.
+- A switch in the transport shows the Picture, the Map or Both (Both to
+  start where there is a map; remembered in the browser). Popping the
+  picture out leaves the whole stage to the map.
+- One slim bar on the map's top edge: This camera (lit; a press centres on
+  it and follows it again), Others (the other cameras of the day, none
+  drawn to start; a tick draws one, grey, with its distance from this
+  camera; All and None; remembered for the case), then the trails, the
+  events and More (Fit all, Tidy names, Save a picture). On a camera with
+  no file of its own, Others starts with every camera chosen.
+- The Now line stands on the map's foot with the time of day.
+- The Map tab, its panel, the Said here list and the map-beside-the-words
+  of v1.224.0 are gone; the shape marks (around, file waiting) and the
+  waiting file's card stand with the switch and above the map.
+
+The map is not drawn under 1280 wide, where the stage is not a column.
+
 ## v1.224.1, 2026-11-09
 
 ```
