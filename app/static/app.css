@@ -4681,3 +4681,19 @@ details.menu .menu-body label.small { min-width: 0; max-width: 100%; }
    video's row is never three lines tall for the pill alone. */
 .case-page #recordings td.prepared { min-width: 7rem; }
 .case-page #recordings td.prepared .pill { white-space: nowrap; }
+
+/* The Documents tab's menus (v1.219.0): the shelf card scrolls sideways
+   (scroll-x, so a narrow screen never runs the table off the edge), and a
+   card that scrolls sideways clips downwards too, so Compare against and
+   More opened under the card's edge and the card grew a scrollbar instead
+   of showing the menu. While one of its menus is open the card lets
+   everything out. */
+.card.shelf-card:has(details.menu[open]) { overflow: visible !important; }
+/* The same menu, and the Comparison page's against menu, sit at the left of
+   the page but opened leftwards from their button and took the longest
+   record name's width, so a long camera title ran the menu off the left
+   edge of the window: they open rightwards, 34rem at most, with a long name
+   wrapping inside its item. */
+details.menu.compare-against > ul, .cmp-page details.menu.cmp-against > ul { left: 0; right: auto; width: max-content; max-width: min(34rem, calc(100vw - 48px)); }
+details.menu.compare-against > ul a, details.menu.compare-against > ul button,
+.cmp-page details.menu.cmp-against > ul a, .cmp-page details.menu.cmp-against > ul button { white-space: normal; line-height: 1.3; padding-top: 5px; padding-bottom: 5px; }

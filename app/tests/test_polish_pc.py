@@ -216,3 +216,17 @@ def test_the_ultrawide_measure_holds():
     viewer = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
     assert "var short = window.innerHeight < 900 || window.innerWidth < 1280;" in viewer
     assert "var folded = short ? true : (remembered ?" in viewer
+
+
+def test_the_shelf_menus_drop_clear_of_the_card():
+    # The Documents tab's menus (v1.219.0): the shelf card scrolls sideways,
+    # which clips a menu opened inside it; while a menu is open the card
+    # lets it out instead of growing a scrollbar.
+    rule = ".card.shelf-card:has(details.menu[open])"
+    rule += " { overflow: visible !important; }"
+    assert rule in CSS
+    # And the menu opens rightwards, capped, its long names wrapping.
+    opens = "details.menu.compare-against > ul, .cmp-page details.menu.cmp-against > ul"
+    opens += " { left: 0; right: auto;"
+    assert opens in CSS
+    assert "details.menu.cmp-against > ul button { white-space: normal;" in CSS

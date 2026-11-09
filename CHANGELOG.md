@@ -17,6 +17,27 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.219.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Documents tab's menus open clear of the shelf. The card that holds the
+reports scrolls sideways so a narrow screen never runs the table off the
+edge, and a card that scrolls sideways clips downwards too: Compare against
+and More opened under the card's bottom edge and the card grew a scrollbar
+instead of showing the menu, on every screen. While one of its menus is
+open the card now lets everything out, so the menu drops over the drop
+zone below as a menu should.
+
+The same menu, and the Comparison page's against menu in its head, opened
+leftwards from their button and took the longest record name's width, so a
+long camera title ran the menu off the left edge of the window. Both open
+rightwards now, 34rem at most, and a long name wraps inside its item. Two
+rules and a test; nothing else changes.
+
 ## v1.218.0, 2026-11-06
 
 ```
