@@ -4785,22 +4785,16 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
   .stage-map #case-map { position: relative; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 0; }
   .stage-map .map-tab.map-inc .map-wrap { flex: 1 1 auto; min-height: 0; display: block; }
   .stage-map .map-tab.map-inc .map-pane { height: 100%; min-height: 220px; }
-  .stage-map .map-foot { position: absolute; top: 0; left: 0; right: 0; z-index: 3; padding: 6px 8px; gap: 6px; flex-wrap: nowrap; overflow: visible; background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface) 55%, transparent)); font-size: var(--t-label); }
+  .stage-map .map-foot { position: absolute; top: 0; left: 0; right: 0; z-index: 3; padding: 6px 8px; gap: 4px 6px; flex-wrap: wrap; overflow: visible; background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface) 55%, transparent)); font-size: var(--t-label); }
   .stage-map .map-foot .btn.tiny, .stage-map .map-foot .pill.small { background: var(--surface); }
+  .stage-map .map-foot #map-cams { background: var(--surface); flex: none; }
+  .stage-map .map-foot #map-cams button { white-space: nowrap; }
+  .stage-map .map-foot #map-cams button[disabled] { opacity: 0.5; cursor: default; }
   .stage-map .map-foot details.menu .menu-body { top: calc(100% + 4px); min-width: 18rem; max-width: min(24rem, calc(100vw - 48px)); font-size: var(--t-small); }
-  .stage-map .map-foot details.map-others .menu-body { left: 0; right: auto; }
   .stage-map .map-foot details.map-trails .menu-body, .stage-map .map-foot details.map-evs .menu-body, .stage-map .map-foot details.map-more .menu-body { right: 0; left: auto; min-width: 12rem; }
   .stage-map .map-foot .map-ev { display: flex; flex-direction: column; gap: 4px; }
   .stage-map .map-foot #map-show { display: flex; flex-direction: column; gap: 2px; }
   .stage-map .map-foot #map-show button { justify-content: flex-start; text-align: left; }
-  .map-others-h { text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--t-label); padding: 2px 4px 4px; }
-  .map-other { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 2px 8px; align-items: center; padding: 4px 4px; border-radius: var(--radius); cursor: pointer; }
-  .map-other:hover { background: var(--surface-2); }
-  .map-other .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .map-other .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .map-other .small { grid-column: 3; }
-  .map-others-foot { gap: 8px; align-items: center; padding: 4px 4px 0; border-top: 1px solid var(--line); margin-top: 4px; }
-  .map-others-foot .muted { margin-left: auto; }
   .map-now { position: absolute; left: 8px; right: 8px; bottom: 44px; z-index: 3; margin: 0; display: flex; gap: 8px; align-items: baseline; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 95%, transparent); font-size: var(--t-small); }
   .map-now .lbl { font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
   .map-now .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

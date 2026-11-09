@@ -84,7 +84,7 @@
   // the case tab's ticks: the two are different questions.
   function rememberHidden() {
     if (PICK) { return; }
-    if (REC) { remember("map-rec-others-" + CASE, JSON.stringify(recOthers().filter(shown).map(function (c) { return c.id; }))); return; }
+    if (REC) { remember("map-rec-cams-" + CASE, recOthers().length && recOthers().every(shown) ? "all" : "own"); return; }
     remember("map-hidden-" + CASE, JSON.stringify(Object.keys(S.hidden)));
   }
   // Pick mode: the strip's ticks become the map's ticks; nothing else shows.
@@ -1668,6 +1668,10 @@
   function onPress(e) {
     var chip = e.target.closest(".map-days [data-day]");
     if (chip) { var menu = chip.closest("details.menu"); if (menu) { menu.removeAttribute("open"); } S.day = chip.dataset.day; setAddress(); S.selected = null; S.following = null; load(false); return; }
+    if (REC) {
+      var which = e.target.closest("#map-cams [data-cams]");
+      if (which) { if (which.dataset.cams === "all") { tickAll(true); } else if (ownCam()) { only(ownCam(), false); } drawTransport(); return; }
+    }
     if (CLOCKED) { var sh = e.target.closest("#map-show [data-show]"); if (sh) { S.show = sh.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); return; } }
     var b = e.target.closest("[data-act]");
     if (b) {
@@ -1681,8 +1685,6 @@
         case "next-event": stepEvent(1); return;
         case "fit": fitAll(); return;
         case "here": S.recMoved = false; var mine = S.byId[host.dataset.recording]; if (mine) { flyTo(mine); } return;
-        case "others-all": tickAll(true); drawTransport(); return;
-        case "others-none": if (ownCam()) { only(ownCam(), false); } drawTransport(); return;
         case "fly": if (cam) { flyTo(cam); } return;
         case "open": if (cam) { S.open = S.open === cam.id ? null : cam.id; drawStrip(); drawList(); } return;
         case "tag": if (cam) { select(cam); openTile(cam); } return;
@@ -1869,35 +1871,27 @@
   // remembered for the case; on the "around" shape, where this camera has
   // no path of its own, every other camera to start.
   function recHidden() {
-    var own = host.dataset.recording, chosen = null;
-    try { chosen = JSON.parse(recall("map-rec-others-" + CASE) || "null"); } catch (e) { chosen = null; }
-    if (!chosen) { chosen = host.dataset.around === "1" ? S.cams.map(function (c) { return c.id; }) : []; }
-    var keep = {}; chosen.forEach(function (id) { keep[id] = true; });
+    var own = host.dataset.recording;
+    var wanted = recall("map-rec-cams-" + CASE) || (host.dataset.around === "1" ? "all" : "own");
     S.hidden = {};
-    S.cams.forEach(function (c) { if (c.id !== own && !keep[c.id]) { S.hidden[c.id] = true; } });
+    if (wanted !== "all") { S.cams.forEach(function (c) { if (c.id !== own) { S.hidden[c.id] = true; } }); }
   }
   // One slim bar on the map (the drawing recording-map-desk.html, figure 4):
   // This camera, Others, then the trails, the events and More.
   function recBar() {
-    var own = ownCam(), m = now(), others = recOthers(), chosen = others.filter(shown);
-    var here = own && own.onClock ? positionAt(own, m - own.zero.second) : null;
+    var own = ownCam(), others = recOthers(), all = others.length > 0 && others.every(shown);
     var chev = "<svg class='i' aria-hidden='true'><use href='#i-chevron-down'></use></svg>";
-    var rows = others.map(function (c) {
-      var local = c.onClock ? m - c.zero.second : NaN, p = isNaN(local) ? null : positionAt(c, local);
-      var dist = p && !p.nofix && !p.ended ? (here && !here.nofix ? Math.round(metres(p, here)) + " m away" : "has a fix") : "no fix now";
-      return "<label class='map-other'><input type='checkbox' data-other='" + c.id + "'" + (shown(c) ? " checked" : "") + "><i class='dot' style='background: " + colourOf(c) + "'></i><span class='nm'>" + nameHtml(c) + "</span><span class='muted small'>" + (c.source === "car" ? "in-car" : "body camera") + " · " + dist + "</span></label>";
-    }).join("");
     var showWords = { markers: "Markers", trails: "Trails", whole: "Paths" }[S.show] || "Trails";
-    return (own && own.fixes.length ? "<button type='button' class='pill small on' data-act='here' title='Centre the map on this camera and follow it again'>This camera</button>" : "<span class='pill small' title='This camera has no path file of its own'>This camera: no file</span>") +
-      (others.length
-        ? "<details class='menu map-others'><summary class='btn tiny' title='The other cameras of this day: drawn when ticked, grey, with their distance from this camera'>Others " + chev + " <span class='muted'>" + chosen.length + " of " + others.length + "</span></summary>" +
-          "<div class='menu-body'><div class='muted small map-others-h'>Other cameras this day</div>" + rows +
-          "<div class='row small map-others-foot'><button type='button' class='tiny ghost' data-act='others-all'>All</button><button type='button' class='tiny ghost' data-act='others-none'>None</button><span class='muted'>remembered for this case</span></div></div></details>"
-        : "<span class='muted small'>the only camera this day</span>") +
+    return "<span class='seg' id='map-cams' role='group' aria-label='Which cameras are drawn'>" +
+      "<button type='button' data-cams='own' class='" + (all ? "" : "on") + "' title='This camera alone'>This camera</button>" +
+      "<button type='button' data-cams='all' class='" + (all ? "on" : "") + "'" + (others.length ? "" : " disabled") + " title='Every camera of this day, the others grey'>All" + (others.length ? " (" + (others.length + 1) + ")" : "") + "</button></span>" +
+      (own && own.fixes.length ? "" : "<span class='pill small' title='This camera has no path file of its own'>no file of its own</span>") +
       "<span class='grow'></span>" +
       "<details class='menu map-trails'><summary class='btn tiny' title='How much of each path is drawn'>" + showWords + " " + chev + "</summary><div class='menu-body'><span class='seg' id='map-show'>" + seg("markers", "Markers only") + seg("trails", "Trails") + seg("whole", "Whole paths") + "</span></div></details>" +
       "<details class='menu map-evs'><summary class='btn tiny' title='The readings drawn on the paths'>Events " + chev + "</summary><div class='menu-body map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</div></details>" +
-      "<details class='menu map-more'><summary class='btn tiny'>More " + chev + "</summary><div class='menu-body'><button type='button' class='small' data-act='fit'>Fit all</button><button type='button' class='small' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
+      "<details class='menu map-more'><summary class='btn tiny'>More " + chev + "</summary><div class='menu-body'>" +
+      (own && own.fixes.length ? "<button type='button' class='small' data-act='here' title='Centre the map on this camera and follow it again'>Centre on this camera</button>" : "") +
+      "<button type='button' class='small' data-act='fit'>Fit all</button><button type='button' class='small' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
       (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab'>Save a picture</button>" : "") + "</div></details>";
   }
   function recStart() {
@@ -1906,15 +1900,6 @@
     S.recMoved = false;
     map.on("dragstart", function () { S.recMoved = true; });
     map.on("wheel", function () { S.recMoved = true; });
-    host.addEventListener("change", function (e) {
-      var t = e.target;
-      if (!t.dataset || !t.dataset.other) { return; }
-      setHidden(S.byId[t.dataset.other], !t.checked);
-      var menu = t.closest("details.map-others"), open = !!(menu && menu.open);
-      drawTransport();
-      // The menu stays open for the next tick.
-      var again = host.querySelector("details.map-others"); if (again && open) { again.open = true; }
-    });
     drawSaid(true);
   }
   function saidFeatures() {

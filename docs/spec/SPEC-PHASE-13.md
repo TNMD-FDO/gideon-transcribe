@@ -165,13 +165,14 @@ when chosen. Three directions were drawn in
   there is a map, remembered in the browser; popping the picture out leaves
   the stage to the map. The shape marks (around, file waiting) stand with
   the switch; the waiting file's card and the around notice above the map.
-- **One slim bar on the map's top edge:** This camera (lit; a press centres
-  on it and follows it again), Others (the other cameras of the day, none
-  drawn to start; a tick draws one, grey, with its distance from this
-  camera at the moment; All and None; remembered for the case, apart from
-  the case Map tab's own ticks), then the trails, the events and More (Fit
-  all, Tidy names, Save a picture). On a camera with no file of its own
-  (the around shape) Others starts with every camera chosen.
+- **One slim bar on the map's top edge:** a two-way choice, **This camera**
+  (alone, as the map starts) or **All cameras** of the day with the others
+  grey, remembered for the case apart from the case Map tab's own ticks
+  (v1.225.1; v1.225.0 had a menu of the other cameras with a tick each,
+  which dropped off the bottom of a laptop's stage); **Centre** brings
+  this camera back to the middle and follows it again; then the trails,
+  the events and More (Fit all, Tidy names, Save a picture). On a camera
+  with no file of its own (the around shape) the map starts on All cameras.
 - **The Now line** stands on the map's foot with the moment and the time
   of day.
 - The map is not drawn under 1280 wide, where the stage is not a column.

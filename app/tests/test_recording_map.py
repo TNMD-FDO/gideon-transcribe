@@ -202,8 +202,11 @@ def test_the_scripts_and_the_stylesheet_hold_the_pieces():
     assert "if (REC) { recStart(); }" in MAP and "if (REC) { recTick(m); }" in MAP
     assert "function goToCamera(cam)" in MAP and "window.CaseMap = {" in MAP
     assert "data-act='here'" in MAP
-    assert "function recHidden()" in MAP and 'remember("map-rec-others-" + CASE' in MAP
-    assert "data-other='" in MAP and 'case "others-all"' in MAP
+    # This camera alone or all the cameras of the day (v1.225.1), remembered
+    # for the case as one word; no menu of ticks to fall off a short stage.
+    assert "function recHidden()" in MAP and 'remember("map-rec-cams-" + CASE' in MAP
+    assert "data-cams='own'" in MAP and "data-cams='all'" in MAP
+    assert "data-other" not in MAP and "map-others" not in MAP
     # recording-map.js: the clock, the switch, the card, the watcher.
     assert "window.RecordingClock = {" in REC
     assert "start + player.currentTime" in REC and "lineIndex: hereIndex" in REC

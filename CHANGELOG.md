@@ -17,6 +17,21 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.225.1, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+This camera, or all of them. The map's bar had a menu of the other
+cameras with a tick each, and on a laptop's stage the menu dropped off the
+bottom of the map. At the maintainer's word it is one two-way choice on
+the bar: **This camera** (alone, as the map starts) or **All cameras** of
+the day, the others grey; remembered for the case. **Centre** beside it
+brings this camera back to the middle. On a camera with no file of its own
+the map starts on All cameras, as before.
+
 ## v1.225.0, 2026-11-09
 
 ```
