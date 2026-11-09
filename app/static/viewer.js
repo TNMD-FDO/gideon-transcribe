@@ -873,6 +873,17 @@
         }
       }
     }
+    // The lines said (v1.223.0, Phase 13 chapter 2): a tick at each line's
+    // start along the foot, so the timeline reads where the talking is as
+    // well as where the sound is.
+    if (duration && segments && segments.length) {
+      pen.fillStyle = unplayed;
+      pen.globalAlpha = 0.45;
+      for (var s = 0; s < segments.length; s += 1) {
+        pen.fillRect(Math.round((segments[s].start / duration) * width), height - 3, 1, 3);
+      }
+      pen.globalAlpha = 1;
+    }
     // A noted line's mark is an element over the canvas (chapter 11), so it
     // can take the Event card.
     drawNoteTicks();
@@ -2110,9 +2121,29 @@
           }
         ).join("");
         drawMarks(body.marks || []);
+        drawCameraFile(body.camera_file);
         drawAdminDigest(body.digest);
         drawTranslateAgain(body.translate_again);
       });
+  }
+
+  // The camera's file (v1.223.0, Phase 13 chapter 2): a row with the offer
+  // of the case's Map tab when a camera has no path file yet.
+  function drawCameraFile(told) {
+    var box = document.getElementById("details");
+    if (!box || !told || !told.words) { return; }
+    var dt = document.createElement("dt");
+    dt.textContent = "Camera's file";
+    var dd = document.createElement("dd");
+    dd.textContent = told.words + (told.url ? " · " : "");
+    if (told.url) {
+      var link = document.createElement("a");
+      link.href = told.url;
+      link.textContent = told.link || "add it on the case's Map tab";
+      dd.appendChild(link);
+    }
+    box.appendChild(dt);
+    box.appendChild(dd);
   }
 
   // Translate again (ADR 0026, v1.162.0): the lines whose English is not
@@ -2225,7 +2256,8 @@
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
     );
     if (which === "details") { loadDetails(); }
-    if (openWindowButton) { openWindowButton.hidden = which === "transcript"; }
+    // The Map tab stays on the page (v1.223.0): it follows this page's player.
+    if (openWindowButton) { openWindowButton.hidden = which === "transcript" || which === "map"; }
     // `keep` is for restoring what was already chosen, which is not itself a
     // choice and must not overwrite one.
     if (!keep) { rememberTab(which); }

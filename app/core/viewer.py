@@ -402,6 +402,17 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # where this recording stands in the case and the ready ones either
         # side; it took the place of the list under the video.
         "walk": _walk_hand_off(_walk(in_case), recording, request.user),
+        # The Map tab (Phase 13 chapter 2, release 3, v1.223.0): its shape by
+        # what the recording holds, and the case map's context when there is
+        # one to draw.
+        "map_tab": (
+            map_shape := map_tab(
+                recording,
+                bool(playback and playback.suffix == ".mp4")
+                or (playback is None and _expects_video(recording)),
+            )
+        ),
+        **(_map_tab_context(recording, request.user) if map_shape else {}),
         "transcript": transcript,
         # The speakers pass over a Live recording still to land (v1.94.0).
         "speakers_pass_running": _speakers_pass_running(recording),
@@ -1919,6 +1930,9 @@ def details(request: HttpRequest, recording_id) -> JsonResponse:
     answer = {
         "rows": [[name, value] for name, value in rows if str(value).strip()],
         "marks": marks,
+        # The camera's file (Phase 13 chapter 2, release 3): the offer of the
+        # case's Map tab for a camera in a case with no path file yet.
+        "camera_file": _camera_file_words(recording),
     }
     # The Digest itself, and the record's descriptions, for an Admin only
     # (Phase 4 chapter 7): what a summary was written from, so the prompting
@@ -2039,6 +2053,111 @@ def _the_rest_of_the_case(recording) -> list:
             }
         )
     return rows
+
+
+def _waiting_for(recording):
+    """A path file waiting on the case for this camera: flagged against it
+    when it came, or named like its video."""
+    from django.db.models import Q
+
+    from core import camera_paths
+
+    return (
+        camera_paths.WaitingPathFile.objects.filter(case_id=recording.case_id)
+        .filter(
+            Q(flagged_recording=recording)
+            | Q(stem=camera_paths.stem_of(recording.original_filename or ""))
+        )
+        .first()
+    )
+
+
+def _others_on_the_day(recording) -> bool:
+    """Whether another camera of the case has fixes on this recording's day."""
+    from core import camera_paths
+
+    return (
+        camera_paths.CameraPath.objects.filter(
+            recording__case_id=recording.case_id,
+            recording__clock_date=recording.clock_date,
+            fix_count__gt=0,
+        )
+        .exclude(recording=recording)
+        .exists()
+    )
+
+
+def map_tab(recording, is_video: bool) -> dict:
+    """The Map tab's shape (Phase 13 chapter 2, release 3; figure 9 of the
+    drawing): "own" for a camera with its own path file on the case's
+    clock, "waiting" for one whose file waits on the case, "around" for one
+    with no file of its own on a day other cameras have fixes, and empty
+    (no tab) otherwise, as for every recording without a picture."""
+    from core import camera_paths
+
+    if not is_video or recording.case_id is None or not camera_paths.on():
+        return {}
+    own = camera_paths.of(recording)
+    on_clock = recording.clock_date is not None and recording.clock_start is not None
+    told = {
+        "day": recording.clock_date.isoformat() if on_clock else "",
+        "second": float(recording.clock_start) if on_clock else None,
+        "own": bool(own is not None and own.has_fixes),
+    }
+    if own is not None and own.has_fixes and on_clock:
+        return {**told, "shape": "own"}
+    waiting = _waiting_for(recording)
+    if waiting is not None:
+        return {
+            **told,
+            "shape": "waiting",
+            "waiting": {
+                "id": str(waiting.pk),
+                "file": waiting.original_filename,
+                "kind": (
+                    "in-car" if waiting.source == camera_paths.CAR else "body camera"
+                ),
+                "cues": waiting.cues,
+                "flagged": waiting.flagged,
+            },
+        }
+    if on_clock and _others_on_the_day(recording):
+        return {**told, "shape": "around"}
+    return {}
+
+
+def _camera_file_words(recording) -> dict:
+    """The Details tab's "Camera's file" row for a video in a case while the
+    maps are on: the file's name when it has one, else "none yet" with the
+    case's Map tab as the place to add it, and whether the recording is on
+    the case's clock."""
+    from django.urls import reverse
+
+    from core import camera_paths, incidents
+
+    if (
+        recording.case_id is None
+        or not camera_paths.on()
+        or not incidents.is_video(recording)
+    ):
+        return {}
+    own = camera_paths.of(recording)
+    if own is not None:
+        return {"words": own.original_filename, "url": "", "link": ""}
+    on_clock = recording.clock_date is not None and recording.clock_start is not None
+    return {
+        "words": "none yet" + ("" if on_clock else " · not on the case's clock"),
+        "url": f"{reverse('case', args=[recording.case_id])}?tab=map",
+        "link": "add it on the case's Map tab",
+    }
+
+
+def _map_tab_context(recording, user) -> dict:
+    """The case map's context for the recording page's Map tab: the same the
+    case page gives its own tab (the JSON address, the basemap, the zone)."""
+    from core import case_pages
+
+    return case_pages._map_context(recording.case, user)
 
 
 def _walk(rows: list[dict]) -> dict:

@@ -32,7 +32,14 @@ def test_the_stage_wraps_the_picture_the_transport_and_the_line_being_spoken():
     # The Gideon tab went with Phase 8 chapter 1; the floating panel holds the chat.
     # The Report tab (Phase 8 chapter 4) left with v1.213.0: documents live on
     # the case's Documents tab, and Details keeps a Reports line.
-    assert tabs == ["transcript", "clips", "summary", "details"]
+    # The Map tab (v1.223.0) comes and goes by what the recording holds, so
+    # it is left out of the order read here.
+    assert [one for one in tabs if one != "map"] == [
+        "transcript",
+        "clips",
+        "summary",
+        "details",
+    ]
     assert 'class="tab on" data-panel="transcript"' in page
     assert (
         page.index('class="tabbar"')

@@ -147,22 +147,60 @@ the tab bar's end. The pages say "the case's recordings", never siblings.
   after this one first (Phase 9 chapter 3's rule), with Open; absent when
   there is none.
 
-### Releases 3 and 4 (to come, at the maintainer's word)
+### Release 3: the Map tab (v1.223.0)
 
-- **Release 3, the Map tab** (figures 6 and 9): the case's map script
-  following this page's clock as it follows the incident page's; the
-  camera's path lit and its marker on the playhead; the other cameras of
-  the case on the clock drawn grey with their distances; a pip on the path
-  for every line where it was said, pressable; a Said here list beside the
-  map; the Now caption; the camera's own readings. Four shapes by what the
-  recording holds: no tab for a kind that can never carry a file (a jail
-  call, a phone line, an interview room); no tab and the Details offer for
-  a camera with no file not on the clock; the tab marked "around" for a
-  camera with no file of its own on the clock among cameras that have one,
-  drawing the others and never this camera; the tab marked "file waiting"
-  opening on the waiting file's card. The page's state poll moves between
-  the shapes without a reload. No position is sent to the server.
-- **Release 4, the columns** (figure 4): from 2200 wide the case's
+- **The map, following the player.** The case's map script (Phase 12
+  chapter 1) draws into a host on the recording page in a recording mode
+  beside its incident mode: the page's player is the clock
+  (`window.RecordingClock`, seconds of the day on the case's clock), this
+  camera is selected and lit from the start, the other cameras of the day
+  are drawn where they were at the moment, and the map keeps this camera in
+  view until the person moves it; **This camera** brings it back. A press
+  on another camera's marker opens that recording at the same moment where
+  both are on the clock and the moment falls inside it, else from its
+  start. The transport is the incident pane's (count, Show, the events'
+  ticks, Fit all, Tidy names, Save a picture) without Larger map; the tab
+  never opens in a window of its own, since it follows this page's player.
+- **The lines said.** Every line of the transcript with a fix is a pip on
+  this camera's path where it was said, the line being spoken filled; hover
+  shows the time, the speaker and the words, a press plays from there. A
+  line said where the camera had no fix, or outside the file, has no pip.
+  The timeline under the head gains a tick at each line's start on every
+  recording with a transcript.
+- **Said here.** Beside the map, the line being spoken in the middle with
+  three before and three after, each a press to play from; a dashed ring
+  where this camera had no fix at the time, filled for the line being
+  spoken; "whole transcript" returns to the Transcript tab. Under the map
+  the Now caption: the moment, the time of day, the speaker and the words.
+  Under 1100 wide the list is not drawn.
+- **Four shapes, by what the recording holds** (figure 9), decided on the
+  server from the picture, the clock placement and the case's files:
+  - a recording without a picture (a jail call, a phone line, an interview
+    room) never has the tab, and nothing says why;
+  - a camera with no file of its own that is not on the case's clock, or
+    on a day no other camera has fixes, has no tab; the Details tab's
+    "Camera's file" row says "none yet" (and "not on the case's clock"
+    where that is so) and offers the case's Map tab, where files are added;
+  - a camera with no file of its own, on the clock, on a day other cameras
+    have fixes, has the tab marked **around**: the others drawn, this
+    camera with no marker and no pips, the Said here list by time alone,
+    and one line above the map saying its own place is not known;
+  - a camera whose file waits on the case (flagged against it when it came,
+    or named like its video) has the tab marked **file waiting**, opening
+    on the waiting file's card (its name, kind, readings and why it was not
+    paired) with Add anyway and Remove, the case Map tab's own two acts;
+    done, the page loads itself again at the same moment and tab.
+- **The page notices.** Every recording of a case with a picture asks
+  `recording/<id>/map-shape` (the shape alone, no position) every thirty
+  seconds while its tab is in view; when the answer differs from the page,
+  it says so and loads itself again at the same moment and tab. The
+  decision of 2026-11-09, left to the build: the page reloads rather than
+  redrawing in place, since the map's libraries and the case's JSON are
+  not on a page that had no tab.
+
+### Release 4 (to come, at the maintainer's word)
+
+- **The columns** (figure 4): from 2200 wide the case's
   recordings as a left column, the words at their measure, the stage with
   the picture and the map stacked; the Map tab opening beside the
   Transcript as the incident page's two panels do. With a picture and no

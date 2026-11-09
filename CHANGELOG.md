@@ -17,6 +17,46 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.223.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The recording page, release 3 of its redrawing (Phase 13 chapter 2): the
+Map tab, against the lines being said. On a recording with a path file
+the tab opens the case's map following this page's player: this camera's
+path lit and its marker on the playhead, the other cameras of the day
+drawn where they were at that moment, and a pip on the path for every
+line of the transcript where it was said, the line being spoken filled;
+hover a pip for the words, press it to play from there. Beside the map a
+Said here list keeps the words in view (the line being spoken in the
+middle, three before and three after, each a press; a dashed ring where
+the camera had no fix), and under it the Now caption with the time of day.
+The map keeps this camera in view until the reader moves it; This camera
+brings it back. A press on another camera's marker opens that recording
+at the same moment. The timeline gains a tick at each line's start.
+
+The tab takes one of four shapes from what the recording holds, and the
+page notices by itself when that changes (a path file landing, a waiting
+file added) and loads itself again at the same moment and tab:
+
+- a recording without a picture (a jail call, a phone line) never has the
+  tab, and nothing says why;
+- a camera with no file, not on the case's clock or alone on its day, has
+  no tab; the Details tab's new "Camera's file" row says none yet and
+  offers the case's Map tab;
+- a camera with no file of its own, on a day other cameras have fixes,
+  has the tab marked "around": the others drawn, this camera with no
+  marker and no pips, and one line saying its own place is not known;
+- a camera whose file is waiting on the case has the tab marked "file
+  waiting", opening on the waiting file's card with Add anyway and Remove.
+
+One small new address, `recording/<id>/map-shape`, answers the page's
+question (the shape alone, no position). The map script gains a recording
+mode beside its incident mode; the case's Map tab is unchanged.
+
 ## v1.222.0, 2026-11-09
 
 ```

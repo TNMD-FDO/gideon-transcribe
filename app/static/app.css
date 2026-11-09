@@ -4770,3 +4770,37 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
 .followstate[data-paused="yes"] .is-following { display: none; }
 .followstate[data-paused="yes"] .is-paused { display: inline-flex; }
 .followstate .tiny { min-height: 0; height: 22px; }
+
+/* The Map tab on the recording page, release 3 of the redrawing (Phase 13
+   chapter 2, v1.223.0; the drawing's figures 6 and 9): the tab's mark, the
+   panel as the map pane with the Said here list beside it and the Now
+   caption under it, the waiting file's card and the around notice above
+   it, and the pips' hover words. */
+.tabbar .tab .tab-mark { margin-left: 4px; height: 16px; padding: 0 5px; font-size: var(--t-label); }
+.panels .panel.rec-map-panel { padding: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.rec-map { display: grid; grid-template-columns: minmax(0, 1fr) 320px; flex: 1 1 auto; min-height: 0; }
+.rec-map .map-tab.map-inc { display: flex; flex-direction: column; min-height: 0; gap: 0; }
+.rec-map .map-tab.map-inc .map-wrap { flex: 1 1 auto; min-height: 0; display: block; }
+.rec-map .map-tab.map-inc .map-pane { height: 100%; min-height: 300px; }
+.rec-map .map-tab.map-inc .map-foot { flex: none; }
+@media (max-width: 1099px) { .rec-map { grid-template-columns: minmax(0, 1fr); } .said-here { display: none; } }
+.said-here { border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; font-size: var(--t-small); }
+.said-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.said-head .tiny { text-transform: none; letter-spacing: 0; }
+.said-list { list-style: none; margin: 0; padding: 6px 8px; overflow: auto; flex: 1 1 auto; min-height: 0; }
+.said-row button { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid var(--line); border-radius: 0 var(--radius) var(--radius) 0; padding: 5px 8px; margin: 0 0 4px; color: var(--text); font: inherit; cursor: pointer; min-height: 0; }
+.said-row button:hover { background: var(--surface-2); }
+.said-row .pip { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); margin-top: 3px; box-sizing: border-box; }
+.said-row.here button { background: var(--accent-soft); border-left-color: var(--accent); }
+.said-row.here .pip { background: var(--accent); }
+.said-row.nofix .pip { border-color: var(--muted); border-style: dashed; }
+.said-row .who { font-size: var(--t-label); color: var(--muted); font-weight: 600; }
+.said-row .w { font-size: var(--t-small); }
+.rec-map-cap { flex: none; display: flex; gap: 8px; align-items: baseline; margin: 0; padding: 6px 12px; border-top: 1px solid var(--line); font-size: var(--t-small); }
+.rec-map-cap .lbl { font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.rec-map-cap .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-map-cap .who { font-weight: 600; }
+.rec-map-waiting { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--warn-soft); font-size: var(--t-small); }
+.rec-map-waiting .grow { flex: 1 1 auto; }
+.rec-map-around { padding: 8px 12px; border-bottom: 1px solid var(--line); border-radius: 0; }
+.map-said-pop .maplibregl-popup-content { font-size: var(--t-small); padding: 6px 10px; max-width: 320px; color: var(--text); background: var(--surface); }

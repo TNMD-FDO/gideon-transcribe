@@ -417,6 +417,11 @@ urlpatterns = [
         name="camera-path-remove",
     ),
     path(
+        "recording/<uuid:recording_id>/map-shape",
+        camera_path_pages.map_shape,
+        name="recording-map-shape",
+    ),
+    path(
         "recording/<uuid:recording_id>/path/offer",
         camera_path_pages.offer,
         name="camera-path-offer",

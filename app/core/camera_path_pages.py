@@ -353,6 +353,19 @@ def paths_add(request: HttpRequest, case_id) -> JsonResponse:
 
 
 @login_required
+def map_shape(request: HttpRequest, recording_id) -> JsonResponse:
+    """The recording page's Map tab shape (Phase 13 chapter 2, release 3):
+    "own", "waiting", "around" or "", asked now and then by the open page so
+    a path file that lands while it is open changes the tab. No position."""
+    from core import incidents, viewer
+
+    recording = _recording_for(request, recording_id)
+    if recording is None:
+        return JsonResponse({"error": "no such recording"}, status=404)
+    told = viewer.map_tab(recording, incidents.is_video(recording))
+    return JsonResponse({"shape": told.get("shape", "")})
+
+
 def map_json(request: HttpRequest, case_id) -> JsonResponse:
     """What the Map tab reads once on opening, and again after a change."""
     _maps_or_404()

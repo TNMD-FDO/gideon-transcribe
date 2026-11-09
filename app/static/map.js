@@ -12,7 +12,18 @@
   // of running its own transport, list and strip. A press on the map seeks
   // the incident's clock and brings the camera to the front of the wall.
   var INC = host.dataset.clock === "incident";
-  function incClock() { return INC && window.IncidentClock ? window.IncidentClock : null; }
+  // The recording page's Map tab (Phase 13 chapter 2, release 3, v1.223.0):
+  // the same pane following that page's player through window.RecordingClock
+  // (recording-map.js); this camera lit, a pip on its path for every line
+  // where it was said, and a press on another camera opening that recording
+  // at the same moment. CLOCKED is either page whose clock is not the map's.
+  var REC = host.dataset.clock === "recording";
+  var CLOCKED = INC || REC;
+  function incClock() {
+    if (INC && window.IncidentClock) { return window.IncidentClock; }
+    if (REC && window.RecordingClock) { return window.RecordingClock; }
+    return null;
+  }
   // The Incidents tab's map (Phase 12 chapter 8, v1.200.0): the same script
   // in pick mode, drawing only the cameras ticked on the strip, which tells
   // it the ticks and the day by an "incident-ticks" event; no list, no
@@ -135,7 +146,7 @@
   }
   // Ticked means drawn. The incident page's pane has no list to untick from,
   // so it draws every camera of its incident.
-  function shown(cam) { return INC || !S.hidden[cam.id]; }
+  function shown(cam) { return CLOCKED || !S.hidden[cam.id]; }
   function shownCams() { return dayCams().filter(shown); }
   // The name first (chapter 6): the wearer as the file gives it, else the unit.
   function nameOf(cam) { return cam.wearer || cam.unit || cam.title; }
@@ -263,7 +274,7 @@
 
   // The page ---------------------------------------------------------------------
   function layout() {
-    if (INC) { layoutPane(); return; }
+    if (CLOCKED) { layoutPane(); return; }
     // The Map as a page of its own (chapter 6.10, v1.210.0; the drawing
     // phase-12-map-page.html, K and B together): the frame is the map with
     // a two-row band on its top edge (the play controls, then Show and the
@@ -319,7 +330,7 @@
   // never under 120, and scrolls inside itself when the day has more lanes.
   var PANE_LEAST = 320, BAND_LEAST = 120, SPLIT = 8;
   function sizeFrame() {
-    if (INC || PICK || !el.wrap || !el.pane) { return; }
+    if (CLOCKED || PICK || !el.wrap || !el.pane) { return; }
     if (host.classList.contains("full")) { el.pane.style.height = ""; if (el.lanes) { el.lanes.style.height = ""; } return; }
     var top = el.wrap.getBoundingClientRect().top + window.scrollY;
     var frame = Math.max(PANE_LEAST + SPLIT + BAND_LEAST, Math.round(window.innerHeight - top - 12));
@@ -388,19 +399,21 @@
   function drawShow() { host.querySelectorAll("#map-show [data-show]").forEach(function (b) { b.classList.toggle("on", b.dataset.show === S.show); }); }
   function drawTransport() {
     var m = now();
-    if (INC) {
+    if (CLOCKED) {
       var cams = dayCams(), ic = incClock();
+      var own = REC ? S.byId[host.dataset.recording] : null;
       el.transport.innerHTML =
         "<span class='muted small' id='map-count'>" + (cams.length ? cams.filter(inView).length + " of " + cams.length + " in view" : "no camera on this day") + "</span>" +
-        (ic && ic.now() === null ? "<span class='muted small'>This incident has no clock yet, so the map stands at the cameras' start.</span>" : "") +
+        (ic && ic.now() === null ? "<span class='muted small'>" + (REC ? "This recording is not on the case's clock" : "This incident has no clock yet") + ", so the map stands at the cameras' start.</span>" : "") +
+        (own && own.fixes.length ? "<button type='button' class='tiny' data-act='here' title='Bring this camera back to the middle and follow it again'>This camera</button>" : "") +
         "<span class='seg' id='map-show'>" + seg("markers", "Markers") + seg("trails", "Trails") + seg("whole", "Paths") + "</span>" +
         "<span class='map-ev' id='map-events'>" + EVENT_KINDS.map(evTick).join("") + "</span>" +
         "<span class='grow'></span>" +
         "<button type='button' class='tiny' data-act='fit'>Fit all</button>" +
         (pinnedCount() ? "<span class='pill small acc'>" + plural(pinnedCount(), "name") + " pinned</span>" : "") +
         "<button type='button' class='tiny ghost' data-act='tidy' title='Let every name ride beside its marker again'>Tidy names</button>" +
-        (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about this incident'>Save a picture</button>" : "") +
-        "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>";
+        (host.dataset.edit ? "<button type='button' class='tiny' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab" + (INC ? ", about this incident" : "") + "'>Save a picture</button>" : "") +
+        (INC ? "<button type='button' class='tiny " + (S.large ? "on" : "") + "' data-act='large'>" + (S.large ? "Smaller map" : "Larger map") + "</button>" : "");
       return;
     }
     var scope = S.scope ? "<span class='pill small acc' title='" + esc(S.scope.name) + "'>" + esc(S.scope.name) + "</span> <button type='button' class='tiny ghost' data-act='whole-day'>whole day</button>" : "";
@@ -475,14 +488,14 @@
       map.touchZoomRotate.disableRotation();
       // The zoom and the full-screen corner sit bottom right (v1.208.0): the
       // list panel has the top right.
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), INC || PICK ? "top-right" : "bottom-right");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), CLOCKED || PICK ? "top-right" : "bottom-right");
       map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
-      map.addControl(new maplibregl.FullscreenControl({ container: el.wrap }), INC || PICK ? "top-right" : "bottom-right");
+      map.addControl(new maplibregl.FullscreenControl({ container: el.wrap }), CLOCKED || PICK ? "top-right" : "bottom-right");
       if (host.dataset.basemap) { map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: host.dataset.attribution }), "bottom-right"); }
       else { var note = document.createElement("div"); note.className = "map-nomap"; note.innerHTML = "No street map installed: the paths are drawn on plain ground. <span class='muted'>The Admin can install one (admin guide, Maps).</span>"; el.pane.appendChild(note); }
       var north = document.createElement("div"); north.className = "map-north"; north.textContent = "N"; el.pane.appendChild(north);
       var mine = map;
-      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); if (PICK) { applyPick(); } });
+      map.on("load", function () { if (map !== mine) { return; } mapReady = true; addLayers(); fitAll(); drawList(); tick(); if (S.circle) { drawCircle(); } askedCameras(); if (PICK) { applyPick(); } if (REC) { recStart(); } });
       map.on("moveend", function () { drawList(); });
       map.on("move", function () { drawLeaders(); });
       // A press on one pip opens its card; on a stack (v1.206.0) it opens
@@ -564,6 +577,7 @@
     // A wider ring to press (v1.196.0): the pips are ten pixels across, and a
     // press a few pixels off used to do nothing.
     map.addLayer({ id: "map-events-hit", type: "circle", source: "map-events", paint: { "circle-radius": 12, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
+    if (REC) { addSaidLayers(); }
     drawMarkers();
   }
   function refreshLayers() {
@@ -584,7 +598,7 @@
   function hiddenFilter() {
     // Pick mode (chapter 10): only the ticked cameras' paths are drawn.
     if (PICK) { var picked = Object.keys(pickedSet()); return ["in", ["get", "id"], ["literal", picked]]; }
-    var ids = Object.keys(S.hidden); if (INC || !ids.length) { return null; } return ["!", ["in", ["get", "id"], ["literal", ids]]];
+    var ids = Object.keys(S.hidden); if (CLOCKED || !ids.length) { return null; } return ["!", ["in", ["get", "id"], ["literal", ids]]];
   }
   function drawMarkers() {
     Object.keys(markers).forEach(function (id) { markers[id].remove(); });
@@ -694,6 +708,7 @@
     movePlayhead(m);
     syncTiles(m);
     drawLeaders();
+    if (REC) { recTick(m); }
   }
   // Where a camera is now (chapter 6), for its opened row: the street under
   // it when a basemap is drawn, and the nearest other camera shown, by
@@ -735,7 +750,7 @@
         (cam.source === "car" ? "<span class='spd mono' hidden></span>" : "") +
         "<span class='pinmark' title='Pinned where you dropped it; press to let it ride again'>pinned · release</span>";
       node.title = "Press: open its video on the map. Drag: put the name where you like." + (cam.streams.length ? " This unit has " + (cam.streams.length + 1) + " streams; a press asks which." : "");
-      wireDrag(node, function () { return tag; }, function () { select(cam); if (cam.streams.length && !INC) { showChooser(cam, node); } else { openTile(cam, 0); } }, function () { tag.pinned = false; layoutNames(); drawTransport(); });
+      wireDrag(node, function () { return tag; }, function () { select(cam); if (cam.streams.length && !CLOCKED) { showChooser(cam, node); } else { openTile(cam, 0); } }, function () { tag.pinned = false; layoutNames(); drawTransport(); });
       tag.node = node;
     }
     return tag;
@@ -1164,7 +1179,7 @@
     drawTransport(); drawList(); drawStrip();
   }
   function drawList() {
-    if (INC) { var count = host.querySelector("#map-count"); var dc = dayCams(); if (count) { count.textContent = dc.length ? dc.filter(inView).length + " of " + dc.length + " in view" : "no camera on this day"; } return; }
+    if (CLOCKED) { var count = host.querySelector("#map-count"); var dc = dayCams(); if (count) { count.textContent = dc.length ? dc.filter(inView).length + " of " + dc.length + " in view" : "no camera on this day"; } return; }
     if (!el.list) { return; }
     var cams = S.cams.filter(scoped);
     var today = cams.filter(ofDay), other = cams.filter(function (c) { return c.onClock && !ofDay(c); }), off = cams.filter(function (c) { return !c.onClock; });
@@ -1473,6 +1488,7 @@
     closeChooser();
     stream = stream || 0;
     if (INC) { openPreview(cam); return; }
+    if (REC) { goToCamera(cam); return; }
     if (!cam.onClock) { toast("That camera is not on the clock.", true); return; }
     if (!streamCam(cam, stream).media) { toast("That recording has no copy to play yet.", true); return; }
     if (S.tiles[cam.id]) { if (S.tiles[cam.id].stream !== stream) { switchStream(S.tiles[cam.id], stream); return; } closeTile(cam.id); return; }
@@ -1585,7 +1601,7 @@
     drawTransport();
   }
   function followPreview() {
-    if (INC || !S.following || !window.Preview) { return; }
+    if (CLOCKED || !S.following || !window.Preview) { return; }
     if (!window.Preview.isOpen()) { S.following = null; if (S.playing) { pause(); } drawTransport(); return; }
     var asked = window.Preview.asked ? window.Preview.asked() : null;
     if (asked && asked.recording && asked.recording !== S.following) { S.following = S.byId[asked.recording] && S.byId[asked.recording].onClock ? asked.recording : null; drawTransport(); if (!S.following) { return; } }
@@ -1644,7 +1660,7 @@
   function onPress(e) {
     var chip = e.target.closest(".map-days [data-day]");
     if (chip) { var menu = chip.closest("details.menu"); if (menu) { menu.removeAttribute("open"); } S.day = chip.dataset.day; setAddress(); S.selected = null; S.following = null; load(false); return; }
-    if (INC) { var sh = e.target.closest("#map-show [data-show]"); if (sh) { S.show = sh.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); return; } }
+    if (CLOCKED) { var sh = e.target.closest("#map-show [data-show]"); if (sh) { S.show = sh.dataset.show; remember("map-show", S.show); drawShow(); refreshLayers(); tick(); return; } }
     var b = e.target.closest("[data-act]");
     if (b) {
       var more = b.closest("details.map-more"); if (more) { more.removeAttribute("open"); }
@@ -1656,6 +1672,7 @@
         case "prev-event": stepEvent(-1); return;
         case "next-event": stepEvent(1); return;
         case "fit": fitAll(); return;
+        case "here": S.recMoved = false; var ownCam = S.byId[host.dataset.recording]; if (ownCam) { flyTo(ownCam); } return;
         case "fly": if (cam) { flyTo(cam); } return;
         case "open": if (cam) { S.open = S.open === cam.id ? null : cam.id; drawStrip(); drawList(); } return;
         case "tag": if (cam) { select(cam); openTile(cam); } return;
@@ -1722,7 +1739,7 @@
   document.addEventListener("keydown", function (e) {
     if ((e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) { return; }
     // On the incident page the keys are that page's; only Escape clears a selection here.
-    if (INC && e.key !== "Escape") { return; }
+    if (CLOCKED && e.key !== "Escape") { return; }
     if (e.key === " ") { e.preventDefault(); if (S.playing) { pause(); } else { play(); } }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek(now() - (e.shiftKey ? 10 : 1)); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek(now() + (e.shiftKey ? 10 : 1)); }
@@ -1827,16 +1844,102 @@
     map.triggerRepaint();
   }
 
+  // The recording page's Map tab (v1.223.0) --------------------------------------
+  //
+  // This camera lit from the start, the map keeping its marker in view
+  // until the person moves the map (This camera brings it back); a pip on
+  // its path for every line of the transcript where it was said, the line
+  // being spoken filled, hover for the words, a press to play from it; and
+  // a press on another camera opening that recording at the same moment.
+  var said = { built: false, here: -1, popup: null };
+  function ownCam() { return REC ? S.byId[host.dataset.recording] || null : null; }
+  function recClock() { return window.RecordingClock || null; }
+  function recStart() {
+    var own = ownCam();
+    if (own) { select(own); flyTo(own); }
+    S.recMoved = false;
+    map.on("dragstart", function () { S.recMoved = true; });
+    map.on("wheel", function () { S.recMoved = true; });
+    drawSaid(true);
+  }
+  function saidFeatures() {
+    var own = ownCam(), rc = recClock();
+    if (!own || !own.fixes.length || !rc || !rc.lines) { return []; }
+    var here = rc.lineIndex ? rc.lineIndex() : -1;
+    var out = [];
+    rc.lines().forEach(function (line) {
+      var p = positionAt(own, line.t);
+      if (!p || p.nofix || p.ended) { return; }
+      out.push({ type: "Feature", id: line.index, geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+        properties: { index: line.index, t: line.t, who: line.who || "", text: line.text || "", here: line.index === here ? 1 : 0 } });
+    });
+    return out;
+  }
+  function addSaidLayers() {
+    map.addSource("map-said", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "map-said", type: "circle", source: "map-said", paint: {
+      "circle-radius": ["case", ["==", ["get", "here"], 1], 7, 4.5],
+      "circle-color": ["case", ["==", ["get", "here"], 1], token("--accent"), token("--surface")],
+      "circle-stroke-color": token("--accent"), "circle-stroke-width": 2 } });
+    map.addLayer({ id: "map-said-hit", type: "circle", source: "map-said", paint: { "circle-radius": 11, "circle-opacity": 0, "circle-stroke-opacity": 0 } });
+    map.on("mouseenter", "map-said-hit", function (e) {
+      map.getCanvas().style.cursor = "pointer";
+      var f = e.features && e.features[0]; if (!f) { return; }
+      if (!said.popup) { said.popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: "map-said-pop" }); }
+      said.popup.setLngLat(f.geometry.coordinates).setHTML("<span class='mono muted'>" + elapsed(f.properties.t) + "</span> " + (f.properties.who ? "<b>" + esc(f.properties.who) + "</b> " : "") + esc(f.properties.text)).addTo(map);
+    });
+    map.on("mouseleave", "map-said-hit", function () { map.getCanvas().style.cursor = ""; if (said.popup) { said.popup.remove(); } });
+    map.on("click", "map-said-hit", function (e) {
+      var f = e.features && e.features[0], rc = recClock();
+      if (f && rc && rc.seekLocal) { rc.seekLocal(parseFloat(f.properties.t)); }
+    });
+  }
+  function drawSaid(force) {
+    if (!map || !mapReady || !REC) { return; }
+    var rc = recClock(), here = rc && rc.lineIndex ? rc.lineIndex() : -1;
+    if (!force && said.built && here === said.here) { return; }
+    var src = map.getSource("map-said"); if (!src) { return; }
+    src.setData({ type: "FeatureCollection", features: saidFeatures() });
+    said.built = true; said.here = here;
+  }
+  function recTick(m) {
+    drawSaid(false);
+    var own = ownCam();
+    if (!own || !map || !mapReady || S.recMoved || !own.onClock) { return; }
+    var p = positionAt(own, m - own.zero.second);
+    if (!p || p.nofix) { return; }
+    var pt = map.project([p.lon, p.lat]), size = map.getContainer().getBoundingClientRect();
+    var margin = 40;
+    if (pt.x < margin || pt.y < margin || pt.x > size.width - margin || pt.y > size.height - margin) { map.panTo([p.lon, p.lat], { duration: 400 }); }
+  }
+  // A press on another camera: that recording at the same moment when both
+  // are on the clock and the moment falls inside it, else from its start.
+  function goToCamera(cam) {
+    if (!cam || !cam.viewer_url) { return; }
+    if (cam.id === host.dataset.recording) { S.recMoved = false; flyTo(cam); return; }
+    var local = cam.onClock ? now() - cam.zero.second : NaN;
+    var inside = !isNaN(local) && local >= 0 && (!cam.length || local <= cam.length);
+    window.location.href = cam.viewer_url + (inside ? "?t=" + local.toFixed(2) : "");
+  }
+  // For the Said here list beside the map: whether this camera had a fix
+  // when a line was said.
+  if (REC) {
+    window.CaseMap = {
+      hasFix: function (t) { var own = ownCam(); if (!own || !own.fixes.length) { return null; } var p = positionAt(own, t); return !!(p && !p.nofix && !p.ended); },
+      ready: function () { return !!(mapReady && S.loaded); }
+    };
+  }
+
   // The address --------------------------------------------------------------------
   function askedMoment() {
-    if (INC) { return null; }
+    if (CLOCKED) { return null; }
     var rec = host.dataset.recording, at = parseFloat(host.dataset.at);
     if (rec && S.byId[rec] && S.byId[rec].onClock && !isNaN(at)) { var cam = S.byId[rec]; if (cam.date === S.day) { window.setTimeout(function () { select(cam); flyTo(cam); }, 300); return cam.zero.second + at; } }
     if (S.scope) { var low = Infinity; S.scope.cameras.forEach(function (id) { var c = S.byId[id]; if (c && c.onClock) { low = Math.min(low, c.zero.second); } }); if (low < Infinity) { return low; } }
     return null;
   }
   function setAddress() {
-    if (INC) { return; }
+    if (CLOCKED) { return; }
     var p = new URLSearchParams(location.search);
     p.set("tab", "map");
     if (S.day) { p.set("day", S.day); } else { p.delete("day"); }
@@ -1850,7 +1953,7 @@
   // fits the map to where they were in the span and sets the clock at its
   // start. No circle is drawn: the one circle is the person's.
   function askedCameras() {
-    if (INC || askedCameras.done) { return; }
+    if (CLOCKED || askedCameras.done) { return; }
     askedCameras.done = true;
     var p = new URLSearchParams(location.search);
     var ids = (p.get("show") || "").split(",").filter(Boolean), from = parseFloat(p.get("from")), to = parseFloat(p.get("to"));
