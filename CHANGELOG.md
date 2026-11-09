@@ -17,6 +17,26 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.222.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The recording page, release 2 of its redrawing (Phase 13 chapter 2): the
+hand-off. The recording walker's ‹ and ›, and the keys `<` and `>`, keep
+the moment when this recording and the neighbour are both placed on the
+case's clock: the next camera opens at the same time of day, so a reviewer
+walks a stop from camera to camera without losing their place. Off the
+clock on either side, or when the moment falls outside the neighbour, it
+opens from the start as before. The arrow's tooltip says "at the same
+moment" when it will. The walker's list gains the reader's next assigned
+recording of the case at its foot, with Open.
+
+No new endpoint or setting: the page carries each neighbour's start on the
+clock and its length, and works the moment out when the arrow is pressed.
+
 ## v1.221.0, 2026-11-09
 
 ```

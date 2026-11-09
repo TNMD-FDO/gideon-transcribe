@@ -1835,6 +1835,37 @@
     });
   }
 
+  // The hand-off (v1.222.0): ‹ and ›, and the keys < and >, keep the moment
+  // when this recording and the neighbour are both on the case's clock: the
+  // neighbour opens at the same time of day, so the same moment plays from
+  // the next camera. Off the clock, or when the moment falls outside the
+  // neighbour, it opens from the start.
+  var walker = document.getElementById("walker");
+  function walkTo(step) {
+    var link = document.getElementById(step < 0 ? "walk-prev" : "walk-next");
+    if (!link) { return false; }
+    var href = link.getAttribute("href").split("?")[0];
+    var hereStart = walker ? parseFloat(walker.dataset.start) : NaN;
+    var otherStart = parseFloat(link.dataset.start);
+    var length = parseFloat(link.dataset.length);
+    var at = player ? player.currentTime : 0;
+    if (!isNaN(hereStart) && !isNaN(otherStart)) {
+      var same = hereStart + at - otherStart;
+      if (same >= 0 && (!length || same <= length)) { href += "?t=" + same.toFixed(2); }
+    }
+    window.location.href = href;
+    return true;
+  }
+  if (walker) {
+    walker.addEventListener("click", function (event) {
+      var arrow = event.target.closest("a.arrow");
+      if (!arrow || event.ctrlKey || event.metaKey || event.shiftKey || event.button) { return; }
+      event.preventDefault();
+      walkTo(arrow.id === "walk-prev" ? -1 : 1);
+    });
+  }
+  window.VIEWER.walkTo = walkTo;
+
   function rename(from, to) {
     fetch("/recording/" + window.VIEWER.recording + "/speakers", {
       method: "POST",
@@ -2647,8 +2678,7 @@
     if (event.key === "?") { shortcuts(overlay.hidden); return; }
     // < and > walk the case's ready recordings (v1.221.0, the walker).
     if (event.key === "<" || event.key === ">") {
-      var step = document.getElementById(event.key === "<" ? "walk-prev" : "walk-next");
-      if (step) { event.preventDefault(); window.location.href = step.href; }
+      if (window.VIEWER.walkTo && window.VIEWER.walkTo(event.key === "<" ? -1 : 1)) { event.preventDefault(); }
       return;
     }
     if (event.key === "Escape") {

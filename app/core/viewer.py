@@ -401,7 +401,7 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # The recording walker in the head (Phase 13 chapter 2, v1.221.0):
         # where this recording stands in the case and the ready ones either
         # side; it took the place of the list under the video.
-        "walk": _walk(in_case),
+        "walk": _walk_hand_off(_walk(in_case), recording, request.user),
         "transcript": transcript,
         # The speakers pass over a Live recording still to land (v1.94.0).
         "speakers_pass_running": _speakers_pass_running(recording),
@@ -2054,6 +2054,35 @@ def _walk(rows: list[dict]) -> dict:
     )
     after = next((one["recording"] for one in rows[here + 1 :] if one["ready"]), None)
     return {"place": here + 1, "count": len(rows), "prev": before, "next": after}
+
+
+def _clock_seconds(recording) -> float | None:
+    """Where a recording starts on the case's clock, as seconds on one scale
+    across days (the day's ordinal times 86400 plus the second of the day),
+    or None for a recording not placed on the clock (ADR 0027)."""
+    if recording is None or recording.clock_date is None:
+        return None
+    if recording.clock_start is None:
+        return None
+    return recording.clock_date.toordinal() * 86400 + float(recording.clock_start)
+
+
+def _walk_hand_off(walk: dict, recording, user) -> dict:
+    """The hand-off (Phase 13 chapter 2, release 2, v1.222.0): the walker's
+    neighbours with where each starts on the case's clock and how long it
+    runs, so the page can keep the moment from one camera to the next; and
+    the reader's next assigned recording of the case for the list's foot."""
+    from core import assignments
+
+    if not walk:
+        return walk
+    walk["here_start"] = _clock_seconds(recording)
+    for key in ("prev", "next"):
+        other = walk[key]
+        walk[f"{key}_start"] = _clock_seconds(other)
+        walk[f"{key}_length"] = (other.duration_seconds or 0) if other else 0
+    walk["assigned_next"] = assignments.next_for(user, recording)
+    return walk
 
 
 def _people_of(recording) -> list[dict]:

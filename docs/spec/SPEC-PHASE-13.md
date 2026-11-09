@@ -132,12 +132,23 @@ the tab bar's end. The pages say "the case's recordings", never siblings.
   floated at the top of the transcript is gone. The Follow tick on the
   transport is unchanged.
 
-### Releases 2 to 4 (to come, at the maintainer's word)
+### Release 2: the hand-off (v1.222.0)
 
-- **Release 2, the hand-off.** ‹ and › keep the moment when both
-  recordings are on the case's clock, so the same moment plays from the
-  next camera; the next recording assigned to the reader at the list's
-  foot.
+- **The same moment on the next camera.** ‹ and ›, and the keys `<` and
+  `>`, keep the moment when this recording and the neighbour are both
+  placed on the case's clock (ADR 0027): the neighbour opens at the same
+  time of day (`?t=` as citations use it), and the arrow's tooltip says
+  "at the same moment". Off the clock on either side, or when the moment
+  falls before the neighbour starts or after it ends, the neighbour opens
+  from the start. The page works it out when the arrow is pressed, from
+  the playhead, as All cameras does.
+- **The next assigned to you** at the foot of the walker's list: the
+  reader's next assigned recording of the case not yet reviewed, oldest
+  after this one first (Phase 9 chapter 3's rule), with Open; absent when
+  there is none.
+
+### Releases 3 and 4 (to come, at the maintainer's word)
+
 - **Release 3, the Map tab** (figures 6 and 9): the case's map script
   following this page's clock as it follows the incident page's; the
   camera's path lit and its marker on the playhead; the other cameras of

@@ -38,6 +38,31 @@ def test_the_walker_stops_at_the_ends_and_outside_a_case():
     assert _walk(rows("r", "r")) == {}
 
 
+def test_the_hand_off_keeps_the_moment_between_cameras():
+    # Release 2 (v1.222.0): a recording's start on one scale across days,
+    # None off the clock; the walker and its arrows carry the starts and
+    # lengths, and the script keeps the moment when both are on the clock.
+    import datetime as dt
+    from types import SimpleNamespace
+
+    from core.viewer import _clock_seconds
+
+    on = SimpleNamespace(clock_date=dt.date(2025, 11, 6), clock_start=51600.0)
+    later = SimpleNamespace(clock_date=dt.date(2025, 11, 7), clock_start=0.0)
+    assert _clock_seconds(later) - _clock_seconds(on) == 86400 - 51600
+    assert _clock_seconds(SimpleNamespace(clock_date=None, clock_start=5.0)) is None
+    assert _clock_seconds(None) is None
+    assert "data-start=\"{{ walk.here_start|default_if_none:'' }}\"" in PAGE
+    assert "data-start=\"{{ walk.next_start|default_if_none:'' }}\"" in PAGE
+    assert 'data-length="{{ walk.next_length }}"' in PAGE
+    assert "var same = hereStart + at - otherStart;" in SCRIPT
+    assert 'if (same >= 0 && (!length || same <= length)) { href += "?t="' in SCRIPT
+    assert "window.VIEWER.walkTo = walkTo;" in SCRIPT
+    # The reader's next assigned recording at the list's foot.
+    assert "{% if walk.assigned_next %}" in PAGE
+    assert 'class="walker-assigned"><b>Next assigned to you:' in PAGE
+
+
 def test_the_walker_stands_in_the_head_and_the_rail_is_gone():
     assert '<nav class="walker" id="walker"' in PAGE
     assert 'id="walk-prev"' in PAGE and 'id="walk-next"' in PAGE

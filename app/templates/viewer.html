@@ -41,8 +41,14 @@
                 place ("3 of 8") opening the case's list, which stood under
                 the video until this release. The keys < and > walk too.
               {% endcomment %}
-              <nav class="walker" id="walker" aria-label="The case's recordings">
-                {% if walk.prev %}<a class="arrow" id="walk-prev" href="{% url 'viewer' walk.prev.pk %}" title="Previous: {{ walk.prev.title }} (<)" aria-label="Previous recording">&lsaquo;</a>{% else %}<span class="arrow off" title="The first ready recording of the case">&lsaquo;</span>{% endif %}
+              {% comment %}
+                The hand-off (release 2, v1.222.0): each neighbour carries where it
+                starts on the case's clock and how long it runs; when this
+                recording and the neighbour are both on the clock, the arrow and
+                the key open the neighbour at the same moment, else from the start.
+              {% endcomment %}
+              <nav class="walker" id="walker" aria-label="The case's recordings" data-start="{{ walk.here_start|default_if_none:'' }}">
+                {% if walk.prev %}<a class="arrow" id="walk-prev" href="{% url 'viewer' walk.prev.pk %}" data-start="{{ walk.prev_start|default_if_none:'' }}" data-length="{{ walk.prev_length }}" title="Previous: {{ walk.prev.title }} (<){% if walk.here_start and walk.prev_start %}, at the same moment{% endif %}" aria-label="Previous recording">&lsaquo;</a>{% else %}<span class="arrow off" title="The first ready recording of the case">&lsaquo;</span>{% endif %}
                 <details class="menu which" id="walker-menu">
                   <summary title="The case's recordings"><span class="place">{{ walk.place }} of {{ walk.count }}</span> {% icon "chevron-down" %}</summary>
                   <ul class="walker-list">
@@ -56,11 +62,15 @@
                       </li>
                     {% endfor %}
                     <li class="sep"></li>
+                    {% if walk.assigned_next %}
+                      {% comment %}The reader's next assigned recording of the case (Phase 9 chapter 3's next_for), at the list's foot.{% endcomment %}
+                      <li><a href="{% url 'viewer' walk.assigned_next.pk %}" class="walker-assigned"><b>Next assigned to you: {{ walk.assigned_next.title }}</b><span class="small">Open</span></a></li>
+                    {% endif %}
                     <li><a href="{% url 'case-download' recording.case_id %}">{% icon "download" %} Download all transcripts</a></li>
-                    <li class="walker-foot muted small">&lsaquo; and &rsaquo;, or the keys &lt; and &gt;, walk the ready recordings in the case's order.</li>
+                    <li class="walker-foot muted small">&lsaquo; and &rsaquo;, or the keys &lt; and &gt;, walk the ready recordings in the case's order{% if walk.here_start %}, keeping the moment where the next camera is on the clock too{% endif %}.</li>
                   </ul>
                 </details>
-                {% if walk.next %}<a class="arrow" id="walk-next" href="{% url 'viewer' walk.next.pk %}" title="Next: {{ walk.next.title }} (>)" aria-label="Next recording">&rsaquo;</a>{% else %}<span class="arrow off" title="The last ready recording of the case">&rsaquo;</span>{% endif %}
+                {% if walk.next %}<a class="arrow" id="walk-next" href="{% url 'viewer' walk.next.pk %}" data-start="{{ walk.next_start|default_if_none:'' }}" data-length="{{ walk.next_length }}" title="Next: {{ walk.next.title }} (>){% if walk.here_start and walk.next_start %}, at the same moment{% endif %}" aria-label="Next recording">&rsaquo;</a>{% else %}<span class="arrow off" title="The last ready recording of the case">&rsaquo;</span>{% endif %}
               </nav>
             {% endif %}
           {% elif recording.is_dictation %}
