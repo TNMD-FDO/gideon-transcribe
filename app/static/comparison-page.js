@@ -112,6 +112,26 @@
     title: page.dataset.title
   };
   window.REPORT_PANEL.drawComparison(box, urls, null, {
+    // The quote (v1.220.0): the passage window, the report's pages in one
+    // scroll opened at the cited paragraph; the row lights, and a press on
+    // a paragraph in the window lights the findings that rest on it.
+    passage: function (quote) {
+      if (!window.PASSAGE_WINDOW) { return; }
+      var row = quote.closest("tr");
+      var cite = quote.parentNode.querySelector("a[data-para-card]");
+      var clock = row ? row.querySelector(".cite.play") : null;
+      Array.prototype.forEach.call(box.querySelectorAll("tr.lit"), function (r) { r.classList.remove("lit"); });
+      if (row) { row.classList.add("lit"); }
+      window.PASSAGE_WINDOW.open({
+        stateUrl: page.dataset.documentState,
+        docUrl: cite ? cite.dataset.docUrl : "",
+        title: urls.title,
+        page: quote.dataset.page,
+        n: quote.dataset.para,
+        finding: clock ? "the finding at " + clock.textContent.trim() : "",
+        onParagraph: function (number, n) { lightRows(number, n); }
+      });
+    },
     // Against an incident a finding has no recording: the moment plays every
     // camera of the incident at that time of day, in the Preview.
     playIncident: function (at, from) {

@@ -17,6 +17,41 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.220.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The passage window: the report comes to the reader, whole. On the
+Comparison page a finding's quote from the report was a tooltip, and the
+small cite under it turned the page in the column beside the findings,
+where a whole page stands 340 px wide and its words do not read. The quote
+is now a press, and it opens a floating window of the Preview's kind with
+the report's pages stacked in one scroll, opened at the cited paragraph
+with it outlined a third of the way down, so the paragraphs before are
+above it and the rest of the page and every page after are below.
+
+The window's bar holds the zoom (Fit sets the page to the window's width;
+100% shows the picture as the app stores it, about one and a half times
+print; 150% larger still, scrolling sideways with the paragraph kept in
+view), the page arrows, Back to the citation once the reader has scrolled
+away, and Open the document at that paragraph. The cited words, as read,
+stand in the foot. The window is dragged by its head and resized at its
+corner, and its size and zoom are remembered in the browser. The next
+quote pressed scrolls the window to that paragraph and the head names the
+finding; a press on any paragraph in the window lights the findings that
+rest on it, as a press on the page column does. Escape or Close closes it.
+The cite link under a quote still turns the page column as before.
+
+Nothing new is asked of the server: the window stacks the page pictures
+and paragraph boxes the page column already fetches. Where report-panel.js
+draws findings without the window (an incident's or a recording's Details),
+the quote opens the paragraph card under its cite instead. Drawn first as
+docs in `.claude/tools/preview/comparison-passage.html` (figure 6), the
+maintainer's pick of 2026-11-09.
+
 ## v1.219.0, 2026-11-09
 
 ```

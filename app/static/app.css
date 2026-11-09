@@ -4697,3 +4697,35 @@ details.menu .menu-body label.small { min-width: 0; max-width: 100%; }
 details.menu.compare-against > ul, .cmp-page details.menu.cmp-against > ul { left: 0; right: auto; width: max-content; max-width: min(34rem, calc(100vw - 48px)); }
 details.menu.compare-against > ul a, details.menu.compare-against > ul button,
 .cmp-page details.menu.cmp-against > ul a, .cmp-page details.menu.cmp-against > ul button { white-space: normal; line-height: 1.3; padding-top: 5px; padding-bottom: 5px; }
+
+/* The passage window (v1.220.0; the drawing comparison-passage.html of
+   2026-11-09, figure 6 at the maintainer's word): a finding's quote on the
+   Comparison page is a press, and it opens a floating window of the
+   Preview's kind with the report's pages stacked in one scroll, opened at
+   the cited paragraph; dragged by its head, resized at its corner. */
+.quote-press { font: inherit; color: var(--muted); background: none; border: 0; padding: 0; margin: 0; text-align: left; display: inline; white-space: normal; cursor: pointer; border-bottom: 1px dotted var(--muted); border-radius: 0; }
+.quote-press:hover, .quote-press:focus-visible { color: var(--text); border-bottom-color: var(--accent); }
+tr.lit .quote-press { color: var(--text); }
+.passage-win { position: fixed; right: 20px; bottom: 20px; z-index: 46; width: 640px; height: 560px; min-width: 360px; min-height: 280px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); display: flex; flex-direction: column; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); font-size: var(--t-small); overflow: hidden; resize: both; }
+body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
+.passage-head { flex: none; display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: var(--accent); color: var(--accent-ink); cursor: grab; user-select: none; touch-action: none; }
+.passage-head b { font-size: var(--t-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; flex: none; }
+.passage-head .grow { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+.passage-head .pw-close { color: inherit; border: 1px solid color-mix(in srgb, var(--accent-ink) 55%, transparent); background: transparent; }
+.passage-bar { flex: none; display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.passage-bar .grow { flex: 1 1 auto; }
+.pw-zoom { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.pw-zoom button { border: 0; border-radius: 0; background: transparent; padding: 2px 8px; min-height: 0; font-size: var(--t-label); color: var(--muted); cursor: pointer; }
+.pw-zoom button + button { border-left: 1px solid var(--line); }
+.pw-zoom button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.passage-doc { flex: 1 1 auto; min-height: 0; overflow: auto; background: var(--surface-2); padding: 10px 14px 14px; }
+.passage-doc:focus { outline: none; }
+.pw-page { position: relative; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); box-sizing: border-box; }
+.pw-page img { display: block; width: 100%; height: 100%; }
+.pw-page .doc-box { cursor: pointer; }
+.pw-page .doc-box.lit { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.pw-page .doc-box.hit { outline: 2px solid var(--warn); border-color: var(--warn); }
+.pw-gap { text-align: center; font-size: var(--t-label); color: var(--muted); padding: 10px 0 6px; }
+.passage-foot { flex: none; padding: 6px 10px 8px; border-top: 1px solid var(--line); max-height: 32%; overflow: auto; }
+.passage-foot .pw-words { margin: 3px 0 0; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: var(--t-body); }
+@media (max-width: 899px) { .passage-win, body.gideon-open .passage-win { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto !important; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; resize: vertical; } }

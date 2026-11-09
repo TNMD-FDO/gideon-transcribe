@@ -110,7 +110,7 @@
               (one.recording ? "<div class='muted small'>" + escape(one.recording) + "</div>" : "") +
               (one.note_id ? "<div class='muted small'>a note on " + escape(one.note_on || "the recording") + "</div>" : "") + "</td>" +
               "<td><div class='claim'>" + escape(one.claim) + "</div>" +
-              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <span class='muted' title='" + quoted(one.paragraph) + "'>" + escape(shorten(one.paragraph, 220)) + "</span>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
+              (one.page ? "<div class='small rests'><a class='cite' href='" + escape(one.paragraph_url) + "' data-para-card='1' data-doc-url='" + escape(C.document_url || "") + "' data-page='" + one.page + "' data-para='" + one.n + "' data-title='" + escape(C.document || "") + "'>page " + one.page + ", para " + one.n + "</a>" + (one.paragraph ? " <button type='button' class='quote-press' data-passage='1' data-page='" + one.page + "' data-para='" + one.n + "' data-finding='" + escape(one.id) + "' title='" + quoted(one.paragraph) + "'>" + escape(shorten(one.paragraph, 220)) + "</button>" : "") + "</div>" : "<div class='muted small'>Not in the report</div>") +
               (one.why ? "<div class='small why'>" + escape(one.why) + "</div>" : "") +
               (one.note ? "<div class='small note'><b>Note:</b> " + escape(one.note) + "</div>" : "") +
               "<div class='acts'>" +
@@ -173,6 +173,16 @@
         if (order) { kept.order = order.dataset.order; render(); return; }
         var play = event.target.closest(".cite.play[data-at]");
         if (play) { event.preventDefault(); playAt(play); return; }
+        // The quote (v1.220.0): the passage window where the page has one,
+        // the paragraph card under the cite elsewhere.
+        var quote = event.target.closest("[data-passage]");
+        if (quote) {
+          event.preventDefault();
+          if (hooks.passage) { hooks.passage(quote); return; }
+          var cite = quote.parentNode.querySelector("a[data-para-card]");
+          if (cite && window.PARAGRAPH_CARD) { window.PARAGRAPH_CARD.open(cite); }
+          return;
+        }
         var make = event.target.closest("[data-make]");
         if (make) {
           var finding = (kept.state.findings || []).filter(function (one) { return one.id === make.dataset.make; })[0];
