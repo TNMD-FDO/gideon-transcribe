@@ -2050,6 +2050,9 @@ def _the_rest_of_the_case(recording) -> list:
                 "ready": one.pk in with_transcript,
                 "in_the_queue": one.pk in in_the_queue,
                 "failed": one.media_state in ("failed", "rejected"),
+                # Where it starts on the case's clock (release 4, v1.224.0),
+                # so the case column's rows keep the moment as the walker does.
+                "start": _clock_seconds(one),
             }
         )
     return rows

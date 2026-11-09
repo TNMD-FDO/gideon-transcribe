@@ -246,7 +246,9 @@ def test_the_map_takes_the_window_and_the_lanes_carry_the_names():
         ".map-showbox",
         ".map-reader",
         ".map-tab.folded",
-        "min-width: 2200px",
+        # The Map page's own 2200 rule went with v1.210.0; the recording
+        # page's three columns (v1.224.0) have a 2200 query of their own.
+        "2200px) { .map-tab",
         ".map-tab-page",
     ):
         assert gone not in css, gone

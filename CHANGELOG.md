@@ -17,6 +17,30 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.224.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The recording page, release 4 of its redrawing (Phase 13 chapter 2): the
+three columns from 2200 wide, for the office's docked screens. In a case
+the page takes three columns under the head and the timeline: the case's
+recordings in a column of their own at the left (the case and its count,
+Download all, every recording with its kind, length or state, the one in
+hand marked, the next assigned to you at the foot), the words in the
+middle at their reading measure, and the stage at the right with its grip
+on its left edge. A press on a column row keeps the moment as the walker's
+arrows do. From 2200 wide the Map tab opens beside the Transcript instead
+of replacing it, half and half, so the words stay against the map; under
+2200 nothing changes. A sound recording in a case gains the column alone.
+
+The drawing's figure 4 had drawn a second, small map under the picture in
+the stage; one map is drawn, beside the words, and the stage keeps the
+picture, the transport and the Now line. This closes the four releases of
+the recording page's redrawing.
+
 ## v1.223.0, 2026-11-09
 
 ```

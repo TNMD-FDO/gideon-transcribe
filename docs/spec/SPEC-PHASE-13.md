@@ -198,14 +198,32 @@ the tab bar's end. The pages say "the case's recordings", never siblings.
   redrawing in place, since the map's libraries and the case's JSON are
   not on a page that had no tab.
 
-### Release 4 (to come, at the maintainer's word)
+### Release 4: the three columns (v1.224.0)
 
-- **The columns** (figure 4): from 2200 wide the case's
-  recordings as a left column, the words at their measure, the stage with
-  the picture and the map stacked; the Map tab opening beside the
-  Transcript as the incident page's two panels do. With a picture and no
-  file the stage holds the picture alone; with neither, the stage column
-  goes and the transport and the Now line sit in a bar under the timeline.
+- **From 2200 wide, in a case,** the page takes three columns under the
+  head and the timeline: the case's recordings in a **case column** of
+  their own at the left (300 px: the case and its count, Download all,
+  every recording with its kind, length or state, the one in hand marked,
+  the next assigned to the reader at the foot), the work area in the
+  middle with the words at their reading measure, and the stage at the
+  right with its grip on its left edge (dragging left makes the picture
+  wider). A press on a column row keeps the moment as the walker's arrows
+  do. The walker stays in the head, since it also walks by key. Under 2200
+  nothing changes: the column is not drawn and the walker's list is the
+  case's list.
+- **The Map tab beside the Transcript.** From 2200 wide, pressing Map
+  keeps the Transcript panel in view and opens the map panel beside it,
+  half and half, as the incident page's two panels do; pressing Transcript
+  closes the map panel. Crossing 2200 with the map open joins or parts the
+  two. Under 2200 the Map tab replaces the Transcript as before.
+- **A sound recording** (no picture) in a case keeps its transport under
+  the head and gains the case column alone: two columns, the words beside
+  the case's recordings.
+- **Left to the build, decided (2026-11-09):** figure 4 drew the map a
+  second time, small, under the picture in the stage. One map is drawn, in
+  the work area beside the words, and the stage keeps the picture, the
+  transport and the Now line: the same map script draws into one host, and
+  a second small map would have said less than the words-and-map pair.
 
 ### What is not
 

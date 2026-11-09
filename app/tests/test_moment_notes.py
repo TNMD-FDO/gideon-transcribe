@@ -388,7 +388,9 @@ def test_the_cases_list_under_the_video_shows_the_rest_in_place(person, a_case, 
     assert f'<span class="place">1 of {len(made)}</span>' in page
     for one in made:
         assert one.title in page
-    assert page.count('<li class="here">') == 1
+    # Marked in the walker's list and, from v1.224.0, in the case column too.
+    assert page.count('<li class="here">') == 2
+    assert page.count('aria-current="page"') == 1
     assert 'id="walk-prev"' not in page and 'id="walk-next"' in page
     # The oldest is last: next is greyed, previous is the one before it.
     page = client.get(f"/recording/{made[0].pk}").content.decode()

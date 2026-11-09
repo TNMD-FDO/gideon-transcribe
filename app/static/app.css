@@ -4804,3 +4804,58 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
 .rec-map-waiting .grow { flex: 1 1 auto; }
 .rec-map-around { padding: 8px 12px; border-bottom: 1px solid var(--line); border-radius: 0; }
 .map-said-pop .maplibregl-popup-content { font-size: var(--t-small); padding: 6px 10px; max-width: 320px; color: var(--text); background: var(--surface); }
+
+/* The three columns from 2200 wide, release 4 of the redrawing (Phase 13
+   chapter 2, v1.224.0; the drawing's figure 4): in a case, the case's
+   recordings in a column of their own at the left, the words in the middle
+   at their measure, the stage at the right with the grip on its left edge;
+   the Map tab opens beside the Transcript instead of replacing it. Under
+   2200 nothing changes: the column is not drawn and the walker is the list. */
+.case-column { display: none; }
+@media (min-width: 2200px) {
+  .desk.in-case:not(.sound) {
+    grid-template-columns: 300px minmax(0, 1fr) var(--stage, clamp(360px, 29vw, 800px));
+    grid-template-areas:
+      "head head head"
+      "timeline timeline timeline"
+      "caption caption caption"
+      "case body stage";
+  }
+  .desk.in-case:not(.sound) .stage { border-right: 0; border-left: 1px solid var(--line); }
+  .desk.in-case:not(.sound) .stagegrip { right: auto; left: -5px; }
+  .desk.in-case.sound {
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "head head"
+      "transport transport"
+      "timeline timeline"
+      "caption caption"
+      "case body";
+  }
+  .case-column { display: flex; flex-direction: column; grid-area: case; min-height: 0; border-right: 1px solid var(--line); background: var(--surface); font-size: var(--t-small); }
+  .case-column-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.06em; }
+  .case-column-head a { text-transform: none; letter-spacing: 0; white-space: nowrap; }
+  .case-column-list { list-style: none; margin: 0; padding: 6px 8px; overflow: auto; flex: 1 1 auto; min-height: 0; }
+  .case-column-list a, .case-column-list .row-not { display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; border-radius: var(--radius); color: var(--text); text-decoration: none; border-left: 3px solid transparent; min-width: 0; }
+  .case-column-list a:hover { background: var(--surface-2); }
+  .case-column-list li.here > a { background: var(--accent-soft); border-left-color: var(--accent); }
+  .case-column-list b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .case-column-list li.notyet .row-not { color: var(--muted); }
+  .case-column-foot { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+  .case-column-foot b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .panels.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+  .panels.two > .panel { min-height: 0; }
+  .panels.two > .panel.read { overflow-y: auto; }
+  .panels.two > .panel.rec-map-panel { border-left: 1px solid var(--line); }
+  /* Beside the map the words take the half panel as a laptop's column would:
+     the actions as the hover toolbar of v1.217.0, not a column of their own;
+     and the map has the words beside it already, so the Said here list goes. */
+  .panels.two .panel.read #transcript .seg { position: relative; grid-template-columns: 5.5em 9em minmax(0, 1fr); }
+  body.no-speakers .panels.two .panel.read #transcript .seg { grid-template-columns: 5.5em minmax(0, 1fr); }
+  .panels.two .panel.read #transcript .seg .actions { position: absolute; right: 6px; top: 3px; grid-column: auto; background: var(--surface-2); border-radius: 4px; padding: 1px 2px; }
+  .panels.two .panel.read #transcript .seg.here .actions { position: static; grid-column: 3; grid-row: 2; justify-self: end; background: transparent; padding: 0; }
+  body.no-speakers .panels.two .panel.read #transcript .seg.here .actions { grid-column: 2; }
+  .panels.two .said-here { display: none; }
+  .panels.two .rec-map { grid-template-columns: minmax(0, 1fr); }
+}

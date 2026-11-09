@@ -16,7 +16,7 @@
     </p>
   {% endif %}
 
-  <div class="desk{% if not is_video %} sound{% endif %}">
+  <div class="desk{% if not is_video %} sound{% endif %}{% if in_case %} in-case{% endif %}">
     {% comment %}
       Three regions: the head, the timeline with its marking strip, and
       under them the stage on the left (the picture, the transport, the line
@@ -286,7 +286,34 @@
               title="Drop this selection (Esc)">clear</button>
     </p>
 
-    {# The work area: the tabs, one at a time at full width; beside it, in a case, the rest of the case. #}
+    {% if in_case %}
+      {% comment %}
+        The case column (Phase 13 chapter 2, release 4, v1.224.0; the drawing
+        phase-13-recording-page.html, figure 4): from 2200 wide the case's
+        recordings stand in a column of their own at the page's left, the
+        words in the middle at their measure, the stage at the right; under
+        2200 the column is not drawn and the walker in the head is the list.
+        A row keeps the moment as the walker does when both are on the clock.
+      {% endcomment %}
+      <aside class="case-column" id="case-column" aria-label="The case's recordings">
+        <div class="case-column-head"><span>This case &middot; {{ in_case|length }} recording{{ in_case|length|pluralize }}</span><a href="{% url 'case-download' recording.case_id %}" title="Every transcript of the case in one file">Download all</a></div>
+        <ol class="case-column-list">
+          {% for one in in_case %}
+            <li class="{% if one.here %}here{% endif %}{% if not one.ready %} notyet{% endif %}">
+              {% if one.ready %}
+                <a href="{% url 'viewer' one.recording.pk %}" data-start="{{ one.start|default_if_none:'' }}" data-length="{{ one.recording.duration_seconds|default:0 }}"{% if one.here %} aria-current="page"{% endif %}><b>{{ one.recording.title }}</b><span class="muted small">{% if one.recording.recording_type %}{{ one.recording.recording_type }} &middot; {% endif %}{{ one.length }}</span></a>
+              {% else %}
+                <span class="row-not"><b>{{ one.recording.title }}</b><span class="muted small">{% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}</span></span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+        {% if walk.assigned_next %}
+          <div class="case-column-foot"><span class="muted small">Next assigned to you</span><a href="{% url 'viewer' walk.assigned_next.pk %}"><b>{{ walk.assigned_next.title }}</b></a></div>
+        {% endif %}
+      </aside>
+    {% endif %}
+    {# The work area: the tabs, one at a time at full width; from 2200 wide the Map tab beside the Transcript. #}
     <div class="body{% if in_case %} with-case{% endif %}">
 
       <div class="work">

@@ -1852,9 +1852,9 @@
   // the next camera. Off the clock, or when the moment falls outside the
   // neighbour, it opens from the start.
   var walker = document.getElementById("walker");
-  function walkTo(step) {
-    var link = document.getElementById(step < 0 ? "walk-prev" : "walk-next");
-    if (!link) { return false; }
+  // The address of a neighbour at the same moment, or plain (v1.222.0),
+  // for the walker's arrows and the case column's rows alike (v1.224.0).
+  function momentHref(link) {
     var href = link.getAttribute("href").split("?")[0];
     var hereStart = walker ? parseFloat(walker.dataset.start) : NaN;
     var otherStart = parseFloat(link.dataset.start);
@@ -1864,8 +1864,22 @@
       var same = hereStart + at - otherStart;
       if (same >= 0 && (!length || same <= length)) { href += "?t=" + same.toFixed(2); }
     }
-    window.location.href = href;
+    return href;
+  }
+  function walkTo(step) {
+    var link = document.getElementById(step < 0 ? "walk-prev" : "walk-next");
+    if (!link) { return false; }
+    window.location.href = momentHref(link);
     return true;
+  }
+  var caseColumn = document.getElementById("case-column");
+  if (caseColumn) {
+    caseColumn.addEventListener("click", function (event) {
+      var link = event.target.closest(".case-column-list a[data-start]");
+      if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.button) { return; }
+      event.preventDefault();
+      window.location.href = momentHref(link);
+    });
   }
   if (walker) {
     walker.addEventListener("click", function (event) {
@@ -2237,6 +2251,8 @@
   }
 
   var panels = document.getElementById("panels");
+  // The three columns (v1.224.0): from 2200 wide, in a case.
+  var THREE_COLUMNS = window.matchMedia("(min-width: 2200px)");
 
   function rememberTab(what) {
     try {
@@ -2247,10 +2263,16 @@
   function openTab(which, keep) {
     if (!panels) { return; }
     if (!document.querySelector('.tab[data-panel="' + which + '"]')) { which = "transcript"; }
+    // From 2200 wide (v1.224.0, the three columns) the Map tab opens beside
+    // the Transcript instead of replacing it, as the incident page's two
+    // panels do; the words stay in view against the map.
+    var beside = which === "map" && THREE_COLUMNS.matches && !!panels.querySelector('.panel[data-panel="transcript"]');
     Array.prototype.forEach.call(
       panels.querySelectorAll(".panel"),
-      function (panel) { panel.hidden = panel.dataset.panel !== which; }
+      function (panel) { panel.hidden = !(panel.dataset.panel === which || (beside && panel.dataset.panel === "transcript")); }
     );
+    panels.classList.toggle("two", beside);
+    panels.dataset.open = which;
     Array.prototype.forEach.call(
       document.querySelectorAll(".tab"),
       function (tab) { tab.classList.toggle("on", tab.dataset.panel === which); }
@@ -2266,6 +2288,10 @@
   window.VIEWER.openTab = openTab;
   // The name the clip tool and the assistant knew it by.
   window.VIEWER.openSheet = openTab;
+  // Crossing 2200 with the Map tab open: the two panels join or part.
+  if (THREE_COLUMNS.addEventListener) {
+    THREE_COLUMNS.addEventListener("change", function () { if (panels && panels.dataset.open === "map") { openTab("map", true); } });
+  }
 
   var openWindowButton = document.getElementById("open-window");
   Array.prototype.forEach.call(
@@ -3025,7 +3051,11 @@
     stageGrip.addEventListener("pointermove", function (event) {
       if (!sizingStage) { return; }
       // The grip is on the stage's right edge: dragging right makes it wider.
-      setStage(stageWas + (event.clientX - stageFromX));
+      // From 2200 wide in a case (v1.224.0) the stage stands at the right
+      // and the grip on its left edge, so dragging left makes it wider.
+      var desk = document.querySelector(".desk");
+      var onTheRight = window.matchMedia("(min-width: 2200px)").matches && desk && desk.classList.contains("in-case");
+      setStage(stageWas + (onTheRight ? -1 : 1) * (event.clientX - stageFromX));
       window.requestAnimationFrame(drawTimeline);
     });
 
