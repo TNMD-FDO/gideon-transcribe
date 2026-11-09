@@ -2075,19 +2075,19 @@ def _waiting_for(recording):
     )
 
 
-def _others_on_the_day(recording) -> bool:
-    """Whether another camera of the case has fixes on this recording's day."""
+def _others_on_the_day(recording, day: str) -> bool:
+    """Whether another camera of the case has fixes on this day, placed as
+    the map places it (v1.224.1: the map's own rule, not the recording's
+    clock fields alone)."""
     from core import camera_paths
 
-    return (
-        camera_paths.CameraPath.objects.filter(
-            recording__case_id=recording.case_id,
-            recording__clock_date=recording.clock_date,
-            fix_count__gt=0,
-        )
-        .exclude(recording=recording)
-        .exists()
-    )
+    for path in camera_paths.for_case(recording.case):
+        if path.recording_id == recording.pk or not path.has_fixes:
+            continue
+        zero = camera_paths.zero_of(path.recording, path)
+        if zero and zero.get("second") is not None and zero.get("date") == day:
+            return True
+    return False
 
 
 def map_tab(recording, is_video: bool) -> dict:
@@ -2101,10 +2101,15 @@ def map_tab(recording, is_video: bool) -> dict:
     if not is_video or recording.case_id is None or not camera_paths.on():
         return {}
     own = camera_paths.of(recording)
-    on_clock = recording.clock_date is not None and recording.clock_start is not None
+    # Placed as the map places it (v1.224.1): the path file's own clock, then
+    # the clock the app holds, then the file's time, then the name. The first
+    # release read the recording's clock fields alone, and on the office's
+    # server 60 of 102 cameras with a file had no tab.
+    zero = camera_paths.zero_of(recording, own)
+    on_clock = bool(zero and zero.get("second") is not None)
     told = {
-        "day": recording.clock_date.isoformat() if on_clock else "",
-        "second": float(recording.clock_start) if on_clock else None,
+        "day": zero["date"] if on_clock else "",
+        "second": float(zero["second"]) if on_clock else None,
         "own": bool(own is not None and own.has_fixes),
     }
     if own is not None and own.has_fixes and on_clock:
@@ -2124,7 +2129,7 @@ def map_tab(recording, is_video: bool) -> dict:
                 "flagged": waiting.flagged,
             },
         }
-    if on_clock and _others_on_the_day(recording):
+    if on_clock and _others_on_the_day(recording, told["day"]):
         return {**told, "shape": "around"}
     return {}
 
@@ -2147,7 +2152,8 @@ def _camera_file_words(recording) -> dict:
     own = camera_paths.of(recording)
     if own is not None:
         return {"words": own.original_filename, "url": "", "link": ""}
-    on_clock = recording.clock_date is not None and recording.clock_start is not None
+    zero = camera_paths.zero_of(recording, None)
+    on_clock = bool(zero and zero.get("second") is not None)
     return {
         "words": "none yet" + ("" if on_clock else " · not on the case's clock"),
         "url": f"{reverse('case', args=[recording.case_id])}?tab=map",

@@ -109,6 +109,26 @@ def test_the_four_shapes_by_what_the_recording_holds(person, a_case, maps_on):
     assert viewer.map_tab(own, True) == {}
 
 
+def test_the_shape_is_placed_as_the_map_places_it(person, a_case, maps_on):
+    # v1.224.1: a camera whose recording carries no clock fields but whose
+    # in-car file has its own clock is on the map, so it has the tab; and a
+    # camera with no file beside it that day is "around" by the same rule.
+    import datetime as dt
+
+    from django.utils import timezone
+
+    own = a_recording(person, a_case, "Unit-9082", on_clock=False)
+    path = a_path(own)
+    path.clock_start = timezone.make_aware(dt.datetime(2025, 11, 6, 14, 20, 0))
+    path.save(update_fields=["clock_start"])
+    told = viewer.map_tab(own, True)
+    assert told["shape"] == "own" and told["day"] == "2025-11-06"
+    assert told["second"] == 14 * 3600 + 20 * 60
+    # The other camera, placed by the app's clock, finds this one on its day.
+    beside = a_recording(person, a_case, "BWC-beside")
+    assert viewer.map_tab(beside, True)["shape"] == "around"
+
+
 def test_the_page_carries_the_tab_the_panel_and_the_host(
     person, a_case, client, maps_on
 ):

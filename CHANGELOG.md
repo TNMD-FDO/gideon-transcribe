@@ -17,6 +17,22 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.224.1, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Map tab shows for every camera the map places. v1.223.0 decided the
+tab's shape from the recording's own clock fields, while the case's map
+places a camera by a wider rule (the path file's own clock, then the clock
+the app holds, then the file's time, then its name): on the office's server
+60 of the 102 cameras with a path file had no tab. The shape is now
+decided by the map's rule, for the camera itself and for the cameras
+around it, and the Details tab's "Camera's file" row says "not on the
+case's clock" by the same rule.
+
 ## v1.224.0, 2026-11-09
 
 ```
