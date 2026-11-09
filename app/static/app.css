@@ -1235,8 +1235,6 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 /* Phase 8 chapter 1: the case's recordings sit under the video as a card,
    and the transcript column runs the full height beside the stage. */
 .body.with-case { grid-template-columns: minmax(0, 1fr); position: relative; }
-.stage .caserail { border: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius-lg); margin-top: 10px; max-height: 40vh; overflow-y: auto; }
-.stage .caserail .panel { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
 
 .caserail {
   border-right: 1px solid var(--line);
@@ -3420,15 +3418,9 @@ body.gideon-window .gideon-grip { display: none; }
 /* The walk of 2 October 2026 (v1.106.0): the five shapes that broke ---------
    Walked at 390, 768, 1024, 1366 by 768, 125% zoom and 1912. */
 
-/* 1. The recording page: the case's recordings under the transcript used to
-   keep up to 40vh whatever the height, and on a laptop (768 tall) the
-   transcript had no lines in view. The list folds to a strip; the script
-   folds it by itself on a short or narrow window and remembers a choice. */
-.stage .caserail .case-fold { margin-left: auto; flex: none; }
-.stage .caserail.folded .caselist,
-.stage .caserail.folded .panel > .btn { display: none; }
-.stage .caserail.folded { max-height: none; overflow: visible; }
-.stage .caserail.folded .panel { border-bottom: 0; border-radius: var(--radius-lg); }
+/* 1. The recording page: the case's recordings under the transcript folded
+   to a strip (v1.111.0 to v1.218.0); since v1.221.0 they are the recording
+   walker's list in the head (Phase 13 chapter 2), so the rules went. */
 
 /* 2. The Panel's menu shares the rail's class; under 900 wide the rail's
    narrow rules turned it into a scattered grid. It is a chip row that
@@ -4729,3 +4721,52 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
 .passage-foot { flex: none; padding: 6px 10px 8px; border-top: 1px solid var(--line); max-height: 32%; overflow: auto; }
 .passage-foot .pw-words { margin: 3px 0 0; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: var(--t-body); }
 @media (max-width: 899px) { .passage-win, body.gideon-open .passage-win { left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto !important; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; resize: vertical; } }
+
+/* The recording page, release 1 of the redrawing (Phase 13 chapter 2,
+   v1.221.0; the drawing phase-13-recording-page.html, figures 2, 5, 7 and
+   8): the head on one line with the recording walker, the title cut to one
+   line with its full name on hover and the pencil on hover, the marking
+   strip as the timeline's tooltip until something is marked, the speakers
+   folded to one row on a short window with the hint behind a mark, and the
+   follow state in the tab bar in place of the pill that floated over the
+   words. The case's recordings under the video went into the walker. */
+.walker { display: inline-flex; align-items: stretch; height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); flex: none; font-size: var(--t-small); }
+.walker .arrow { display: inline-flex; align-items: center; justify-content: center; width: 28px; color: var(--accent); font-size: var(--t-heading); text-decoration: none; border-right: 1px solid var(--line); }
+.walker .arrow:last-child { border-right: 0; border-left: 1px solid var(--line); }
+.walker .arrow.off { color: var(--muted); opacity: 0.5; cursor: default; }
+.walker a.arrow:hover { background: var(--surface-2); }
+.walker .which { display: inline-flex; }
+.walker .which > summary { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; height: 100%; color: var(--text); white-space: nowrap; }
+.walker .which > summary:hover { background: var(--surface-2); }
+#walker-menu > ul { left: 0; right: auto; width: 34rem; max-width: calc(100vw - 48px); max-height: 60vh; overflow: auto; }
+.walker-list a, .walker-list .row-not { display: flex; gap: 10px; justify-content: space-between; align-items: baseline; min-height: 32px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+.walker-list li.here > a { background: var(--accent-soft); }
+.walker-list a b { font-weight: 500; }
+.walker-list b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.walker-list .small { flex: none; }
+.walker-list li.notyet .row-not { color: var(--muted); }
+.walker-list .walker-foot { padding: 6px 10px 2px; white-space: normal; }
+/* One head line from 1280 wide: the walker, the title cut to one line, its pills, then the search and the actions. */
+@media (min-width: 1280px) {
+  .desk .head { flex-direction: row; align-items: center; gap: 12px; }
+  .desk .head .head-title { flex: 1 1 auto; flex-wrap: nowrap; min-width: 0; }
+  .desk .head .head-title h1 { flex: 1 1 auto; min-width: 12rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+  .desk .head .head-title .pill { flex: none; }
+  .desk .head .head-acts { flex: none; flex-wrap: nowrap; }
+  .desk .head .head-acts .search-box { margin-right: 0; }
+  .desk .head .head-title .rename { opacity: 0; transition: opacity 0.15s; }
+  .desk .head .head-title:hover .rename, .desk .head .head-title:focus-within .rename { opacity: 1; }
+}
+/* The marking strip is the timeline's tooltip until something is marked. */
+.desk .caption:not(.marking) { display: none; }
+/* The speakers folded to one row: the chips in one line that fades at its end; the hint, the rename box and Suggest names stay away until unfolded. */
+.cast.folded .speakerchips { display: flex; flex-wrap: nowrap; overflow: hidden; mask-image: linear-gradient(90deg, black 86%, transparent); }
+.cast.folded .speakerchips .speakerchip { flex: none; }
+.cast .cast-tools .icon .i { width: 14px; height: 14px; }
+/* The follow state at the tab bar's end. */
+.followstate { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); margin-right: 6px; white-space: nowrap; }
+.followstate .is-following, .followstate .is-paused { display: inline-flex; align-items: center; gap: 6px; }
+.followstate .is-paused { display: none; color: var(--warn); }
+.followstate[data-paused="yes"] .is-following { display: none; }
+.followstate[data-paused="yes"] .is-paused { display: inline-flex; }
+.followstate .tiny { min-height: 0; height: 22px; }

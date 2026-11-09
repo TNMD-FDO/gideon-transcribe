@@ -17,6 +17,50 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.221.0, 2026-11-09
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The recording page, release 1 of its redrawing (Phase 13 chapter 2; the
+drawing `docs/spec/mockups/phase-13-recording-page.html`, taken by the
+maintainer as Direction A with C's columns to follow): the head and the
+height. On an undocked laptop (1366 by 647) the first line of the words
+stood at 600 px of 647, under a title of two lines and a pencil line, the
+search row, the timeline and its strip, the tab bar, two rows of speaker
+chips, the "Click a name" tip and the Suggest names line. It stands at
+about 350 px now, with eight lines of words in place of one.
+
+- **The recording walker** in the head, in place of the list of the case's
+  recordings that stood under the video: previous and next ready
+  recording of the case in the case's order, and the place ("6 of 8")
+  opening the case's list with each recording's kind, length and state,
+  the one in hand marked and in view, the ones not ready greyed with why,
+  and Download all transcripts at the foot. The keys `<` and `>` walk too,
+  and the shortcuts list says so.
+- **One head line** from 1280 wide: the walker, the title cut to one line
+  with its full name as its tooltip and the pencil on hover, the pills,
+  then the search and the actions.
+- **The marking strip** is the timeline's tooltip until something is
+  marked; marked, the strip returns with the range, Preview, Save clip
+  and clear as before.
+- **The speakers fold** to one row from the start on a window under 900
+  tall (a remembered choice wins): the chips in one line that fades at its
+  end, the count, and the tools. The "Click a name" hint sits behind an
+  information mark in the tools instead of taking a line until dismissed;
+  the Suggest names line shows when the cast is unfolded, as before.
+- **The follow state** lives at the tab bar's right end: "Following" with
+  pause while the words follow the sound, "Paused while you read" with
+  Resume (F) once the reader scrolls. The pill that floated over the top of
+  the words, covering the line under it, is gone.
+
+No server change beyond the walker's place and neighbours in the page's
+context. Releases 2 to 4 of the redrawing (the same-moment hand-off
+between cameras, the Map tab against the lines said, the three columns
+from 2200 wide) follow at the maintainer's word.
+
 ## v1.220.0, 2026-11-09
 
 ```

@@ -667,7 +667,12 @@
     return found;
   }
 
-  var pill = document.getElementById("follow-pill");
+  // The follow state at the tab bar's end (v1.221.0), in place of the pill
+  // that floated over the top of the words.
+  var followState = document.getElementById("follow-state");
+  function showFollowState() {
+    if (followState) { followState.dataset.paused = paused ? "yes" : "no"; }
+  }
   var followBox = document.getElementById("follow");
   var reading = document.querySelector(".read");
 
@@ -737,7 +742,7 @@
   function pauseFollowing() {
     if (!following || paused) { return; }
     paused = true;
-    if (pill) { pill.hidden = false; }
+    showFollowState();
   }
 
   // Whether a row sits outside the middle band of the column, from about a
@@ -766,7 +771,7 @@
     paused = false;
     following = true;
     if (followBox) { followBox.checked = true; }
-    if (pill) { pill.hidden = true; }
+    showFollowState();
     // The line at the time just asked for, or the player's own, not the one
     // the page last marked (v1.159.1): a click on a line seeks and resumes
     // before the player has moved, and scrolling to the marked line pulled
@@ -801,14 +806,15 @@
   }
   window.VIEWER.resumeFollowing = resumeFollowing;
 
-  if (pill) {
-    document.getElementById("resume-follow").addEventListener("click", resumeFollowing);
-  }
+  var resumeButton = document.getElementById("resume-follow");
+  if (resumeButton) { resumeButton.addEventListener("click", function () { resumeFollowing(); }); }
+  var pauseButton = document.getElementById("follow-pause");
+  if (pauseButton) { pauseButton.addEventListener("click", function () { if (!following && followBox) { followBox.checked = true; following = true; } pauseFollowing(); }); }
   if (followBox) {
     followBox.addEventListener("change", function () {
       following = this.checked;
       paused = false;
-      if (pill) { pill.hidden = true; }
+      showFollowState();
     });
   }
 
@@ -1209,46 +1215,8 @@
     );
   }
 
-  // The case's recordings under the video (v1.99.1): "and 4 more" shows the
-  // rest in place; it used to leave the recording for the case's page.
-  var caseMore = document.getElementById("case-more");
-  if (caseMore) {
-    caseMore.addEventListener("click", function () {
-      var list = caseMore.closest("ul");
-      var opening = caseMore.getAttribute("aria-expanded") !== "true";
-      Array.prototype.forEach.call(list.querySelectorAll("li.rest"), function (row) { row.hidden = !opening; });
-      caseMore.setAttribute("aria-expanded", opening ? "true" : "false");
-      caseMore.textContent = opening ? "show fewer" : caseMore.dataset.more;
-    });
-  }
-
-  // The list folds to a strip (v1.106.0): on a laptop the case's recordings
-  // kept 40vh under the transcript and the transcript had no lines in view.
-  // Folded by itself on a window under 900 tall or 1280 wide, unless this
-  // browser remembers a choice.
-  var caseFold = document.getElementById("case-fold");
-  var caseRail = document.getElementById("caserail");
-  if (caseFold && caseRail) {
-    var remembered = null;
-    try { remembered = window.localStorage.getItem("caserail-fold"); } catch (error) { remembered = null; }
-    // v1.218.0 (the production walk's 9): on a short or narrow window the list
-    // starts folded whatever was remembered, so the transcript is in view;
-    // Show opens it for the page. A tall window keeps the remembered choice.
-    var short = window.innerHeight < 900 || window.innerWidth < 1280;
-    var folded = short ? true : (remembered ? remembered === "folded" : false);
-    var showFold = function () {
-      caseRail.classList.toggle("folded", folded);
-      caseFold.setAttribute("aria-expanded", folded ? "false" : "true");
-      caseFold.textContent = folded ? "Show" : "Fold";
-      caseFold.title = folded ? "Show the case's recordings" : "Fold the list to one line";
-    };
-    showFold();
-    caseFold.addEventListener("click", function () {
-      folded = !folded;
-      try { window.localStorage.setItem("caserail-fold", folded ? "folded" : "open"); } catch (error) { /* a private window keeps nothing */ }
-      showFold();
-    });
-  }
+  // The case's recordings under the video (v1.99.1 to v1.218.0) are the
+  // recording walker's list in the head since v1.221.0 (Phase 13 chapter 2).
 
   // Rows ----------------------------------------------------------------------
 
@@ -1835,9 +1803,36 @@
       foldCast(folded);
       try { window.localStorage.setItem("cast-folded", folded ? "yes" : "no"); } catch (ignored) { /* this page only */ }
     });
-    try {
-      foldCast(window.localStorage.getItem("cast-folded") === "yes");
-    } catch (ignored) { foldCast(false); }
+    // Folded from the start on a short window (v1.221.0), so a laptop shows
+    // the words; a remembered choice wins either way.
+    var rememberedFold = null;
+    try { rememberedFold = window.localStorage.getItem("cast-folded"); } catch (ignored) { rememberedFold = null; }
+    foldCast(rememberedFold ? rememberedFold === "yes" : window.innerHeight < 900);
+  }
+
+  // The speakers' hint behind its mark (v1.221.0): shown on the mark, gone
+  // on Got it or the mark again; nothing is remembered, nothing shows by itself.
+  var castHelp = document.getElementById("cast-help");
+  var castHint = document.getElementById("cast-hint");
+  if (castHelp && castHint) {
+    castHelp.addEventListener("click", function () {
+      castHint.hidden = !castHint.hidden;
+      castHelp.setAttribute("aria-expanded", castHint.hidden ? "false" : "true");
+      if (!castHint.hidden && cast.classList.contains("folded")) { foldCast(false); }
+    });
+    castHint.querySelector(".close-hint").addEventListener("click", function () {
+      castHint.hidden = true;
+      castHelp.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  // The recording walker's list opens with this recording in view (v1.221.0).
+  var walkerMenu = document.getElementById("walker-menu");
+  if (walkerMenu) {
+    walkerMenu.addEventListener("toggle", function () {
+      var here = walkerMenu.querySelector("li.here");
+      if (walkerMenu.open && here) { here.scrollIntoView({ block: "center" }); }
+    });
   }
 
   function rename(from, to) {
@@ -2650,6 +2645,12 @@
 
     if (event.key === "/") { event.preventDefault(); search.focus(); return; }
     if (event.key === "?") { shortcuts(overlay.hidden); return; }
+    // < and > walk the case's ready recordings (v1.221.0, the walker).
+    if (event.key === "<" || event.key === ">") {
+      var step = document.getElementById(event.key === "<" ? "walk-prev" : "walk-next");
+      if (step) { event.preventDefault(); window.location.href = step.href; }
+      return;
+    }
     if (event.key === "Escape") {
       if (!overlay.hidden) { shortcuts(false); return; }
       if (clipStartsAt !== null) { stopMarking(); return; }

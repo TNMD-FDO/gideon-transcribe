@@ -33,16 +33,47 @@
       <div class="head-title">
           {% comment %}In a case the case bar above the head is the way back (v1.171.0); the arrow and the crumb that stood here went with it.{% endcomment %}
           {% if recording.case_id %}
+            {% if walk %}
+              {% comment %}
+                The recording walker (Phase 13 chapter 2, v1.221.0; the drawing
+                phase-13-recording-page.html, figure 5): previous and next
+                ready recording of the case in the case's order, and the
+                place ("3 of 8") opening the case's list, which stood under
+                the video until this release. The keys < and > walk too.
+              {% endcomment %}
+              <nav class="walker" id="walker" aria-label="The case's recordings">
+                {% if walk.prev %}<a class="arrow" id="walk-prev" href="{% url 'viewer' walk.prev.pk %}" title="Previous: {{ walk.prev.title }} (<)" aria-label="Previous recording">&lsaquo;</a>{% else %}<span class="arrow off" title="The first ready recording of the case">&lsaquo;</span>{% endif %}
+                <details class="menu which" id="walker-menu">
+                  <summary title="The case's recordings"><span class="place">{{ walk.place }} of {{ walk.count }}</span> {% icon "chevron-down" %}</summary>
+                  <ul class="walker-list">
+                    {% for one in in_case %}
+                      <li class="{% if one.here %}here{% endif %}{% if not one.ready %} notyet{% endif %}">
+                        {% if one.ready %}
+                          <a href="{% url 'viewer' one.recording.pk %}"><b>{{ one.recording.title }}</b><span class="muted small">{% if one.here %}here · {% endif %}{% if one.recording.recording_type %}{{ one.recording.recording_type }} · {% endif %}{{ one.length }}</span></a>
+                        {% else %}
+                          <span class="row-not"><b>{{ one.recording.title }}</b><span class="muted small">{% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}</span></span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                    <li class="sep"></li>
+                    <li><a href="{% url 'case-download' recording.case_id %}">{% icon "download" %} Download all transcripts</a></li>
+                    <li class="walker-foot muted small">&lsaquo; and &rsaquo;, or the keys &lt; and &gt;, walk the ready recordings in the case's order.</li>
+                  </ul>
+                </details>
+                {% if walk.next %}<a class="arrow" id="walk-next" href="{% url 'viewer' walk.next.pk %}" title="Next: {{ walk.next.title }} (>)" aria-label="Next recording">&rsaquo;</a>{% else %}<span class="arrow off" title="The last ready recording of the case">&rsaquo;</span>{% endif %}
+              </nav>
+            {% endif %}
           {% elif recording.is_dictation %}
             <a href="{% url 'recordings' %}" title="Back to My recordings" class="btn ghost icon">{% icon "back" %}</a>
             <span class="crumb muted small"><a href="{% url 'recordings' %}">My recordings</a></span>
           {% else %}
             <a href="{% url 'recordings' %}" title="Back to your recordings" class="btn ghost icon">{% icon "back" %}</a>
           {% endif %}
-          <h1 id="recording-title">{{ recording.title }}</h1>
+          {% comment %}One line from 1280 wide (v1.221.0): the full name is the title's tooltip, and the pencil shows on hover.{% endcomment %}
+          <h1 id="recording-title" title="{{ recording.title }}">{{ recording.title }}</h1>
           {% if is_someone_elses %}{% if recording.case_id %}{% include "admin-pill.html" with owner=recording.user what="case" %}{% else %}{% include "admin-pill.html" with owner=recording.user what="Workspace" %}{% endif %}{% endif %}
           {% if not is_someone_elses %}
-            <button type="button" class="btn ghost icon" id="rename-title" title="Rename this recording" aria-label="Rename this recording">{% icon "correct" %}</button>
+            <button type="button" class="btn ghost icon rename" id="rename-title" title="Rename this recording" aria-label="Rename this recording">{% icon "correct" %}</button>
           {% endif %}
           {% if recording.is_two_channel_call %}
             <span class="pill side">Two-channel call: {{ sides|length }} sides</span>
@@ -216,62 +247,7 @@
         <b id="now-who" class="who"></b>
         <span id="now-text" class="grow"></span>
       </div>
-      {% comment %}Phase 8 chapter 1: the case's recordings under the video.{% endcomment %}
-      {% if in_case %}
-        <aside class="caserail" id="caserail" aria-label="This case">
-          <div class="panel">
-            <div class="row">
-              <a href="{% url 'case' recording.case_id %}" class="grow"
-                 title="Back to the case">This case: {{ recording.case.name }}</a>
-              {% comment %}v1.106.0: the list folds to this strip, so the transcript keeps the height; folded by itself on a short or narrow window.{% endcomment %}
-              <button type="button" class="ghost small case-fold" id="case-fold" aria-expanded="true" aria-controls="caserail" title="Fold the list to one line">Fold</button>
-            </div>
-            <p class="muted small m0 mt2">
-              {{ in_case|length }} recording{{ in_case|length|pluralize }} in this case
-            </p>
-            <a href="{% url 'case-download' recording.case_id %}"
-               class="btn small" style="margin-top: 6px; display: block; text-align: center">
-              Download all transcripts
-            </a>
-          </div>
-          <ul class="caselist">
-            {% for one in in_case %}
-              {% comment %}v1.99.1: past the eighth they are on the page and folded, shown in place by "and N more"; open from the start when this recording is one of them.{% endcomment %}
-              <li class="{% if one.here %}here{% endif %}{% if forloop.counter > 8 %} rest{% endif %}"{% if forloop.counter > 8 and not here_is_past_eight %} hidden{% endif %}>
-                {% if one.ready %}
-                  <a href="{% url 'viewer' one.recording.pk %}">
-                    <b>{{ one.recording.title }}</b>
-                    <span class="muted small">
-                      {% if one.recording.recording_type %}{{ one.recording.recording_type }} &middot; {% endif %}{{ one.length }}
-                    </span>
-                  </a>
-                {% else %}
-                  <span class="notyet">
-                    <b>{{ one.recording.title }}</b>
-                    <span class="muted small">
-                      {% if one.failed %}no transcript{% elif one.in_the_queue %}in the queue{% else %}not ready{% endif %}
-                    </span>
-                  </span>
-                {% endif %}
-              </li>
-            {% endfor %}
-            {% if in_case|length > 8 %}
-              <li><button type="button" class="case-more" id="case-more" aria-expanded="{% if here_is_past_eight %}true{% else %}false{% endif %}" data-more="and {{ in_case|length|add:"-8" }} more" title="Show the rest of this case's recordings here">{% if here_is_past_eight %}show fewer{% else %}and {{ in_case|length|add:"-8" }} more{% endif %}</button></li>
-            {% endif %}
-          </ul>
-        </aside>
-        {% comment %}The rail's fold decided before the page paints (v1.176.0, the motion walk): the script had folded it after the paint on a window under 900 tall or 1280 wide, and the page jumped. The script keeps the button and the memory.{% endcomment %}
-        <script>
-          (function () {
-            var rail = document.getElementById("caserail");
-            if (!rail) { return; }
-            var remembered = null;
-            try { remembered = window.localStorage.getItem("caserail-fold"); } catch (ignored) { remembered = null; }
-            var folded = remembered ? remembered === "folded" : (window.innerHeight < 900 || window.innerWidth < 1280);
-            if (folded) { rail.classList.add("folded"); }
-          })();
-        </script>
-      {% endif %}
+      {% comment %}The case's recordings stood here under the video from Phase 8 chapter 1 until v1.221.0; they are the recording walker's list in the head now (Phase 13 chapter 2).{% endcomment %}
       {% if is_video %}
         <div id="stage-grip" class="stagegrip" title="Drag to resize the stage. Double-click to reset."
              role="separator" aria-label="Resize the stage" tabindex="0"></div>
@@ -279,7 +255,7 @@
     </div>
 
     {# The timeline: the waveform and the marked range, at the width of the window. #}
-    <div class="timeline" id="timeline">
+    <div class="timeline" id="timeline" title="Click to jump; drag along it to mark a clip">
       <canvas id="waveform" height="56"></canvas>
       <div id="range" hidden></div>
       <div id="playhead"></div>
@@ -315,6 +291,19 @@
           {% endif %}
           <button type="button" class="tab" data-panel="details">{% icon "info" %} Details</button>
           <span class="grow"></span>
+          {% if transcript %}
+            {% comment %}
+              The follow state (v1.221.0; the drawing's figure 7): "Following"
+              with pause while the words follow the sound, "Paused while you
+              read" with Resume once the reader scrolls; here at the bar's
+              end, where it covers no line, in place of the pill that floated
+              over the top of the words.
+            {% endcomment %}
+            <span class="followstate small" id="follow-state" data-paused="no">
+              <span class="is-following">Following <button type="button" class="ghost tiny" id="follow-pause" title="Stop the words following the sound while you read">pause</button></span>
+              <span class="is-paused">Paused while you read <button type="button" class="tiny" id="resume-follow" title="Follow the sound again (F)">Resume (F)</button></span>
+            </span>
+          {% endif %}
           <button type="button" class="ghost small" id="open-window" hidden
                   title="Open this tab in a window of its own, which follows the recording">{% icon "expand" %} Open in a window</button>
         </div>
@@ -351,6 +340,8 @@
                     {# The Speaker check's count (Phase 5 chapter 3), filled by assistant.js; a press opens the Speakers page. #}
                     <button type="button" id="corrections-pill" class="pill warn corrections-pill" hidden title="Lines the AI assistant says were given to the wrong speaker; decide them on the Speakers page"></button>
                   {% endif %}
+                  {% comment %}The hint behind a mark (v1.221.0): it had taken a line of every laptop until dismissed.{% endcomment %}
+                  <button type="button" id="cast-help" class="ghost tiny icon" title="How the speakers work" aria-label="How the speakers work" aria-expanded="false">{% icon "info" %}</button>
                   <button type="button" id="speakers-toggle" class="ghost tiny" title="Hide or show the speaker names on the lines">hide</button>
                   <button type="button" id="cast-toggle" class="ghost tiny" title="Fold the speakers away to one line">fold</button>
                 </span>
@@ -366,10 +357,10 @@
               {% endif %}
             </div>
             {% if speakers %}
-              <div class="hint" data-hint="speakers" hidden>
+              <div class="hint" id="cast-hint" hidden>
                 {% icon "info" %}
                 <span class="grow">Click a name to change it. Drag one speaker onto another when two labels are the same person.</span>
-                <button type="button" class="ghost tiny dismiss">Got it</button>
+                <button type="button" class="ghost tiny close-hint">Got it</button>
               </div>
               {% if in_case %}
                 {% comment %}
@@ -432,13 +423,7 @@
               </div>
             {% endif %}
           </div>
-          {# A holder of no height, so the pill's coming and going moves nothing. #}
-          <div class="followhold">
-            <span id="follow-pill" class="pill followpill" hidden>
-              Following paused while you read.
-              <button type="button" id="resume-follow">Resume (F)</button>
-            </span>
-          </div>
+          {% comment %}The follow state moved to the tab bar's right end (v1.221.0): the pill that floated here covered the line under it.{% endcomment %}
           <p id="speakers-pass" class="notice small" {% if not speakers_pass_running %}hidden{% endif %}>
             The speakers are being matched over the whole recording. The
             labels change here by themselves in a moment.
@@ -496,6 +481,7 @@
         <div><span>Back or forward five seconds</span><kbd>&larr; &rarr;</kbd></div>
         <div><span>One second</span><kbd>Shift + &larr; &rarr;</kbd></div>
         <div><span>Thirty seconds</span><kbd>Ctrl + &larr; &rarr;</kbd></div>
+        {% if walk %}<div><span>The case's previous or next recording</span><kbd>&lt; &gt;</kbd></div>{% endif %}
         <div><span>One frame back or forward</span><kbd>, .</kbd></div>
         <div><span>Previous or next segment</span><kbd>&uarr; &darr;</kbd></div>
         <div><span>Slower or faster</span><kbd>[ ]</kbd></div>

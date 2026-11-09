@@ -398,9 +398,10 @@ def _page_context(request: HttpRequest, recording: Recording) -> dict:
         # The rest of the case, so somebody working through a matter moves
         # between its recordings without going back to the case page.
         "in_case": (in_case := _the_rest_of_the_case(recording)),
-        # v1.99.1: the list under the video folds past the eighth, and opens
-        # unfolded when this recording is one of those.
-        "here_is_past_eight": any(one["here"] for one in in_case[8:]),
+        # The recording walker in the head (Phase 13 chapter 2, v1.221.0):
+        # where this recording stands in the case and the ready ones either
+        # side; it took the place of the list under the video.
+        "walk": _walk(in_case),
         "transcript": transcript,
         # The speakers pass over a Live recording still to land (v1.94.0).
         "speakers_pass_running": _speakers_pass_running(recording),
@@ -2038,6 +2039,21 @@ def _the_rest_of_the_case(recording) -> list:
             }
         )
     return rows
+
+
+def _walk(rows: list[dict]) -> dict:
+    """The recording walker (Phase 13 chapter 2): where this recording stands
+    in the case's list (1-based, counting every recording), and the nearest
+    recording with a transcript before and after it in the list's order, or
+    None at either end. Empty outside a case."""
+    here = next((i for i, one in enumerate(rows) if one["here"]), None)
+    if here is None:
+        return {}
+    before = next(
+        (one["recording"] for one in reversed(rows[:here]) if one["ready"]), None
+    )
+    after = next((one["recording"] for one in rows[here + 1 :] if one["ready"]), None)
+    return {"place": here + 1, "count": len(rows), "prev": before, "next": after}
 
 
 def _people_of(recording) -> list[dict]:

@@ -150,12 +150,13 @@ def test_every_page_in_the_case_carries_the_bar_with_its_tab_lit(
     page = client.get(f"/recording/{cam.pk}").content.decode()
     assert 'id="case-bar"' in page and _lit(page) == "Recordings"
     assert "&rsaquo; BWC2-1" in page and "Harbour Street stop" in page
-    # The head's arrow went; the "This case" link under the video stays.
+    # The head's arrow went; the list under the video went too (v1.221.0),
+    # into the recording walker in the head; the bar is the way to the case.
     assert (
         'title="Back to the case Harbour Street stop" class="btn ghost icon"'
         not in page
     )
-    assert "This case: Harbour Street stop" in page
+    assert 'id="walker"' in page and "This case: Harbour Street stop" not in page
     # The incident page: Incidents lit; "in the case" and Back to the case gone.
     page = client.get(made.url()).content.decode()
     assert 'id="case-bar"' in page and _lit(page) == "Incidents"

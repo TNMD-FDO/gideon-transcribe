@@ -39,8 +39,8 @@ def test_the_stage_wraps_the_picture_the_transport_and_the_line_being_spoken():
         < page.index('id="panels"')
         < page.index('class="panel read" data-panel="transcript"')
     )
-    # The follow pill in a holder of no height; the speakers fold away.
-    assert 'class="followhold"' in page and 'id="cast-toggle"' in page
+    # The follow state at the tab bar's end (v1.221.0); the speakers fold away.
+    assert 'id="follow-state"' in page and 'id="cast-toggle"' in page
     panels = (APP / "templates" / "viewer-panels.html").read_text(encoding="utf-8")
     assert 'id="download-clips"' in panels
     # The marking strip's three controls.

@@ -320,9 +320,10 @@ def test_a_case_opens_on_its_own_page_whatever_it_holds(person, a_case, client):
     page = client.get("/cases").content.decode()
     assert f'data-open="/case/{a_case.pk}"' in page
     assert "Case page" not in page and 'id="detail-pane"' not in page
-    # The viewer shows the way back to the case beside the title.
+    # The viewer's case bar is the way back to the case, and the recording
+    # walker in its head walks the case's recordings (v1.221.0).
     viewer = client.get(f"/recording/{newer.pk}").content.decode()
-    assert f'href="/case/{a_case.pk}"' in viewer and "Back to the case" in viewer
+    assert f'href="/case/{a_case.pk}"' in viewer and 'id="walker"' in viewer
 
 
 def test_the_case_download_holds_every_transcript_in_it(person, a_case, client):

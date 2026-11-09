@@ -85,11 +85,11 @@ def test_the_five_breaks_of_the_october_walk_are_held_in_the_files():
     css = (APP / "static" / "app.css").read_text(encoding="utf-8")
     viewer = (APP / "templates" / "viewer.html").read_text(encoding="utf-8")
     script = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
-    # 1. The case's list folds to a strip, by itself on a short window.
-    assert 'id="case-fold"' in viewer and 'aria-controls="caserail"' in viewer
-    assert ".stage .caserail.folded .caselist" in css
-    assert "window.innerHeight < 900 || window.innerWidth < 1280" in script
-    assert 'localStorage.getItem("caserail-fold")' in script
+    # 1. The case's list folded to a strip (v1.111.0 to v1.218.0); since
+    # v1.221.0 it is the recording walker's list in the head, and the
+    # speakers fold on a short window in its stead.
+    assert '<nav class="walker" id="walker"' in viewer and ".walker-list" in css
+    assert "window.innerHeight < 900" in script and "caserail-fold" not in script
     # 2. The Panel's menu is a chip row under 900, over the whole width.
     assert ".panel-shell .rail a {" in css and "border-radius: 999px" in css
     assert ".panel-shell { display: block; }" in css

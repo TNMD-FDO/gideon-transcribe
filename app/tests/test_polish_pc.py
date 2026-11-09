@@ -72,7 +72,8 @@ def test_what_arrives_after_the_paint_keeps_its_place():
     # replaced by the script, never pushed; the rail folded before the paint.
     viewer = (TEMPLATES / "viewer.html").read_text(encoding="utf-8")
     assert viewer.count('<li class="seg skeleton"') == 1 and "123456789012" in viewer
-    assert 'localStorage.getItem("caserail-fold")' in viewer
+    # The rail that folded before the paint went into the walker (v1.221.0).
+    assert 'id="walker"' in viewer and "caserail-fold" not in viewer
     incident = (TEMPLATES / "incident.html").read_text(encoding="utf-8")
     assert '<div class="lane placeholder"' in incident and "state.cameras" in incident
     chron = (APP / "static" / "chronology.js").read_text(encoding="utf-8")
@@ -213,9 +214,10 @@ def test_the_ultrawide_measure_holds():
     chevron += '<span class="chev" aria-hidden="true">&#8250;</span> <b>'
     assert chevron in case
     assert '<td><div class="hit-words">{{ hit.text }}' in case
+    # 9 was the case's list folding on a short window; since v1.221.0 the
+    # list is the walker's and the speakers fold on a short window instead.
     viewer = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
-    assert "var short = window.innerHeight < 900 || window.innerWidth < 1280;" in viewer
-    assert "var folded = short ? true : (remembered ?" in viewer
+    assert "window.innerHeight < 900" in viewer and "caserail-fold" not in viewer
 
 
 def test_the_shelf_menus_drop_clear_of_the_card():

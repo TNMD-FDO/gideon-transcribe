@@ -380,17 +380,19 @@ def test_the_cases_list_under_the_video_shows_the_rest_in_place(person, a_case, 
         Transcript.objects.create(recording=one, language="en")
         made.append(one)
     signed_in(client, person)
-    # The newest is first in the list: the rest are folded.
+    # Since v1.221.0 (Phase 13 chapter 2) the case's recordings are the
+    # recording walker's list in the head, every one of them on the page;
+    # the newest is first and this one is marked.
     page = client.get(f"/recording/{made[-1].pk}").content.decode()
-    assert page.count('<li class=" rest" hidden>') == 3
-    assert 'id="case-more" aria-expanded="false" data-more="and 3 more"' in page
-    assert ">and 3 more</button>" in page
+    assert '<nav class="walker" id="walker"' in page
+    assert f'<span class="place">1 of {len(made)}</span>' in page
     for one in made:
         assert one.title in page
-    assert f'<a href="/case/{a_case.pk}" class="muted small">and' not in page
-    # The oldest is past the eighth: the list opens unfolded, on it.
+    assert page.count('<li class="here">') == 1
+    assert 'id="walk-prev"' not in page and 'id="walk-next"' in page
+    # The oldest is last: next is greyed, previous is the one before it.
     page = client.get(f"/recording/{made[0].pk}").content.decode()
-    assert '<li class="here rest">' in page and ' rest" hidden' not in page
-    assert 'aria-expanded="true"' in page and ">show fewer</button>" in page
-    script = (APP / "static" / "viewer.js").read_text(encoding="utf-8")
-    assert 'getElementById("case-more")' in script and "li.rest" in script
+    assert f'<span class="place">{len(made)} of {len(made)}</span>' in page
+    assert f'id="walk-prev" href="/recording/{made[1].pk}"' in page
+    assert 'id="walk-next"' not in page
+    assert 'class="caserail"' not in page
