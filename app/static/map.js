@@ -1292,7 +1292,10 @@
     var trackPx = Math.max(120, (el.strip.clientWidth || 600) - 240), step = 300;
     [300, 600, 900, 1800, 3600, 7200, 14400].some(function (s) { step = s; return ((range[1] - range[0]) / s) * 64 <= trackPx; });
     for (var t = Math.ceil(range[0] / step) * step; t <= range[1]; t += step) { html += "<span style='left: " + x(t) + "%'>" + hm(t) + "</span>"; }
-    html += "</div></div>";
+    // The clock as a flag in the ruler row (v1.227.0): it rides the sticky
+    // ruler, above its labels, so the ruler never covers it and it stays in
+    // view when the lanes scroll; to the second, as the map's clock runs.
+    html += "<b class='ph-clock mono' id='map-ph-clock' aria-hidden='true'></b></div></div>";
     cams.forEach(function (cam) {
       var z = cam.zero.second;
       html += "<div class='map-lane lane" + (laneDim(cam) ? " dim" : "") + (S.lit === cam.id ? " lit" : "") + (S.open === cam.id ? " open" : "") + (inView(cam) ? "" : " away") + "' data-cam='" + cam.id + "'>" + laneHead(cam) + "<div class='track'>";
@@ -1322,8 +1325,12 @@
       html += "</div></div>";
     });
     if (!cams.length) { html += "<p class='muted small' style='grid-column: 1 / -1; margin: 6px 0 0'>No camera on the clock on this day.</p>"; }
-    html += "<div class='playhead' id='map-playhead'><b>" + hm(now()) + "</b></div>";
+    html += "<div class='playhead' id='map-playhead'></div>";
     el.strip.innerHTML = html;
+    // The ruler sticks right under the lanes' heading, whatever its height
+    // (v1.227.0): at a fixed 33 px it tucked under a 39 px heading when the
+    // lanes scrolled, and the heading cut the ruler's labels and the clock.
+    if (el.lanes && el.lanesHead) { el.lanes.style.setProperty("--lanes-head", el.lanesHead.offsetHeight + "px"); }
     wireStrip(range);
     el.strip.querySelectorAll(".map-lane[data-cam]").forEach(function (l) {
       l.addEventListener("mouseenter", function () { light(S.byId[l.dataset.cam]); });
@@ -1353,8 +1360,17 @@
     var range = span(), track = el.strip.querySelector(".ruler .ticks");
     if (!track) { return; }
     var left = track.offsetLeft + ((m - range[0]) / (range[1] - range[0])) * track.offsetWidth;
-    ph.style.left = Math.max(track.offsetLeft, Math.min(track.offsetLeft + track.offsetWidth, left)) + "px";
-    ph.querySelector("b").textContent = hm(m);
+    left = Math.max(track.offsetLeft, Math.min(track.offsetLeft + track.offsetWidth, left));
+    ph.style.left = left + "px";
+    // The flag: centred on the line, kept inside the ruler at either end,
+    // its pointer staying on the line.
+    var flag = track.querySelector("#map-ph-clock"); if (!flag) { return; }
+    var words = hms(m);
+    if (flag.textContent !== words) { flag.textContent = words; }
+    var at = left - track.offsetLeft, half = flag.offsetWidth / 2;
+    var mid = Math.max(half, Math.min(track.offsetWidth - half, at));
+    flag.style.left = mid + "px";
+    flag.style.setProperty("--tip", (at - (mid - half)) + "px");
   }
   function wireStrip(range) {
     var dragging = false;

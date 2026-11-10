@@ -974,3 +974,32 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "S.incident.pictures" in incident_js
     # The hidden New incident dialog left the page (v1.201.0).
     assert 'id="incident-box"' not in page and "choose-myself" not in static("cases.js")
+
+
+def test_the_lanes_clock_is_a_flag_and_a_note_is_its_own_tag():
+    # v1.227.0 (the drawing phase-12-map-lanes-look.html, T1 and N2): the
+    # playhead's clock rides the sticky ruler row, above its labels and to
+    # the second, where it was a label under the ruler; a note on a lane is
+    # the folded-corner tag in the page's ink, where it was a 3 px accent
+    # mark lost on a blue bar; the ruler sticks at the heading's own height.
+    script = static("map.js")
+    assert (
+        "<b class='ph-clock mono' id='map-ph-clock' aria-hidden='true'></b>" in script
+    )
+    assert "html += \"<div class='playhead' id='map-playhead'></div>\";" in script
+    assert "var words = hms(m);" in script
+    assert 'flag.style.setProperty("--tip", (at - (mid - half)) + "px");' in script
+    assert (
+        'el.lanes.style.setProperty("--lanes-head", el.lanesHead.offsetHeight' in script
+    )
+    css = static("app.css")
+    for rule in (
+        ".map-strip .ruler .ticks .ph-clock { position: absolute; top: -1px;",
+        "box-shadow: 0 0 0 1px var(--surface); z-index: 2; pointer-events: none; }",
+        "position: sticky; top: var(--lanes-head, 39px); z-index: 3;",
+        ".map-strip .map-lane .track em.note { top: 1px; bottom: 1px; height: auto;",
+        'em.note::after { content: ""; position: absolute; inset: 0;',
+    ):
+        assert rule in css, rule
+    assert ".map-strip .playhead b" not in css
+    assert "em.bookmark, .map-strip .map-lane .track em.note" not in css

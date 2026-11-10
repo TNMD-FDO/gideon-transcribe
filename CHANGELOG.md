@@ -17,6 +17,32 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.227.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Map page's lanes: a clock that stays in view and notes that stand out.
+The maintainer found the timer all but disappearing and the marked notes
+blending into the lanes; both had a plain cause, and the fix was drawn
+first (`docs/spec/mockups/phase-12-map-lanes-look.html`, T1 and N2).
+
+- **The clock** on the playhead was an 11 px label painted under the
+  sticky ruler row, which covered it. It is a flag in the ruler row now,
+  above the ruler's labels, larger, to the second as the map's clock runs,
+  with a pale edge and a pointer that stays on the line; near either end
+  it stays inside the ruler. The line has a hairline pale edge, so it reads
+  where it crosses a bar of its own blue.
+- **The ruler** stuck at a fixed 33 px under a heading 39 px tall, so when
+  the lanes scrolled the heading cut the ruler's labels and the clock in
+  half. It sticks at the heading's own measured height.
+- **A note** on a lane was a 3 px mark in the accent blue, invisible on a
+  blue camera's bar. It is the folded-corner tag the incident page's strip
+  uses for a note, in the page's ink with a pale edge, the lane's height
+  and 8 px wide, so it reads on every camera's colour in light and dark.
+
 ## v1.226.0, 2026-11-10
 
 ```

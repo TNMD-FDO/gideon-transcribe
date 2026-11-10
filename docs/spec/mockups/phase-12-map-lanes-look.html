@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The lanes' look</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --ok: #2f7d4f; --warn: #9a5b06; --warn-soft: #fbefd9; --danger: #b3261e;
+  --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32; --sp4: #8e24aa;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p { margin: 6px 0; color: var(--muted); max-width: 95ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 3px; }
+.fig { margin-top: 40px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin: 0 0 12px; color: var(--muted); max-width: 95ch; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.frame .at { position: absolute; top: 6px; right: 10px; font-size: var(--t-label); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; z-index: 9; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.opt { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.opt .cap { padding: 8px 12px 10px; font-size: var(--t-small); color: var(--muted); border-top: 1px solid var(--line); }
+.opt .cap b { color: var(--text); display: block; margin-bottom: 2px; }
+.opt.pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.opt.pick .cap b::after { content: " · my pick"; color: var(--accent); font-weight: 600; }
+/* The lanes band, as the Map page draws it: a head column and a track. */
+.band { padding: 0 10px 8px; font-size: var(--t-small); position: relative; }
+.bandhead { display: flex; justify-content: space-between; padding: 6px 0 4px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.bandhead a { color: var(--accent); margin-left: 12px; }
+.strip { display: grid; grid-template-columns: var(--head, 230px) minmax(0, 1fr); gap: 2px 8px; position: relative; padding-top: 4px; }
+.ruler { display: contents; }
+.ruler .h { height: 16px; }
+.ruler .ticks { position: relative; height: 16px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); background: var(--surface); }
+.ruler .ticks span { position: absolute; top: 0; transform: translateX(-50%); }
+.lane { display: contents; }
+.lane .h { display: flex; gap: 5px; align-items: center; height: 20px; white-space: nowrap; overflow: hidden; }
+.lane .h .tk { width: 13px; height: 13px; border-radius: 3px; background: var(--accent); flex: none; }
+.lane .h i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lane .h i.sq { border-radius: 2px; }
+.lane .track { position: relative; height: 20px; }
+.lane .track > i { position: absolute; top: 5px; height: 10px; border-radius: 5px; }
+.lane .track > i.gp { height: 4px; top: 8px; opacity: .35; }
+.lane .track em { position: absolute; }
+.lane .track em.cam { width: 6px; height: 6px; border-radius: 50%; top: 7px; background: var(--text); }
+.lane .track em.lights { top: 3px; width: 3px; height: 14px; border-radius: 1px; background: var(--warn); }
+/* Today: the note is a 3 px accent sliver. */
+.note-now { top: 3px; width: 3px; height: 14px; border-radius: 1px; background: var(--accent); }
+/* N1: a pin on the bar's top edge. */
+.note-pin { top: 1px; width: 9px; height: 9px; margin-left: -4px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--text); box-shadow: 0 0 0 1.5px var(--surface); }
+/* N2: the folded-corner tag the incident strip uses, in ink with a surface edge. */
+.note-tag { top: 1px; width: 9px; height: 18px; margin-left: -1px; background: var(--surface); clip-path: polygon(0 0, 62% 0, 100% 26%, 100% 100%, 0 100%); }
+.note-tag::after { content: ""; position: absolute; inset: 1.5px; background: var(--text); clip-path: polygon(0 0, 58% 0, 100% 28%, 100% 100%, 0 100%); }
+/* N3: notes on a thin row of their own under the bar. */
+.lane.rowed .track { height: 26px; }
+.note-row { top: 18px; width: 7px; height: 7px; margin-left: -3px; background: var(--text); transform: rotate(45deg); }
+.rowline { position: absolute; left: 0; right: 0; top: 21px; border-top: 1px dashed var(--line); }
+/* The playhead. */
+.ph { position: absolute; top: 4px; bottom: 0; width: 2px; background: var(--accent); z-index: 2; }
+.ph b { position: absolute; font: 600 var(--t-label) var(--mono); color: var(--accent-ink); background: var(--accent); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
+.ph.now b { top: 0; left: -18px; }
+.cover { position: absolute; left: 0; right: 0; background: var(--surface); z-index: 3; }
+/* T1: a flag in the ruler row, over the ruler, to the second, with a halo on the line. */
+.ph.flag { box-shadow: 0 0 0 1px var(--surface); z-index: 6; }
+.ph.flag b { top: -1px; left: 50%; transform: translateX(-50%); font-size: var(--t-small); line-height: 18px; padding: 0 6px; border-radius: 4px; box-shadow: 0 0 0 2px var(--surface), 0 1px 3px rgba(0,0,0,.25); }
+.ph.flag b::after { content: ""; position: absolute; left: 50%; bottom: -4px; margin-left: -4px; border: 4px solid transparent; border-top-color: var(--accent); border-bottom: 0; }
+/* T2: a row of its own for the clock, above the ruler. */
+.clockrow { grid-column: 2; height: 20px; position: relative; }
+.ph.rowed { top: 4px; box-shadow: 0 0 0 1px var(--surface); z-index: 6; }
+.ph.rowed b { top: 0; left: 50%; transform: translateX(-50%); font-size: var(--t-small); line-height: 18px; padding: 0 6px; border-radius: 4px; }
+/* T3: the clock in the ruler's empty head cell, large; the line keeps a small cap. */
+.bigclock { height: 16px; display: flex; align-items: center; gap: 8px; font: 600 var(--t-body) var(--mono); color: var(--accent); }
+.bigclock small { font: 400 var(--t-label) var(--sans); color: var(--muted); }
+.ph.capped { box-shadow: 0 0 0 1px var(--surface); z-index: 6; }
+.ph.capped::before { content: ""; position: absolute; left: -4px; top: 14px; border: 5px solid transparent; border-top-color: var(--accent); border-bottom: 0; }
+.zoom { transform: scale(2.4); transform-origin: 0 0; width: calc(100% / 2.4); }
+.zoombox { height: 190px; overflow: hidden; }
+.verdict { margin-top: 40px; padding: 14px 18px; border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+.verdict p { margin: 6px 0; max-width: 100ch; }
+.dark { --bg: #14181d; --surface: #1c2229; --surface-2: #262d36; --line: #364150; --text: #e6eaef; --muted: #9aa5b1; --accent: #6bb6dd; --accent-soft: #1d3545; --accent-ink: #0d1318; --warn: #e0a84a; background: var(--surface); color: var(--text); }
+</style>
+<div class="wrap">
+  <div class="intro">
+    <h1>The lanes' look on the Map page</h1>
+    <p>The ask (2026-11-10): on the Map page's chronology the marked notes blend in too much, and the timer disappears a bit. Both reproduce on the local demo, and both have a plain cause.</p>
+    <div class="brief">
+      <b>What is wrong today (figure 1)</b>
+      <ol>
+        <li><b style="display: inline">The timer.</b> The clock on the playhead is an 11 px label at the very top of the lanes, drawn <i>under</i> the ruler row: the ruler is a sticky strip with its own background and sits above the playhead, so it covers the label's lower part, and the lanes' own head ("5 of 5 shown") covers it from above when the band scrolls. What is left is a sliver. It also reads to the minute while the map's clock runs to the second.</li>
+        <li><b style="display: inline">The notes.</b> A note is a mark 3 px wide and 14 px tall in the accent blue, on top of a lane bar that is 10 px tall in the camera's colour. On a blue camera the two blues differ by a shade (measured: the mark #0f5e86 on the bar #1f6fb2), so the note is invisible; on any other colour it is a thin line the same height as the lights' mark.</li>
+      </ol>
+    </div>
+    <p>Three ways to draw each follow, at the page's real size and enlarged. The words are made up; nothing of a real case is on this page.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 1. Today</h2>
+    <p class="why">The lanes band as the page draws it, then the top-left corner enlarged: the clock cut by the ruler, and three notes on the blue lane (there are three; count them).</p>
+    <div class="frame"><span class="at">real size</span>
+      <div class="band">
+        <div class="bandhead"><span>☑ 4 of 4 shown · 4 in view</span><span><a>all</a><a>none</a></span></div>
+        <div class="strip">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 12%">14:30</span><span style="left: 37%">15:00</span><span style="left: 62%">15:30</span><span style="left: 87%">16:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe <span class="muted small">vehicle</span></div><div class="track"><i style="left: 4%; width: 42%; background: var(--sp1)"></i><em class="cam" style="left: 4%"></em><em class="note-now" style="left: 14%"></em><em class="note-now" style="left: 22%"></em><em class="lights" style="left: 27%"></em><em class="note-now" style="left: 35%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 30%; background: var(--sp2)"></i><em class="cam" style="left: 9%"></em><em class="note-now" style="left: 18%"></em><em class="note-now" style="left: 31%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp3)"></i> Kit Vale</div><div class="track"><i style="left: 11%; width: 36%; background: var(--sp3)"></i><em class="note-now" style="left: 25%"></em></div></div>
+          <div class="ph now" style="left: calc(230px + 8px + (100% - 238px) * 0.20)"><b>14:39</b></div>
+          <div class="cover" style="top: 8px; height: 16px; left: 238px"></div>
+          <div class="ruler" style="position: absolute"></div>
+        </div>
+      </div>
+    </div>
+    <div class="frame zoombox" style="margin-top: 10px"><span class="at">the same, enlarged</span>
+      <div class="zoom"><div class="band">
+        <div class="strip" style="--head: 120px">
+          <div class="ruler"><div class="h"></div><div class="ticks" style="position: relative; z-index: 3"><span style="left: 30%">14:30</span><span style="left: 80%">15:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i><em class="cam" style="left: 6%"></em><em class="note-now" style="left: 26%"></em><em class="note-now" style="left: 44%"></em><em class="lights" style="left: 58%"></em><em class="note-now" style="left: 76%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i><em class="cam" style="left: 16%"></em><em class="note-now" style="left: 38%"></em><em class="note-now" style="left: 66%"></em></div></div>
+          <div class="ph now" style="left: calc(120px + 8px + (100% - 128px) * 0.42)"><b>14:39</b></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 2. The timer, three ways</h2>
+    <p class="why">In all three the playhead's line gains a hairline edge in the page's own background, so it reads where it crosses a bar of its own blue, and the clock is drawn above the ruler and the lanes' head, never under them.</p>
+    <div class="opts">
+      <div class="opt pick"><div class="zoombox" style="height: 150px"><div class="zoom"><div class="band"><div class="strip" style="--head: 60px; padding-top: 8px">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 14%">14:30</span><span style="left: 90%">15:00</span></div></div>
+          <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i></div></div>
+          <div class="ph flag" style="left: calc(60px + 8px + (100% - 68px) * 0.52); top: 8px"><b>14:39:12</b></div>
+        </div></div></div></div>
+        <div class="cap"><b>T1. A flag in the ruler row</b>The clock rides the ruler row itself, over the ruler's own labels, at the small text size in place of the label size, to the second, with a pointer and a pale edge so it lifts off the page. Costs no height. Near the right end it stays inside the band.</div></div>
+      <div class="opt"><div class="zoombox" style="height: 150px"><div class="zoom"><div class="band"><div class="strip" style="--head: 60px">
+          <div class="clockrow"></div>
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 14%">14:30</span><span style="left: 90%">15:00</span></div></div>
+          <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i></div></div>
+          <div class="ph rowed" style="left: calc(60px + 8px + (100% - 68px) * 0.52)"><b>14:39:12</b></div>
+        </div></div></div></div>
+        <div class="cap"><b>T2. A row of its own</b>A 20 px row above the ruler holds only the clock, so it never sits on a ruler label. The clearest, at the price of one lane's height in a band that is 120 px tall on a laptop.</div></div>
+      <div class="opt"><div class="zoombox" style="height: 150px"><div class="zoom"><div class="band"><div class="strip" style="--head: 110px; padding-top: 8px">
+          <div class="ruler"><div class="bigclock">14:39:12 <small>6 Nov</small></div><div class="ticks"><span style="left: 14%">14:30</span><span style="left: 90%">15:00</span></div></div>
+          <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i></div></div>
+          <div class="ph capped" style="left: calc(110px + 8px + (100% - 118px) * 0.52); top: 8px"></div>
+        </div></div></div></div>
+        <div class="cap"><b>T3. The clock in the ruler's empty corner</b>The cell left of the ruler is empty today. The clock stands there, large, with the day; the line keeps only a small cap. Always in the same place to read, but the eye has to travel from the line to the corner.</div></div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 3. The notes, three ways</h2>
+    <p class="why">The same three lanes each time, blue, orange and green, with the same notes, so each mark is seen on every kind of bar. Hover still names the note and a press still opens its card.</p>
+    <div class="opts">
+      <div class="opt"><div class="zoombox" style="height: 170px"><div class="zoom"><div class="band"><div class="strip" style="--head: 60px">
+          <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i><em class="cam" style="left: 6%"></em><em class="note-pin" style="left: 26%"></em><em class="note-pin" style="left: 44%"></em><em class="lights" style="left: 58%"></em><em class="note-pin" style="left: 76%"></em></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i><em class="cam" style="left: 16%"></em><em class="note-pin" style="left: 38%"></em><em class="note-pin" style="left: 66%"></em></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp3)"></i> Kit</div><div class="track"><i style="left: 20%; width: 70%; background: var(--sp3)"></i><em class="note-pin" style="left: 48%"></em></div></div>
+        </div></div></div></div>
+        <div class="cap"><b>N1. A pin on the bar</b>A small drop-shaped pin in the page's ink, with a pale ring, its point on the bar's top edge. Reads on every colour and is unlike the round camera mark only by its point, which is small at this size.</div></div>
+      <div class="opt pick"><div class="zoombox" style="height: 170px"><div class="zoom"><div class="band"><div class="strip" style="--head: 60px">
+          <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i><em class="cam" style="left: 6%"></em><em class="note-tag" style="left: 26%"></em><em class="note-tag" style="left: 44%"></em><em class="lights" style="left: 58%"></em><em class="note-tag" style="left: 76%"></em></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i><em class="cam" style="left: 16%"></em><em class="note-tag" style="left: 38%"></em><em class="note-tag" style="left: 66%"></em></div></div>
+          <div class="lane"><div class="h"><i style="background: var(--sp3)"></i> Kit</div><div class="track"><i style="left: 20%; width: 70%; background: var(--sp3)"></i><em class="note-tag" style="left: 48%"></em></div></div>
+        </div></div></div></div>
+        <div class="cap"><b>N2. The note's own tag</b>The folded-corner tag the incident page's strip already uses for a note, here in the page's ink with a pale edge, the lane's full height and three times today's width. One shape for a note on both strips, and unlike every other mark on the lane.</div></div>
+      <div class="opt"><div class="zoombox" style="height: 170px"><div class="zoom"><div class="band"><div class="strip" style="--head: 60px">
+          <div class="lane rowed"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam</div><div class="track"><i style="left: 6%; width: 90%; background: var(--sp1)"></i><em class="cam" style="left: 6%"></em><span class="rowline"></span><em class="note-row" style="left: 26%"></em><em class="note-row" style="left: 44%"></em><em class="lights" style="left: 58%"></em><em class="note-row" style="left: 76%"></em></div></div>
+          <div class="lane rowed"><div class="h"><i style="background: var(--sp2)"></i> Lee</div><div class="track"><i style="left: 16%; width: 64%; background: var(--sp2)"></i><em class="cam" style="left: 16%"></em><span class="rowline"></span><em class="note-row" style="left: 38%"></em><em class="note-row" style="left: 66%"></em></div></div>
+          <div class="lane rowed"><div class="h"><i style="background: var(--sp3)"></i> Kit</div><div class="track"><i style="left: 20%; width: 70%; background: var(--sp3)"></i><span class="rowline"></span><em class="note-row" style="left: 48%"></em></div></div>
+        </div></div></div></div>
+        <div class="cap"><b>N3. A row of their own</b>The notes leave the bar for a thin dotted row under it, as diamonds. Nothing ever sits on a colour, but every lane grows by 6 px and a band of twelve cameras scrolls sooner.</div></div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 4. The two picks together, at real size, light and dark</h2>
+    <p class="why">T1 and N2 on the band as the page draws it. The dark theme uses the same tokens, so the tag is pale on dark and the flag keeps its edge.</p>
+    <div class="frame"><span class="at">light</span>
+      <div class="band">
+        <div class="bandhead"><span>☑ 4 of 4 shown · 4 in view</span><span><a>all</a><a>none</a></span></div>
+        <div class="strip">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 12%">14:30</span><span style="left: 37%">15:00</span><span style="left: 62%">15:30</span><span style="left: 87%">16:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe <span class="muted small">vehicle</span></div><div class="track"><i style="left: 4%; width: 42%; background: var(--sp1)"></i><em class="cam" style="left: 4%"></em><em class="note-tag" style="left: 14%"></em><em class="note-tag" style="left: 22%"></em><em class="lights" style="left: 27%"></em><em class="note-tag" style="left: 35%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 30%; background: var(--sp2)"></i><em class="cam" style="left: 9%"></em><em class="note-tag" style="left: 18%"></em><em class="note-tag" style="left: 31%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp3)"></i> Kit Vale</div><div class="track"><i style="left: 11%; width: 36%; background: var(--sp3)"></i><em class="note-tag" style="left: 25%"></em></div></div>
+          <div class="ph flag" style="left: calc(230px + 8px + (100% - 238px) * 0.20)"><b>14:39:12</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="frame dark" style="margin-top: 10px"><span class="at">dark</span>
+      <div class="band">
+        <div class="bandhead"><span>☑ 4 of 4 shown · 4 in view</span><span><a>all</a><a>none</a></span></div>
+        <div class="strip">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 12%">14:30</span><span style="left: 37%">15:00</span><span style="left: 62%">15:30</span><span style="left: 87%">16:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe <span class="muted small">vehicle</span></div><div class="track"><i style="left: 4%; width: 42%; background: var(--sp1)"></i><em class="cam" style="left: 4%"></em><em class="note-tag" style="left: 14%"></em><em class="note-tag" style="left: 22%"></em><em class="lights" style="left: 27%"></em><em class="note-tag" style="left: 35%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 30%; background: var(--sp2)"></i><em class="cam" style="left: 9%"></em><em class="note-tag" style="left: 18%"></em><em class="note-tag" style="left: 31%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp3)"></i> Kit Vale</div><div class="track"><i style="left: 11%; width: 36%; background: var(--sp3)"></i><em class="note-tag" style="left: 25%"></em></div></div>
+          <div class="ph flag" style="left: calc(230px + 8px + (100% - 238px) * 0.20)"><b>14:39:12</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <p><b>My pick:</b> T1 for the timer and N2 for the notes. T1 fixes the real fault (the clock drawn under the ruler) without spending height the lanes band does not have on a laptop, and makes the clock larger and to the second, as the map's own clock is. N2 gives a note the shape the incident page's strip already taught, in the page's ink so it never depends on the lane's colour, three times as wide as today's mark and the lane's full height. T2 is the alternative if the flag over the ruler's labels bothers you; N3 if notes should never touch a bar.</p>
+    <p><b>The same marks elsewhere, if wanted:</b> the map's own pips for notes (on the paths) are the same accent blue on a blue path; they could take the ink-and-pale-edge treatment in the same release so a note looks alike on the lane and on the map.</p>
+  </div>
+</div>
+</html>

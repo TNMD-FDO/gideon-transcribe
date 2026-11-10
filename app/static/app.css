@@ -4118,7 +4118,7 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-lanes-head .h .acts { display: inline-flex; gap: 2px; }
 .map-lanes-head .h .acc { color: var(--accent); }
 .map-lanes .map-strip { --head: 230px; padding: 4px 10px 6px; gap: 2px 8px; }
-.map-lanes .map-strip .ruler .head, .map-lanes .map-strip .ruler .ticks { position: sticky; top: 33px; z-index: 3; background: var(--surface); }
+.map-lanes .map-strip .ruler .head, .map-lanes .map-strip .ruler .ticks { position: sticky; top: var(--lanes-head, 39px); z-index: 3; background: var(--surface); }
 .map-lanes .map-strip .map-lane .head { height: 20px; gap: 5px; border-radius: 4px; padding: 0 2px; }
 .map-lanes .map-strip .map-lane .track { height: 20px; }
 .map-lanes .map-strip .map-lane .head .tk { margin: 0; width: 14px; height: 14px; flex: none; cursor: pointer; }
@@ -4130,7 +4130,6 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-lanes .map-strip .map-lane.dim .head, .map-lanes .map-strip .map-lane.dim .track { opacity: 0.5; }
 .map-lanes .map-strip .map-lane.away .head .nm { color: var(--muted); }
 .map-lanes .map-strip .map-lane.lit .head, .map-lanes .map-strip .map-lane.open .head, .map-lanes .map-strip .map-lane .head:hover { background: var(--accent-soft); }
-.map-lanes .map-strip .playhead b { top: 0; }
 .map-folds { padding: 2px 10px 10px; }
 .map-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; background: color-mix(in srgb, var(--surface) 88%, transparent); border-bottom: 1px solid var(--line); padding: 6px 10px 5px; display: flex; flex-direction: column; gap: 4px; }
 .map-top .map-show { gap: 8px; }
@@ -4294,13 +4293,28 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
 .map-strip .map-lane .track i.clip { height: 3px; top: 0; border-radius: 2px; background: var(--clip); cursor: pointer; }
 .map-strip .map-lane .track em { position: absolute; top: 2px; width: 3px; height: 14px; border-radius: 1px; background: var(--muted); cursor: pointer; }
 .map-strip .map-lane .track em::before { content: ""; position: absolute; left: -5px; right: -5px; top: -3px; bottom: -3px; }
-.map-strip .map-lane .track em.lights { background: var(--warn); } .map-strip .map-lane .track em.siren { background: var(--danger); } .map-strip .map-lane .track em.bookmark, .map-strip .map-lane .track em.note { background: var(--accent); }
+.map-strip .map-lane .track em.lights { background: var(--warn); } .map-strip .map-lane .track em.siren { background: var(--danger); } .map-strip .map-lane .track em.bookmark { background: var(--accent); }
+/* A note on a lane (v1.227.0; the drawing map-lanes-look.html, N2): the
+   folded-corner tag the incident page's strip uses for a note, in the page's
+   ink with an edge in its background, the lane's height and 8 px wide, its
+   straight left edge at the note's moment. It was a 3 px mark in the accent
+   blue, lost on a blue camera's bar and a sliver on any other. */
+.map-strip .map-lane .track em.note { top: 1px; bottom: 1px; height: auto; width: 8px; border-radius: 0; background: transparent; z-index: 1; filter: drop-shadow(1px 0 0 var(--surface)) drop-shadow(-1px 0 0 var(--surface)) drop-shadow(0 1px 0 var(--surface)) drop-shadow(0 -1px 0 var(--surface)); }
+.map-strip .map-lane .track em.note::after { content: ""; position: absolute; inset: 0; background: var(--text); clip-path: polygon(0 0, 60% 0, 100% 28%, 100% 100%, 0 100%); }
 .map-strip .map-lane .track em.camera { width: 6px; height: 6px; border-radius: 50%; top: 6px; background: var(--text); }
 .map-strip .map-lane .track em.camera.is-on { background: var(--surface); border: 2px solid var(--text); box-sizing: border-box; }
 .map-strip .map-lane .track em.on { width: auto; height: 3px; top: 0; background: var(--warn); border-radius: 2px; cursor: default; }
 .map-strip .map-lane .track em.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
-.map-strip .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); z-index: 2; pointer-events: none; }
-.map-strip .playhead b { position: absolute; top: -2px; left: -18px; font: 600 var(--t-label) var(--mono); color: var(--accent-ink); background: var(--accent); padding: 0 4px; border-radius: 3px; }
+/* The playhead and its clock (v1.227.0; the drawing map-lanes-look.html, T1):
+   the line with a hairline edge in the page's own background, so it reads
+   where it crosses a bar of its own blue; the clock a flag in the ruler row,
+   inside the sticky ruler and above its labels (it was a label on the line,
+   painted under the ruler, and all but hidden), at the small text size, to
+   the second, with a pale edge and a pointer that stays on the line. */
+.map-strip .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); box-shadow: 0 0 0 1px var(--surface); z-index: 2; pointer-events: none; }
+.map-strip .ruler .ticks .ph-clock { position: absolute; top: -1px; left: 0; transform: translateX(-50%); z-index: 2; height: 18px; line-height: 18px; padding: 0 6px; border-radius: 4px; font-size: var(--t-small); font-weight: 600; white-space: nowrap; color: var(--accent-ink); background: var(--accent); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+.map-strip .ruler .ticks .ph-clock:empty { display: none; }
+.map-strip .ruler .ticks .ph-clock::after { content: ""; position: absolute; left: var(--tip, 50%); bottom: -4px; margin-left: -4px; border: 4px solid transparent; border-top-color: var(--accent); border-bottom: 0; }
 .map-evcard { position: absolute; z-index: 4; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 8px 10px; font-size: var(--t-small); width: 260px; }
 .map-evcard b { display: block; }
 .map-evcard .words { white-space: pre-wrap; }
