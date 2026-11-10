@@ -17,6 +17,41 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.230.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+A first install asks one question and shows one screen. The third step of
+streamlining the install, at the maintainer's word. A running server is not
+touched by this: it changes what `./transcribe install` asks on a server
+that has never been installed.
+
+- **One question.** The address people will use, which the server cannot
+  work out. The example's placeholder is no longer taken as an answer.
+- **One screen.** Everything else is proposed and shown together, numbered:
+  the port, the server's own LAN address, its own network as who may
+  connect, the folder Step 1 made as the data folder, the server's time
+  zone, a self-signed certificate, Local admins only, transcription and
+  the Local engine as the card allows, no backup, no mail. Enter accepts
+  it. A number changes one fact there and then, or marks a piece to be
+  asked in full.
+- **The same code underneath.** Each piece runs what it always ran, in the
+  same order: asked exactly as before, or taken as proposed, which is Enter
+  at each of its questions, with one line saying what was set and any
+  warning it had. `--reconfigure` asks every question as it always did.
+- **Three things differ, on purpose.** Taken as proposed, an empty `tls/`
+  gets a self-signed certificate. A first install not asked about the
+  directory starts with Local admins only, where the example file assumed
+  a directory. And the card question's usual answer is no for a card under
+  16 GB, where yes wrote nothing and ended the install.
+- **Still asked** when the server cannot propose an answer: no LAN address
+  or network found, only the operating system's drive, or several cards.
+- Proven by whole first installs in a throwaway copy with stand-ins for the
+  system's commands; not yet on a fresh Ubuntu server.
+
 ## v1.229.0, 2026-11-10
 
 ```

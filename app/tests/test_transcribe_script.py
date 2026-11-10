@@ -331,7 +331,7 @@ def test_the_os_drive_helper_judges_by_the_nearest_folder_that_exists():
     asked = source.index('ask "The app data folder')
     assert 'on_the_os_drive "$value"' in source[asked : asked + 400]
     assert 'ask_yes_no "  Use it anyway?" no' in source[asked : asked + 800]
-    assert source.count("on_the_os_drive") == 3
+    assert source.count("on_the_os_drive") == 4
 
 
 def test_the_check_sends_one_test_message_and_never_counts_mailboxes():
@@ -403,7 +403,7 @@ def test_the_install_still_stops_for_three_things_and_no_more():
     assert "if prerequisites; then" in preflight
     assert "need_env" not in preflight
     # The name is judged right after it is typed.
-    facts = body.split("ask_the_office_facts() {", 1)[1].split("\n}\n", 1)[0]
+    facts = body.split("ask_the_address() {", 1)[1].split("\n}\n", 1)[0]
     assert (
         'set_env APP_HOSTNAME "$value"\n  say_whether_the_name_resolves "$value"'
         in facts
@@ -537,3 +537,219 @@ def test_the_guide_has_a_row_for_every_note_of_the_wider_check():
         assert in_the_guide in table, in_the_guide
         assert in_the_script in text(), in_the_script
     assert "`./transcribe preflight`" in guide
+
+
+# The one screen (v1.230.0) ----------------------------------------------------
+
+_SCREEN = [
+    "is_unset",
+    "asked_for",
+    "needs_a_person",
+    "mark_or_unmark",
+    "card_usual_answer",
+    "screen_label",
+    "screen_value",
+    "the_screen",
+]
+
+_SCREEN_STANDS_IN = (
+    'HERE=/nowhere\nASK_PIECES=""\nASK_ALL=no\nNETWORK_PROPOSED=yes\n'
+    'env_value() { case "$1" in APP_HOSTNAME) echo app.example.internal ;; '
+    "HTTPS_PORT) echo 8443 ;; BIND_ADDRESS) echo 10.0.0.12 ;; "
+    "ALLOWED_CLIENT_CIDRS) echo 10.0.0.0/24 ;; APP_DATA_DIR) echo /data/app ;; "
+    "TZ) echo Europe/London ;; esac; }\n"
+    "folder_gb_free() { echo 900; }\n"
+    "certificate_is_self_signed() { return 1; }\n"
+    'card_count() { echo "$CARDS"; }\n'
+    'largest_card_gb() { echo "$CARD_GB"; }\n'
+)
+
+
+def test_a_first_install_asks_the_address_then_shows_the_screen():
+    """v1.230.0: one typed answer, one screen, then the same pieces in the
+    same order, each asked or taken as proposed; a reconfigure asks every
+    question as it always did."""
+    body = text()
+    install = body.split("cmd_install() {", 1)[1].split("\n}\n", 1)[0]
+    first = install.split('if [ "$reconfigure" = "yes" ]; then', 1)[1]
+    again, first = first.split("  else\n", 1)
+    assert "ASK_ALL=yes" in again and "ask_the_office_facts" in again
+    order = [
+        "ask_the_address",
+        "propose_the_office_facts",
+        "choose_on_the_screen",
+        "write_what_the_server_decides",
+        'piece certificate "The certificate" ask_the_certificate',
+        'piece directory "Sign-in" cmd_directory',
+        "make_the_secrets",
+        'piece card "Transcription" ask_the_card',
+        'piece engine "The AI assistant" ask_the_engine',
+        'piece fast-lane "The fast lane" ask_the_fast_lane',
+        'piece backup "Backup" ask_the_backup',
+        "backup_on || install_timers",
+        'piece mail "Mail" ask_the_mail',
+    ]
+    places = [first.index(one) for one in order]
+    assert places == sorted(places)
+    # Every question the reconfigure asks is still one question each.
+    facts = body.split("ask_the_office_facts() {", 1)[1].split("\n}\n", 1)[0]
+    for one in (
+        "ask_the_address",
+        "ask_the_port",
+        "ask_the_lan_address",
+        "ask_who_may_connect",
+        "ask_the_data_folder",
+        "ask_the_time_zone",
+        "write_what_the_server_decides",
+    ):
+        assert f"\n  {one}" in facts, one
+
+
+@needs_bash
+def test_a_piece_taken_as_proposed_answers_with_what_is_there_and_never_a_placeholder():
+    probe = _sourced(["ask", "ask_choice", "ask_yes_no"]) + (
+        "\nTAKE_DEFAULTS=1"
+        '\nprintf "%s|" "$(ask "The port" 8443)"'
+        '\nprintf "%s|" "$(ask "The backup target" "")"'
+        '\nprintf "%s|" "$(ask "The address" "<hostname>")"'
+        '\nprintf "%s|" "$(ask_choice "The engine" none "local|shared|none")"'
+        '\nprintf "%s|" "$(ask_choice "The certificate" nothing "own|self-signed")"'
+        "\n"
+    )
+    # Only two answers are read: the placeholder's, and the choice whose
+    # usual answer matched nothing.
+    done = subprocess.run(
+        [BASH, "-c", probe],
+        input="typed.example.internal\nself\n",
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "8443||typed.example.internal|none|self-signed|"
+
+
+@needs_bash
+def test_the_screen_says_what_is_proposed_for_the_server_it_is_on():
+    def screen(cards: str, gb: str, then: str = "") -> str:
+        probe = (
+            _sourced(_SCREEN, _SCREEN_STANDS_IN + f"CARDS={cards}\nCARD_GB={gb}\n")
+            + f"\n{then}\nthe_screen\n"
+        )
+        done = subprocess.run(
+            [BASH, "-c", probe], capture_output=True, text=True, timeout=120
+        )
+        assert done.returncode == 0, done.stderr
+        return done.stdout
+
+    none = screen("0", "")
+    assert "Enter to go on, or a number to change a line." in none
+    assert " 1  The address       app.example.internal" in none
+    assert " 4  Who may connect   10.0.0.0/24  (this server's own network" in none
+    assert " 5  The data folder   /data/app  (900 GB free)" in none
+    assert " 7  The certificate   self-signed, made now" in none
+    assert " 8  Sign-in           Local admins only" in none
+    assert " 9  Transcription     not installed, no card" in none
+    assert "10  The AI assistant  off, no engine" in none
+    assert "The fast lane" not in none
+    assert "12  Mail              none" in none and "13  " not in none
+
+    one = screen("1", "48")
+    assert " 9  Transcription     on, with this server's card  (48 GB)" in one
+    assert "10  The AI assistant  the Local engine, on the same card" in one
+    assert "11  The fast lane     off" in one and "13  Mail" in one
+
+    # 24 GB carries transcription and not the engine beside it.
+    assert "10  The AI assistant  off, no engine" in screen("1", "24")
+
+    small = screen("1", "12")
+    assert "not installed: the card has 12 GB, under the 16 GB it needs" in small
+    assert "The fast lane" not in small
+
+    two = screen("2", "48")
+    assert " 9  Transcription     asked when you go on: 2 cards here" in two
+
+    marked = screen("0", "", "mark_or_unmark directory; mark_or_unmark backup")
+    assert " 8  Sign-in           asked when you go on" in marked
+    assert "11  Backup            asked when you go on" in marked
+    again = screen("0", "", "mark_or_unmark directory; mark_or_unmark directory")
+    assert " 8  Sign-in           Local admins only" in again
+
+
+@needs_bash
+def test_a_piece_is_asked_when_marked_and_otherwise_says_one_line():
+    probe = (
+        _sourced(
+            ["asked_for", "needs_a_person", "piece"],
+            'ASK_PIECES=""\nASK_ALL=no\n'
+            "card_count() { echo 0; }\n"
+            'green() { printf "%s\\n" "$1"; }\n'
+            'amber() { printf "\\033[33m%s\\033[0m\\n" "$1"; }\n'
+            'state_words() { echo "as it stands"; }\n'
+            'a_piece() { echo "A long explanation."; amber "A warning."; '
+            'echo "mode:${TAKE_DEFAULTS:-asked}"; }\n'
+            'a_failing_piece() { echo "What went wrong."; return 3; }\n',
+        )
+        + '\npiece backup "Backup" a_piece'
+        + '\nASK_PIECES=" backup"\npiece backup "Backup" a_piece'
+        + '\nASK_PIECES=""\nASK_ALL=yes\npiece backup "Backup" a_piece'
+        + '\nASK_ALL=no\npiece mail "Mail" a_failing_piece || echo "stopped:$?"\n'
+    )
+    done = subprocess.run(
+        [BASH, "-c", probe], capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    lines = [re.sub(r"\x1b\[[0-9;]*m", "", one) for one in done.stdout.splitlines()]
+    assert lines == [
+        # Taken as proposed: the warning and one line, no explanation.
+        "A warning.",
+        "  set   Backup: as it stands",
+        # Marked on the screen: its own words, in full, and it is asked.
+        "A long explanation.",
+        "A warning.",
+        "mode:asked",
+        # A reconfigure asks everything.
+        "A long explanation.",
+        "A warning.",
+        "mode:asked",
+        # A piece that fails says everything it said, and the failure stands.
+        "What went wrong.",
+        "stopped:3",
+    ]
+
+
+@needs_bash
+def test_who_may_connect_is_proposed_as_the_servers_own_network():
+    probe = (
+        _sourced(
+            ["own_network_of"],
+            "ip() { "
+            'echo "10.0.0.0/24 dev eth0 proto kernel scope link src 10.0.0.12 x"; '
+            'echo "172.17.0.0/16 dev docker0 scope link src 172.17.0.1"; }\n',
+        )
+        + '\nprintf "%s|" "$(own_network_of 10.0.0.12)"'
+        + '\nprintf "%s|" "$(own_network_of 10.0.0.1)"'
+        + '\nprintf "%s|" "$(own_network_of 172.17.0.1)"\n'
+    )
+    done = subprocess.run(
+        [BASH, "-c", probe], capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "10.0.0.0/24||172.17.0.0/16|"
+
+
+@needs_bash
+def test_the_free_space_of_a_value_that_is_no_path_does_not_spin():
+    """Found by a trial install on a Windows shell, where a path came back
+    as a drive letter with no folder above it: the climb to the nearest
+    folder that exists has to end."""
+    probe = (
+        _sourced(["folder_gb_free"])
+        + '\ndirname() { echo "$1"; }\n'
+        + "folder_gb_free no-such-thing-anywhere; echo ended\n"
+    )
+    done = subprocess.run(
+        [BASH, "-c", probe], capture_output=True, text=True, timeout=30
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "ended"

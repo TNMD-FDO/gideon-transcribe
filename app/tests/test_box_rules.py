@@ -38,9 +38,20 @@ def test_step_zero_follows_the_shared_recipe():
 
 def test_the_data_folder_refuses_the_os_drive_beside_a_data_volume():
     # v0.3.135 line 2.
-    asked = between(SCRIPT, "ask_the_office_facts() {")
+    # The question is its own function from v1.230.0, asked at a reconfigure
+    # and from the first install's screen; the rule is where the question is.
+    asked = between(SCRIPT, "ask_the_data_folder() {")
     assert (
         "data_volume_present" in asked and 'ask_yes_no "  Use it anyway?" no' in asked
+    )
+    assert "ask_the_data_folder" in between(SCRIPT, "ask_the_office_facts() {")
+    # And what a first install proposes obeys it: never a folder on the
+    # operating system's drive, and a folder under /data where there is one.
+    proposed = between(SCRIPT, "propose_the_office_facts() {")
+    assert '! on_the_os_drive "$data"' in proposed
+    assert (
+        'elif data_volume_present; then\n      set_env APP_DATA_DIR "/data/transcribe"'
+        in proposed
     )
     assert "mountpoint -q /data" in between(SCRIPT, "data_volume_present() {")
     check = between(SCRIPT, "cmd_check() {")
@@ -148,8 +159,14 @@ def test_caddy_binds_the_lan_address_and_never_every_interface():
     assert "0.0.0.0" not in published and "${BIND_ADDRESS:?" in published
     assert COMPOSE.count("${BIND_ADDRESS:?") == 2
     assert "\nBIND_ADDRESS=\n" in EXAMPLE
-    asked = between(SCRIPT, "ask_the_office_facts() {")
+    asked = between(SCRIPT, "ask_the_lan_address() {")
     assert "hostname -I" in asked and '""|0.0.0.0|::)' in asked
+    assert "ask_the_lan_address" in between(SCRIPT, "ask_the_office_facts() {")
+    # What a first install proposes (v1.230.0) is the same address, and it
+    # asks rather than fall back to every interface.
+    proposed = between(SCRIPT, "propose_the_office_facts() {")
+    assert '""|0.0.0.0|::) lan="$(hostname -I' in proposed
+    assert "ask_the_lan_address" in proposed
 
 
 def test_the_pair_proof_s_install_defects_are_closed():

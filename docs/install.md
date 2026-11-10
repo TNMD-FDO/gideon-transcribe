@@ -17,27 +17,27 @@ The shortest way from a fresh server to the app in a browser: the server alone, 
 1. **Prepare Ubuntu:** [Step 0](#step-0-prepare-ubuntu). Without a graphics card that is Docker and the image store's place; the two NVIDIA parts wait until there is a card.
 2. **Make the app's account and its two folders:** [Step 1](#step-1-prepare-the-server), three commands. On a server whose data drive is at `/data`, the usual folders are `/data/transcribe` and `/opt/gideon-transcribe`.
 3. **Fetch a Release:** [Step 2](#step-2-clone-a-release), one command.
-4. **Run the install** from the install home, and answer as the table says. (To see what the server has before answering anything, `./transcribe preflight` prints the install's opening checks on their own and changes nothing.)
+4. **Run the install** from the install home:
 
     ```bash
     ./transcribe install
     ```
 
-    | It asks | For the quickest install |
-    |---|---|
-    | The address people will use | Type the app's name, for example `transcribe.example.internal` |
-    | The port | Enter, for 8443 |
-    | The server's own LAN address | Enter, when the address it offers is this server's |
-    | Who may connect | Type your office's networks, for example `10.0.0.0/8` |
-    | The app data folder | Type the data folder you made in step 2 |
-    | The time zone | Type it, for example `Europe/London` |
-    | The certificate | `self-signed` |
-    | Is directory sign-in on? | `no` |
-    | The engine | `none` |
-    | The backup target, the Operator address, the mail relay | Enter at each, for none |
-    | Do the rest now? | Enter, for yes |
+    It checks what the server has, then asks one thing: **the address people will use**. Type the app's name, for example `transcribe.example.internal`. Then it shows one screen of everything else, already filled in. Read it, and press Enter.
 
-    Without a graphics card it asks nothing about transcription: it says recordings will wait for a card, and goes on.
+    | Line on the screen | What it proposes | Change it when |
+    |---|---|---|
+    | The address, The port | The name you typed, and 8443 | Another port is wanted |
+    | Listens on | The server's own LAN address | The server has several and this is the wrong one |
+    | Who may connect | The server's own network | People on other office networks must reach the app: give every network, separated by spaces |
+    | The data folder | The folder you made in step 2 | It is not the one you meant |
+    | The time zone | The server's own | The office's differs |
+    | The certificate | A self-signed one, made now | Your own is ready: put it in `tls/` first (Step 3) |
+    | Sign-in | Local admins only | The directory checklist is done and you have its answers to hand |
+    | Transcription, The AI assistant, The fast lane | What the server's card allows; without a card, not installed | You want to decide yourself |
+    | Backup, Mail | None | You have the store's or the relay's details to hand |
+
+    A number changes that line. A fact (the first six) is asked there and then. A piece (the certificate and below) is marked "asked when you go on", and its questions follow once you press Enter. Then it asks **Do the rest now?**: Enter, for yes. (To see what the server has before answering anything, `./transcribe preflight` prints the install's opening checks on their own and changes nothing.)
 
 5. **Give the Local admin a long password** when it asks, and keep it where the office keeps such things. Then it runs its checks; without a card they end with notes, not failures.
 6. **Open the address it prints** in a browser on an office computer and sign in as the Local admin. The browser warns about the certificate until that computer trusts it once; `./transcribe tls self-signed` prints how.
@@ -317,7 +317,9 @@ Check: `ls -l tls ca` shows the three files, the key readable only by you.
 
 It first checks what the server has, as one list: the system and its cores and memory, Docker, the Compose plugin, the NVIDIA driver and, with a driver, the container toolkit's CDI list, the `transcribe` account, where the image store is, the room where Docker keeps its images, a data drive, whether port 8443 is free, and whether the four kinds of host it downloads from answer. Docker, Compose and the account are required and it stops without them; everything else is a note that says what to do, and the install goes on (without transcription, when it is the driver or the CDI list that is missing). `./transcribe preflight` prints the same list on its own, before an install or any time after, and changes nothing. Then it prints the ladder from section 1 with this server's row marked, so you see what this install will be before the questions start.
 
-Then it asks, in plain words, in this order, offering a sensible default where there is one. For every question with fixed answers the first letter is enough, in any case, Enter takes the default in brackets, and an answer that matches nothing is asked again:
+**A first install asks one question and shows one screen** (v1.230.0). The question is the address people will type, which the server cannot work out. Everything else it proposes: port 8443, the server's own LAN address, the server's own network as who may connect, the folder Step 1 made as the data folder (the app account's home), the server's time zone, a self-signed certificate unless the office's own is already in `tls/`, Local admins only, transcription on the server's card when it has one large enough, the Local engine when that card has the room, the fast lane off, and no backup or mail. The screen shows all of it, numbered. Enter accepts it. A number changes one line: a fact is asked there and then, with what is there now; a piece is marked "asked when you go on" (the same number again unmarks it) and is asked in full, as below, once the screen is left, so the pieces are still settled in the order they depend on each other. A piece you did not mark runs the same code as if you had pressed Enter at each of its questions, and prints one line saying what was set, with any warning it had. What the server cannot propose it still asks: the LAN address or the network when it cannot find them, the data folder when the operating system's drive is all there is, and which card when there are several.
+
+`./transcribe install --reconfigure` asks every question, one after another, each with what is there now, as it always did. These are the questions, whichever way they are reached. For every question with fixed answers the first letter is enough, in any case, Enter takes the default in brackets, and an answer that matches nothing is asked again:
 
 - the address people will type, the port, the server's LAN address to listen on, which networks may connect, the App data folder and the time zone. Right after the address it says whether that name is in DNS yet as this server sees it, since a name looked up before it exists can go on failing for an hour. A data folder on the same drive as the operating system is pointed out in amber with the reason, and the install asks whether to use it anyway, with no as the default;
 - the certificate: the office's own already in `tls/` (`own`), or a self-signed one made now (`self-signed`);

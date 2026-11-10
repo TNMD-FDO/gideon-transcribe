@@ -262,8 +262,8 @@ def test_a_stranger_is_sent_to_sign_in(client):
 
 def test_the_install_guide_opens_with_the_quickest_install():
     # v1.228.1: the guide's first page is the whole quickest install, before
-    # chapter 1, and it is held to the script: every question its table names
-    # is one the install asks, every piece it says can be added has its
+    # chapter 1, and it is held to the script: every line its table names is
+    # a line of the install's screen (v1.230.0), every piece it adds has its
     # command, and every link on the page lands on a heading of the guide.
     text = text_of("install.md")
     assert text.index("## Start here: the quickest install") < text.index(
@@ -273,23 +273,28 @@ def test_the_install_guide_opens_with_the_quickest_install():
         "## 1. What you need", 1
     )[0]
     script = (HERE / "transcribe").read_text(encoding="utf-8")
-    for asked in (
-        "The address people will use",
+    # The page's table is the screen's lines, by the screen's own labels.
+    labels = script.split("screen_label() {", 1)[1].split("\n}\n", 1)[0]
+    for line in (
+        "The address",
         "The port",
-        "The server's own LAN address",
+        "Listens on",
         "Who may connect",
-        "The app data folder",
+        "The data folder",
         "The time zone",
         "The certificate",
-        "Is directory sign-in on?",
-        "The engine",
-        "The backup target",
-        "Operator address",
-        "mail relay",
-        "Do the rest now",
+        "Sign-in",
+        "Transcription",
+        "The AI assistant",
+        "The fast lane",
+        "Backup",
+        "Mail",
     ):
-        assert asked in page, asked
-        assert asked in script, asked
+        assert line in page, line
+        assert f'echo "{line}"' in labels, line
+    assert "the address people will use" in page
+    assert "The address people will use" in script
+    assert "Do the rest now" in page and "Do the rest now" in script
     adding = script.split("cmd_add() {", 1)[1].split("\n}\n", 1)[0]
     for piece in ("transcription", "fast-lane", "engine", "directory", "mail"):
         assert f"`./transcribe add {piece}`" in page, piece

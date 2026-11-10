@@ -153,6 +153,18 @@ ask() {
   # A question with what is there now as the default. Prints to stderr so the
   # answer alone comes back on stdout.
   local question="$1" now="$2" answer=""
+  if [ -n "${TAKE_DEFAULTS:-}" ]; then
+    # A piece taken as the screen proposed it (v1.230.0): what is already
+    # there is the answer, and nobody is stopped. The example's placeholders
+    # are never an answer, so a question still holding one is asked.
+    case "$now" in
+      "<"*">" | /replace/with/*) ;;
+      *)
+        printf '%s' "$now"
+        return 0
+        ;;
+    esac
+  fi
   if [ -n "$now" ]; then
     printf '%s\n  [%s]: ' "$question" "$now" >&2
   else
@@ -183,6 +195,7 @@ ask_choice() {
       done
     fi
     echo "  Please answer one of: $(printf '%s' "$choices" | tr '|' ' ')" >&2
+    TAKE_DEFAULTS=""
   done
 }
 
@@ -558,9 +571,11 @@ WORDS
   mkdir -p "$SECRETS" 2>/dev/null || true
   chmod 700 "$SECRETS" 2>/dev/null || true
   local password="" again=""
-  printf 'The bind account'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
-  read -rs password
-  echo >&2
+  if [ -z "${TAKE_DEFAULTS:-}" ]; then
+    printf 'The bind account'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+    read -rs password
+    echo >&2
+  fi
 
   if [ -n "$password" ]; then
     printf 'And again: ' >&2
@@ -933,20 +948,36 @@ cmd_install() {
     set_env RELEASE_TAG "$checked_out"
   fi
 
-  ask_the_office_facts
-  ask_the_certificate
-  cmd_directory
-  make_the_secrets
-  ask_the_card
-  ask_the_engine
-  if transcription_is_on; then
-    ask_the_fast_lane
+  if [ "$reconfigure" = "yes" ]; then
+    # Every question, each with what is there now, as before.
+    ASK_ALL=yes
+    ask_the_office_facts
+  else
+    # A first install (v1.230.0): one typed answer, then one screen.
+    ASK_ALL=no
+    ask_the_address
+    propose_the_office_facts
+    choose_on_the_screen
+    write_what_the_server_decides
+    # The example file is written for an office with a directory; a first
+    # install that was not asked about one starts with Local admins only.
+    if ! asked_for directory; then set_env LDAP_ENABLED false; fi
+    echo
+    echo "Writing it. A piece you did not ask to be asked about says what was set."
   fi
-  ask_the_backup
+  piece certificate "The certificate" ask_the_certificate
+  piece directory "Sign-in" cmd_directory
+  make_the_secrets
+  piece card "Transcription" ask_the_card
+  piece engine "The AI assistant" ask_the_engine
+  if transcription_is_on; then
+    piece fast-lane "The fast lane" ask_the_fast_lane
+  fi
+  piece backup "Backup" ask_the_backup
   # Without a target the units are still written, disabled (v1.137.0; the
   # ledger's v0.3.141 line 7), so a later target has them to enable.
   backup_on || install_timers
-  ask_the_mail
+  piece mail "Mail" ask_the_mail
   ensure_the_token_file
   ensure_the_service_env
   make_the_data_folders
@@ -1095,7 +1126,7 @@ ask_the_card() {
   echo "Transcription needs one card with $((TRANSCRIPTION_GB + DIARIZER_GB)) GB of memory to spare ($TRANSCRIPTION_GB GB for"
   echo "the service and about $DIARIZER_GB GB for the diarizer, for recordings up to two"
   echo "hours). Without it everything else works and recordings wait for it."
-  if ask_yes_no "Use a card for transcription now?" yes; then
+  if ask_yes_no "Use a card for transcription now?" "$(card_usual_answer)"; then
     configure_transcription
   else
     echo "  Transcription is not installed now. When it should be:"
@@ -1249,7 +1280,13 @@ ask_the_certificate() {
   echo "the request) and puts it in tls/. An office without one can have a"
   echo "self-signed certificate made now: workstations trust its root once,"
   echo "and the office's own certificate replaces it later without a reinstall."
-  case "$(ask_choice "The certificate: the office's own, or a self-signed one made now" "$( certificate_is_self_signed && echo self-signed || echo own)" "own|self-signed")" in
+  # Asked, the usual answer is what is there; taken as proposed (v1.230.0),
+  # an empty tls/ gets a self-signed one, since the stack starts on nothing.
+  local usual=own
+  if certificate_is_self_signed || [ -n "${TAKE_DEFAULTS:-}" ]; then
+    usual=self-signed
+  fi
+  case "$(ask_choice "The certificate: the office's own, or a self-signed one made now" "$usual" "own|self-signed")" in
     self-signed) make_a_self_signed_certificate ;;
     *) echo "  Put cert.pem and key.pem in tls/ before the stack is started." ;;
   esac
@@ -1497,9 +1534,13 @@ largest_other_drive() {
 folder_gb_free() {
   # The free space where a folder is, or will be: judged at the nearest
   # parent that exists, as the helper for the operating system's drive does.
-  local path="$1"
+  local path="$1" up
   while [ -n "$path" ] && [ ! -d "$path" ]; do
-    path="$(dirname "$path")"
+    up="$(dirname "$path")"
+    # A value with no folder above it that exists (not a path at all) must
+    # not spin here: it has no free space to report.
+    if [ "$up" = "$path" ]; then return 0; fi
+    path="$up"
   done
   df -BG --output=avail "$path" 2>/dev/null | tail -1 | tr -dc '0-9'
 }
@@ -1685,25 +1726,37 @@ prerequisites() {
   [ "$ok" = "yes" ]
 }
 
-ask_the_office_facts() {
-  local value
-
+ask_the_address() {
+  # The one answer the server cannot work out. The example's placeholder is
+  # not a name (v1.230.0): Enter on it used to write "<hostname>".
+  local value now
+  now="$(env_value APP_HOSTNAME)"
+  case "$now" in "<"*">") now="" ;; esac
   echo
-  value="$(ask "The address people will use, without https://
-  (for example transcribe.example.internal)" "$(env_value APP_HOSTNAME)")"
+  while true; do
+    value="$(ask "The address people will use, without https://
+  (for example transcribe.example.internal)" "$now")"
+    if [ -n "$value" ]; then break; fi
+    echo "  A name, please: it is what people type and what the certificate is for." >&2
+  done
   set_env APP_HOSTNAME "$value"
   say_whether_the_name_resolves "$value"
+}
 
+ask_the_port() {
+  local value
   echo
   value="$(ask "The port it answers on" "$(env_value HTTPS_PORT)")"
   set_env HTTPS_PORT "${value:-8443}"
+}
 
-  echo
+ask_the_lan_address() {
   # The LAN address, suggested from the server itself and never every
   # interface (v1.137.0; the ledger's §4 and its v0.3.135 line 7).
-  local suggested
+  local value suggested
+  echo
   suggested="$(env_value BIND_ADDRESS)"
-  case "$suggested" in ""|0.0.0.0) suggested="$(hostname -I 2>/dev/null | awk '{print $1}')" ;; esac
+  case "$suggested" in ""|0.0.0.0) suggested="$(hostname -I 2>/dev/null | awk '{print $1}' || true)" ;; esac
   while true; do
     value="$(ask "The server's own LAN address to listen on, so this is off
   every other interface the machine has" "$suggested")"
@@ -1713,12 +1766,18 @@ ask_the_office_facts() {
     esac
   done
   set_env BIND_ADDRESS "$value"
+}
 
+ask_who_may_connect() {
+  local value
   echo
   value="$(ask "Who may connect, as networks separated by spaces
   (for example 10.0.0.0/8 192.168.0.0/16)" "$(env_value ALLOWED_CLIENT_CIDRS)")"
   set_env ALLOWED_CLIENT_CIDRS "$value"
+}
 
+ask_the_data_folder() {
+  local value
   echo
   while true; do
     value="$(ask "The app data folder, on the largest drive and not the OS drive" "$(env_value APP_DATA_DIR)")"
@@ -1739,11 +1798,17 @@ ask_the_office_facts() {
     fi
   done
   set_env APP_DATA_DIR "$value"
+}
 
+ask_the_time_zone() {
+  local value
   echo
   value="$(ask "The time zone" "$(env_value TZ)")"
   set_env TZ "${value:-UTC}"
   set_service_env TZ "${value:-UTC}"
+}
+
+write_what_the_server_decides() {
   write_the_cpu_limit
 
   # The app runs as its own account, and compose needs its numbers; the
@@ -1755,6 +1820,337 @@ ask_the_office_facts() {
     set_service_env WHISPERX_GID "$(id -g "$APP_USER")"
     green "The app will run as $APP_USER ($(id -u "$APP_USER"):$(id -g "$APP_USER"))."
   fi
+}
+
+ask_the_office_facts() {
+  # Every office fact, one question after another: what --reconfigure asks,
+  # each with what is there now. A first install asks the address alone and
+  # shows the rest on one screen (below).
+  ask_the_address
+  ask_the_port
+  ask_the_lan_address
+  ask_who_may_connect
+  ask_the_data_folder
+  ask_the_time_zone
+  write_what_the_server_decides
+}
+
+# The one screen (v1.230.0) ------------------------------------------------------
+#
+# A first install asked about twelve questions one after another, most of
+# them answered with Enter, and four with no answer offered at all. It asks
+# one now, the address people will use, which the server cannot work out;
+# it proposes every other answer and shows them together. Enter goes on; a
+# number changes a fact there and then, or marks a piece to be asked in full.
+# Then each piece runs the code it always ran: asked, exactly as before, or
+# taken as proposed, which is Enter at each of its questions. Nothing new is
+# written and nothing is written differently.
+
+is_unset() {
+  # Nothing, or one of the example's placeholders.
+  case "$1" in ""|"<"*">"|/replace/with/*) return 0 ;; esac
+  return 1
+}
+
+own_network_of() {
+  # The network the server's own LAN address is on, as the kernel's routes
+  # say it: the narrowest honest answer to "who may connect", widened by the
+  # person who knows the office's other networks.
+  ip -4 route show scope link 2>/dev/null |
+    awk -v a="$1" 'index($0 " ", "src " a " ") && found == "" { found = $1 } END { if (found != "") print found }'
+}
+
+the_accounts_folder() {
+  # The folder the guide's Step 1 made: the app account's own home.
+  local home
+  home="$(getent passwd "$APP_USER" 2>/dev/null | cut -d: -f6 || true)"
+  case "$home" in ""|/|/nonexistent|/home/*) return 0 ;; esac
+  printf '%s' "$home"
+}
+
+propose_the_office_facts() {
+  # Each fact the server can work out, where .env still has nothing or the
+  # example's placeholder; a value somebody set is left alone. A fact it
+  # cannot work out is asked here, as it always was.
+  local lan net data found zone
+  if is_unset "$(env_value HTTPS_PORT)"; then set_env HTTPS_PORT "$USUAL_PORT"; fi
+
+  lan="$(env_value BIND_ADDRESS)"
+  case "$lan" in ""|0.0.0.0|::) lan="$(hostname -I 2>/dev/null | awk '{print $1}' || true)" ;; esac
+  if [ -n "$lan" ]; then
+    set_env BIND_ADDRESS "$lan"
+  else
+    ask_the_lan_address
+    lan="$(env_value BIND_ADDRESS)"
+  fi
+
+  if is_unset "$(env_value ALLOWED_CLIENT_CIDRS)"; then
+    net="$(own_network_of "$lan" || true)"
+    if [ -n "$net" ]; then
+      set_env ALLOWED_CLIENT_CIDRS "$net"
+      NETWORK_PROPOSED=yes
+    else
+      ask_who_may_connect
+    fi
+  fi
+
+  if is_unset "$(env_value APP_DATA_DIR)"; then
+    data="$(the_accounts_folder || true)"
+    if [ -n "$data" ] && ! on_the_os_drive "$data"; then
+      set_env APP_DATA_DIR "$data"
+    elif data_volume_present; then
+      set_env APP_DATA_DIR "/data/transcribe"
+    else
+      found="$(largest_other_drive || true)"
+      if [ -n "$found" ]; then
+        set_env APP_DATA_DIR "${found#* }/transcribe"
+      else
+        # The operating system's drive is all there is: asked, with its
+        # warning, and with the folder Step 1 made as what is offered.
+        if [ -n "$data" ]; then set_env APP_DATA_DIR "$data"; fi
+        ask_the_data_folder
+      fi
+    fi
+  fi
+
+  if is_unset "$(env_value TZ)"; then
+    zone="$(timedatectl show -p Timezone --value 2>/dev/null || true)"
+    if [ -z "$zone" ]; then zone="$(cat /etc/timezone 2>/dev/null || true)"; fi
+    set_env TZ "${zone:-UTC}"
+    set_service_env TZ "${zone:-UTC}"
+  fi
+}
+
+card_count() {
+  nvidia-smi --query-gpu=uuid --format=csv,noheader 2>/dev/null | grep -c . || true
+}
+
+card_usual_answer() {
+  # yes, unless the largest card is under what the service and the diarizer
+  # need at the least: saying yes to that card writes nothing and stops.
+  local gb
+  gb="$(largest_card_gb || true)"
+  if [ -n "$gb" ] && [ "$gb" -lt "$LEAST_CARD_GB" ]; then echo no; else echo yes; fi
+}
+
+# The pieces the person marked on the screen, to be asked in full.
+ASK_PIECES=""
+ASK_ALL=no
+NETWORK_PROPOSED=no
+
+asked_for() {
+  case " $ASK_PIECES " in *" $1 "*) return 0 ;; esac
+  return 1
+}
+
+needs_a_person() {
+  # A piece whose question has no answer to propose on this server: which
+  # of several cards.
+  [ "$1" = "card" ] && [ "$(card_count)" -gt 1 ]
+}
+
+mark_or_unmark() {
+  local name="$1" one kept=""
+  if asked_for "$name"; then
+    for one in $ASK_PIECES; do
+      if [ "$one" != "$name" ]; then kept="$kept $one"; fi
+    done
+    ASK_PIECES="$kept"
+  else
+    ASK_PIECES="$ASK_PIECES $name"
+  fi
+}
+
+screen_label() {
+  case "$1" in
+    address) echo "The address" ;;
+    port) echo "The port" ;;
+    lan) echo "Listens on" ;;
+    networks) echo "Who may connect" ;;
+    data) echo "The data folder" ;;
+    zone) echo "The time zone" ;;
+    certificate) echo "The certificate" ;;
+    directory) echo "Sign-in" ;;
+    card) echo "Transcription" ;;
+    engine) echo "The AI assistant" ;;
+    fast-lane) echo "The fast lane" ;;
+    backup) echo "Backup" ;;
+    mail) echo "Mail" ;;
+  esac
+}
+
+screen_value() {
+  # What the line says: a fact as it stands in .env, or a piece as it is
+  # proposed. A piece the person marked says it will be asked.
+  local cards gb free
+  case "$1" in
+    address) env_value APP_HOSTNAME; return 0 ;;
+    port) env_value HTTPS_PORT; return 0 ;;
+    lan) echo "$(env_value BIND_ADDRESS)  (this server's LAN address)"; return 0 ;;
+    networks)
+      if [ "$NETWORK_PROPOSED" = "yes" ]; then
+        echo "$(env_value ALLOWED_CLIENT_CIDRS)  (this server's own network; change it to add the office's others)"
+      else
+        env_value ALLOWED_CLIENT_CIDRS
+      fi
+      return 0
+      ;;
+    data)
+      free="$(folder_gb_free "$(env_value APP_DATA_DIR)" || true)"
+      echo "$(env_value APP_DATA_DIR)  (${free:-?} GB free)"
+      return 0
+      ;;
+    zone) env_value TZ; return 0 ;;
+  esac
+  if asked_for "$1"; then
+    echo "asked when you go on"
+    return 0
+  fi
+  cards="$(card_count)"
+  case "$1" in
+    certificate)
+      if [ -s "$HERE/tls/cert.pem" ] && [ -s "$HERE/tls/key.pem" ] && ! certificate_is_self_signed; then
+        echo "the office's own, in tls/"
+      else
+        echo "self-signed, made now  (the office's own replaces it later)"
+      fi
+      ;;
+    directory) echo "Local admins only  (./transcribe add directory)" ;;
+    card)
+      gb="$(largest_card_gb || true)"
+      if [ "$cards" = "0" ]; then
+        echo "not installed, no card  (./transcribe add transcription)"
+      elif [ "$cards" -gt 1 ]; then
+        echo "asked when you go on: $cards cards here"
+      elif [ "$(card_usual_answer)" = "no" ]; then
+        echo "not installed: the card has ${gb} GB, under the $LEAST_CARD_GB GB it needs"
+      else
+        echo "on, with this server's card  (${gb:-?} GB)"
+      fi
+      ;;
+    engine)
+      gb="$(largest_card_gb || true)"
+      if [ "$cards" = "1" ] && [ "$(card_usual_answer)" = "yes" ] && [ -n "$gb" ] && [ $((gb - TRANSCRIPTION_GB - DIARIZER_GB)) -ge "$ENGINE_GB" ]; then
+        echo "the Local engine, on the same card"
+      elif [ "$cards" -gt 1 ]; then
+        echo "the Local engine when the chosen card has room, else off"
+      else
+        echo "off, no engine  (./transcribe add engine)"
+      fi
+      ;;
+    fast-lane) echo "off  (./transcribe add fast-lane)" ;;
+    backup) echo "none  (./transcribe add backup)" ;;
+    mail) echo "none  (./transcribe add mail)" ;;
+  esac
+}
+
+SCREEN_KEYS=""
+
+the_screen() {
+  local n=0 key
+  SCREEN_KEYS="address port lan networks data zone certificate directory card engine"
+  # The fast lane is a line only where transcription may be on: a card that
+  # can carry it, or several to choose from.
+  if [ "$(card_count)" -gt 1 ] || { [ "$(card_count)" = "1" ] && [ "$(card_usual_answer)" = "yes" ]; }; then
+    SCREEN_KEYS="$SCREEN_KEYS fast-lane"
+  fi
+  SCREEN_KEYS="$SCREEN_KEYS backup mail"
+  echo
+  echo "This install, as it stands. Enter to go on, or a number to change a line."
+  echo
+  for key in $SCREEN_KEYS; do
+    n=$((n + 1))
+    printf '  %2d  %-17s %s\n' "$n" "$(screen_label "$key")" "$(screen_value "$key")"
+  done
+  echo
+}
+
+choose_on_the_screen() {
+  # Enter goes on. A fact's number asks that one fact again, with what is
+  # there now; a piece's number marks it to be asked in full once the screen
+  # is left (and a second press unmarks it), so the pieces are still settled
+  # in the order they depend on each other.
+  local pick key
+  while true; do
+    the_screen
+    printf '  [Enter]: ' >&2
+    read -r pick || pick=""
+    pick="${pick%$'\r'}"
+    if [ -z "$pick" ]; then return 0; fi
+    key=""
+    case "$pick" in
+      *[!0-9]*) ;;
+      *) key="$(printf '%s\n' $SCREEN_KEYS | sed -n "${pick}p" 2>/dev/null || true)" ;;
+    esac
+    case "$key" in
+      address) ask_the_address ;;
+      port) ask_the_port ;;
+      lan) ask_the_lan_address ;;
+      networks) ask_who_may_connect; NETWORK_PROPOSED=no ;;
+      data) ask_the_data_folder ;;
+      zone) ask_the_time_zone ;;
+      certificate|directory|card|engine|fast-lane|backup|mail) mark_or_unmark "$key" ;;
+      *) echo "  A number from the list, or Enter to go on." >&2 ;;
+    esac
+  done
+}
+
+state_words() {
+  # A piece as it now stands, for the line a piece taken as proposed prints.
+  case "$1" in
+    certificate)
+      if certificate_is_self_signed; then echo "self-signed, made (./transcribe tls self-signed prints how a workstation trusts it)"
+      elif [ -s "$HERE/tls/cert.pem" ]; then echo "the office's own"
+      else echo "none yet: put cert.pem and key.pem in tls/"; fi
+      ;;
+    directory)
+      if [ "$(env_value LDAP_ENABLED)" = "true" ]; then echo "the office directory"
+      else echo "Local admins only (./transcribe add directory)"; fi
+      ;;
+    card)
+      if transcription_is_on; then echo "on; the service starts with the stack"
+      else echo "not installed (./transcribe add transcription)"; fi
+      ;;
+    engine)
+      if local_engine_is_on; then echo "the Local engine; its first start downloads the model, about 8 GB"
+      elif shared_engine_is_on; then echo "a shared engine"
+      else echo "off, no engine (./transcribe add engine)"; fi
+      ;;
+    fast-lane)
+      if fast_lane_is_on; then echo "on"; else echo "off (./transcribe add fast-lane)"; fi
+      ;;
+    backup)
+      if backup_on; then echo "to $(backup_target)"; else echo "none (./transcribe add backup)"; fi
+      ;;
+    mail)
+      if [ -n "$(env_value SMTP_HOST)" ]; then echo "through $(env_value SMTP_HOST)"
+      else echo "none (./transcribe add mail)"; fi
+      ;;
+  esac
+}
+
+piece() {
+  # One piece of the install. Asked in full when this is a reconfigure, when
+  # the person marked it on the screen, or when its question has no answer
+  # to propose. Otherwise taken as proposed: its own code runs with Enter at
+  # each of its questions, its explanations are kept off the terminal, its
+  # warnings are not, and one line says what was set.
+  local name="$1" label="$2" said status
+  shift 2
+  if [ "$ASK_ALL" = "yes" ] || asked_for "$name" || needs_a_person "$name"; then
+    "$@"
+    return
+  fi
+  set +e
+  said="$(set -e; TAKE_DEFAULTS=1; "$@")"
+  status=$?
+  set -e
+  if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$said"
+    return "$status"
+  fi
+  printf '%s\n' "$said" | grep -e "$(printf '\033\\[3[13]m')" || true
+  green "  set   $label: $(state_words "$name")"
 }
 
 service_env_default() {
@@ -1825,6 +2221,7 @@ ask_the_gpu() {
   echo
   echo "The cards on this server:"
   local listed count now value picked
+  local TAKE_DEFAULTS="${TAKE_DEFAULTS:-}"
   listed="$(nvidia-smi --query-gpu=index,name,memory.total,uuid --format=csv,noheader 2>/dev/null)"
   count="$(printf '%s\n' "$listed" | grep -c .)"
   printf '%s\n' "$listed" | awk -F', ' '{ printf "  %d. %s, %s (%s)\n", NR, $2, $3, $4 }'
@@ -1847,6 +2244,7 @@ ask_the_gpu() {
         ;;
     esac
     echo "  Please give a number from the list, or the GPU-... UUID." >&2
+    TAKE_DEFAULTS=""
   done
   set_service_env WHISPERX_GPU_UUID "$value"
 }
@@ -1962,9 +2360,12 @@ ask_the_hugging_face_token() {
   echo "belonging to an account that has accepted the model's conditions."
   echo "It is used at install and at upgrade and never while the app runs."
   local token again
-  printf 'The Hugging Face token (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
-  read -rs token
-  echo >&2
+  token=""
+  if [ -z "${TAKE_DEFAULTS:-}" ]; then
+    printf 'The Hugging Face token (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+    read -rs token
+    echo >&2
+  fi
 
   if [ -n "$token" ]; then
     printf 'And again: ' >&2
@@ -3079,9 +3480,11 @@ WORDS
     user="$(ask "The relay's sign-in name" "$(env_value SMTP_USER)")"
     set_env SMTP_USER "$user"
     local password="" again=""
-    printf 'The relay'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
-    read -rs password
-    echo >&2
+    if [ -z "${TAKE_DEFAULTS:-}" ]; then
+      printf 'The relay'"'"'s password (nothing is shown as you type;\n  press Enter alone to keep the one already stored): ' >&2
+      read -rs password
+      echo >&2
+    fi
     if [ -n "$password" ]; then
       printf 'And again: ' >&2
       read -rs again
