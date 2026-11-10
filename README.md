@@ -101,7 +101,7 @@ download sizes and the host figures, is at the top of the install guide.
 ## Installing (the short version)
 
 The full guide is [`docs/install.md`](docs/install.md), written for an IT
-generalist. The app is installed in pieces: the server alone runs cases,
+generalist; it opens with the quickest install, on one page. The app is installed in pieces: the server alone runs cases,
 incidents, notes, clips and documents; a graphics card adds transcription; room
 on the card, or an engine the office already runs, adds the AI assistant; the
 directory, mail and a backup store are pieces too. Each is added at install or

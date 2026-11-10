@@ -6,6 +6,71 @@ The app runs on one server in your office, on Docker, and nothing it does leaves
 
 **Nothing is ever pushed from a workstation to the server, and nothing is ever copied over the install folder.** Code reaches the server only by `./transcribe upgrade <tag>`, which fetches a Release from GitHub and checks it out. If you find yourself copying files onto the server by hand, stop: that is not how this app is installed or changed.
 
+## Start here: the quickest install
+
+The shortest way from a fresh server to the app in a browser: the server alone, no graphics card, a certificate the install makes for you, and one Local admin to sign in with. Allow about thirty minutes once Ubuntu is prepared, most of it downloads. Nothing done here is undone later: sign-in with office accounts, your own certificate, a graphics card, the AI assistant, a backup and mail are each added afterwards with one command.
+
+**You need** a server running Ubuntu Server 24.04 or newer, a data drive separate from the operating system's, an account on it that can use `sudo`, and a name for the app that your office's DNS will answer (it can be made after the install). The server must be able to reach the hosts in the appendix while it installs.
+
+**Do this**, in order:
+
+1. **Prepare Ubuntu:** [Step 0](#step-0-prepare-ubuntu). Without a graphics card that is Docker and the image store's place; the two NVIDIA parts wait until there is a card.
+2. **Make the app's account and its two folders:** [Step 1](#step-1-prepare-the-server), three commands. On a server whose data drive is at `/data`, the usual folders are `/data/transcribe` and `/opt/gideon-transcribe`.
+3. **Fetch a Release:** [Step 2](#step-2-clone-a-release), one command.
+4. **Run the install** from the install home, and answer as the table says:
+
+    ```bash
+    ./transcribe install
+    ```
+
+    | It asks | For the quickest install |
+    |---|---|
+    | The address people will use | Type the app's name, for example `transcribe.example.internal` |
+    | The port | Enter, for 8443 |
+    | The server's own LAN address | Enter, when the address it offers is this server's |
+    | Who may connect | Type your office's networks, for example `10.0.0.0/8` |
+    | The app data folder | Type the data folder you made in step 2 |
+    | The time zone | Type it, for example `Europe/London` |
+    | The certificate | `self-signed` |
+    | Is directory sign-in on? | `no` |
+    | The engine | `none` |
+    | The backup target, the Operator address, the mail relay | Enter at each, for none |
+    | Do the rest now? | Enter, for yes |
+
+    Without a graphics card it asks nothing about transcription: it says recordings will wait for a card, and goes on.
+
+5. **Give the Local admin a long password** when it asks, and keep it where the office keeps such things. Then it runs its checks; without a card they end with notes, not failures.
+6. **Open the address it prints** in a browser on an office computer and sign in as the Local admin. The browser warns about the certificate until that computer trusts it once; `./transcribe tls self-signed` prints how.
+
+**What you have now:** cases, incidents, notes, clips, documents and sharing, all working. A recording somebody uploads is kept and waits for a graphics card.
+
+**Add the rest when you are ready**, each with one command on the server:
+
+| When | The command | Read first |
+|---|---|---|
+| People should sign in with their office accounts | `./transcribe add directory` | The directory checklist, section 2 |
+| The office's own certificate is ready | Step 3, then `docker compose restart caddy` | The certificate request, section 2 |
+| A graphics card is in the server | `./transcribe add transcription` | Step 0's two NVIDIA parts; the ladder, section 1 |
+| The card has room, or the office runs an engine on the LAN | `./transcribe add engine` | The Local engine, section 3 |
+| Recordings made in the app should not wait behind a long job | `./transcribe add fast-lane` | The fast lane, section 3 |
+| There is somewhere off the server to keep a nightly copy | `./transcribe add backup` | The backup, section 3 |
+| The app should send mail | `./transcribe add mail` | The mail, section 3 |
+
+`./transcribe pieces` lists what is on, off and not installed at any time.
+
+**In this guide**
+
+| Section | What it is for |
+|---|---|
+| [1. What you need](#1-what-you-need-by-what-the-server-has) | What a graphics card opens, by its memory, and what the server itself needs. Read it before buying. |
+| [2. Before you start](#2-before-you-start) | Three preparations done away from the server, all optional: the directory, your own certificate, a Hugging Face token. |
+| [3. Install](#3-install) | Every step in full, then each piece that can be added later. |
+| [4. Check](#4-check) | What each line of `./transcribe check` means. |
+| [5. First sign-in](#5-first-sign-in) | The first recording, once round. |
+| [6. When it fails](#6-when-it-fails) | Each message, what it means and the fix. |
+| [7. Upgrade](#7-upgrade), [8. Roll back](#8-roll-back), [9. Uninstall](#9-uninstall) | Keeping it running. |
+| [10. Appendix](#10-appendix) | Every environment key, the files beside them, and the hosts the server must reach. |
+
 ## 1. What you need, by what the server has
 
 The app is installed in pieces. The server alone runs the app; each piece is added when the office has what it needs, at install or later with one command. Nothing has to wait for everything: an office whose graphics card is still on order installs today and adds transcription when the card arrives.
@@ -28,7 +93,7 @@ Any NVIDIA card of compute capability 7.5 or newer under a driver of 570 or newe
 
 The other pieces need no hardware: **the office directory** (sign-in with office accounts and groups; without it, Local admins only), **a mail relay** (notifications, the retention digest, the Operator mail) and **a backup store** (nightly encrypted Snapshots off the box and a monthly restore drill; an SFTP account on an office file store).
 
-**The quickest install**, to see it work: the server alone, a self-signed certificate, Local admins only, one recording through to "Waiting for the card". Step 0, Steps 1 and 2, then `./transcribe install` answering `self-signed`, `no` to the directory and Enter to the rest, and `yes` when it offers to do the rest. About thirty minutes after Ubuntu is prepared, most of it the downloads. Every other piece is added later with one command, and nothing done for the quick install is undone.
+**The quickest install**, to see it work, is the page this guide opens with ("Start here"): the server alone, a self-signed certificate, Local admins only, one recording through to "Waiting for the card". Every other piece is added later with one command, and nothing done for the quick install is undone.
 
 **The server itself** needs:
 
@@ -47,7 +112,7 @@ The other pieces need no hardware: **the office directory** (sign-in with office
 
 ## 2. Before you start
 
-Three things are done away from the server, and each needs somebody with the right permissions. Do the ones your office wants first, so the install itself is not held up. None of them is required to install: without the directory the app runs with Local admins (`./transcribe add directory` later), without a certificate from the office the install makes a self-signed one (below), and without a Hugging Face token the default diarizer needs none.
+**Everything in this section is optional.** Three things are done away from the server, and each needs somebody with the right permissions. Do the ones your office wants first, so the install itself is not held up. None of them is required to install: without the directory the app runs with Local admins (`./transcribe add directory` later), without a certificate from the office the install makes a self-signed one (below), and without a Hugging Face token the default diarizer needs none.
 
 ### The directory checklist (optional)
 
@@ -137,7 +202,7 @@ You will type the token once, into `./transcribe install`, or press Enter to giv
 
 ### Step 0: prepare Ubuntu
 
-Three things the app needs from the operating system, each with the command that installs it and the check that it worked. The commands are the ones the makers publish (`docs/research/ubuntu-preparation.md` has where each was read and when); run them as the compose admin.
+Four things the app needs from the operating system, each with the command that installs it and the check that it worked. A server with no graphics card needs the first and the last (Docker, and the image store's place); the two NVIDIA parts are for a card, now or when it arrives. The commands are the ones the makers publish (`docs/research/ubuntu-preparation.md` has where each was read and when); run them as the compose admin.
 
 **Docker with the Compose plugin**, from Docker's own repository:
 

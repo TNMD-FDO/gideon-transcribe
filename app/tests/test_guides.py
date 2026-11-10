@@ -258,3 +258,57 @@ def test_an_admin_reads_the_admin_guide(client):
 
 def test_a_stranger_is_sent_to_sign_in(client):
     assert client.get(reverse("help")).status_code == 302
+
+
+def test_the_install_guide_opens_with_the_quickest_install():
+    # v1.228.1: the guide's first page is the whole quickest install, before
+    # chapter 1, and it is held to the script: every question its table names
+    # is one the install asks, every piece it says can be added has its
+    # command, and every link on the page lands on a heading of the guide.
+    text = text_of("install.md")
+    assert text.index("## Start here: the quickest install") < text.index(
+        "## 1. What you need"
+    )
+    page = text.split("## Start here: the quickest install", 1)[1].split(
+        "## 1. What you need", 1
+    )[0]
+    script = (HERE / "transcribe").read_text(encoding="utf-8")
+    for asked in (
+        "The address people will use",
+        "The port",
+        "The server's own LAN address",
+        "Who may connect",
+        "The app data folder",
+        "The time zone",
+        "The certificate",
+        "Is directory sign-in on?",
+        "The engine",
+        "The backup target",
+        "Operator address",
+        "mail relay",
+        "Do the rest now",
+    ):
+        assert asked in page, asked
+        assert asked in script, asked
+    adding = script.split("cmd_add() {", 1)[1].split("\n}\n", 1)[0]
+    for piece in ("transcription", "fast-lane", "engine", "directory", "mail"):
+        assert f"`./transcribe add {piece}`" in page, piece
+        assert f"{piece})" in adding, piece
+    assert "`./transcribe add backup`" in page and "backup)" in adding
+    headings = {
+        re.sub(r"[^\w\- ]", "", found.strip().lower()).replace(" ", "-")
+        for found in re.findall(r"^#+ (.+)$", text, re.M)
+    }
+    links = re.findall(r"\]\(#([^)]+)\)", text)
+    assert links, "the first page links to the steps"
+    assert not [link for link in links if link not in headings]
+    # Nothing moved: the steps and the chapters keep their names and numbers.
+    for kept in (
+        "### Step 0: prepare Ubuntu",
+        "### Step 1: prepare the server",
+        "### Step 4: run the install",
+        "## 2. Before you start",
+        "## 10. Appendix",
+        "**Everything in this section is optional.**",
+    ):
+        assert kept in text, kept

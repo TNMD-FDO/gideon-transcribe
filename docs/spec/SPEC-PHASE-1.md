@@ -815,6 +815,8 @@ The app serves the user guide at `/help/` and the admin guide from a Help link i
 9. **Uninstall.** Stop the project, remove the folders, remove the units, remove the user.
 10. **Appendix.** Every `.env` key with its meaning, and the egress hosts.
 
+Amended 2026-11-10 (v1.228.1, at the maintainer's word, the first step of the streamlined install): before chapter 1 the guide opens with **Start here: the quickest install**, one page: what the server needs, the six things to do in order with a link to each step, a table of what the install asks and the answer that gives the quickest install (the server alone, a self-signed certificate, Local admins only), what the office has at the end, a table of each piece added later with its one command, and a table of the guide's sections. Chapter 2 opens by saying that everything in it is optional, and Step 0 says which of its parts a server with no card needs. No chapter is renumbered, no step moves and no command changes; Step 0 keeps every part the box ledger's directions put there.
+
 #### Egress hosts (the appendix)
 
 At install and upgrade:

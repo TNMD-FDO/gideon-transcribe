@@ -17,6 +17,33 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.228.1, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The install guide opens with the quickest install, on one page. Words only:
+no command, no step and no script changes, and a running server gains
+nothing by upgrading to this tag. The first step of streamlining the
+install, at the maintainer's word.
+
+- **Start here.** The guide's first page is now the whole quickest install:
+  what the server needs, six things to do in order with a link to each
+  step, and a table of every question the install asks with the answer
+  that gives the quickest install. The old one-paragraph version said
+  "Enter to the rest", but four of the answers have no default (the
+  address, the networks, the data folder and the time zone); the table
+  says so.
+- **Add the rest.** One table of each piece added later (office sign-in,
+  your own certificate, a graphics card, the engine, the fast lane, backup,
+  mail), its one command and what to read first.
+- **In this guide.** A table of the sections and what each is for.
+- **Optional, said first.** Section 2 opens by saying everything in it is
+  optional, and Step 0 says which of its four parts a server with no card
+  needs. Step 0 keeps every part it had.
+
 ## v1.228.0, 2026-11-10
 
 ```

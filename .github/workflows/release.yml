@@ -187,7 +187,7 @@ jobs:
             echo
             echo "---"
             echo "New here? What to buy and how to install: the install guide at this release,"
-            echo "https://github.com/${{ github.repository }}/blob/$tag/docs/install.md, opens with what a graphics card opens."
+            echo "https://github.com/${{ github.repository }}/blob/$tag/docs/install.md, opens with the quickest install and then what a graphics card opens."
           } >> /tmp/notes.md
 
       - name: Sign in to ghcr.io
