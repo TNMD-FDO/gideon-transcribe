@@ -17,6 +17,39 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.229.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The install checks everything it will need before it asks anything, as one
+list, and `./transcribe preflight` prints that list on its own. The second
+step of streamlining the install, at the maintainer's word.
+
+- **One list.** The install's opening checks looked at five things; the
+  rest surfaced where it first hurt, some of it half an hour in. They now
+  also say the system and its cores and memory, the room where Docker keeps
+  its images, whether there is a data drive, whether port 8443 is free, and
+  whether the hosts the install downloads from answer. Each line is a pass
+  or a note that says what to do.
+- **What stops an install is unchanged:** Docker, the Compose plugin and
+  the app's account. Nothing new stops one that would have gone on before,
+  and nothing in the list changes the server.
+- **`./transcribe preflight`** prints the list without installing, before
+  an install or any time after. It needs no `.env`.
+- **The name in DNS.** Right after the address is typed, the install says
+  whether that name resolves yet as the server sees it, with the reason to
+  make the record first.
+- **Found on the way.** The check of where the image store is kept the
+  single quotes containerd 2 writes round the path, so it never matched the
+  package default and passed a store that was still there. It reads the
+  path bare now. And on a server whose containerd config has no `root` line
+  at all, which is the file the package ships, `./transcribe check` ended
+  silently at that line; it goes on now.
+- The guide's Step 4 and its failure table say all of this, row by row.
+
 ## v1.228.1, 2026-11-10
 
 ```

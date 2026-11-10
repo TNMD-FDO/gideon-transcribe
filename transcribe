@@ -6,6 +6,8 @@
 # is meant to be safe to run twice, and none of them ever prints a secret.
 #
 #   ./transcribe install      ask what this server has and write both .env files
+#   ./transcribe preflight    what this server has, as one list, before an install
+#                             or any time after; it changes nothing
 #   ./transcribe status       what is running, and whether it is healthy
 #   ./transcribe check        the smoke checks, as a plain report
 #   ./transcribe bring-up     the steps after install, in order: the images, the
@@ -601,7 +603,7 @@ check_the_containerd_root() {
   # moves only by hand in an announced window. A note, never a stop: the
   # setting is the box's and the fix is the guide's Step 0.
   local root
-  root="$(grep -E '^\s*root\s*=' /etc/containerd/config.toml 2>/dev/null | head -1 | sed 's/.*=\s*//; s/"//g')"
+  root="$(grep -E '^\s*root\s*=' /etc/containerd/config.toml 2>/dev/null | sed 's/.*=\s*//' | tr -d "\"'" | sed -n '1p' || true)"
   if [ -z "$root" ] || [ "$root" = "/var/lib/containerd" ]; then
     note "containerd's image store is at its package default (/var/lib/containerd); the shared box's rule puts it on the Docker volume at /var/lib/docker/containerd before the first image (the install guide's Step 0)"
   else
@@ -1435,9 +1437,200 @@ cmd_remove() {
   esac
 }
 
+# The wider check (v1.229.0) -----------------------------------------------------
+#
+# What a server has beyond the five things the install always looked at: the
+# system, its cores and memory, the room where Docker keeps its images, a
+# data drive, the port, and the hosts an install downloads from. Until now
+# each of these surfaced where it first hurt, some of them half an hour in.
+# Every line is a pass or a note with its fix. None of them stops an install
+# that would have gone on before, and nothing here changes the server.
+
+# The host figures the guide gives in its section 1: the app's own estimates.
+LEAST_CORES=4
+LEAST_MEMORY_GB=16
+# What the guide asks to keep free where Docker keeps its images.
+DOCKER_GB_TO_KEEP=100
+# What the app keeps free on the data drive as shipped.
+DATA_GB_TO_KEEP=200
+# The port the example environment answers on.
+USUAL_PORT=8443
+# The hosts an install downloads from (the guide's appendix), one of each kind.
+REACH_HOSTS="github.com ghcr.io registry-1.docker.io huggingface.co"
+
+os_release_value() {
+  # One value out of /etc/os-release, unquoted; nothing where there is none.
+  [ -r /etc/os-release ] || return 0
+  sed -n "s/^$1=//p" /etc/os-release | tr -d '"' | tail -1
+}
+
+check_the_system() {
+  local id version pretty cores memory_kb memory_gb
+  id="$(os_release_value ID)"
+  version="$(os_release_value VERSION_ID)"
+  pretty="$(os_release_value PRETTY_NAME)"
+  if [ "$id" = "ubuntu" ] && [ "${version%%.*}" -ge 24 ] 2>/dev/null; then
+    pass "Ubuntu $version"
+  elif [ "$id" = "ubuntu" ]; then
+    note "this is Ubuntu $version; the install guide is written for Ubuntu Server 24.04 or newer"
+  else
+    note "this is ${pretty:-a system this script does not know}; the install guide's Step 0 is written for Ubuntu Server 24.04 or newer, and its commands may differ here"
+  fi
+  cores="$(nproc 2>/dev/null || true)"
+  memory_kb="$(sed -n 's/^MemTotal: *\([0-9]*\) kB.*/\1/p' /proc/meminfo 2>/dev/null || true)"
+  [ -n "$cores" ] && [ -n "$memory_kb" ] || return 0
+  memory_gb=$(( (memory_kb + 524288) / 1048576 ))
+  if [ "$cores" -ge "$LEAST_CORES" ] && [ "$memory_gb" -ge "$LEAST_MEMORY_GB" ]; then
+    pass "$cores cores, $memory_gb GB of memory"
+  else
+    note "$cores cores and $memory_gb GB of memory; the app wants about $LEAST_CORES cores and $LEAST_MEMORY_GB GB (the install guide, section 1)"
+  fi
+}
+
+largest_other_drive() {
+  # The roomiest real filesystem that is not the operating system's, as
+  # "GB mountpoint"; nothing when the root filesystem is all there is.
+  df -BG --output=avail,target -x tmpfs -x devtmpfs -x overlay -x squashfs -x efivarfs 2>/dev/null |
+    awk 'NR > 1 { gsub("G", "", $1); if ($2 != "/" && $2 !~ /^\/(boot|snap|run|dev|sys|proc|var\/lib\/docker)/ && $1 + 0 > best) { best = $1 + 0; where = $2 } } END { if (where != "") print best " " where }'
+}
+
+folder_gb_free() {
+  # The free space where a folder is, or will be: judged at the nearest
+  # parent that exists, as the helper for the operating system's drive does.
+  local path="$1"
+  while [ -n "$path" ] && [ ! -d "$path" ]; do
+    path="$(dirname "$path")"
+  done
+  df -BG --output=avail "$path" 2>/dev/null | tail -1 | tr -dc '0-9'
+}
+
+check_the_room() {
+  local free data found gb where
+  free="$(root_gb_free || true)"
+  if [ -z "$free" ]; then
+    :
+  elif [ "$free" -ge "$DOCKER_GB_TO_KEEP" ]; then
+    pass "$free GB free where Docker keeps its images"
+  elif [ "$free" -ge "$ROOT_GB_TO_BUILD" ]; then
+    note "$free GB free where Docker keeps its images; the guide asks for $DOCKER_GB_TO_KEEP GB there, for the images and the build cache (./transcribe tidy frees this project's own)"
+  else
+    note "only $free GB free where Docker keeps its images: an image cannot be built here with under $ROOT_GB_TO_BUILD GB (the install guide, section 1)"
+  fi
+
+  data=""
+  [ -f "$ENV_FILE" ] && data="$(env_value APP_DATA_DIR || true)"
+  case "$data" in /replace/with/*) data="" ;; esac
+  if [ -n "$data" ]; then
+    gb="$(folder_gb_free "$data" || true)"
+    if [ -z "$gb" ]; then
+      :
+    elif [ "$gb" -gt "$DATA_GB_TO_KEEP" ]; then
+      pass "the app data folder $data has $gb GB free"
+    else
+      note "the app data folder $data has only $gb GB free; the app keeps $DATA_GB_TO_KEEP GB free as shipped and pauses uploads when it cannot"
+    fi
+  elif data_volume_present; then
+    gb="$(folder_gb_free /data || true)"
+    pass "a data volume at /data with ${gb:-?} GB free"
+  else
+    found="$(largest_other_drive || true)"
+    if [ -n "$found" ]; then
+      gb="${found%% *}"; where="${found#* }"
+      pass "a drive apart from the operating system's at $where with $gb GB free"
+    else
+      note "no drive apart from the operating system's was found: recordings fill a drive, and a full operating system drive stops the whole server (the install guide, section 1)"
+    fi
+  fi
+}
+
+check_the_port() {
+  # Before an install only: afterwards the port is the app's own, and
+  # ./transcribe check reports the running stack.
+  if [ -f "$ENV_FILE" ] || ! command -v ss >/dev/null 2>&1; then
+    return 0
+  fi
+  if ss -ltnH 2>/dev/null | awk -v p=":$USUAL_PORT" '$4 ~ p"$" { found = 1 } END { exit !found }'; then
+    note "port $USUAL_PORT is already in use on this server: answer the install's port question with another, or stop what holds it"
+  else
+    pass "port $USUAL_PORT is free"
+  fi
+}
+
+answers_from_here() {
+  # Whether a host answers on 443 within a few seconds. Any answer counts:
+  # this asks whether the road is open, not what is at the end of it.
+  if command -v curl >/dev/null 2>&1; then
+    curl -s -o /dev/null --connect-timeout 5 --max-time 8 -I "https://$1" 2>/dev/null
+  else
+    timeout 6 bash -c "exec 3<>/dev/tcp/$1/443" 2>/dev/null
+  fi
+}
+
+what_a_host_is_for() {
+  case "$1" in
+    github.com) echo "the code" ;;
+    ghcr.io) echo "the app's images" ;;
+    registry-1.docker.io) echo "the database, web server and upload images" ;;
+    huggingface.co) echo "the models" ;;
+    *) echo "what it serves" ;;
+  esac
+}
+
+check_the_reach() {
+  local host silent=""
+  for host in $REACH_HOSTS; do
+    answers_from_here "$host" || silent="$silent $host"
+  done
+  if [ -z "$silent" ]; then
+    pass "$(printf '%s' "$REACH_HOSTS" | sed 's/ /, /g; s/\(.*\), /\1 and /') answer from here"
+    return 0
+  fi
+  for host in $silent; do
+    note "$host does not answer from here: $(what_a_host_is_for "$host") cannot be fetched until it does (needed at install and upgrade only; the install guide's appendix lists the hosts)"
+  done
+}
+
+say_whether_the_name_resolves() {
+  # Right after the address is typed (v1.229.0): a name looked up before it
+  # exists goes on failing for the zone's negative TTL, usually an hour, so
+  # the record is better made before anybody tries the name.
+  local name="$1"
+  case "$name" in ""|"<"*) return 0 ;; esac
+  if getent hosts "$name" >/dev/null 2>&1; then
+    green "  $name resolves on this server."
+  else
+    amber "  $name is not in DNS yet, as seen from this server."
+    echo "  Create the record, pointing at this server's LAN address, before anybody"
+    echo "  tries the name: a name looked up before it exists can go on failing for"
+    echo "  an hour. The install goes on either way."
+  fi
+}
+
+cmd_preflight() {
+  # The checks the install opens with, on their own (v1.229.0): for before
+  # an install, or any time after. It needs no .env and changes nothing.
+  echo "Gideon Transcribe: what this server has"
+  echo "Nothing is changed. A note is something to know; a FAIL stops the install"
+  echo "and names the step of the guide that puts it right."
+  echo
+  FAILURES=0
+  if prerequisites; then
+    echo "Everything the install must have is here."
+    if [ -f "$ENV_FILE" ]; then
+      echo "  This server is installed: ./transcribe check is the fuller report."
+    else
+      echo "  When you are ready:   ./transcribe install"
+    fi
+  else
+    red "$FAILURES to put right before the install will run; each FAIL line names its step."
+    exit 1
+  fi
+}
+
 prerequisites() {
   echo "Checking what this server has:"
   local ok=yes
+  check_the_system
 
   if command -v docker >/dev/null 2>&1; then
     pass "docker $(docker --version | sed 's/Docker version //; s/,.*//')"
@@ -1484,6 +1677,9 @@ prerequisites() {
     ok=no
   fi
   check_the_containerd_root
+  check_the_room
+  check_the_port
+  check_the_reach
 
   echo
   [ "$ok" = "yes" ]
@@ -1496,6 +1692,7 @@ ask_the_office_facts() {
   value="$(ask "The address people will use, without https://
   (for example transcribe.example.internal)" "$(env_value APP_HOSTNAME)")"
   set_env APP_HOSTNAME "$value"
+  say_whether_the_name_resolves "$value"
 
   echo
   value="$(ask "The port it answers on" "$(env_value HTTPS_PORT)")"
@@ -3624,6 +3821,7 @@ usage() {
 
 case "${1:-}" in
 install) shift && cmd_install "$@" ;;
+preflight) shift && cmd_preflight "$@" ;;
 status) shift && cmd_status "$@" ;;
 check) shift && cmd_check "$@" ;;
 bring-up) shift && cmd_bring_up "$@" ;;

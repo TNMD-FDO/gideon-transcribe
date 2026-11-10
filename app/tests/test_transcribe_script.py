@@ -359,3 +359,181 @@ def test_the_directory_check_runs_inside_django():
     assert 'python manage.py shell -v 0 -c "' in section
     assert "directory.test_connection()" in section
     assert 'python -c "' not in section
+
+
+# The wider check (v1.229.0) ---------------------------------------------------
+
+_SAYS = (
+    'pass() { echo "  pass  $1"; }\n'
+    'note() { echo "  note  $1"; }\n'
+    'green() { echo "$1"; }\n'
+    'amber() { echo "$1"; }\n'
+)
+
+
+def _figures() -> str:
+    """The wider check's own numbers, as the script sets them."""
+    found = re.findall(
+        r"^(?:LEAST_CORES|LEAST_MEMORY_GB|DOCKER_GB_TO_KEEP|DATA_GB_TO_KEEP"
+        r"|USUAL_PORT|ROOT_GB_TO_BUILD)=\d+$|^REACH_HOSTS=.*$",
+        text(),
+        re.M,
+    )
+    assert len(found) == 7, found
+    return "\n".join(found) + "\n"
+
+
+def test_the_install_still_stops_for_three_things_and_no_more():
+    """v1.229.0: the opening checks say much more, and what stops an install
+    is what stopped it before: Docker, the Compose plugin and the account."""
+    body = text()
+    prerequisites = body.split("prerequisites() {", 1)[1].split("\n}\n", 1)[0]
+    assert prerequisites.count("ok=no") == 3
+    for called in (
+        "check_the_system",
+        "check_the_room",
+        "check_the_port",
+        "check_the_reach",
+    ):
+        assert f"\n  {called}\n" in prerequisites, called
+    for name in ("check_the_system", "check_the_room", "check_the_reach"):
+        one = body.split(f"{name}() {{", 1)[1].split("\n}\n", 1)[0]
+        assert "fail " not in one and "ok=no" not in one, name
+    preflight = body.split("cmd_preflight() {", 1)[1].split("\n}\n", 1)[0]
+    assert "if prerequisites; then" in preflight
+    assert "need_env" not in preflight
+    # The name is judged right after it is typed.
+    facts = body.split("ask_the_office_facts() {", 1)[1].split("\n}\n", 1)[0]
+    assert (
+        'set_env APP_HOSTNAME "$value"\n  say_whether_the_name_resolves "$value"'
+        in facts
+    )
+
+
+@needs_bash
+def test_the_room_where_docker_keeps_its_images_is_said_three_ways():
+    probe = (
+        _sourced(
+            ["check_the_room"],
+            _SAYS
+            + _figures()
+            + "ENV_FILE=/nowhere/.env\ndata_volume_present() { return 1; }\n"
+            + 'largest_other_drive() { echo "$DRIVE"; }\n'
+            + 'root_gb_free() { echo "$ROOM"; }\n',
+        )
+        + "\nROOM=150 DRIVE='900 /srv/data' check_the_room"
+        + "\nROOM=60 DRIVE='' check_the_room"
+        + "\nROOM=30 DRIVE='' check_the_room"
+        + "\necho went-on\n"
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    out = done.stdout
+    assert "pass  150 GB free where Docker keeps its images" in out
+    assert (
+        "note  60 GB free where Docker keeps its images; the guide asks for 100" in out
+    )
+    assert "note  only 30 GB free where Docker keeps its images" in out
+    assert (
+        "pass  a drive apart from the operating system's at /srv/data with 900" in out
+    )
+    assert "note  no drive apart from the operating system's was found" in out
+    assert out.rstrip().endswith("went-on")
+
+
+@needs_bash
+def test_a_host_that_does_not_answer_is_a_note_that_says_what_it_is_for():
+    probe = (
+        _sourced(
+            ["what_a_host_is_for", "check_the_reach"],
+            _SAYS + _figures() + 'answers_from_here() { [ "$1" != "$SILENT" ]; }\n',
+        )
+        + "\nSILENT=none check_the_reach"
+        + "\nSILENT=huggingface.co check_the_reach"
+        + "\necho went-on\n"
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    out = done.stdout
+    assert (
+        "pass  github.com, ghcr.io, registry-1.docker.io and huggingface.co "
+        "answer from here" in out
+    )
+    assert "note  huggingface.co does not answer from here: the models" in out
+    assert out.rstrip().endswith("went-on")
+
+
+@needs_bash
+def test_the_system_line_passes_ubuntu_24_and_notes_anything_else():
+    def run(ident: str, version: str) -> str:
+        probe = (
+            _sourced(
+                ["check_the_system"],
+                _SAYS
+                + _figures()
+                + 'os_release_value() { case "$1" in '
+                + f"ID) echo {ident} ;; VERSION_ID) echo {version} ;; "
+                + "*) echo 'Some System 9' ;; esac; }\n",
+            )
+            + "\ncheck_the_system\n"
+        )
+        done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+        assert done.returncode == 0, done.stderr
+        return done.stdout
+
+    assert "pass  Ubuntu 24.04" in run("ubuntu", "24.04")
+    assert "pass  Ubuntu 26.04" in run("ubuntu", "26.04")
+    assert "note  this is Ubuntu 22.04" in run("ubuntu", "22.04")
+    assert "note  this is Some System 9" in run("debian", "13")
+
+
+@needs_bash
+def test_the_image_store_check_goes_on_where_the_config_has_no_root_line():
+    """v1.229.0: called plainly, as ./transcribe check calls it, a config
+    with no root line (the file the package ships) or no config at all made
+    the search fail under the script's strict mode and ended the script
+    there, silently. And containerd 2 writes the path in single quotes."""
+    probe = (
+        _sourced(["check_the_containerd_root"], _SAYS)
+        + "\ncheck_the_containerd_root\necho went-on\n"
+    )
+    done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.rstrip().endswith("went-on")
+    one = text().split("check_the_containerd_root() {", 1)[1].split("\n}\n", 1)[0]
+    assert '| tr -d "\\"\'" |' in one and "|| true)" in one
+
+
+def test_the_guide_has_a_row_for_every_note_of_the_wider_check():
+    """Each row is in the guide in full, and its fixed words are the
+    script's own (the figures in a line come from the script's numbers)."""
+    guide = (HERE / "docs" / "install.md").read_text(encoding="utf-8")
+    table = guide.split("## 6. When it fails", 1)[1].split("## 7. Upgrade", 1)[0]
+    for in_the_guide, in_the_script in (
+        (
+            "the install guide is written for Ubuntu Server 24.04 or newer",
+            "the install guide is written for Ubuntu Server 24.04 or newer",
+        ),
+        ("the app wants about 4 cores and 16 GB", "the app wants about"),
+        (
+            "an image cannot be built here with under 40 GB",
+            "an image cannot be built here with under",
+        ),
+        ("the guide asks for 100 GB there", "the guide asks for"),
+        (
+            "no drive apart from the operating system's was found",
+            "no drive apart from the operating system's was found",
+        ),
+        (
+            "port 8443 is already in use on this server",
+            "is already in use on this server",
+        ),
+        ("does not answer from here", "does not answer from here"),
+        (
+            "is not in DNS yet, as seen from this server.",
+            "is not in DNS yet, as seen from this server.",
+        ),
+    ):
+        assert in_the_guide in table, in_the_guide
+        assert in_the_script in text(), in_the_script
+    assert "`./transcribe preflight`" in guide
