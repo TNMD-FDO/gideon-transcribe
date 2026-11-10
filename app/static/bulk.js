@@ -86,7 +86,7 @@
     by("use-batch").checked = !one.own;
     Card.enable(!!one.own);
     Card.write(one.own || settings());
-    fold.open = true;
+    // The card is always in view (v1.226.0); the press only brings it up the page.
     draw();
     fold.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }

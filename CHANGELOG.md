@@ -17,6 +17,24 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.226.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Bulk transcription shows its settings always. The settings card stood as a
+fold under the files, shut until pressed, so a person uploading did not see
+what the batch would be given. At the maintainer's word it is always in
+view, with its one line at the head still saying what is set. Always open
+the card is about 680 px tall, and stacked under the drop it put Start at
+1,100 px of a 647 px laptop with half the card empty; so from 1280 wide
+the settings stand beside the drop, the files and Start, and Start stays
+in view. Under 1280 they stand under the files as before, open. While the
+batch's files upload the settings are hidden, as they were: they are sent
+by then.
+
 ## v1.225.1, 2026-11-09
 
 ```

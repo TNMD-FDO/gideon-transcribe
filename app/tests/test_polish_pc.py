@@ -232,3 +232,19 @@ def test_the_shelf_menus_drop_clear_of_the_card():
     opens += " { left: 0; right: auto;"
     assert opens in CSS
     assert "details.menu.cmp-against > ul button { white-space: normal;" in CSS
+
+
+def test_the_bulk_settings_stand_open_beside_the_drop():
+    # v1.226.0: the settings card on Bulk transcription is always in view,
+    # beside the drop, the files and Start from 1280 wide so Start stays in
+    # view on a laptop; one column again while the batch uploads.
+    for rule in (
+        ".bulk .settings-open { background: var(--surface);",
+        ".bulk #bulk-drop:not([hidden]):not(:has(> #bulk-settings[hidden]))",
+        "grid-template-rows: repeat(5, auto) 1fr;",
+        ".bulk #bulk-drop > #bulk-settings:not([hidden]) { grid-column: 2;",
+    ):
+        assert rule in CSS, rule
+    assert ".settings-fold" not in CSS
+    bulk = (APP / "static" / "bulk.js").read_text(encoding="utf-8")
+    assert "fold.open = true" not in bulk

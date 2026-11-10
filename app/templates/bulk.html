@@ -8,7 +8,8 @@
     Bulk transcription (Phase 8 chapter 13, amended v1.173.0 and v1.174.0;
     the drawings docs/spec/mockups/phase-8-bulk-transcription.html and
     phase-8-bulk-transcription-settings.html): the drop, the files with
-    their titles and chips, the settings card folded under them, Start;
+    their titles and chips, the settings card under them (always in view
+    since v1.226.0), Start;
     the batch where it stands while one runs; the download when every file
     has ended. One page, one script (bulk.js), the settings card shared
     with the Upload page, the batch page's own state feed underneath.
@@ -54,16 +55,22 @@
           </p>
         </div>
         <ul id="chosen" class="cards"></ul>
-        {% comment %}The settings card (v1.174.0), the Upload page's own, folded under the files with one line saying what is set; a file's chip opens it for that file.{% endcomment %}
-        <details id="bulk-settings" class="settings-fold">
-          <summary><b>Settings</b> <span class="muted">(optional)</span> <span class="muted small" id="bulk-settings-line"></span></summary>
+        {% comment %}
+          The settings card (v1.174.0), the Upload page's own, under the files.
+          Always in view since v1.226.0, at the maintainer's word: it was a
+          fold, shut until pressed, and a person uploading did not see what
+          the batch would be given. The head keeps the one line saying what
+          is set; a file's chip turns the card to that file.
+        {% endcomment %}
+        <section id="bulk-settings" class="settings-open" aria-labelledby="bulk-settings-head">
+          <div class="settings-head"><b id="bulk-settings-head">Settings</b> <span class="muted">(optional)</span> <span class="muted small" id="bulk-settings-line"></span></div>
           <p class="muted small" id="bulk-settings-help">
             Nothing here needs changing for a plain transcript. Set what you
             want for the batch, or press a file's chip to give that file its
             own. A case or a recording type: use <a href="{% url 'upload' %}">Upload files</a>.
           </p>
           {% include "upload-settings.html" %}
-        </details>
+        </section>
         <div class="dialog">
           <button type="button" id="start" class="primary big" disabled>Start</button>
           <span class="muted small" id="start-hint">Lights when a file is in.</span>

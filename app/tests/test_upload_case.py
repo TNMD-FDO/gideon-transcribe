@@ -43,10 +43,14 @@ CARD = (
 )
 
 
-def test_the_bulk_page_folds_the_whole_settings_card_under_the_files(person, client):
+def test_the_bulk_page_shows_the_whole_settings_card_always(person, client):
+    # Always in view since v1.226.0, at the maintainer's word: a section, not
+    # the fold of v1.174.0 that stood shut until pressed.
     signed_in(client, person)
     page = client.get(reverse("bulk")).content.decode()
-    assert 'id="bulk-settings" class="settings-fold"' in page
+    assert '<section id="bulk-settings" class="settings-open"' in page
+    assert "<details id=" + '"bulk-settings"' not in page
+    assert 'id="bulk-settings-line"' in page
     for control in CARD:
         assert control in page, control
     # The case-bound settings are not there, whatever the office's switches.
