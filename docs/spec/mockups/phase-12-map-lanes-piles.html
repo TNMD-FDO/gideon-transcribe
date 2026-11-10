@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes that overlap on a lane</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --warn: #9a5b06;
+  --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #2e7d32;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p { margin: 6px 0; color: var(--muted); max-width: 95ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 3px; }
+.fig { margin-top: 40px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin: 0 0 12px; color: var(--muted); max-width: 95ch; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.frame .at { position: absolute; top: 6px; right: 10px; font-size: var(--t-label); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; z-index: 9; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.opt { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.opt .say { padding: 8px 12px 10px; font-size: var(--t-small); color: var(--muted); border-top: 1px solid var(--line); }
+.opt .say b { color: var(--text); display: block; margin-bottom: 2px; }
+.opt.mine { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.opt.mine .say b::after { content: " · my pick"; color: var(--accent); font-weight: 600; }
+/* The lanes band as the Map page draws it. */
+.band { padding: 0 10px 8px; font-size: var(--t-small); position: relative; }
+.strip { display: grid; grid-template-columns: var(--head, 200px) minmax(0, 1fr); gap: 2px 8px; position: relative; padding-top: 4px; }
+.ruler, .lane { display: contents; }
+.ruler .h { height: 18px; }
+.ruler .ticks { position: relative; height: 18px; border-bottom: 1px solid var(--line); font-size: var(--t-label); color: var(--muted); }
+.ruler .ticks span { position: absolute; top: 2px; transform: translateX(-50%); }
+.lane .h { display: flex; gap: 5px; align-items: center; height: 20px; white-space: nowrap; overflow: hidden; }
+.lane .h .tk { width: 13px; height: 13px; border-radius: 3px; background: var(--accent); flex: none; }
+.lane .h i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lane .h i.sq { border-radius: 2px; }
+.lane .track { position: relative; height: 20px; }
+.lane .track > i { position: absolute; top: 5px; height: 10px; border-radius: 5px; }
+.lane .track em { position: absolute; }
+.lane .track em.lights { top: 3px; width: 3px; height: 14px; border-radius: 1px; background: var(--warn); }
+/* The note tag as v1.227.0 draws it: ink, an edge in the page's background. */
+.edge { filter: drop-shadow(1px 0 0 var(--surface)) drop-shadow(-1px 0 0 var(--surface)) drop-shadow(0 1px 0 var(--surface)) drop-shadow(0 -1px 0 var(--surface)); }
+.tag { top: 1px; bottom: 1px; width: 8px; }
+.tag::after { content: ""; position: absolute; inset: 0; background: var(--text); clip-path: polygon(0 0, 60% 0, 100% 28%, 100% 100%, 0 100%); }
+/* P1: a pile, one wider tag with a second leaf behind it and the count on it. */
+.pile { top: 1px; bottom: 1px; width: 15px; cursor: pointer; }
+.pile::before { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; right: -4px; background: var(--muted); clip-path: polygon(0 0, 68% 0, 100% 28%, 100% 100%, 0 100%); }
+.pile::after { content: ""; position: absolute; inset: 0; background: var(--text); clip-path: polygon(0 0, 68% 0, 100% 28%, 100% 100%, 0 100%); }
+.pile b { position: absolute; inset: 0; z-index: 1; text-align: center; font: 600 var(--t-label)/18px var(--mono); color: var(--surface); }
+.pile.wide { width: 19px; }
+.pile.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* P2: fanned apart, a bracket under the tags marks the stretch they really cover. */
+.fanned .track { height: 25px; }
+.brk { position: absolute; top: 20px; height: 3px; border: 1px solid var(--muted); border-top: 0; box-sizing: border-box; }
+/* P3: shingled, every other tag dropped and shortened so an edge of each peeks out. */
+.tag.low { top: 7px; }
+.tag.high { bottom: 7px; }
+/* The list a pile opens: the one the map already uses for pips at one spot. */
+.stack { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 6px; width: 300px; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.18); font-size: var(--t-label); }
+.stack .hd { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; padding: 0 4px 4px; border-bottom: 1px solid var(--line); }
+.stack .row { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; }
+.stack .row.on { background: var(--accent-soft); }
+.stack .row .w { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card { position: absolute; z-index: 5; width: 300px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.18); font-size: var(--t-small); }
+.card b { display: block; } .card .words { margin: 4px 0 2px; }
+.card .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.btn { font-size: var(--t-label); padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.gh { border-color: transparent; color: var(--accent); }
+.mapbit { height: 150px; background: repeating-linear-gradient(135deg, var(--surface-2) 0 14px, var(--bg) 14px 28px); border-bottom: 1px solid var(--line); position: relative; }
+.mapbit span { position: absolute; left: 12px; top: 10px; font-size: var(--t-label); color: var(--muted); background: var(--surface); padding: 1px 6px; border-radius: 4px; }
+.zoom { transform: scale(3); transform-origin: 0 0; width: calc(100% / 3); }
+.zoombox { height: 150px; overflow: hidden; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.verdict { margin-top: 40px; padding: 14px 18px; border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+.verdict p { margin: 6px 0; max-width: 100ch; }
+.dark { --bg: #14181d; --surface: #1c2229; --surface-2: #262d36; --line: #364150; --text: #e6eaef; --muted: #9aa5b1; --accent: #6bb6dd; --accent-soft: #1d3545; --accent-ink: #0d1318; --warn: #e0a84a; background: var(--surface); color: var(--text); }
+</style>
+<div class="wrap">
+  <div class="intro">
+    <h1>Notes that overlap on a lane</h1>
+    <p>The ask (2026-11-10, after v1.227.0): on the Map page's lanes, when notes overlap you cannot see the one under it. It reproduces on the local demo, and it is worse than it looks: the note underneath cannot be pressed either.</p>
+    <div class="brief">
+      <b>What happens today (figure 1)</b>
+      <ol>
+        <li>Each note is drawn at its own moment as a tag 8 px wide. On a lane that spans hours, 8 px is several minutes, so notes made within a few minutes of each other land on the same pixels and the last one drawn covers the rest.</li>
+        <li>Measured on the demo at 1366 wide: three lanes of four notes each, and on every one of them three or four of the notes sit inside one tag's width; on two lanes some sit less than 2 px apart. A wider screen (2560) spreads them a little, but the piles stay.</li>
+        <li>A press reaches only the tag on top, so the notes under it can be reached only by stepping with the card's arrows, if you know they are there.</li>
+      </ol>
+    </div>
+    <p>Three ways to show them follow. The words are made up; nothing of a real case is on this page.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 1. Today</h2>
+    <p class="why">Real size, then enlarged three times. The orange lane holds four notes between 14:40 and 14:43; the blue lane holds two a minute apart and one alone.</p>
+    <div class="frame"><span class="at">real size</span>
+      <div class="band"><div class="strip">
+        <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 10%">14:30</span><span style="left: 35%">15:00</span><span style="left: 60%">15:30</span><span style="left: 85%">16:00</span></div></div>
+        <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe <span class="muted small">vehicle</span></div><div class="track"><i style="left: 4%; width: 60%; background: var(--sp1)"></i><em class="tag edge" style="left: 22%"></em><em class="tag edge" style="left: 22.5%"></em><em class="tag edge" style="left: 44%"></em></div></div>
+        <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 48%; background: var(--sp2)"></i><em class="tag edge" style="left: 18.3%"></em><em class="tag edge" style="left: 18.6%"></em><em class="tag edge" style="left: 19.1%"></em><em class="tag edge" style="left: 19.5%"></em><em class="lights" style="left: 31%"></em></div></div>
+      </div></div>
+    </div>
+    <div class="frame zoombox" style="margin-top: 10px"><span class="at">enlarged</span>
+      <div class="zoom"><div class="band"><div class="strip" style="--head: 76px">
+        <div class="lane"><div class="h"><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 0; width: 100%; background: var(--sp1)"></i><em class="tag edge" style="left: 50px"></em><em class="tag edge" style="left: 54px"></em><em class="tag edge" style="left: 200px"></em></div></div>
+        <div class="lane"><div class="h"><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 0; width: 100%; background: var(--sp2)"></i><em class="tag edge" style="left: 50px"></em><em class="tag edge" style="left: 52px"></em><em class="tag edge" style="left: 56px"></em><em class="tag edge" style="left: 59px"></em></div></div>
+      </div></div></div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 2. Three ways</h2>
+    <p class="why">The same two lanes, enlarged three times, each way.</p>
+    <div class="opts">
+      <div class="opt mine">
+        <div class="zoombox" style="height: 180px"><div class="zoom"><div class="band"><div class="strip" style="--head: 4px">
+          <div class="lane"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp1)"></i><em class="pile edge" style="left: 30px"><b>2</b></em><em class="tag edge" style="left: 88px"></em></div></div>
+          <div class="lane"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp2)"></i><em class="pile edge" style="left: 30px"><b>4</b></em></div></div>
+        </div></div></div></div>
+        <div class="say"><b>P1. A pile with its count</b>Notes that would overlap are drawn as one wider tag with a second leaf behind it and the number on it, standing at the first note's moment. A press opens a short list of them in order of time; a row opens that note. A note alone stays the plain tag. Works for two notes or twenty, and nothing is moved off its moment.</div>
+      </div>
+      <div class="opt">
+        <div class="zoombox" style="height: 180px"><div class="zoom"><div class="band"><div class="strip fanned" style="--head: 4px">
+          <div class="lane fanned"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp1)"></i><em class="tag edge" style="left: 30px"></em><em class="tag edge" style="left: 40px"></em><em class="brk" style="left: 30px; width: 18px"></em><em class="tag edge" style="left: 88px"></em></div></div>
+          <div class="lane fanned"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp2)"></i><em class="tag edge" style="left: 30px"></em><em class="tag edge" style="left: 40px"></em><em class="tag edge" style="left: 50px"></em><em class="tag edge" style="left: 60px"></em><em class="brk" style="left: 30px; width: 38px"></em></div></div>
+        </div></div></div></div>
+        <div class="say"><b>P2. Fanned apart</b>Overlapping tags are pushed apart so each shows and each can be pressed; a small bracket under them says they were moved off their own moments. Reads at a glance for two or three, but the tags no longer stand at their own moments, a pile of ten takes 100 px of the lane and runs into the next mark, and every lane grows a few pixels taller for the bracket.</div>
+      </div>
+      <div class="opt">
+        <div class="zoombox" style="height: 180px"><div class="zoom"><div class="band"><div class="strip" style="--head: 4px">
+          <div class="lane"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp1)"></i><em class="tag high edge" style="left: 30px"></em><em class="tag low edge" style="left: 34px"></em><em class="tag edge" style="left: 88px"></em></div></div>
+          <div class="lane"><div class="h"></div><div class="track"><i style="left: 0; width: 100%; background: var(--sp2)"></i><em class="tag high edge" style="left: 30px"></em><em class="tag low edge" style="left: 32px"></em><em class="tag high edge" style="left: 36px"></em><em class="tag low edge" style="left: 39px"></em></div></div>
+        </div></div></div></div>
+        <div class="say"><b>P3. Shingled</b>Every other tag in a pile is dropped and the one before it raised, so a corner of each peeks out, all at their own moments. No extra height and no list, but past two notes it is a smudge again (the orange lane holds four), and the corners are too small to press with any confidence.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 3. P1 in use</h2>
+    <p class="why">Left: a press on the pile opens the list beside it, the same list the map already opens when several pips sit on one spot (v1.206.0), so there is one thing to learn. Right: a row's press opens that note's card as today, which says where it stands in the pile and steps to the others; the pile keeps the selection's outline. Pointing at a pile without pressing names it: "4 notes, 14:40:12 to 14:42:51".</p>
+    <div class="two">
+      <div class="frame" style="height: 236px"><span class="at">the press</span>
+        <div class="mapbit"><span>the map</span></div>
+        <div class="band"><div class="strip" style="--head: 150px">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 20%">14:30</span><span style="left: 70%">15:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 4%; width: 90%; background: var(--sp1)"></i><em class="pile edge" style="left: 42%"><b>2</b></em><em class="tag edge" style="left: 78%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 80%; background: var(--sp2)"></i><em class="pile edge sel" style="left: 36%"><b>4</b></em></div></div>
+        </div></div>
+        <div class="stack" style="left: 176px; top: 8px">
+          <div class="hd"><b>4 notes here</b><span class="muted">in order of time · Escape closes</span></div>
+          <div class="row"><span class="mono">14:40:12</span><span class="w">He asks for the licence a second time</span><span class="muted">R. Hale</span></div>
+          <div class="row on"><span class="mono">14:41:03</span><span class="w">Second officer walks into frame</span><span class="muted">R. Hale</span></div>
+          <div class="row"><span class="mono">14:41:40</span><span class="w">The door is opened here, not before</span><span class="muted">J. Park</span></div>
+          <div class="row"><span class="mono">14:42:51</span><span class="w">Check this against the vehicle camera</span><span class="muted">R. Hale</span></div>
+        </div>
+      </div>
+      <div class="frame" style="height: 236px"><span class="at">the note</span>
+        <div class="mapbit"><span>the map</span></div>
+        <div class="band"><div class="strip" style="--head: 150px">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 20%">14:30</span><span style="left: 70%">15:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 4%; width: 90%; background: var(--sp1)"></i><em class="pile edge" style="left: 42%"><b>2</b></em><em class="tag edge" style="left: 78%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 80%; background: var(--sp2)"></i><em class="pile edge sel" style="left: 36%"><b>4</b></em></div></div>
+        </div></div>
+        <div class="card" style="left: 230px; top: 14px">
+          <b>Note · Lee Fox</b>
+          <div class="words">Second officer walks into frame</div>
+          <span class="muted small">R. Hale · 14:41:03</span>
+          <div class="muted small" style="margin-top: 4px">2 of 4 here <span class="btn gh">‹ 1/4</span> <span class="btn gh">3/4 ›</span></div>
+          <div class="acts"><span class="btn pri">Play here</span><span class="btn">Edit</span><span class="btn gh">On the Notes tab</span><span class="btn gh">Close</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure 4. P1 at real size, light and dark</h2>
+    <p class="why">A pile is 15 px wide with its second leaf, against 8 px for a note alone, so the two read apart without the number; the number is the label size the ruler uses. Notes join a pile when they would stand within a pile's width of its first note, so a busy stretch reads as a row of piles ("3", "4", "2"), never one long block, and the piles re-form by themselves when the lanes show a shorter or longer stretch.</p>
+    <div class="two">
+      <div class="frame"><span class="at">light</span>
+        <div class="band"><div class="strip" style="--head: 150px">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 20%">14:30</span><span style="left: 70%">15:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 4%; width: 90%; background: var(--sp1)"></i><em class="pile edge" style="left: 30%"><b>2</b></em><em class="tag edge" style="left: 58%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 80%; background: var(--sp2)"></i><em class="pile edge" style="left: 24%"><b>4</b></em><em class="pile edge" style="left: 30%"><b>3</b></em><em class="lights" style="left: 52%"></em><em class="pile wide edge" style="left: 70%"><b>12</b></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp3)"></i> Kit Vale</div><div class="track"><i style="left: 11%; width: 70%; background: var(--sp3)"></i><em class="tag edge" style="left: 40%"></em><em class="tag edge" style="left: 47%"></em></div></div>
+        </div></div>
+      </div>
+      <div class="frame dark"><span class="at">dark</span>
+        <div class="band"><div class="strip" style="--head: 150px">
+          <div class="ruler"><div class="h"></div><div class="ticks"><span style="left: 20%">14:30</span><span style="left: 70%">15:00</span></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i class="sq" style="background: var(--sp1)"></i> Sam Roe</div><div class="track"><i style="left: 4%; width: 90%; background: var(--sp1)"></i><em class="pile edge" style="left: 30%"><b>2</b></em><em class="tag edge" style="left: 58%"></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp2)"></i> Lee Fox</div><div class="track"><i style="left: 9%; width: 80%; background: var(--sp2)"></i><em class="pile edge" style="left: 24%"><b>4</b></em><em class="pile edge" style="left: 30%"><b>3</b></em><em class="lights" style="left: 52%"></em><em class="pile wide edge" style="left: 70%"><b>12</b></em></div></div>
+          <div class="lane"><div class="h"><span class="tk"></span><i style="background: var(--sp3)"></i> Kit Vale</div><div class="track"><i style="left: 11%; width: 70%; background: var(--sp3)"></i><em class="tag edge" style="left: 40%"></em><em class="tag edge" style="left: 47%"></em></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <p><b>My pick: P1, the pile with its count.</b> It is the only one of the three that still works when a lane holds many notes in a few minutes, it keeps every mark at its true moment, and it reuses the list and the "2 of 4" stepping the map already has for pips on one spot, so it is a small build with nothing new to learn.</p>
+    <p><b>What it would change:</b> the Map page's lanes only (and the same lanes wherever the map script draws them); the map's own pips, the Notes tab and the incident page's strip stay as they are. The specification's Phase 12 strip line gains an amendment, as v1.227.0's did.</p>
+    <p><b>Two riders, yours to take or leave:</b> (a) the list could also name the other marks under a pile (a lights or siren mark hidden by the tag); (b) a number above 9 widens the pile to 19 px, as the "12" in figure 4 shows; the alternative is "9+".</p>
+  </div>
+</div>
+</html>

@@ -320,7 +320,7 @@
     if (!layout.wired) {
       layout.wired = true;
       var sizing = null;
-      window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(sizeFrame, 80); });
+      window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(function () { sizeFrame(); if (el.strip && trackWidth() !== S.piledAt) { drawStrip(); } }, 80); });
       // A menu on the bar (More, Day) closes on a press outside it.
       document.addEventListener("click", function (e) { host.querySelectorAll("details.menu[open]").forEach(function (m) { if (!m.contains(e.target)) { m.removeAttribute("open"); } }); });
       // The edge between the map and the lanes band: drag it up or down, remembered per person.
@@ -1321,7 +1321,7 @@
         if (kind === "mic" && !ev.value && ev.until) { html += "<em class='off' style='left: " + x(z + ev.t) + "%; width: " + Math.max(0.2, x(z + ev.until) - x(z + ev.t)) + "%' title='muted " + hms(z + ev.t) + " to " + hms(z + ev.until) + "'></em>"; }
         html += "<em class='mk " + kind + (ev.value ? " is-on" : "") + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + ev.t) + "%' data-key='" + key + "' title='" + esc(ev.words) + " " + hms(z + ev.t) + "'></em>";
       });
-      if (S.events.notes) { (cam.notes || []).forEach(function (n, i) { var key = "note:" + cam.id + ":" + i; html += "<em class='mk note" + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + n.t) + "%' data-key='" + key + "' title='" + esc(n.words).slice(0, 80) + "'></em>"; }); }
+      if (S.events.notes) { (cam.notes || []).forEach(function (n, i) { var key = "note:" + cam.id + ":" + i; html += "<em class='mk note" + (S.selected && S.selected.key === key ? " sel" : "") + "' style='left: " + x(z + n.t) + "%' data-key='" + key + "' data-t='" + n.t + "' data-at='" + hms(z + n.t) + "' title='" + esc(n.words).slice(0, 80) + "'></em>"; }); }
       html += "</div></div>";
     });
     if (!cams.length) { html += "<p class='muted small' style='grid-column: 1 / -1; margin: 6px 0 0'>No camera on the clock on this day.</p>"; }
@@ -1331,6 +1331,7 @@
     // (v1.227.0): at a fixed 33 px it tucked under a 39 px heading when the
     // lanes scrolled, and the heading cut the ruler's labels and the clock.
     if (el.lanes && el.lanesHead) { el.lanes.style.setProperty("--lanes-head", el.lanesHead.offsetHeight + "px"); }
+    pileNotes();
     wireStrip(range);
     el.strip.querySelectorAll(".map-lane[data-cam]").forEach(function (l) {
       l.addEventListener("mouseenter", function () { light(S.byId[l.dataset.cam]); });
@@ -1338,6 +1339,51 @@
     });
     movePlayhead(now());
     drawCamCard();
+  }
+  // Notes that would overlap on a lane stand as one pile with its count
+  // (v1.228.0; the drawing phase-12-map-lanes-piles.html, P1). A note's tag
+  // is 8 px wide and a lane can span hours, so notes a few minutes apart
+  // landed on the same pixels: the last drawn covered the rest, and a press
+  // reached only that one. A note joins a pile when it would stand within a
+  // pile's reach of the pile's first note, so a busy stretch reads as a row
+  // of piles, never one long block. Measured on the drawn lanes, so the
+  // piles re-form whenever the lanes are drawn again or change width.
+  var PILE_REACH = 20;
+  function trackWidth() { var t = el.strip && el.strip.querySelector(".ruler .ticks"); return t ? t.offsetWidth : 0; }
+  function pileNotes() {
+    if (!el.strip) { return; }
+    S.piledAt = trackWidth();
+    var piles = [];
+    el.strip.querySelectorAll(".map-lane .track").forEach(function (track) {
+      var tags = Array.prototype.slice.call(track.querySelectorAll("em.mk.note"));
+      if (tags.length < 2) { return; }
+      var spots = tags.map(function (tag) { return { tag: tag, left: tag.offsetLeft, t: parseFloat(tag.dataset.t) || 0 }; });
+      spots.sort(function (a, b) { return a.t - b.t; });
+      var run = null;
+      spots.forEach(function (one) {
+        if (run && one.left - run[0].left < PILE_REACH) { run.push(one); } else { run = [one]; piles.push(run); }
+      });
+    });
+    piles.forEach(function (run) {
+      if (run.length < 2) { return; }
+      var first = run[0].tag, last = run[run.length - 1].tag;
+      var keys = run.map(function (one) { return one.tag.dataset.key; });
+      var pile = document.createElement("em");
+      pile.className = "mk pile" + (run.length > 9 ? " wide" : "") + (S.selected && keys.indexOf(S.selected.key) >= 0 ? " sel" : "");
+      pile.style.left = first.style.left;
+      pile.dataset.keys = keys.join(" ");
+      pile.title = run.length + " notes, " + first.dataset.at + " to " + last.dataset.at;
+      pile.innerHTML = "<b class='mono'>" + run.length + "</b>";
+      first.parentNode.insertBefore(pile, first);
+      run.forEach(function (one) { one.tag.remove(); });
+    });
+  }
+  // A press on a pile opens the list the map opens for pips on one spot,
+  // set on the map's lower edge above the pile.
+  function openPile(pile) {
+    if (!el.pane) { return; }
+    var r = pile.getBoundingClientRect(), p = el.pane.getBoundingClientRect();
+    openStack(pile.dataset.keys.split(" "), { x: r.left - p.left, y: r.top - p.top }, true);
   }
   // A camera's reading (v1.209.0): the ▸ on its lane head opens it as a
   // card over the map, level with the lane, with what the opened row held.
@@ -1372,20 +1418,30 @@
     flag.style.left = mid + "px";
     flag.style.setProperty("--tip", (at - (mid - half)) + "px");
   }
+  // The strip is wired once for each strip (v1.228.0). It was wired again at
+  // every redraw, and a press on a mark redraws the lanes, so each press
+  // redrew them twice as many times as the press before (1, 2, 4, 8 ...).
+  var stripRange = null, stripDrag = false, stripDocWired = false;
+  function stripAt(e) {
+    var range = stripRange || span(), track = el.strip && el.strip.querySelector(".ruler .ticks");
+    if (!track) { return range[0]; }
+    var r = track.getBoundingClientRect();
+    var px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    return range[0] + Math.max(0, Math.min(1, px / r.width)) * (range[1] - range[0]);
+  }
   function wireStrip(range) {
-    var dragging = false;
-    function at(e) {
-      var track = el.strip.querySelector(".ruler .ticks"); var r = track.getBoundingClientRect();
-      var px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      return range[0] + Math.max(0, Math.min(1, px / r.width)) * (range[1] - range[0]);
-    }
-    el.strip.addEventListener("mousedown", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } dragging = true; seek(at(e)); e.preventDefault(); });
-    document.addEventListener("mousemove", function (e) { if (dragging) { seek(at(e)); } });
-    document.addEventListener("mouseup", function () { dragging = false; });
-    el.strip.addEventListener("touchstart", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } dragging = true; seek(at(e)); }, { passive: true });
-    el.strip.addEventListener("touchmove", function (e) { if (dragging) { seek(at(e)); } }, { passive: true });
-    el.strip.addEventListener("touchend", function () { dragging = false; });
-    el.strip.addEventListener("click", function (e) { var mk = e.target.closest("em.mk"); if (mk) { selectKey(mk.dataset.key); } });
+    stripRange = range;
+    if (!el.strip || el.strip.dataset.wired) { return; }
+    el.strip.dataset.wired = "1";
+    el.strip.addEventListener("mousedown", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } stripDrag = true; seek(stripAt(e)); e.preventDefault(); });
+    el.strip.addEventListener("touchstart", function (e) { if (e.target.closest("em.mk, i.clip, .head, button")) { return; } stripDrag = true; seek(stripAt(e)); }, { passive: true });
+    el.strip.addEventListener("touchmove", function (e) { if (stripDrag) { seek(stripAt(e)); } }, { passive: true });
+    el.strip.addEventListener("touchend", function () { stripDrag = false; });
+    el.strip.addEventListener("click", function (e) { var mk = e.target.closest("em.mk"); if (!mk) { return; } if (mk.dataset.keys) { openPile(mk); } else { selectKey(mk.dataset.key); } });
+    if (stripDocWired) { return; }
+    stripDocWired = true;
+    document.addEventListener("mousemove", function (e) { if (stripDrag) { seek(stripAt(e)); } });
+    document.addEventListener("mouseup", function () { stripDrag = false; });
   }
 
   // Events and notes ----------------------------------------------------------------
@@ -1431,14 +1487,17 @@
   // through the stack's others. Nothing is kept.
   function closeStack() { var c = el.pane && el.pane.querySelector(".map-stack"); if (c) { c.remove(); } }
   function stackList(keys) { return allShown().filter(function (one) { return keys.indexOf(one.key) >= 0; }); }
-  function openStack(keys, point) {
+  function openStack(keys, point, pile) {
     closeStack(); closeChooser();
+    S.stackHere = !!pile;
     var list = stackList(keys);
     if (list.length < 2) { S.stack = null; if (list.length) { selectKey(list[0].key); } return; }
     var box = document.createElement("div");
     box.className = "map-stack";
-    box.innerHTML = "<div class='h'><b>" + list.length + " at this spot</b><span class='muted'>in order of time · Escape closes</span></div>" +
-      list.map(function (one) { return "<button type='button' class='row' data-act='stack-pick' data-key='" + one.key + "' title='" + esc((one.kind === "note" ? "Note by " + (one.note.by || "") : one.words) + " · " + nameOf(one.cam)) + "'><span class='mono'>" + hms(one.moment) + "</span><span class='w'>" + esc(one.kind === "note" ? "Note, " + (one.note.by || "") : one.words) + "</span><span class='muted'>" + esc(nameOf(one.cam)) + "</span></button>"; }).join("");
+    box.innerHTML = "<div class='h'><b>" + list.length + (pile ? " notes here" : " at this spot") + "</b><span class='muted'>in order of time · Escape closes</span></div>" +
+      list.map(function (one) {
+        if (pile) { return "<button type='button' class='row' data-act='stack-pick' data-key='" + one.key + "' title='" + esc(one.words) + "'><span class='mono'>" + hms(one.moment) + "</span><span class='w'>" + esc(one.words) + "</span><span class='muted'>" + esc((one.note && one.note.by) || "") + "</span></button>"; }
+        return "<button type='button' class='row' data-act='stack-pick' data-key='" + one.key + "' title='" + esc((one.kind === "note" ? "Note by " + (one.note.by || "") : one.words) + " · " + nameOf(one.cam)) + "'><span class='mono'>" + hms(one.moment) + "</span><span class='w'>" + esc(one.kind === "note" ? "Note, " + (one.note.by || "") : one.words) + "</span><span class='muted'>" + esc(nameOf(one.cam)) + "</span></button>"; }).join("");
     el.pane.appendChild(box);
     box.style.left = Math.max(8, Math.min(el.pane.clientWidth - box.offsetWidth - 8, point.x + 14)) + "px";
     box.style.top = Math.max(8, Math.min(el.pane.clientHeight - box.offsetHeight - 8, point.y - 10)) + "px";
@@ -1457,7 +1516,7 @@
     // From a stack (v1.206.0): "k of N at this spot", and ‹ › through its others.
     var stack = S.stack ? stackList(S.stack) : [], at = stack.map(function (e) { return e.key; }).indexOf(one.key), stackWords = "";
     if (at >= 0 && stack.length > 1) {
-      stackWords = "<div class='muted small'>" + (at + 1) + " of " + stack.length + " at this spot" +
+      stackWords = "<div class='muted small'>" + (at + 1) + " of " + stack.length + (S.stackHere ? " here" : " at this spot") +
         (at > 0 ? " <button type='button' class='tiny ghost' data-act='select' data-key='" + stack[at - 1].key + "' title='" + esc(stack[at - 1].words) + "'>‹ " + at + "/" + stack.length + "</button>" : "") +
         (at < stack.length - 1 ? " <button type='button' class='tiny ghost' data-act='select' data-key='" + stack[at + 1].key + "' title='" + esc(stack[at + 1].words) + "'>" + (at + 2) + "/" + stack.length + " ›</button>" : "") + "</div>";
     } else { S.stack = null; }

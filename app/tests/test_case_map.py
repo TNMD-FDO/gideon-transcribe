@@ -965,7 +965,8 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert '.inc-desk.many:not([data-layout="focus"]) .inc-tile .inc-lines' in css
     # Stacked pips (v1.206.0): a press on a stack opens the list, and the
     # card steps through the stack.
-    assert "function openStack(keys, point)" in script and "at this spot" in script
+    assert "function openStack(keys, point, pile)" in script
+    assert "at this spot" in script
     assert "data-act='stack-pick'" in script and ".map-stack {" in css
     # The two tools and the streams as one (v1.205.0).
     assert "data-act='tick-running'" in strip and "data-act='tick-near'" in strip
@@ -1003,3 +1004,33 @@ def test_the_lanes_clock_is_a_flag_and_a_note_is_its_own_tag():
         assert rule in css, rule
     assert ".map-strip .playhead b" not in css
     assert "em.bookmark, .map-strip .map-lane .track em.note" not in css
+
+
+def test_notes_that_overlap_on_a_lane_stand_as_a_pile():
+    # v1.228.0 (the drawing phase-12-map-lanes-piles.html, P1): a note's tag
+    # is 8 px wide on a lane that can span hours, so notes a few minutes
+    # apart covered each other and only the top one could be pressed. They
+    # stand as one pile with its count; a press opens the list the map
+    # opens for pips on one spot, each line the note's own words; the card
+    # says "k of N here". The strip is wired once: it was wired again at
+    # every redraw, so each press redrew the lanes twice as often as the last.
+    script = static("map.js")
+    assert "var PILE_REACH = 20;" in script
+    assert "    pileNotes();\n    wireStrip(range);" in script
+    assert 'pile.className = "mk pile" + (run.length > 9 ? " wide" : "")' in script
+    assert "if (run && one.left - run[0].left < PILE_REACH)" in script
+    assert "if (mk.dataset.keys) { openPile(mk); }" in script
+    assert '(pile ? " notes here" : " at this spot")' in script
+    assert '(S.stackHere ? " here" : " at this spot")' in script
+    assert "trackWidth() !== S.piledAt) { drawStrip(); }" in script
+    assert "if (!el.strip || el.strip.dataset.wired) { return; }" in script
+    assert script.count('el.strip.addEventListener("click"') == 1
+    assert script.count('document.addEventListener("mouseup", function () { strip') == 1
+    css = static("app.css")
+    for rule in (
+        ".map-strip .map-lane .track em.pile { top: 1px; bottom: 1px; height: auto;",
+        ".map-strip .map-lane .track em.pile.wide { width: 19px; }",
+        '.map-strip .map-lane .track em.pile::after { content: "";',
+        ".map-strip .map-lane .track em.pile b { position: absolute; inset: 0;",
+    ):
+        assert rule in css, rule

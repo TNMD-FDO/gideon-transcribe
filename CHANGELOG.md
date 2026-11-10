@@ -17,6 +17,34 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.228.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Map page's lanes: notes that overlap stand as a pile you can open.
+The maintainer found that when notes overlap on a lane, the one underneath
+cannot be seen. It could not be pressed either. Drawn first
+(`docs/spec/mockups/phase-12-map-lanes-piles.html`) and built as P1.
+
+- **A pile.** A note's tag is 8 px wide and a lane can span hours, so notes
+  made a few minutes apart landed on the same pixels. Notes that would
+  overlap are now one wider tag with a second leaf behind it and their
+  number on it, at the first note's moment. A note alone is the plain tag
+  as before. A busy stretch reads as a row of piles, and the piles re-form
+  when the window changes width.
+- **The press.** A press on a pile opens the short list the map already
+  opens for several pips on one spot, headed "4 notes here": each line is a
+  note's time, its words and who wrote it, in order of time. A line's press
+  opens that note's card, which says "2 of 4 here" with steps to the others.
+  Pointing at a pile names its count and its first and last times.
+- **Found on the way.** The lanes were wired for the mouse again at every
+  redraw, and a press on a mark redraws them, so each press redrew the lanes
+  twice as many times as the press before (1, 2, 4, 8 and so on): after a
+  dozen presses the page would slow to a crawl. They are wired once.
+
 ## v1.227.0, 2026-11-10
 
 ```

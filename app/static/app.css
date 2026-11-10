@@ -4301,6 +4301,13 @@ button.link { background: none; border: 0; padding: 0; font: inherit; color: var
    blue, lost on a blue camera's bar and a sliver on any other. */
 .map-strip .map-lane .track em.note { top: 1px; bottom: 1px; height: auto; width: 8px; border-radius: 0; background: transparent; z-index: 1; filter: drop-shadow(1px 0 0 var(--surface)) drop-shadow(-1px 0 0 var(--surface)) drop-shadow(0 1px 0 var(--surface)) drop-shadow(0 -1px 0 var(--surface)); }
 .map-strip .map-lane .track em.note::after { content: ""; position: absolute; inset: 0; background: var(--text); clip-path: polygon(0 0, 60% 0, 100% 28%, 100% 100%, 0 100%); }
+/* Notes that would overlap stand as one pile (v1.228.0, the drawing
+   phase-12-map-lanes-piles.html, P1): a wider tag with a second leaf behind
+   it and the count on it, in the note's own ink and edge. */
+.map-strip .map-lane .track em.pile { top: 1px; bottom: 1px; height: auto; width: 15px; border-radius: 0; background: transparent; z-index: 1; filter: drop-shadow(1px 0 0 var(--surface)) drop-shadow(-1px 0 0 var(--surface)) drop-shadow(0 1px 0 var(--surface)) drop-shadow(0 -1px 0 var(--surface)); }
+.map-strip .map-lane .track em.pile.wide { width: 19px; }
+.map-strip .map-lane .track em.pile::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; right: -4px; background: var(--muted); clip-path: polygon(0 0, 68% 0, 100% 28%, 100% 100%, 0 100%); }
+.map-strip .map-lane .track em.pile b { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: var(--t-label); font-weight: 600; font-style: normal; color: var(--surface); background: var(--text); clip-path: polygon(0 0, 68% 0, 100% 28%, 100% 100%, 0 100%); }
 .map-strip .map-lane .track em.camera { width: 6px; height: 6px; border-radius: 50%; top: 6px; background: var(--text); }
 .map-strip .map-lane .track em.camera.is-on { background: var(--surface); border: 2px solid var(--text); box-sizing: border-box; }
 .map-strip .map-lane .track em.on { width: auto; height: 3px; top: 0; background: var(--warn); border-radius: 2px; cursor: default; }
