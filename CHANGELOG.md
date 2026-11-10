@@ -17,6 +17,39 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.231.0, 2026-11-10
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The prepare step: one script for the guide's Steps 0 to 2, written and
+tested with stand-ins, and not yet proven on a clean server. The fourth
+step of streamlining the install, at the maintainer's word. A running
+server is not touched by this release.
+
+- **`prepare.sh`** does what Steps 0 to 2 do by hand, with the same
+  commands in the same order: Docker with the Compose plugin, the image
+  store, with an NVIDIA card the driver and the container toolkit, the
+  app's account and its two folders, and the newest Release fetched into
+  the install home. Then it starts `./transcribe install`.
+- **It asks before each group of changes** and prints every command before
+  it runs it. `bash prepare.sh --check-only` looks and changes nothing.
+- **What it will not do:** restart Docker or move the image store on a
+  server whose Docker holds anything; change a Docker installed another
+  way; touch a driver that already works; propose a data folder on the
+  operating system's drive; run as root; or change anything on a system
+  that is not Ubuntu Server 24.04 or newer.
+- **Where it stands, plainly.** No clean machine was to hand, so it was
+  tested against stand-ins for the system's commands, in twelve shapes of
+  server, and its look-only mode was run on the office's server. It has not
+  been run from start to finish on a fresh machine. The script says so when
+  it starts, and the guide keeps Steps 1 to 3 by hand as the way it stands
+  behind. Promoting it waits for that run and for the box ledger's entry.
+- A test holds the script's commands to the guide's, so the two cannot
+  drift apart.
+
 ## v1.230.0, 2026-11-10
 
 ```

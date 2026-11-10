@@ -17,6 +17,8 @@ The shortest way from a fresh server to the app in a browser: the server alone, 
 1. **Prepare Ubuntu:** [Step 0](#step-0-prepare-ubuntu). Without a graphics card that is Docker and the image store's place; the two NVIDIA parts wait until there is a card.
 2. **Make the app's account and its two folders:** [Step 1](#step-1-prepare-the-server), three commands. On a server whose data drive is at `/data`, the usual folders are `/data/transcribe` and `/opt/gideon-transcribe`.
 3. **Fetch a Release:** [Step 2](#step-2-clone-a-release), one command.
+
+    (Steps 1 to 3 can also be done by one script, `prepare.sh`, which asks before each change. It is new and **not yet proven on a clean server**, so the three steps by hand remain the way this guide stands behind; [the prepare step](#the-prepare-step-new-and-not-yet-proven) says what it does.)
 4. **Run the install** from the install home:
 
     ```bash
@@ -199,6 +201,34 @@ The app tells voices apart with Nemotron 3 Diarization, whose weights are open a
 You will type the token once, into `./transcribe install`, or press Enter to give none. Nothing is shown as you type, and it goes into a file only the service reads. Without one the model fetch skips pyannote and says so, and the Panel offers Nemotron alone; `./transcribe install --reconfigure` takes a token later.
 
 ## 3. Install
+
+### The prepare step (new, and not yet proven)
+
+`prepare.sh`, in the repository's root from v1.231.0, does Steps 0 to 2 below for a fresh Ubuntu server and then starts the install. It runs the same commands as those steps, in the same order, and nothing else.
+
+**Where it stands.** It was written from this guide and tested against stand-ins for the system's commands, and its look-only mode has run on a real server. It has **not** been run from start to finish on a clean machine. Until it has, Steps 0 to 2 by hand are the way this guide stands behind, and the script says the same when it starts. An office that tries it on a machine it can afford to rebuild, and reports what happened, does the next office a favour.
+
+```bash
+bash prepare.sh --check-only
+```
+
+looks and changes nothing: it prints one list of what the server has and what is left to do. This is safe on any server, including one that is already installed or shared with another project.
+
+```bash
+bash prepare.sh
+```
+
+looks, then asks before each change, one group at a time, and prints every command before it runs it. Run it as the account that will look after the app, not as root. `--data DIR` and `--home DIR` name the two folders when its proposals are not the ones you want, and `--tag v1.2.3` fetches that Release rather than the newest.
+
+| It offers | When | What it will not do |
+|---|---|---|
+| Docker with the Compose plugin, from Docker's own repository | There is no Docker | Change a Docker that was installed another way |
+| The image store on the Docker volume | Docker holds no image and no container yet | Restart Docker on a server that holds any, yours or another project's |
+| The NVIDIA driver, then after a restart the container toolkit and the CDI list | There is an NVIDIA card | Touch a driver that already works, even an older one |
+| The `transcribe` account, the data folder and the install home | They are not there | Put the data folder on the operating system's drive without being told to with `--data` |
+| The newest Release, fetched into the install home | The install home is empty | Fetch over a checkout that is already there |
+
+After a driver it stops and asks for a restart; run it again afterwards and it carries on. A command that fails stops its own step and says which; run it again when that is put right, since everything already done is found and passed over. On anything but Ubuntu Server 24.04 or newer it only looks. When nothing is left, it starts `./transcribe install`.
 
 ### Step 0: prepare Ubuntu
 

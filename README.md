@@ -74,6 +74,7 @@ whether the database migrates.
 | `app/` | the Django app, its Dockerfile, and its tests |
 | `whisperx-service/` | the transcription service: Dockerfile, compose file, models list, README |
 | `transcribe` | the one script an Admin runs on the server: install, check, upgrade, and the rest |
+| `prepare.sh` | the install guide's Steps 0 to 2 as one script that asks before each change; new, and not yet proven on a clean server |
 | `compose.yaml` | the whole stack |
 | `docs/spec/` | the nine build specifications and the settings catalogue, which the code answers to |
 | `docs/whisperx-api.md` | the WhisperX service's API and operating contract, for any consumer |
