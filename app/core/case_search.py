@@ -34,6 +34,9 @@ KINDS = (
     ("words", "Words"),
     # What the cameras showed (v1.97.0).
     ("seen", "Seen"),
+    # What the cameras' own files record (v1.236.0): the lights, the siren,
+    # a camera being activated, a stop, and who was near.
+    ("readings", "Readings"),
     ("events", "Events"),
     ("notes", "Notes"),
     ("memos", "Memos"),
@@ -317,6 +320,9 @@ def search(case, asked: str, kind: str = "") -> dict:
     from core import camera_paths
 
     on_map = camera_paths.ids_with_path(case)
+    # The cameras' readings (v1.236.0), worked out once: found by their own
+    # words and by the officer or unit whose camera it is.
+    readings = camera_paths.readings_for_search(case) if on_map else []
     # A note event is found once, as its note (on a line, or at a moment).
     events_of = Event.objects.filter(
         incident__case=case,
@@ -354,7 +360,8 @@ def search(case, asked: str, kind: str = "") -> dict:
         ],
         texts=[one.text for one in memos]
         + [one.text for one in summaries]
-        + [one.about for one in case.incidents.all() if one.about],
+        + [one.about for one in case.incidents.all() if one.about]
+        + [f"{one['text']} {one['whose']}" for one in readings],
     )
 
     # Words: every transcript's lines and speaker names.
@@ -428,6 +435,43 @@ def search(case, asked: str, kind: str = "") -> dict:
                     close=near,
                     preview=_plays(recording, one.at),
                     map_url=camera_paths.map_url_at(on_map, recording, one.at),
+                )
+            )
+
+    # Readings (v1.236.0): what a camera's own file records, exactly, with no
+    # model in it. A reading is found by its words ("lights", "siren",
+    # "activated", "stood still") and by whose camera it is, so "hale
+    # lights" is one officer's lights. Each hit is a moment to press.
+    found_readings = []
+    for one in readings:
+        where = f"{one['text']} {one['whose']}"
+        if matches(where, words):
+            found_readings.append((one, False))
+        elif is_close(where, words, also):
+            found_readings.append((one, True))
+    more = more or len(found_readings) > MOST
+    found_readings = found_readings[:MOST]
+    counts["readings"] = len(found_readings)
+    if wanted("readings"):
+        for one, near in found_readings:
+            recording = one["recording"]
+            here = group(
+                ("recording", recording.pk),
+                recording.title,
+                reverse("viewer", args=[recording.pk]),
+            )
+            here["hits"].append(
+                _hit(
+                    exports.clock(one["at"]),
+                    marked(one["text"], words, also, near, heard),
+                    url=f"{reverse('viewer', args=[recording.pk])}?t={one['at']:.1f}",
+                    who="Camera's file",
+                    under=mark(one["whose"], words, also),
+                    all_cameras=incidents.url_at(links.get(recording.pk), one["at"]),
+                    at=one["at"],
+                    close=near,
+                    preview=_plays(recording, one["at"]),
+                    map_url=camera_paths.map_url_at(on_map, recording, one["at"]),
                 )
             )
 

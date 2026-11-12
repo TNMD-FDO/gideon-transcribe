@@ -1627,14 +1627,19 @@ def _reference(number: int, t: float, length: float) -> str:
     )
 
 
-def sheet_lines(path: CameraPath, zero: dict | None, number: int, near) -> list[str]:
-    """One line per reading of one camera, each with its reference into the
-    recording, and for the lights, the siren, the camera being activated, a
-    bookmark and the crash sensor, who was near at that moment (`near` is a
-    function of t, or None)."""
+def reading_rows(path: CameraPath, zero: dict | None, number: int | None, near):
+    """One row per reading of one camera: (t, kind, words). With a number the
+    words carry the reference into the recording, as the chat's sheet wants
+    it; without one they are plain, as Search shows them (v1.236.0). For the
+    lights, the siren, the camera being activated, a bookmark and the crash
+    sensor the words say who was near at that moment (`near` is a function
+    of t, or None)."""
 
     def at(t: float) -> str:
-        return f"{_spell_words(t, None, zero)} {_reference(number, t, path.length)}"
+        words = _spell_words(t, None, zero)
+        if number is None:
+            return words
+        return f"{words} {_reference(number, t, path.length)}"
 
     def spell(t: float, until: float | None) -> str:
         return at(t) + (f" to {_spell_words(until, None, zero)}" if until else "")
@@ -1646,33 +1651,43 @@ def sheet_lines(path: CameraPath, zero: dict | None, number: int, near) -> list[
     for one in events_of(path):
         kind, t = one["kind"], one["t"]
         if kind == "camera":
-            out.append(f"recording {'began' if one['value'] else 'ended'} {at(t)}")
+            words = f"recording {'began' if one['value'] else 'ended'} {at(t)}"
         elif kind == "mic" and one["value"]:
             if one["words"] == "Activated":
-                out.append(
+                words = (
                     f"activated {at(t)} (the minute before is the camera's buffer, "
                     f"without sound).{nearby(t)}"
                 )
             else:
-                out.append(f"mic on {at(t)}")
+                words = f"mic on {at(t)}"
         elif kind == "mic":
-            out.append(f"muted {spell(t, one['until'])}")
+            words = f"muted {spell(t, one['until'])}"
         elif kind in ("lights", "siren") and one["value"]:
-            out.append(f"{one['words'].lower()} {spell(t, one['until'])}.{nearby(t)}")
+            words = f"{one['words'].lower()} {spell(t, one['until'])}.{nearby(t)}"
         elif kind in ("aux", "low battery") and one["value"]:
-            out.append(f"{one['words'].lower()} {spell(t, one['until'])}")
+            words = f"{one['words'].lower()} {spell(t, one['until'])}"
         elif kind == "still":
             minutes = max(1, int(round(((one["until"] or t) - t) / 60)))
-            out.append(
+            words = (
                 f"stood still {spell(t, one['until'])} "
                 f"({minutes} minute{'' if minutes == 1 else 's'})"
             )
         elif kind in ("bookmark", "crash"):
-            out.append(f"{one['words'].lower()} {at(t)}.{nearby(t)}")
+            words = f"{one['words'].lower()} {at(t)}.{nearby(t)}"
         elif kind in ("brakes", "speed"):
-            out.append(f"{one['words'].lower()} {at(t)}")
+            words = f"{one['words'].lower()} {at(t)}"
+        else:
+            continue
+        out.append((t, kind, words))
     for start, end in path.gaps or []:
-        out.append(f"no fix {spell(start, end)}")
+        out.append((start, "gap", f"no fix {spell(start, end)}"))
+    return out
+
+
+def sheet_lines(path: CameraPath, zero: dict | None, number: int, near) -> list[str]:
+    """The chat's lines for one camera: each reading with its reference, then
+    what the file left out and whether it holds a position at all."""
+    out = [words for _t, _kind, words in reading_rows(path, zero, number, near)]
     left_out = dropped_count(path)
     if left_out:
         out.append(
@@ -1682,6 +1697,39 @@ def sheet_lines(path: CameraPath, zero: dict | None, number: int, near) -> list[
     if not path.fixes:
         out.append("no position in its file")
     return out
+
+
+def readings_for_search(case) -> list[dict]:
+    """Every reading of every camera of a case that has a path file, for
+    Search (v1.236.0): the recording, the moment in it, the words as the
+    chat's sheet has them without the reference, and whose camera it is.
+    Who was near is worked out for the same readings as in the sheet. No
+    coordinate, as everywhere."""
+    if not on():
+        return []
+    paths = for_case(case)
+    if not paths:
+        return []
+    zeros = {one.recording_id: zero_of(one.recording, one) for one in paths}
+    found = []
+    for path in paths:
+
+        def near(t: float, path=path) -> dict | None:
+            return near_at(path, t, paths, zeros)
+
+        whose = who_of(path)
+        kind = "an in-car camera" if path.source == CAR else "a body camera"
+        for t, what, words in reading_rows(path, zeros[path.recording_id], None, near):
+            found.append(
+                {
+                    "recording": path.recording,
+                    "at": float(t),
+                    "kind": what,
+                    "text": words[:1].upper() + words[1:],
+                    "whose": f"{whose}, {kind}",
+                }
+            )
+    return found
 
 
 def paths_among(case, read: list) -> list[CameraPath]:

@@ -1243,3 +1243,79 @@ def test_a_memo_or_comparison_written_before_a_path_file_says_so(person, a_case)
     assert "path file" in marks(memo, compared)[0]
     settings_store.set_to("maps", False)
     assert marks(memo, compared) == ("", "")
+
+
+# Search finds the cameras' readings (v1.236.0) ----------------------------------------
+
+
+def test_search_finds_what_the_cameras_files_record(person, a_case, client):
+    """The surest way to ask when the lights were on: no assistant, every
+    such moment in the case, each one to press. Found by the reading's own
+    words and by whose camera it is."""
+    car = video(person, a_case, "Dash-4")
+    added(car, car_file(), by=person)
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_x.mp4")
+    added(body, body_file(), by=person)
+
+    def readings(asked: str, kind: str = "") -> list[dict]:
+        found = case_search.search(a_case, asked, kind)
+        count = {one["key"]: one["count"] for one in found["kinds"]}.get("readings", 0)
+        hits = [
+            hit
+            for group in found["groups"]
+            for hit in group["hits"]
+            if hit["who"] == "Camera's file"
+        ]
+        assert count == len(hits)
+        return hits
+
+    (lights,) = readings("lights")
+    assert lights["when"] == "00:00:20" and lights["at"] == 20.0
+    assert lights["url"] == f"/recording/{car.pk}?t=20.0"
+    assert str(lights["text"]) == (
+        "<mark>Lights</mark> on 14:20:23 to 14:22:23. Within 50 m then: nobody "
+        "else&#x27;s camera. Nearest beyond: officer Pat Doe 189 m."
+    )
+    assert str(lights["under"]) == "unit 9082 (officer Sam Roe), an in-car camera"
+    # A Search hit plays where you are and opens the Map at that moment.
+    assert lights["preview"]["recording"] == str(car.pk)
+    assert lights["map"].startswith(f"/case/{a_case.pk}") and lights["close"] is False
+    # No reference stands in a reading on the page: that is the chat's.
+    assert "[Recording" not in str(lights["text"])
+
+    assert [one["when"] for one in readings("siren")] == ["00:00:20"]
+    (activated,) = readings("activated")
+    assert activated["url"].startswith(f"/recording/{body.pk}?t=61")
+    assert "unit 9082 (officer Sam Roe) 612 m" in str(activated["text"])
+    assert [one["when"] for one in readings("bookmark")] == ["00:03:20"]
+    # By whose camera it is: one officer's lights, and every reading of a unit.
+    assert len(readings("roe lights")) == 1 and readings("kim lights") == []
+    # The unit's own eight readings, and the body camera's activation, which
+    # names the unit as the nearest then.
+    assert len(readings("9082")) == 9
+    # And by who was near: the lights that came on with this officer nearest
+    # are found by that officer's name, which is lit in the reading's words.
+    (near_doe,) = readings("doe lights")
+    assert "officer Pat <mark>Doe</mark> 189 m" in str(near_doe["text"])
+    assert "<mark>Roe</mark>" in str(readings("roe lights")[0]["under"])
+    # A word's other form finds it too, marked as close like any other kind.
+    (close,) = readings("light")
+    assert close["close"] is True
+    # The kind narrows as every kind does, and stands with the others.
+    assert case_search.KINDS[2] == ("readings", "Readings")
+    only = case_search.search(a_case, "lights", "readings")
+    assert only["kind"] == "readings" and len(only["groups"]) == 1
+    # Never a position.
+    every = " ".join(str(one["text"]) for one in readings("9082"))
+    assert str(LAT) not in every and str(LON) not in every
+    # On the page: the chip, the row, and the play button of a Search hit.
+    signed_in(client, person)
+    page = client.get(f"/case/{a_case.pk}?tab=search&q=lights").content.decode()
+    assert "Readings (1)" in page and "Camera&#x27;s file" in page
+    assert 'data-preview-seen="1"' in page
+    # With Maps off, and in a case with no path file, there are none.
+    settings_store.set_to("maps", False)
+    assert readings("lights") == []
+    settings_store.set_to("maps", True)
+    camera_paths.remove(camera_paths.of(car), by=person)
+    assert readings("lights") == [] and len(readings("activated")) == 1

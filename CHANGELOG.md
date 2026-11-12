@@ -17,6 +17,37 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.236.0, 2026-11-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Search finds what the cameras' own files record.
+
+- **A new kind in a case's Search: Readings.** Type "lights", "siren",
+  "activated", "muted", "brakes", "bookmark" or "stood still" and every
+  such moment in the case is listed under its recording, marked "Camera's
+  file", with the time of day in its words. There is no assistant in it:
+  the list is exact and complete.
+- **Narrow it by officer or unit.** "hale lights" is one officer's lights;
+  a unit's number finds that unit's readings.
+- **Who was near is on the line.** For the lights, the siren, a camera
+  being activated, a bookmark and the crash sensor the reading says who
+  was within 50 metres at that moment, or that nobody was and who was
+  nearest. So an officer's name also finds the moments that officer was
+  near.
+- **Each hit is a moment to press:** its time opens the recording there,
+  the play button plays it where you are, and "on the map" shows where the
+  camera was.
+- A path file added later is found at once, since the readings are worked
+  out from the files when the search is made. A case with no path file
+  shows no Readings.
+
+Underneath, the chat's sheet (v1.235.0) and Search now take a reading's
+words from one place.
+
 ## v1.235.0, 2026-11-12
 
 ```
