@@ -84,14 +84,232 @@ def test_a_short_time_after_the_recordings_name_takes_the_full_shape():
         named("Blue [Recording 3, 00:12:45], and again [00:12:50].")
         == "Blue [Recording 3, 00:12:45], and again [Recording 3, 00:12:50]."
     )
-    # A new paragraph starts afresh; "Recordings 4 and 5" names none.
-    assert named("Recording 4 here.\nAlone [00:00:01].") == (
-        "Recording 4 here.\nAlone [00:00:01]."
-    )
+    # "Recordings 4 and 5" names none.
     assert named("Recordings 4 and 5 agree [00:00:01].") == (
         "Recordings 4 and 5 agree [00:00:01]."
     )
     assert named("No citation at all.") == "No citation at all."
+
+
+def test_a_recordings_name_is_carried_down_the_answer(monkeypatch):
+    """v1.233.0, from an office's own chat: the engine named the recording in
+    a sentence and then listed quotes under it, one to a line, each with a
+    bare time, and went on in a new paragraph without naming it again. Until
+    now a new line started afresh, so only the sentence's own times linked.
+    The nearest recording named above lends its name now."""
+    named = case_chat.with_recordings_named
+    answer = (
+        "Yes. In Recording 1, the notice was read between [Recording 1, 00:10:01] "
+        "and [Recording 1, 00:10:20]. The transcript records:\n"
+        "\n"
+        '* "First made-up line." [00:10:01]\n'
+        '* "Second made-up line." [00:10:04]\n'
+        "\n"
+        "Speaker 4 then read a second statement [00:10:42] and asked [00:10:47]."
+    )
+    assert named(answer) == (
+        "Yes. In Recording 1, the notice was read between [Recording 1, 00:10:01] "
+        "and [Recording 1, 00:10:20]. The transcript records:\n"
+        "\n"
+        '* "First made-up line." [Recording 1, 00:10:01]\n'
+        '* "Second made-up line." [Recording 1, 00:10:04]\n'
+        "\n"
+        "Speaker 4 then read a second statement [Recording 1, 00:10:42] and "
+        "asked [Recording 1, 00:10:47]."
+    )
+    # The nearest name above wins, and a name on the time's own line first.
+    assert named(
+        "In Recording 1:\n* a [00:00:01]\nIn Recording 2:\n* b [00:00:02]\n"
+        "* c, as Recording 7 has it [00:00:03]\n* d [00:00:04]"
+    ) == (
+        "In Recording 1:\n* a [Recording 1, 00:00:01]\nIn Recording 2:\n"
+        "* b [Recording 2, 00:00:02]\n"
+        "* c, as Recording 7 has it [Recording 7, 00:00:03]\n"
+        "* d [Recording 7, 00:00:04]"
+    )
+    # A name from a line above is taken only where that recording holds the
+    # moment: a time of day in brackets, or a time from a recording the
+    # question did not read, stays exactly as written. A name on the time's
+    # own line is the engine's own word and is kept, as before.
+    holds = case_chat.holds_in(
+        {1: {"recording": "r1", "starts": {5: 5.2}, "length": 600.0}}
+    )
+    assert holds(1, 5) and holds(1, 600) and not holds(1, 601) and not holds(2, 5)
+    assert named(
+        "In Recording 1 the stop began.\n* at [00:00:05]\n* by the clock [21:56:19]\n"
+        "In Recording 2:\n* said [00:00:05]\nRecording 2 again [00:00:07].",
+        holds,
+    ) == (
+        "In Recording 1 the stop began.\n* at [Recording 1, 00:00:05]\n"
+        "* by the clock [21:56:19]\n"
+        "In Recording 2:\n* said [00:00:05]\nRecording 2 again [Recording 2, 00:00:07]."
+    )
+    # An answer that has named no recording yet has nothing to lend.
+    assert named("Alone [00:00:01].\nRecording 4 here.") == (
+        "Alone [00:00:01].\nRecording 4 here."
+    )
+    # Several spoken of together: a time beside them is no one's, and
+    # nothing is carried past that line.
+    several = (
+        "Recording 4 here.\nRecordings 4 and 5 agree [00:00:01].\nThen [00:00:02]."
+    )
+    assert named(several) == several
+    # The app's own opening line names recordings and lends none of them.
+    from core import assistant
+
+    monkeypatch.setattr(assistant, "digests_on", lambda: True)
+    for count in (1, 2, 3):
+        videos = [{"video": True, "digest": False}] * count
+        opening = case_chat.transcript_alone_line(videos)
+        assert opening and case_chat.ALONE_LINE.match(opening), opening
+        said = f"{opening}\n\nIt was said [00:00:05]."
+        assert named(said) == said
+        assert named(f"{opening}\n\nIn Recording 9 it was said.\n* x [00:00:05]") == (
+            f"{opening}\n\nIn Recording 9 it was said.\n* x [Recording 9, 00:00:05]"
+        )
+
+
+@pytest.mark.django_db
+def test_a_list_of_quotes_under_the_recordings_name_links(
+    owner, a_case, client, monkeypatch
+):
+    """v1.233.0, the whole way through: the answer is saved with the full
+    shape on every line, and each time that is a real moment is a Citation."""
+    swallow_defer(monkeypatch)
+    one = a_recording(owner, a_case, "Call one")
+    reachable(
+        monkeypatch,
+        [
+            "In Recording 1, the colour was given [Recording 1, 00:12:45]. "
+            "The transcript records:\n\n"
+            '* "The car was blue." [00:12:45]\n'
+            '* "Good morning." [00:00:00]\n\n'
+            "Nothing was said later [00:13:00], and nothing at [09:00:00]."
+        ],
+    )
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(chat=chat, number=1, question="The colour?")
+    case_chat.answer_case_turn(turn.pk)
+    turn.refresh_from_db()
+    assert turn.state == "done"
+    assert '* "The car was blue." [Recording 1, 00:12:45]' in turn.answer
+    assert '* "Good morning." [Recording 1, 00:00:00]' in turn.answer
+    assert "later [Recording 1, 00:13:00]" in turn.answer
+    here = str(one.pk)
+    assert turn.citations == {
+        "[Recording 1, 00:12:45]": {"recording": here, "seconds": 765.0},
+        "[Recording 1, 00:00:00]": {"recording": here, "seconds": 0.0},
+        # Not a line's start, but inside the recording: the second itself.
+        "[Recording 1, 00:13:00]": {"recording": here, "seconds": 780.0},
+    }
+    # Past the recording's end: left exactly as the engine wrote it.
+    assert turn.answer.endswith("and nothing at [09:00:00].")
+
+
+@pytest.mark.django_db
+def test_saved_answers_are_mended_once_and_only_their_brackets(owner, a_case):
+    """v1.233.0: the answers saved before the rule changed are read again at
+    the upgrade. Only a bare time's bracket changes; an incident's chat, whose
+    bare times are its own clock, is never touched; and one row says how many,
+    with no word of any answer."""
+    from core import incidents
+
+    one = a_recording(owner, a_case, "Call one")
+    two = a_recording(owner, a_case, "Call two")
+    stored = (
+        "Recording 2 was read from the transcript alone.\n\n"
+        "In Recording 1, the colour was given [Recording 1, 00:12:45]. "
+        "The transcript records:\n\n"
+        '* "The car was blue." [00:12:45]\n\n'
+        "It was said once [00:12:45]."
+    )
+    was = {"[Recording 1, 00:12:45]": {"recording": str(one.pk), "seconds": 765.0}}
+    readings = [
+        case_chat.reading_of(one, one.transcript),
+        case_chat.reading_of(two, two.transcript),
+    ]
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(
+        chat=chat,
+        number=1,
+        question="The colour?",
+        answer=stored,
+        citations=dict(was),
+        readings=readings,
+        state="done",
+    )
+    # A second answer about a recording since moved out of the case, and one
+    # whose transcript has been made again since it was read.
+    elsewhere = Case.objects.create(owner=owner, name="Another")
+    moved = CaseChatTurn.objects.create(
+        chat=chat,
+        number=2,
+        question="And the other?",
+        answer="In Recording 2:\n* said [00:12:45]",
+        readings=readings,
+        state="done",
+    )
+    remade = CaseChatTurn.objects.create(
+        chat=chat,
+        number=3,
+        question="Again?",
+        answer="In Recording 1:\n* said [00:12:45]\n* and [00:20:00]",
+        readings=[{**readings[0], "transcript_created": "2020-01-01T00:00:00+00:00"}],
+        state="done",
+    )
+    two.case = elsewhere
+    two.save(update_fields=["case"])
+    # An incident's chat writes the incident's clock as a bare time.
+    stop = incidents.Incident.objects.create(case=a_case, name="Stop")
+    theirs = CaseChatTurn.objects.create(
+        chat=CaseChat.objects.create(case=a_case, incident=stop, asked_by=owner),
+        number=1,
+        question="When?",
+        answer="In Recording 1 the stop began.\n* The lights came on [21:56:19].",
+        state="done",
+    )
+    # A question still running is not an answer yet.
+    waiting = CaseChatTurn.objects.create(
+        chat=chat, number=4, question="?", answer="Recording 1:\n* [00:00:00]"
+    )
+
+    assert case_chat.mend_bare_times() == {"answers": 2, "references": 1, "cases": 1}
+
+    turn.refresh_from_db()
+    assert turn.answer == stored.replace("[00:12:45]", "[Recording 1, 00:12:45]")
+    # The same moment cited three times is one Citation, as before.
+    assert turn.citations == was
+    moved.refresh_from_db()
+    # The recording has left the case: it lends nothing, and not a
+    # character of that answer changes.
+    assert moved.answer == "In Recording 2:\n* said [00:12:45]"
+    assert moved.citations == {}
+    remade.refresh_from_db()
+    assert remade.answer == (
+        "In Recording 1:\n* said [Recording 1, 00:12:45]\n* and [00:20:00]"
+    )
+    assert remade.citations == {
+        # No line starts to match any more: the second itself, inside the
+        # recording's fifteen minutes; twenty minutes is past its end.
+        "[Recording 1, 00:12:45]": {"recording": str(one.pk), "seconds": 765.0},
+    }
+    theirs.refresh_from_db()
+    assert theirs.answer.endswith("[21:56:19].") and theirs.citations == {}
+    waiting.refresh_from_db()
+    assert waiting.answer == "Recording 1:\n* [00:00:00]"
+
+    row = Row.objects.get(category="system", event="Case chat references re-read")
+    assert row.actor_kind == "system" and row.actor_username == "transcribe upgrade"
+    assert row.details == {"answers": 2, "references": 1, "cases": 1}
+    # Run again, it finds nothing to do and says nothing.
+    assert case_chat.mend_bare_times() == {"answers": 0, "references": 0, "cases": 0}
+    assert Row.objects.filter(event="Case chat references re-read").count() == 1
+    # The upgrade's migration is that call, and never fails an upgrade.
+    import importlib
+
+    step = importlib.import_module("core.migrations.0108_case_chat_bare_times")
+    step.mend(None, None)
 
 
 def test_the_not_read_line_counts_each_reason():

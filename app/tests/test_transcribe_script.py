@@ -845,6 +845,7 @@ _MAP = [
     "write_the_map_note",
     "size_said",
     "whole_gb",
+    "keep_sudo_awake",
     "map_tool",
     "choose_the_areas",
     "basemap_fetch",
@@ -1009,7 +1010,11 @@ env_value() {
 make_the_data_folders() { mkdir -p "$DATA/maps"; }
 folder_gb_free() { echo "$FREE"; }
 answers_from_here() { [ "${REACH:-yes}" = "yes" ]; }
-sudo() { "$@"; }
+# sudo, with or without its "never prompt" flag.
+sudo() {
+  if [ "$1" = "-n" ]; then shift; fi
+  "$@"
+}
 chown() { :; }
 install() { cp "${@: -2:1}" "${@: -1}"; }
 # Today's build is not there yet; yesterday's is.
@@ -1197,6 +1202,29 @@ def test_the_menu_offers_the_whole_country_first_and_remembers_what_is_held(tmp_
     (maps / "basemap.json").unlink()
     done, _, _ = _fetch(tmp_path, "basemap_fetch", typed="\n\n", FREE="210")
     assert "[2]" in done.stderr and "Nothing was changed." in done.stdout
+
+
+@needs_bash
+def test_a_fetch_closed_at_a_question_leaves_nothing_half_done(tmp_path):
+    """v1.233.0, found on the office's own server: a fetch closed at "Fetch
+    N?" left its small region file beside the map until the next fetch."""
+    maps = tmp_path / "data" / "maps"
+    maps.mkdir(parents=True)
+    (maps / "basemap.pmtiles").write_bytes(b"PMTiles-old")
+    # The session ends while the question waits.
+    closed = "ask_yes_no() { kill -TERM $$; sleep 1; }\nbasemap_fetch PR"
+    done, _, calls = _fetch(tmp_path, closed)
+    assert done.returncode == 130, done.stdout + done.stderr
+    assert len(calls) == 1 and "--dry-run" in calls[0]
+    assert [p.name for p in maps.iterdir()] == ["basemap.pmtiles"]
+    assert (maps / "basemap.pmtiles").read_bytes() == b"PMTiles-old"
+    # And sudo is kept awake for the length of the fetch, so the last steps
+    # do not stop at a password prompt after half an hour of downloading.
+    body = text().split("\nbasemap_fetch() {", 1)[1].split("\n}\n", 1)[0]
+    assert body.index("keep_sudo_awake") < body.index("map_tool ")
+    assert "trap " in body and "EXIT" in body and "INT TERM HUP" in body
+    keeper = text().split("\nkeep_sudo_awake() {", 1)[1].split("\n}\n", 1)[0]
+    assert "sudo -n true" in keeper and "SUDO_KEEPER=$!" in keeper
 
 
 @needs_bash

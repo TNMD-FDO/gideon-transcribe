@@ -63,6 +63,15 @@ CITED = re.compile(r"\[Recording (\d{1,3}), (\d{1,2}):(\d{2}):(\d{2})\]")
 # name it falls back on (v1.82.0).
 SHORT_CITED = re.compile(r"\[(\d{1,2}):(\d{2}):(\d{2})\]")
 NAMED = re.compile(r"\bRecording (\d{1,3})\b")
+# Several recordings spoken of together: a bare time beside them belongs to
+# no one of them (v1.233.0).
+SEVERAL = re.compile(r"\bRecordings\b")
+# The app's own opening line, `transcript_alone_line`, which names recordings
+# and lends its names to nothing below it (v1.233.0).
+ALONE_LINE = re.compile(
+    r"^Recording \d{1,3}(?:, Recording \d{1,3})*(?: and Recording \d{1,3})? "
+    r"(?:was|were) read from the transcript alone\.$"
+)
 
 
 class CaseChat(models.Model):
@@ -349,32 +358,149 @@ def pack(
     return readings
 
 
-def with_recordings_named(text: str) -> str:
-    """A short [hh:mm:ss] in a paragraph that has named "Recording n" before
-    it takes the full shape, [Recording n, hh:mm:ss] (v1.82.0).
+def holds_in(starts_by_number: dict[int, dict]):
+    """Whether a Recording of this question holds a moment: a line starts
+    at that second, or the second lies inside the recording's length. The
+    one test `citations` matches by, for the rule below to ask first."""
 
-    The engine names the recording once and then writes the time alone, most
-    often for what the camera showed; the app reads the paragraph as a person
-    does, the nearest name before the time. A full citation names itself and
-    counts as a name for what follows it. A paragraph without a name is left
-    as it is.
+    def holds(number: int, whole: int) -> bool:
+        known = starts_by_number.get(number)
+        return bool(known) and (
+            whole in known["starts"] or whole <= known.get("length", 0)
+        )
+
+    return holds
+
+
+def with_recordings_named(text: str, holds=None) -> str:
+    """A short [hh:mm:ss] after the answer has named "Recording n" takes the
+    full shape, [Recording n, hh:mm:ss] (v1.82.0; down the answer, v1.233.0).
+
+    The engine names the recording once and then writes the time alone: for
+    what the camera showed, and most of all for a list of quotes under the
+    sentence that named the recording, each quote on a line of its own. The
+    app reads the answer as a person does: the nearest name before the time
+    on its own line, or else the last recording named on a line above it. A
+    full citation names itself and counts as a name for what follows it.
+
+    Three things lend no name. The app's own opening line about the videos
+    read from the transcript alone names recordings, and none of them is
+    what the answer below it is about. A line that speaks of "Recordings"
+    together, with no single one named before the time, is about several,
+    so a time there stays as written and nothing is carried past that line.
+    And an answer that has named no recording yet has nothing to lend.
+
+    A name from a line above is taken only where that recording holds the
+    moment (`holds`, from `holds_in`): a time of day the engine put in
+    brackets, or a time from a recording the question did not read, stays
+    exactly as written and is never dressed as another recording's.
     """
-
-    def paragraph(words: str) -> str:
+    carried = ""
+    lines = []
+    for words in text.split("\n"):
+        if ALONE_LINE.match(words.strip()):
+            lines.append(words)
+            continue
         out, at = [], 0
         for match in SHORT_CITED.finditer(words):
-            names = NAMED.findall(words[: match.start()])
+            before = words[: match.start()]
+            names = NAMED.findall(before)
+            number = names[-1] if names else "" if SEVERAL.search(before) else carried
+            hours, minutes, seconds = match.groups()
+            if number and not names and holds is not None:
+                whole = int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+                if not holds(int(number), whole):
+                    number = ""
             out.append(words[at : match.start()])
-            if names:
-                hours, minutes, seconds = match.groups()
-                out.append(f"[Recording {names[-1]}, {hours}:{minutes}:{seconds}]")
+            if number:
+                out.append(f"[Recording {number}, {hours}:{minutes}:{seconds}]")
             else:
                 out.append(match.group(0))
             at = match.end()
         out.append(words[at:])
-        return "".join(out)
+        lines.append("".join(out))
+        # What this line leaves for the lines below it.
+        names = NAMED.findall(words)
+        if names:
+            carried = names[-1]
+        elif SEVERAL.search(words):
+            carried = ""
+    return "\n".join(lines)
 
-    return "\n".join(paragraph(one) for one in text.split("\n"))
+
+def mend_bare_times() -> dict:
+    """Once, at the upgrade to v1.233.0: the saved answers of the cases'
+    chats are read again by the rule above, so the times that stood as plain
+    text under a sentence that named their recording become references.
+
+    Only a case's own chat: an incident's chat writes the incident's clock
+    as [hh:mm:ss] and is left alone. Only the bracket changes, from a bare
+    time to the full shape; no other word of an answer is touched. A time is
+    matched as it is for a new answer: to a line's start where the recording
+    still has the transcript the answer read, and otherwise to the second
+    itself inside the recording's length. A recording since removed or moved
+    to another case lends nothing, and its times stay exactly as written.
+    """
+    from core.recordings import Recording
+
+    answers = references = 0
+    cases = set()
+    turns = (
+        CaseChatTurn.objects.filter(state=DONE, chat__incident__isnull=True)
+        .exclude(answer="")
+        .select_related("chat")
+    )
+    for turn in turns.iterator():
+        if not SHORT_CITED.search(turn.answer):
+            continue
+        try:
+            starts_by_number: dict[int, dict] = {}
+            for number, one in enumerate(turn.readings or [], start=1):
+                recording = Recording.objects.filter(pk=one.get("recording")).first()
+                if recording is None or recording.case_id != turn.chat.case_id:
+                    continue
+                starts: dict[int, float] = {}
+                last = 0.0
+                transcript = getattr(recording, "transcript", None)
+                same = (
+                    transcript is not None
+                    and transcript.created.isoformat() == one.get("transcript_created")
+                )
+                if same:
+                    for line in prompts.lines_of(transcript):
+                        starts.setdefault(int(line.start), line.start)
+                        last = max(last, float(line.start or 0.0))
+                starts_by_number[number] = {
+                    "recording": str(recording.pk),
+                    "starts": starts,
+                    "length": float(recording.duration_seconds or 0.0) or last,
+                }
+            answer = with_recordings_named(turn.answer, holds_in(starts_by_number))
+            if answer == turn.answer:
+                continue
+            found = citations(answer, starts_by_number)
+            new = {
+                key: where for key, where in found.items() if key not in turn.citations
+            }
+            turn.answer = answer
+            turn.citations = {**(turn.citations or {}), **new}
+            turn.save(update_fields=["answer", "citations"])
+        except Exception:  # noqa: BLE001 - one answer never stops the rest
+            log.exception("the references of answer %s were not re-read", turn.pk)
+            continue
+        answers += 1
+        references += len(new)
+        cases.add(turn.chat.case_id)
+    if answers:
+        audit.write(
+            audit.Category.SYSTEM,
+            "Case chat references re-read",
+            system="transcribe upgrade",
+            answers=answers,
+            references=references,
+            cases=len(cases),
+        )
+    return {"answers": answers, "references": references, "cases": len(cases)}
 
 
 def citations(text: str, starts_by_number: dict[int, dict]) -> dict:
@@ -839,7 +965,8 @@ def answer_case_turn(turn_id) -> None:
         # The combined answer's Citations are checked again before display;
         # a time written short after the recording's name takes the full shape.
         turn.answer = with_recordings_named(
-            documents.with_note(turn.answer, papers_note)
+            documents.with_note(turn.answer, papers_note),
+            holds_in(starts_by_number),
         )
         turn.citations = {
             **citations(turn.answer, starts_by_number),

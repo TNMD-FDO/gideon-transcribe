@@ -17,6 +17,41 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.233.0, 2026-11-12
+
+```
+Models: unchanged
+Database: migrates (0108, a catch-up that reads saved case chat answers again; no new table)
+```
+
+A case chat's times that did not link, and two things the street map's
+first day on a server showed.
+
+- **A list of quotes under the recording's name links.** In a case chat the
+  assistant names the recording in a sentence, then lists what was said
+  beneath it, one quote to a line with a bare time, and often goes on in a
+  new paragraph without naming the recording again. Only the sentence's own
+  times were links; the rest were plain text. A recording's name is now
+  carried down the answer: a bare time takes the nearest recording named
+  before it on its line, and otherwise the last one named above.
+- **What still stays plain,** on purpose: a time beside "Recordings 4 and
+  5" spoken of together, a time before any recording has been named, and a
+  time the recording does not hold. The app's own opening line about
+  recordings read from the transcript alone lends its names to nothing.
+- **Answers already saved are mended once, at this upgrade.** Only the
+  bracket of a bare time changes; no other word of an answer is touched. An
+  incident's chat, whose bare times are the incident's clock, is left
+  alone. One row in the audit log counts what was mended, with no word of
+  any answer.
+- **A street map fetch closed at a question leaves nothing behind.** It had
+  left a small file beside the map until the next fetch.
+- **A long fetch no longer stops for a password at its end.** The whole
+  country takes longer to download than sudo remembers a password, and the
+  last steps need it; the command keeps sudo awake while it runs.
+
+The box ledger records the removal of four old build records on the
+office's server, and corrects the cutting tool's size.
+
 ## v1.232.0, 2026-11-12
 
 ```

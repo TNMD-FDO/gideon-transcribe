@@ -3088,6 +3088,17 @@ whole_gb() {
   }' <<<"$1"
 }
 
+keep_sudo_awake() {
+  # A whole-country fetch outlasts sudo's memory of the password (fifteen
+  # minutes as shipped), and the last steps, which put the file in place
+  # under the app's account, need it. Without this the command would stop at
+  # a password prompt nobody is watching, the map fetched and not placed. So
+  # sudo is asked again each minute while the fetch runs, which keeps what
+  # it already has and never prompts; it ends with the command.
+  (while sudo -n true 2>/dev/null; do sleep 50; done) </dev/null >/dev/null 2>&1 &
+  SUDO_KEEPER=$!
+}
+
 map_tool() {
   # Protomaps' cutting tool, run once as a container under the app's account
   # and gone again. The first argument is the folder it sees as /work; the
@@ -3231,6 +3242,13 @@ basemap_fetch() {
 
   # What a fetch that was cut short left behind is cleared before another.
   sudo rm -f "$fetching" "$region"
+  # And however this one ends (v1.233.0): closed at a question, a session
+  # that dropped, or a failure below, nothing half done stays beside the map.
+  keep_sudo_awake
+  # shellcheck disable=SC2064
+  trap "kill $SUDO_KEEPER 2>/dev/null; sudo -n rm -f '$fetching' '$region' 2>/dev/null || true" EXIT
+  # shellcheck disable=SC2064
+  trap "kill $SUDO_KEEPER 2>/dev/null; sudo -n rm -f '$fetching' '$region' 2>/dev/null || true; trap - EXIT; exit 130" INT TERM HUP
   made="$(mktemp)"
   # shellcheck disable=SC2086
   area_boxes $codes | region_of >"$made"
