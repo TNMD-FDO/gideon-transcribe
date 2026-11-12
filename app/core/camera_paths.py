@@ -2355,6 +2355,10 @@ def where_at(recording, t: float) -> dict:
             else incidents.elapsed(t) + " in"
         ),
         "near": [],
+        # For the speaker picker (v1.237.0): whose camera this is, and how
+        # near counts as here.
+        "wearer": " ".join((path.wearer or "").split()),
+        "near_metres": int(NEAR_METRES),
         "map_url": (
             map_url(recording.case_id, recording.pk, t) if recording.case_id else ""
         ),
@@ -2379,6 +2383,10 @@ def where_at(recording, t: float) -> dict:
                 "title": other.recording.title,
                 "unit": other.unit,
                 "metres": int(round(metres_between(here, there))),
+                # Whose it is, and whether it is this camera's own officer's
+                # other camera (v1.237.0), which is nobody else being near.
+                "wearer": " ".join((other.wearer or "").split()),
+                "own": same_officer(path, other),
             }
         )
     out["near"].sort(key=lambda one: one["metres"])

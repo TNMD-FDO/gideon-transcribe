@@ -2398,6 +2398,8 @@
       question: "Whose line is this?",
       quote: "“" + (segment.text || "").slice(0, 80) + "”",
       current: segment.speaker,
+      // The line's own moment (v1.237.0): who was here when it was said.
+      at: segment.start,
       play: function (start, end) { window.VIEWER.playRange(start, end); },
       manageUrl: manage ? manage.dataset.href : "",
       onPick: function (name, role) {

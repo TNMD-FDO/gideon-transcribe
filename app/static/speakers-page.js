@@ -1017,6 +1017,7 @@
       question: "Whose line is this?",
       quote: "“" + segment.text.slice(0, 80) + "”",
       current: segment.speaker,
+      at: segment.start,
       play: playRange,
       onPick: function (name, role) { return give(segment, name, role); }
     });

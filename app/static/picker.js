@@ -18,6 +18,8 @@
 //     currentPill: "has it now", merging: true (on-call rows say "the same person"),
 //     suggested: "Riley" (that row carries a pill and is lit first),
 //     newGo: "Add and give this line", newHint: "..." (the Someone new box),
+//     at: seconds into the recording (v1.237.0: the line's own moment, so the
+//       officers whose cameras were near it then are offered first),
 //     onPick: function (name, role) { return Promise }  (name "" means a new speaker)
 //   })
 (function () {
@@ -39,6 +41,52 @@
   }
 
   function forget(recording) { delete cache[recording]; }
+
+  // Who was here when the line was said (v1.237.0): asked of the camera's
+  // own file, only for a line (a moment) and only where the files give
+  // names to offer. No file, no fix, or Maps off: null, and the picker is
+  // as it was.
+  function fetchHere(options, data) {
+    if (typeof options.at !== "number" || isNaN(options.at) || !(data.wearers || []).length && !data.in_case) { return Promise.resolve(null); }
+    return fetch("/recording/" + options.recording + "/path/where?t=" + encodeURIComponent(options.at.toFixed(1)), { credentials: "same-origin" })
+      .then(function (answer) { return answer.ok ? answer.json() : null; })
+      .then(function (told) { return told && told.has_path && told.fix ? told : null; })
+      .catch(function () { return null; });
+  }
+
+  function lower(name) { return String(name || "").replace(/\s+/g, " ").trim().toLowerCase(); }
+
+  // From the file's answer: this camera's own officer, and each other
+  // officer's nearest camera in metres. An officer's own second camera is
+  // nobody else being near.
+  function hereOf(told) {
+    var here = { own: "", metres: {}, reach: 50, when: "" };
+    if (!told) { return here; }
+    here.own = lower(told.wearer);
+    here.reach = told.near_metres || 50;
+    here.when = told.when || "";
+    (told.near || []).forEach(function (one) {
+      var name = lower(one.wearer);
+      if (!name || one.own || name === here.own) { return; }
+      if (here.metres[name] === undefined || one.metres < here.metres[name]) { here.metres[name] = one.metres; }
+    });
+    return here;
+  }
+
+  function awayWords(metres) { return metres < 1000 ? metres + " m away" : (metres / 1000).toFixed(1) + " km away"; }
+
+  // What a row says of where its officer was: "" when the files do not say.
+  function hereWords(here, name) {
+    var key = lower(name);
+    if (!key) { return ""; }
+    if (key === here.own) { return "this camera's own officer"; }
+    return here.metres[key] === undefined ? "" : awayWords(here.metres[key]);
+  }
+
+  function isHere(here, name) {
+    var key = lower(name);
+    return !!key && (key === here.own || (here.metres[key] !== undefined && here.metres[key] <= here.reach));
+  }
 
   // Beside its card (v1.143.0, the drawing phase-5-speakers-page-breathes.html):
   // to the right of the card on a wide screen, under it on a laptop, kept
@@ -198,7 +246,12 @@
       "<span class='hear'>" + (entry.hear || "") + "</span></div>";
   }
 
-  function build(options, data) {
+  function build(options, data, told) {
+    var here = hereOf(told || null);
+    // A pill on a row of the first two groups whose officer was here.
+    function herePill(name) {
+      return isHere(here, name) ? " <span class='pill here'>" + escape(lower(name) === here.own ? "this camera's officer" : "here, " + awayWords(here.metres[lower(name)])) + "</span>" : "";
+    }
     var box = document.createElement("div");
     box.className = "picker" + (options.compact ? " compact" : "");
     box.setAttribute("role", "dialog");
@@ -213,7 +266,7 @@
       var hear = one.samples && one.samples.length && !one.system ? "<button type='button' class='hear-one' title='Play a sample of this voice; press again for the next'>" + (window.UI && window.UI.icon ? window.UI.icon("play") : "play") + "<span class='n'>1/" + one.samples.length + "</span></button>" : "";
       key += 1;
       var facts = one.lines + (one.lines === 1 ? " line" : " lines") + (!now && options.merging && !one.system ? " \u00b7 the same person" : "");
-      return row({ name: one.name, colour: one.colour, role: one.role, system: one.system, now: now || exclude.indexOf(one.name) >= 0 || one.system, facts: facts, hear: hear }, one.system ? "" : String(key), (now ? " <span class='pill'>" + escape(options.currentPill || "has it now") + "</span>" : "") + suggestedPill(options, one.name));
+      return row({ name: one.name, colour: one.colour, role: one.role, system: one.system, now: now || exclude.indexOf(one.name) >= 0 || one.system, facts: facts, hear: hear }, one.system ? "" : String(key), (now ? " <span class='pill'>" + escape(options.currentPill || "has it now") + "</span>" : "") + suggestedPill(options, one.name) + (one.system ? "" : herePill(one.name)));
     });
     parts.push("<div class='grp'><div class='gh'>On this call</div>" + (onCall.join("") || "<div class='small muted'>No other speaker on this call yet.</div>") + "</div>");
     if (data.in_case) {
@@ -221,18 +274,43 @@
         key += 1;
         var facts = (one.recordings ? "in " + one.recordings + (one.recordings === 1 ? " recording" : " recordings") : "not heard yet") + (one.also_called && one.also_called.length ? " · also called " + one.also_called.join(", ") : "");
         var hear = one.sample ? "<button type='button' class='hear-else' title='Hear this person in another recording of the case'>" + (window.UI && window.UI.icon ? window.UI.icon("play") : "play") + " Preview</button>" : "";
-        return row({ name: one.name, colour: "", role: one.role, facts: facts, hear: hear }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
+        return row({ name: one.name, colour: "", role: one.role, facts: facts, hear: hear }, key <= 9 ? String(key) : "", suggestedPill(options, one.name) + herePill(one.name));
       });
       parts.push("<div class='grp'><div class='gh'>In this case, not yet on this call</div>" + (people.join("") || "<div class='small muted'>Everyone in the case is on this call already.</div>") + "</div>");
       // The names the cameras' own files give (Phase 12 chapter 4): the
       // wearer of a body camera, the driver of a unit; a name to take, never
       // a voice the app matched.
-      var wearers = (data.wearers || []).map(function (one) {
-        key += 1;
-        return row({ name: one.name, colour: "", facts: one.facts }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
+      // The officers who were here when the line was said come first
+      // (v1.237.0): this camera's own officer, then whoever's camera was
+      // within reach, nearest first. It orders the names and says how far;
+      // it names nobody by itself.
+      var offered = (data.wearers || []).slice();
+      var present = offered.filter(function (one) { return isHere(here, one.name); });
+      present.sort(function (a, b) {
+        var x = lower(a.name) === here.own ? -1 : here.metres[lower(a.name)];
+        var y = lower(b.name) === here.own ? -1 : here.metres[lower(b.name)];
+        return x - y;
       });
-      if (wearers.length) {
-        parts.push("<div class='grp'><div class='gh'>From the cameras' files</div>" + wearers.join("") + "</div>");
+      var elsewhere = offered.filter(function (one) { return !isHere(here, one.name); });
+      // The rest nearest first where the files say how far, then the
+      // officers they say nothing of, by name as before.
+      elsewhere.sort(function (a, b) {
+        var x = here.metres[lower(a.name)], y = here.metres[lower(b.name)];
+        if (x === undefined && y === undefined) { return 0; }
+        if (x === undefined) { return 1; }
+        if (y === undefined) { return -1; }
+        return x - y;
+      });
+      function wearerRow(one) {
+        key += 1;
+        var where = hereWords(here, one.name);
+        return row({ name: one.name, colour: "", facts: (where ? where + " \u00b7 " : "") + one.facts }, key <= 9 ? String(key) : "", suggestedPill(options, one.name));
+      }
+      if (present.length) {
+        parts.push("<div class='grp here'><div class='gh'>Here when this was said" + (here.when ? ", " + escape(here.when) : "") + "</div>" + present.map(wearerRow).join("") + "</div>");
+      }
+      if (elsewhere.length) {
+        parts.push("<div class='grp'><div class='gh'>" + (present.length ? "Elsewhere, from the cameras' files" : "From the cameras' files") + "</div>" + elsewhere.map(wearerRow).join("") + "</div>");
       }
     }
     if (options.newSpeaker) {
@@ -295,7 +373,7 @@
     close();
     return fetchOffer(options.recording).then(function (data) {
       if (data.error) { if (window.UI && window.UI.toast) { window.UI.toast(data.error, { problem: true, icon: "warning" }); } return; }
-      build(options, data);
+      return fetchHere(options, data).then(function (told) { build(options, data, told); });
     });
   }
 

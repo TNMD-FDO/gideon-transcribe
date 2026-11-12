@@ -1319,3 +1319,54 @@ def test_search_finds_what_the_cameras_files_record(person, a_case, client):
     settings_store.set_to("maps", True)
     camera_paths.remove(camera_paths.of(car), by=person)
     assert readings("lights") == [] and len(readings("activated")) == 1
+
+
+# The officers who were here come first in the speaker picker (v1.237.0) ---------------
+
+
+def test_the_cameras_file_says_whose_cameras_were_near_for_the_picker(
+    person, a_case, client
+):
+    """Whoever is talking on a body camera is its wearer or someone within
+    earshot, and the files know who that was. The file's answer for a moment
+    names whose camera this is and whose cameras were near, and the picker,
+    given a line's moment, offers those officers first. It orders and says how
+    far; it names nobody by itself."""
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_x.mp4")
+    case_chronology.place(body, dt.date(2025, 11, 6), 51603.0, by=person)
+    added(body, body_file(seconds=300, still=True), by=person)
+    # A second camera of the car's own officer, standing where the car begins.
+    second = video(person, a_case, "BWC9-1", name="BWC9-1_202511061420_y.mp4")
+    case_chronology.place(second, dt.date(2025, 11, 6), 51603.0, by=person)
+    added(second, body_file(seconds=300, still=True), by=person)
+    camera_paths.CameraPath.objects.filter(recording=second).update(wearer="Sam Roe")
+
+    told = camera_paths.where_at(car, 0.0)
+    assert told["wearer"] == "Sam Roe" and told["near_metres"] == 50
+    near = {one["title"]: one for one in told["near"]}
+    assert near["BWC2-1"]["wearer"] == "Pat Doe" and near["BWC2-1"]["own"] is False
+    assert near["BWC2-1"]["metres"] == 0
+    # The officer's own other camera is marked as theirs: nobody else is near.
+    assert near["BWC9-1"]["wearer"] == "Sam Roe" and near["BWC9-1"]["own"] is True
+    # Still never a position.
+    assert str(LAT) not in json.dumps(told) and "lat" not in json.dumps(told)
+    signed_in(client, person)
+    answer = client.get(reverse("camera-path-where", args=[car.pk]) + "?t=0").json()
+    assert answer["wearer"] == "Sam Roe" and len(answer["near"]) == 2
+
+    # The picker's script: a line's moment, the file asked once, the group.
+    static = HERE / "static"
+    picker = (static / "picker.js").read_text(encoding="utf-8")
+    assert '"/path/where?t="' in picker and 'typeof options.at !== "number"' in picker
+    assert "Here when this was said" in picker
+    assert "Elsewhere, from the cameras' files" in picker
+    assert "this camera's own officer" in picker
+    # An officer's own second camera never makes them "near" themselves.
+    assert "one.own || name === here.own" in picker
+    # Without a moment, a file or a fix the picker is built as it was.
+    assert "told && told.has_path && told.fix ? told : null" in picker
+    # The two places a line is given a speaker pass the line's own moment.
+    for script in ("viewer.js", "speakers-page.js"):
+        assert "at: segment.start," in (static / script).read_text(encoding="utf-8")

@@ -17,6 +17,32 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.237.0, 2026-11-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Naming a speaker: the officers who were there come first.
+
+- **Here when this was said.** Opened on a line of a recording whose camera
+  has a path file, the speaker picker now puts first the officers who were
+  there at that moment: the camera's own officer, then each officer whose
+  camera was within 50 metres, nearest first, with how far away each was.
+  Until now it listed every officer of the case by name, which in a large
+  case is thirty and more.
+- **The rest follow, nearest first,** under "Elsewhere, from the cameras'
+  files".
+- **A speaker already on the call, or a person already in the case,** who
+  was there carries a pill saying so.
+- **It orders and says how far; it names nobody.** The app still matches no
+  voice to an officer, and the choice stays yours. An officer's own second
+  camera never counts as someone near.
+- Where the camera had no position at that moment, the recording has no
+  path file, or a speaker is being named as a whole and not on a line, the
+  list is as it was.
+
 ## v1.236.0, 2026-11-12
 
 ```
