@@ -17,6 +17,46 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.232.0, 2026-11-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The street map with one command, and the whole United States with its
+territories in it. A running server is not touched by this release until an
+Admin runs the new command.
+
+- **`./transcribe basemap fetch`** gets the street map behind a case's Map
+  tab onto the server. Until now an Admin cut the file on a workstation:
+  fetch a tool, draw a rectangle on a website, pick a build, run the cut,
+  carry the file over. That way stays, for a server with no route out.
+- **The whole country, territories included.** The first choice is the
+  whole United States with Puerto Rico, the US Virgin Islands, Guam, the
+  Northern Mariana Islands and American Samoa: about 20 GB, measured. The
+  second is only the states and territories you name, 0.1 to 1.5 GB each,
+  by two-letter code (`CO PR GU`) or by name.
+- **It looks before it fetches.** It says whether the server reaches the
+  map's host, the newest build's date, the room on the drive and what map
+  is in place; works out the real size and says it; and stops when there
+  is not the room.
+- **The map in place stays until the new one is whole.** A fetch that
+  fails, or a line that drops, changes nothing.
+- **The Status page says what the office holds:** the areas and the day of
+  the build, beside the size and the day it was placed.
+- **Nothing changes at run time.** The app still never fetches the map or
+  anything else. The fetch is an Admin's command, it sends nothing about a
+  case or a person, and the nightly backup does not carry the map.
+- The install's opening checks name the map's host before an install, as
+  a note; the end of `bring-up` names the command while no map is in place.
+- Words: the glossary's Basemap entry, Phase 12 chapter 1 and ADR 0029 are
+  amended, since all three said the file was cut on a workstation.
+
+Proven on a workstation with Protomaps' tool itself (a real cut of Puerto
+Rico and Guam, and the command's own code fetching three territories); the
+container on a server is proven by the first fetch there.
+
 ## v1.231.0, 2026-11-10
 
 ```

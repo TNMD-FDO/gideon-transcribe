@@ -28,8 +28,11 @@
 #                             start or stop the fast lane, a second copy of the transcription
 #                             service for what must not wait behind a long job
 #   ./transcribe folders      make the app data folders, owned by the app account
-#   ./transcribe basemap FILE put the street map (a .pmtiles file cut on a workstation)
-#                             in place for the Map tab; 'basemap remove' takes it out
+#   ./transcribe basemap fetch
+#                             get the street map for the Map tab: the whole United States
+#                             with its territories, or the states and territories you name
+#   ./transcribe basemap FILE put a .pmtiles file cut on a workstation in place instead;
+#                             'basemap remove' takes the street map out
 #   ./transcribe backup-db    a dump of the database into the app data folder
 #   ./transcribe backup       the nightly job: dump, manifest, Snapshot to the store
 #   ./transcribe snapshots    the Snapshots in the repository, with their ids
@@ -1057,6 +1060,13 @@ cmd_bring_up() {
     echo "    ./transcribe restore-drill"
   fi
   echo "  Then sign in at https://$(env_value APP_HOSTNAME):$(env_value HTTPS_PORT)/ as the Local admin."
+  # Left for later (v1.232.0): the street map is not needed to see the app
+  # work, and fetching the whole country takes about half an hour. Asked
+  # without a password prompt: a hint is not worth one, so where sudo would
+  # ask, the line is simply said.
+  if ! sudo -n test -f "$(env_value APP_DATA_DIR)/maps/basemap.pmtiles" 2>/dev/null; then
+    echo "  The street map behind a case's Map tab, when you want it: ./transcribe basemap fetch"
+  fi
 }
 
 print_what_remains() {
@@ -1494,6 +1504,9 @@ DATA_GB_TO_KEEP=200
 USUAL_PORT=8443
 # The hosts an install downloads from (the guide's appendix), one of each kind.
 REACH_HOSTS="github.com ghcr.io registry-1.docker.io huggingface.co"
+# Where Protomaps publishes a street map build a day and keeps a week of
+# them: asked for by ./transcribe basemap fetch alone, never by an install.
+MAP_BUILD_HOST="build.protomaps.com"
 
 os_release_value() {
   # One value out of /etc/os-release, unquoted; nothing where there is none.
@@ -1624,11 +1637,16 @@ check_the_reach() {
   done
   if [ -z "$silent" ]; then
     pass "$(printf '%s' "$REACH_HOSTS" | sed 's/ /, /g; s/\(.*\), /\1 and /') answer from here"
-    return 0
   fi
   for host in $silent; do
     note "$host does not answer from here: $(what_a_host_is_for "$host") cannot be fetched until it does (needed at install and upgrade only; the install guide's appendix lists the hosts)"
   done
+  # The street map's host (v1.232.0) is asked about before an install only,
+  # and is never needed by one: the map is fetched by its own command, when
+  # the office wants it, and a file cut on a workstation does without it.
+  if [ ! -f "$ENV_FILE" ] && ! answers_from_here "$MAP_BUILD_HOST"; then
+    note "$MAP_BUILD_HOST does not answer from here: the street map cannot be fetched with ./transcribe basemap fetch until it does (that command only; a file cut on a workstation can be placed by hand instead)"
+  fi
 }
 
 say_whether_the_name_resolves() {
@@ -2803,28 +2821,516 @@ cmd_folders() {
   [ "$FAILURES" -eq 0 ] || exit 1
 }
 
-cmd_basemap() {
-  # The street map behind a case's Map tab (Phase 12 chapter 1): one
-  # .pmtiles file the Admin cut on a workstation with the internet, copied
-  # into the maps folder under the app's account, where Caddy serves it
-  # read-only to signed-in browsers. The app never fetches it: nothing
-  # reaches outside the office at run time. The admin guide (Maps) says how
-  # the file is cut.
+# The street map ---------------------------------------------------------------
+#
+# The street map behind a case's Map tab (Phase 12 chapter 1) is one .pmtiles
+# file under the app data folder, served read-only by Caddy to signed-in
+# browsers. It gets there one of two ways: `basemap fetch` (v1.232.0) cuts
+# the whole United States with its territories, or the states and territories
+# an Admin names, out of Protomaps' newest build and puts it in place; or an
+# Admin cuts a file on a workstation and `basemap FILE` places it. The app
+# itself never fetches it: nothing reaches outside the office at run time.
+
+# Protomaps' own cutting tool, pinned like every other image. It is pulled
+# when a fetch runs, runs once, and is no part of the running stack.
+MAP_TOOL_IMAGE="protomaps/go-pmtiles:v1.31.2@sha256:06574f01f55a78f78f887bc7ebf729a5c093c0d6e17d9876300cfcb0758b59d3"
+# Each rectangle is widened by this many degrees (about ten kilometres), so
+# a path that crosses a state line or the border still has its streets.
+MAP_MARGIN="0.1"
+# What a fetch must leave free where the map is kept, beyond its own size.
+MAP_SPARE_GB=5
+# The whole country as measured in November 2026, for the menu's line; the
+# real figure is worked out from the build before anything is fetched.
+WHOLE_COUNTRY_GB=20
+# The 48 adjoining states and the District of Columbia as one rectangle.
+LOWER_48_BOX="-124.77,24.52,-66.94,49.39"
+# The states and territories that stand apart from it, each by its own.
+AREAS_APART="AK HI PR VI GU MP AS"
+
+map_areas() {
+  # The 50 states, the District of Columbia and the five territories:
+  # code|name|rectangles|other names. A rectangle is west,south,east,north
+  # in degrees, from the Census Bureau's boundaries rounded outward. Alaska
+  # has two, since its last islands lie past the date line and no rectangle
+  # crosses it.
+  cat <<'AREAS'
+AK|Alaska|-180.00,51.21,-129.97,71.37 172.30,51.21,180.00,53.20|
+AL|Alabama|-88.48,30.22,-84.88,35.01|
+AR|Arkansas|-94.62,33.00,-89.64,36.50|
+AS|American Samoa|-171.09,-14.55,-168.14,-11.04|
+AZ|Arizona|-114.82,31.33,-109.04,37.01|
+CA|California|-124.41,32.53,-114.13,42.01|
+CO|Colorado|-109.07,36.99,-102.04,41.01|
+CT|Connecticut|-73.73,40.98,-71.78,42.06|
+DC|District of Columbia|-77.12,38.79,-76.90,39.00|Washington DC;D.C.
+DE|Delaware|-75.79,38.45,-75.04,39.84|
+FL|Florida|-87.64,24.52,-80.03,31.01|
+GA|Georgia|-85.61,30.35,-80.83,35.01|
+GU|Guam|144.61,13.23,144.96,13.66|
+HI|Hawaii|-178.34,18.91,-154.80,28.41|
+IA|Iowa|-96.64,40.37,-90.14,43.51|
+ID|Idaho|-117.25,41.98,-111.04,49.01|
+IL|Illinois|-91.52,36.97,-87.49,42.51|
+IN|Indiana|-88.10,37.77,-84.78,41.77|
+KS|Kansas|-102.06,36.99,-94.58,40.01|
+KY|Kentucky|-89.58,36.49,-81.96,39.15|
+LA|Louisiana|-94.05,28.92,-88.81,33.02|
+MA|Massachusetts|-73.51,41.23,-69.92,42.89|
+MD|Maryland|-79.49,37.91,-75.04,39.73|
+ME|Maine|-71.09,42.97,-66.94,47.46|
+MI|Michigan|-90.42,41.69,-82.41,48.24|
+MN|Minnesota|-97.24,43.49,-89.49,49.39|
+MO|Missouri|-95.78,35.99,-89.09,40.62|
+MP|Northern Mariana Islands|144.88,14.11,146.07,20.56|Northern Marianas;Commonwealth of the Northern Mariana Islands;CNMI
+MS|Mississippi|-91.66,30.17,-88.09,35.00|
+MT|Montana|-116.06,44.35,-104.03,49.01|
+NC|North Carolina|-84.33,33.84,-75.46,36.59|
+ND|North Dakota|-104.05,45.93,-96.55,49.01|
+NE|Nebraska|-104.06,39.99,-95.30,43.01|
+NH|New Hampshire|-72.56,42.69,-70.61,45.31|
+NJ|New Jersey|-75.56,38.92,-73.89,41.36|
+NM|New Mexico|-109.06,31.33,-103.00,37.01|
+NV|Nevada|-120.01,35.00,-114.03,42.01|
+NY|New York|-79.77,40.49,-71.85,45.02|
+OH|Ohio|-84.83,38.40,-80.51,41.98|
+OK|Oklahoma|-103.01,33.61,-94.43,37.01|
+OR|Oregon|-124.57,41.99,-116.46,46.30|
+PA|Pennsylvania|-80.52,39.71,-74.68,42.27|
+PR|Puerto Rico|-67.95,17.88,-65.22,18.52|
+RI|Rhode Island|-71.87,41.14,-71.12,42.02|
+SC|South Carolina|-83.36,32.03,-78.54,35.22|
+SD|South Dakota|-104.06,42.47,-96.43,45.95|
+TN|Tennessee|-90.32,34.98,-81.64,36.68|
+TX|Texas|-106.65,25.83,-93.50,36.51|
+UT|Utah|-114.06,36.99,-109.04,42.01|
+VA|Virginia|-83.68,36.54,-75.24,39.47|
+VI|US Virgin Islands|-65.09,17.67,-64.56,18.42|Virgin Islands;U.S. Virgin Islands;United States Virgin Islands;USVI
+VT|Vermont|-73.44,42.72,-71.46,45.02|
+WA|Washington|-124.77,45.54,-116.91,49.01|
+WI|Wisconsin|-92.89,42.49,-86.80,47.09|
+WV|West Virginia|-82.65,37.20,-77.71,40.64|
+WY|Wyoming|-111.06,40.99,-104.05,45.01|
+AREAS
+}
+
+area_line() {
+  # The table's line for a code or a name, in any case, with or without a
+  # leading "the"; nothing when there is no such state or territory. The
+  # whole country answers to US.
+  local want
+  want="$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]' | sed 's/^ *//; s/ *$//; s/  */ /g; s/^THE //')"
+  [ -n "$want" ] || return 0
+  case "$want" in
+    US | USA | "UNITED STATES" | "WHOLE UNITED STATES" | "WHOLE COUNTRY")
+      printf 'US|whole United States and its territories||\n'
+      return 0
+      ;;
+  esac
+  map_areas | awk -F'|' -v want="$want" '
+    !found {
+      hit = (toupper($1) == want || toupper($2) == want)
+      n = split(toupper($4), other, ";")
+      for (i = 1; i <= n; i++) if (other[i] == want) hit = 1
+      if (hit) { print; found = 1 }
+    }'
+}
+
+area_name() {
+  # A code's name as it reads in a sentence.
+  local name
+  name="$(area_line "$1" | cut -d'|' -f2)"
+  case "$1" in DC | VI | MP | US) name="the $name" ;; esac
+  printf '%s' "$name"
+}
+
+areas_in_words() {
+  # "Colorado, Puerto Rico and Guam" from CO PR GU.
+  local code words="" count=0 total=$#
+  for code in "$@"; do
+    count=$((count + 1))
+    if [ "$count" -eq 1 ]; then
+      words="$(area_name "$code")"
+    elif [ "$count" -eq "$total" ]; then
+      words="$words and $(area_name "$code")"
+    else
+      words="$words, $(area_name "$code")"
+    fi
+  done
+  printf '%s' "$words"
+}
+
+areas_named() {
+  # What was typed, as the table's codes, each once and in the order typed.
+  # Commas separate names; without one, a line that is itself a name is one
+  # area, and otherwise spaces separate (CO PR GU). The whole country takes
+  # the place of anything named beside it. A word that is no state or
+  # territory fails, and the words that were not known are what is printed.
+  local typed="$1" part word line codes="" unknown="" words
+  while IFS= read -r part; do
+    line="$(area_line "$part")"
+    if [ -n "$line" ]; then
+      codes="$codes ${line%%|*}"
+      continue
+    fi
+    words=()
+    read -r -a words <<<"$part" || true
+    for word in ${words[@]+"${words[@]}"}; do
+      line="$(area_line "$word")"
+      if [ -n "$line" ]; then
+        codes="$codes ${line%%|*}"
+      else
+        unknown="$unknown $word"
+      fi
+    done
+  done <<<"$(printf '%s' "$typed" | tr ',;' '\n\n')"
+  if [ -n "$unknown" ]; then
+    printf '%s' "${unknown# }"
+    return 1
+  fi
+  case " $codes " in
+    *" US "*)
+      printf 'US'
+      return 0
+      ;;
+  esac
+  # shellcheck disable=SC2086
+  printf '%s\n' $codes | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/ $//'
+}
+
+area_boxes() {
+  # The rectangles of the areas named by code, one "west,south,east,north"
+  # a line. The whole country is the lower 48 as one rectangle and each
+  # state and territory that stands apart by its own.
+  local code
+  for code in "$@"; do
+    if [ "$code" = "US" ]; then
+      printf '%s\n' "$LOWER_48_BOX"
+      # shellcheck disable=SC2086
+      area_boxes $AREAS_APART
+      continue
+    fi
+    area_line "$code" | cut -d'|' -f3 | tr ' ' '\n'
+  done
+}
+
+region_of() {
+  # The rectangles on stdin as the region file the tool reads: one GeoJSON
+  # polygon each, widened by the margin and kept inside the globe.
+  LC_ALL=C awk -F',' -v m="$MAP_MARGIN" '
+    BEGIN { printf "{\"type\":\"FeatureCollection\",\"features\":[" }
+    NF == 4 {
+      w = $1 - m; s = $2 - m; e = $3 + m; n = $4 + m
+      if (w < -180) w = -180
+      if (e > 180) e = 180
+      printf "%s{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[%.2f,%.2f],[%.2f,%.2f],[%.2f,%.2f],[%.2f,%.2f],[%.2f,%.2f]]]}}", (count++ ? "," : ""), w, n, e, n, e, s, w, s, w, n
+    }
+    END { print "]}" }'
+}
+
+build_answers() {
+  # Whether the build of a day (YYYYMMDD) is there: its first bytes answer.
+  local code
+  code="$(curl -s -o /dev/null --connect-timeout 8 --max-time 20 -r 0-6 -w '%{http_code}' "https://$MAP_BUILD_HOST/$1.pmtiles" 2>/dev/null || true)"
+  [ "$code" = "206" ] || [ "$code" = "200" ]
+}
+
+newest_build() {
+  # The newest of the builds Protomaps keeps, a week of them: today's by
+  # the world's clock if it is there yet, else the day before, and so on.
+  local back day
+  for back in 0 1 2 3 4 5 6 7; do
+    day="$(date -u -d "$back days ago" +%Y%m%d)"
+    if build_answers "$day"; then
+      printf '%s' "$day"
+      return 0
+    fi
+  done
+  return 1
+}
+
+build_in_words() {
+  # 20261111, or 2026-11-11, as "11 November 2026".
+  LC_ALL=C date -d "$1" '+%-d %B %Y' 2>/dev/null || printf '%s' "$1"
+}
+
+map_note_value() {
+  # One value out of the note a fetch leaves beside the street map (what it
+  # holds, and the build it was cut from); nothing when there is no note.
+  sudo cat "$1" 2>/dev/null | sed -n "s/^ *\"$2\": *\"\(.*\)\",\{0,1\}\$/\1/p" | sed -n '1p' || true
+}
+
+write_the_map_note() {
+  # the note file, the codes, the build's day
+  local note="$1" codes="$2" build="$3" made
+  made="$(mktemp)"
+  {
+    echo "{"
+    echo "  \"areas\": \"$codes\","
+    # shellcheck disable=SC2086
+    echo "  \"words\": \"$(areas_in_words $codes)\","
+    echo "  \"build\": \"${build:0:4}-${build:4:2}-${build:6:2}\""
+    echo "}"
+  } >"$made"
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0640 "$made" "$note"
+  rm -f "$made"
+}
+
+size_said() {
+  # "20 GB" out of the tool's closing line, "... for an archive size of 20 GB".
+  sed -n 's/.*archive size of \([0-9.]* [kMGTP]*B\).*/\1/p' | tail -n 1
+}
+
+whole_gb() {
+  # A size as the tool says it, in whole gigabytes rounded up: "83 MB" is 1.
+  LC_ALL=C awk '{
+    gb = ($2 == "GB") ? $1 : ($2 == "TB") ? $1 * 1000 : ($2 == "MB") ? $1 / 1000 : 0.001
+    printf "%d", (gb == int(gb)) ? gb : int(gb) + 1
+  }' <<<"$1"
+}
+
+map_tool() {
+  # Protomaps' cutting tool, run once as a container under the app's account
+  # and gone again. The first argument is the folder it sees as /work; the
+  # rest are the tool's own.
+  local work="$1" tty=""
+  shift
+  if [ -t 1 ]; then tty="-t"; fi
+  # shellcheck disable=SC2086
+  docker run --rm $tty \
+    --user "$(env_value APP_UID):$(env_value APP_GID)" \
+    -v "$work:/work" \
+    "$MAP_TOOL_IMAGE" "$@"
+}
+
+choose_the_areas() {
+  # The menu: what the office holds again, the whole country, or the states
+  # and territories an Admin names. Prints the codes chosen; fails for "not
+  # now". The menu itself goes to stderr, as every question does.
+  local held="$1" free="$2" lines=() acts=() usual=1 answer typed codes n=0
+  if [ -n "$held" ]; then
+    # shellcheck disable=SC2086
+    lines+=("The same again, from the newest build: $(areas_in_words $held)")
+    acts+=(same)
+  fi
+  if [ "$held" != "US" ]; then
+    lines+=("The whole United States and its territories, about $WHOLE_COUNTRY_GB GB")
+    acts+=(whole)
+  fi
+  lines+=("Only the states and territories you name, 0.1 to 1.5 GB each")
+  acts+=(named)
+  lines+=("Not now")
+  acts+=(none)
+  # The whole country is the usual answer where it leaves the app its room.
+  if [ -z "$held" ] && [ -n "$free" ] && [ $((free - WHOLE_COUNTRY_GB)) -lt "$DATA_GB_TO_KEEP" ]; then
+    usual=2
+  fi
+  while [ "$n" -lt "${#lines[@]}" ]; do
+    printf '  %d  %s\n' "$((n + 1))" "${lines[$n]}" >&2
+    if [ "${acts[$n]}" = "whole" ]; then
+      echo "       the 50 states and the District of Columbia, Puerto Rico, the US Virgin" >&2
+      echo "       Islands, Guam, the Northern Mariana Islands and American Samoa" >&2
+    fi
+    n=$((n + 1))
+  done
+  echo >&2
+  while true; do
+    answer="$(ask "Which?" "$usual")"
+    case "$answer" in
+      "" | *[!0-9]*) ;;
+      *)
+        if [ "$answer" -ge 1 ] && [ "$answer" -le "${#acts[@]}" ]; then break; fi
+        ;;
+    esac
+    echo "  Please answer with a number from 1 to ${#acts[@]}." >&2
+  done
+  case "${acts[$((answer - 1))]}" in
+    same) printf '%s' "$held" ;;
+    whole) printf 'US' ;;
+    none) return 1 ;;
+    named)
+      while true; do
+        typed="$(ask "Which states and territories? Two-letter codes with spaces between (CO PR GU), or names with commas between" "")"
+        [ -n "$typed" ] || return 1
+        if codes="$(areas_named "$typed")" && [ -n "$codes" ]; then
+          printf '%s' "$codes"
+          return 0
+        fi
+        echo "  There is no state or territory called: $codes. The codes are the two-letter postal ones; PR is Puerto Rico, VI the US Virgin Islands, GU Guam, MP the Northern Mariana Islands and AS American Samoa." >&2
+      done
+      ;;
+  esac
+}
+
+basemap_fetch() {
+  # The street map with one command (v1.232.0). It looks first, shows the
+  # choices, works out the real size from the build before fetching a byte
+  # of map, and cuts into a file beside the map in place, which stays until
+  # the new one is whole.
   need_env
+  local data maps target note fetching region made free build held held_build codes="" said size size_gb usual=yes
+  data="$(env_value APP_DATA_DIR)"
+  maps="$data/maps"
+  target="$maps/basemap.pmtiles"
+  note="$maps/basemap.json"
+  fetching="$maps/.basemap.fetching.pmtiles"
+  region="$maps/.region.geojson"
+
+  # Areas given with the command are judged before anything is looked at;
+  # each word after `fetch` is an area, so a name of two words is quoted.
+  if [ $# -gt 0 ]; then
+    if ! codes="$(areas_named "$(IFS=,; printf '%s' "$*")")" || [ -z "$codes" ]; then
+      red "There is no state or territory called: ${codes:-(nothing)}. The codes are the two-letter postal ones (CO PR GU), and US is the whole country."
+      exit 1
+    fi
+  fi
+
+  echo "The street map for the Map tab"
+  echo "  A public map (OpenStreetMap, built by Protomaps), fetched now and never again"
+  echo "  unless you run this. Nothing about a case or a person is sent; its host sees"
+  echo "  only that this server read part of a public map."
+  echo
+  if ! answers_from_here "$MAP_BUILD_HOST"; then
+    red "  stop  this server cannot reach $MAP_BUILD_HOST"
+    echo "        The street map is fetched from there. Ask whoever looks after the"
+    echo "        firewall to allow it for the fetch, or cut the file on a workstation"
+    echo "        and place it by hand: the admin guide, Maps, says how."
+    exit 1
+  fi
+  pass "this server can reach $MAP_BUILD_HOST"
+  build="$(newest_build || true)"
+  if [ -z "$build" ]; then
+    red "  stop  $MAP_BUILD_HOST answers, but none of the last week's builds was found there"
+    echo "        Try again later. The admin guide, Maps, has the way by hand."
+    exit 1
+  fi
+  pass "the newest build is $(build_in_words "$build")"
+  make_the_data_folders
+  free="$(folder_gb_free "$maps" || true)"
+  pass "the map folder is $maps, with ${free:-?} GB free"
+  held="$(map_note_value "$note" areas)"
+  held_build="$(map_note_value "$note" build)"
+  # A note whose areas this script no longer knows is no note.
+  if [ -n "$held" ] && ! areas_named "$held" >/dev/null; then held=""; fi
+  if ! sudo test -f "$target"; then
+    held=""
+    echo "  now   no street map is in place"
+  elif [ -n "$held" ]; then
+    # shellcheck disable=SC2086
+    echo "  now   $(areas_in_words $held), the build of $(build_in_words "$held_build")"
+  else
+    echo "  now   a street map placed by hand ($(sudo du -h "$target" | cut -f1)); a fetch takes its place"
+  fi
+  echo
+
+  if [ -z "$codes" ]; then
+    if ! codes="$(choose_the_areas "$held" "$free")"; then
+      echo "Nothing was changed."
+      exit 0
+    fi
+  fi
+
+  # What a fetch that was cut short left behind is cleared before another.
+  sudo rm -f "$fetching" "$region"
+  made="$(mktemp)"
+  # shellcheck disable=SC2086
+  area_boxes $codes | region_of >"$made"
+  sudo install -o "$APP_USER" -g "$APP_USER" -m 0640 "$made" "$region"
+  rm -f "$made"
+
+  echo
+  echo "Working out the size from the build's own index (under a minute)."
+  said="$(map_tool "$maps" extract "https://$MAP_BUILD_HOST/$build.pmtiles" /work/.basemap.fetching.pmtiles --region=/work/.region.geojson --dry-run 2>&1 || true)"
+  size="$(printf '%s\n' "$said" | size_said)"
+  if [ -z "$size" ]; then
+    sudo rm -f "$fetching" "$region"
+    red "  stop  the size could not be worked out. The tool said:"
+    printf '%s\n' "$said" | tail -n 5 | sed 's/^/        /'
+    echo "        Nothing was changed."
+    exit 1
+  fi
+  size_gb="$(whole_gb "$size")"
+  # shellcheck disable=SC2086
+  echo "  $(areas_in_words $codes): $size"
+  if [ -n "$free" ] && [ $((free - size_gb)) -lt "$MAP_SPARE_GB" ]; then
+    sudo rm -f "$fetching" "$region"
+    red "  stop  the map folder has $free GB free, and this needs $size with $MAP_SPARE_GB GB to spare"
+    echo "        Name fewer areas, or make room. Nothing was changed."
+    exit 1
+  fi
+  if [ -n "$free" ] && [ $((free - size_gb)) -lt "$DATA_GB_TO_KEEP" ]; then
+    note "this would leave the app data folder about $((free - size_gb)) GB free; the app keeps $DATA_GB_TO_KEEP GB free as shipped and pauses uploads when it cannot"
+    usual=no
+  fi
+  if ! ask_yes_no "Fetch $size?" "$usual"; then
+    sudo rm -f "$fetching" "$region"
+    echo "Nothing was changed."
+    exit 0
+  fi
+
+  echo
+  if [ "$codes" = "US" ]; then
+    echo "Fetching $size. About half an hour on a 100 megabit line; it is safe to leave."
+  else
+    echo "Fetching $size."
+  fi
+  if ! map_tool "$maps" extract "https://$MAP_BUILD_HOST/$build.pmtiles" /work/.basemap.fetching.pmtiles --region=/work/.region.geojson; then
+    sudo rm -f "$fetching" "$region"
+    red "  stop  the fetch ended early"
+    echo "        Nothing was changed: what was in place before is still there."
+    echo "        Run the command again; it starts the fetch afresh."
+    exit 1
+  fi
+  # The tool writes the file's opening bytes last, so a file cut short does
+  # not begin as a map file does.
+  if [ "$(sudo head -c 7 "$fetching" 2>/dev/null | tr -d '\0')" != "PMTiles" ]; then
+    sudo rm -f "$fetching" "$region"
+    red "  stop  what was fetched is not a whole map file"
+    echo "        Nothing was changed: what was in place before is still there."
+    echo "        Run the command again; it starts the fetch afresh."
+    exit 1
+  fi
+  sudo chown "$APP_USER:$APP_USER" "$fetching"
+  sudo chmod 0640 "$fetching"
+  sudo mv -f "$fetching" "$target"
+  sudo rm -f "$region"
+  write_the_map_note "$note" "$codes" "$build"
+  echo
+  # shellcheck disable=SC2086
+  green "The street map is in place: $(areas_in_words $codes), $(sudo du -h "$target" | cut -f1), the build of $(build_in_words "$build")."
+  echo "  Open a case's Map tab to see it; the Status page says what the office holds."
+  echo "  To refresh it later, run this again."
+}
+
+cmd_basemap() {
+  # `fetch` gets the street map with one command; a file an Admin cut on a
+  # workstation is placed by its path; `remove` takes the map out. The admin
+  # guide (Maps) has all three.
   local data
+  case "${1:-}" in
+    fetch)
+      shift
+      basemap_fetch "$@"
+      return 0
+      ;;
+  esac
+  need_env
   data="$(env_value APP_DATA_DIR)"
   local target="$data/maps/basemap.pmtiles"
+  local note="$data/maps/basemap.json"
   case "${1:-}" in
     remove)
       if sudo test -f "$target"; then
-        sudo rm -f "$target"
+        sudo rm -f "$target" "$note"
         green "The street map was removed. The Map tab draws its paths on plain ground now."
       else
         amber "There is no street map in place ($target)."
       fi
       ;;
     "" | -h | --help)
-      red "basemap takes the file to place, or 'remove': ./transcribe basemap /path/to/region.pmtiles"
+      red "basemap takes 'fetch', a file to place, or 'remove': ./transcribe basemap fetch"
+      echo "  ./transcribe basemap fetch                    get the street map with one command"
+      echo "  ./transcribe basemap /path/to/region.pmtiles  place a file cut on a workstation"
+      echo "  ./transcribe basemap remove                   take the street map out"
       exit 1
       ;;
     *)
@@ -2841,6 +3347,8 @@ cmd_basemap() {
       fi
       make_the_data_folders
       sudo install -o "$APP_USER" -g "$APP_USER" -m 0640 "$file" "$target"
+      # A file placed by hand is not what a fetch's note describes.
+      sudo rm -f "$note"
       green "The street map is in place: $target ($(du -h "$file" | cut -f1))."
       echo "  Open a case's Map tab to see it; the Status page's Maps line says it is installed."
       ;;

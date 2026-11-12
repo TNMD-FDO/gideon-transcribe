@@ -638,7 +638,7 @@ A small window on the Map, playing one camera's video at the clock's moment, mut
 _Avoid_: pop-out, mini-player, thumbnail, picture-in-picture, PiP
 
 **Basemap**:
-The street map behind the Paths: one file of OpenStreetMap-based tiles for the office's own region, cut once on a workstation and placed on the server with `./transcribe basemap`, served to signed-in browsers by the office's own server and never fetched from outside. Without it the Map tab draws its Paths on plain ground and says so. Phase 12 chapter 1.
+The street map behind the Paths: one file of OpenStreetMap-based tiles on the office's own server, holding the whole United States with its territories or the states and territories the office named. An Admin fetches it with one command on the server, `./transcribe basemap fetch` (v1.232.0), or cuts a file on a workstation and places it with `./transcribe basemap FILE`. It is served to signed-in browsers by the office's own server; the app itself never fetches it, or anything else, from outside. Without it the Map tab draws its Paths on plain ground and says so. Phase 12 chapter 1.
 _Avoid_: tiles (on a page), tile server, online map, Google Maps, satellite
 
 **Proposed events tab**:

@@ -83,3 +83,31 @@ with it; the waiting file is not a Path and has no readings, so nothing
 that reads paths (the map, the chat, the memo, the comparison, the Speakers
 page) can see it. Add path files moved to the case's head for the same
 reason: a path file is the case's input, not the map's.
+
+## Amendment, 2026-11-12 (Phase 12 chapter 1, v1.232.0)
+
+The street map may be fetched on the server. The decision above said the
+Admin cuts a region once on a workstation; offices across the whole United
+States, the territories among them, are to use the app, and five steps on
+two computers with a rectangle to draw is the wrong way to ask each of them
+for a map. `./transcribe basemap fetch` cuts the whole country with its
+territories, or the states and territories an Admin names, out of the
+newest Protomaps build with Protomaps' own tool, on the server.
+
+What stands: the map is one file the office holds, served by its own
+server from the third read-only root; nothing on the Map tab reaches
+outside the office; the app never fetches the map, and without one the tab
+draws on plain ground. The fetch is an Admin's command at a terminal, like
+an upgrade, and the way by hand remains for a server with no route out.
+
+What changes, and what it costs:
+
+- The file may be about 20 GB, not a few hundred megabytes. It is served
+  by byte ranges either way, so a browser reads no more than before.
+- One more outside host is reached, at the moment of the command only:
+  `build.protomaps.com`, and Docker Hub once for the tool.
+- The build is the one input the app cannot pin by digest, since a new
+  one is made each day and none is kept past a week. Its date is recorded
+  beside the map and shown on the Status page. The tool is pinned by tag
+  and digest and is no part of the running stack.
+- The backup does not carry the map; it is fetched again after a restore.

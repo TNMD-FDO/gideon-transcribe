@@ -209,8 +209,14 @@ def test_the_local_admin_takes_its_password_from_a_pipe(monkeypatch):
 def test_the_ledger_answers_the_directions_by_number():
     ledger = (HERE / "docs" / "box-ledger.md").read_text(encoding="utf-8")
     # The rules version moves at every merge; the entries below are ours.
-    assert "**Rules version:** 2026-10-27.1" in ledger
+    assert "**Rules version:** 2026-11-12.1" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.232.0 (the street map fetched on the server" in ours
+    assert "Your **slice-3-2 ticket 57**: 1. Taken as a direction" in ours
+    assert "Your **v0.3.189**: 1. Received, with thanks for the form." in ours
+    # The fetch is announced, and its tool is in the Images row (v1.232.0).
+    assert "`./transcribe basemap fetch` for the whole country, from v1.232.0" in ledger
+    assert "`protomaps/go-pmtiles` pinned by tag and digest" in ledger
     assert "at v1.160.2 (the fourth container's first day on the server" in ours
     assert "Line 1 of your v0.3.188, answered with a finding" in ours
     assert "at v1.160.0 (a fourth image and a third container of ours on GPU 1" in ours

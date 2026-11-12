@@ -78,7 +78,32 @@ The **Documents** page of the settings turns the police report beside the camera
 
 **Maps** on the Features page (shipped On, needs Folder management) gives every case a **Map** tab that draws each camera's path from the path file beside its video (`.vtt`; the user guide's "The Map tab" says what it holds and how files are added). Off hides the tab, the path endpoints and the street map; files already added stay with their recordings and come back when it is turned on. Nothing about the paths needs configuring and nothing leaves the building: the drawing library is in the app image, and the file is read by the app itself. A path file's positions, the wearer's name and the unit are content: they are never in the audit log, which records only that a file was added, replaced or removed, its kind, its counts and whether its name matched.
 
-**The street map** is one file the office holds, and without it the tab draws the paths on plain ground and says so. The app never fetches a map: you cut a region of the free OpenStreetMap-based builds once on a workstation that has the internet, and place it on the server. On the workstation: fetch the `pmtiles` tool (https://github.com/protomaps/go-pmtiles/releases, one file, no install), find your region's bounding box at http://bboxfinder.com/ (draw a rectangle; copy the MIN_LON,MIN_LAT,MAX_LON,MAX_LAT line), pick a build at https://maps.protomaps.com/builds/, and run:
+**The street map** is one file the office holds, and without it the tab draws the paths on plain ground and says so. The app never fetches a map by itself. An Admin fetches it, with one command on the server:
+
+```bash
+./transcribe basemap fetch
+```
+
+It looks first and says what it found: whether the server can reach `build.protomaps.com` (the free OpenStreetMap-based builds, a new one each day), the newest build's date, the room in the map folder, and what street map is in place now. Then it offers:
+
+| The choice | What it holds | Size |
+|---|---|---|
+| **The whole United States and its territories** | the 50 states and the District of Columbia, Puerto Rico, the US Virgin Islands, Guam, the Northern Mariana Islands and American Samoa | about 20 GB |
+| **Only the states and territories you name** | what you type: two-letter codes with spaces between (`CO PR GU`), or names with commas between (`Colorado, Puerto Rico`) | 0.1 to 1.5 GB each |
+
+The whole country is the usual answer where the drive has the room, since nobody then has to know where a case might wander. A territory is named the same way as a state, and all five are always inside the whole country: together they are under a tenth of a gigabyte.
+
+Before it fetches anything it works out the real size from the build and says it. It stops when the map folder has not the room for that with 5 GB to spare, and when the fetch would leave the app data folder under the free space the app keeps (200 GB as shipped, below which uploads pause) it says so and its usual answer becomes no. Then it fetches, about half an hour for the whole country on a 100 megabit line, checks that what came is a whole map file, and puts it in place. The street map that was there stays until the new one is whole: a fetch that fails, or a line that drops, changes nothing, and the command is run again.
+
+The areas can be given with the command, for a script or a second server: `./transcribe basemap fetch US` is the whole country, and `./transcribe basemap fetch CO PR GU` three areas.
+
+Each area is taken as a rectangle with a margin of about ten kilometres, so a path that crosses a state line or the border still has its streets. The whole country is the lower 48 states as one rectangle, and Alaska, Hawaii and each territory by its own; Alaska has two, since its last islands lie past the date line.
+
+**What the fetch sends.** Nothing about a case, a recording or a person. The map's host sees what any download shows it: the server's internet address, and which parts of a public map were read. It is done by Protomaps' own cutting tool, run once as a container (pinned by tag and digest, pulled from Docker Hub) under the app's account, seeing only the map folder, and gone when it ends. After that the app never reaches outside for the map.
+
+**To refresh the map**, run the command again. It says what the office holds and the build it came from, and offers the same areas from the newest build first. Nothing refreshes by itself.
+
+**With no route to that host**, or for a map of your own cutting, cut the file on a workstation that has the internet and place it by hand. On the workstation: fetch the `pmtiles` tool (https://github.com/protomaps/go-pmtiles/releases, one file, no install), find your region's bounding box at http://bboxfinder.com/ (draw a rectangle; copy the MIN_LON,MIN_LAT,MAX_LON,MAX_LAT line), pick a build at https://maps.protomaps.com/builds/, and run:
 
 ```bash
 pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles basemap.pmtiles --bbox=MIN_LON,MIN_LAT,MAX_LON,MAX_LAT
@@ -90,7 +115,11 @@ It downloads only the region. A county at full detail is tens to a few hundred m
 ./transcribe basemap /path/to/basemap.pmtiles
 ```
 
-It checks that the file is a map file, puts it under the app data folder as the app's account, and says so; the Map tab draws the streets from then on, and the **Status page** (Storage and workspaces) says "Street map: installed, 180 MB, placed 2 Nov 2026". `./transcribe basemap remove` takes it out. To update the map, cut a newer build and place it again. The map shows "© OpenStreetMap contributors · Protomaps", which the data's licence asks for. `docs/research/basemap.md` has the details.
+It checks that the file is a map file, puts it under the app data folder as the app's account, and says so.
+
+Either way the Map tab draws the streets from then on, and the **Status page** (Storage and workspaces) says what the office holds: "Street map: installed, 19.0 GB, the whole United States and its territories, build of 11 Nov 2026, placed 12 Nov 2026" for a fetched map, and the size and the day alone for a file placed by hand, since the app cannot know what such a file covers. The page counts a gigabyte as the app does everywhere (1,024 megabytes), so the whole country reads a little under the 20 GB the command says. `./transcribe basemap remove` takes the map out. The map shows "© OpenStreetMap contributors · Protomaps", which the data's licence asks for. `docs/research/basemap.md` has the details and the measured sizes.
+
+The nightly backup does not copy the street map: it is a public map, not the office's work, and after a restore the same command fetches it again.
 
 The server serves the file to signed-in people only, by byte ranges, and lets a browser keep what it read for a week; it is a public map of the region and not content, so no audit row is written for it. `./caddy/check-ranges.sh` proves the route serves ranges, as it does for recordings.
 

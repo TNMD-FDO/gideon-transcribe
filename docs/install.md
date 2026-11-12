@@ -57,6 +57,7 @@ The shortest way from a fresh server to the app in a browser: the server alone, 
 | Recordings made in the app should not wait behind a long job | `./transcribe add fast-lane` | The fast lane, section 3 |
 | There is somewhere off the server to keep a nightly copy | `./transcribe add backup` | The backup, section 3 |
 | The app should send mail | `./transcribe add mail` | The mail, section 3 |
+| A case's Map tab should show streets under the cameras' paths | `./transcribe basemap fetch` | The street map, section 3 |
 
 `./transcribe pieces` lists what is on, off and not installed at any time.
 
@@ -500,13 +501,17 @@ Leave the relay empty to run without mail. The install says what that loses: no 
 
 ### The street map
 
-The Map tab on a case (v1.187.0) draws the cameras' paths on a street map when one is installed, and on plain ground otherwise. The map is one file of the office's own region, cut once on a workstation with the internet and placed on the server; the server never fetches it. The admin guide's **Maps** section gives the three steps; on the server the one command is:
+The Map tab on a case (v1.187.0) draws the cameras' paths on a street map when one is installed, and on plain ground otherwise. The map is one file on the office's own server, and one command fetches it (v1.232.0):
 
 ```bash
-./transcribe basemap /path/to/basemap.pmtiles
+./transcribe basemap fetch
 ```
 
-It goes under `APP_DATA_DIR/maps/` (made by `./transcribe folders`), and the Status page says it is there.
+It offers the whole United States with its territories (about 20 GB; Puerto Rico, the US Virgin Islands, Guam, the Northern Mariana Islands and American Samoa are all in it) or only the states and territories you name (0.1 to 1.5 GB each). It says the real size before it fetches, and the map already in place stays until the new one is whole. The install does not run it for you: the app works without it, and the whole country is about half an hour of downloading. The app itself never fetches the map; this command is an Admin's, run when the office wants it and again to refresh it.
+
+It needs a road to one more host, `build.protomaps.com` (the appendix). Where there is none, or for a map of your own cutting, the admin guide's **Maps** section gives the way by hand: a file cut on a workstation and placed with `./transcribe basemap /path/to/basemap.pmtiles`.
+
+The file goes under `APP_DATA_DIR/maps/` (made by `./transcribe folders`), and the Status page says what the office holds.
 
 ## 4. Check
 
@@ -588,6 +593,7 @@ The last line is either `Everything checked passed.` or a count of what did not.
 | `N GB free where Docker keeps its images; the guide asks for 100 GB there` | A note: enough to build once, not enough to keep two tags and the build cache comfortably. | The same, when convenient. |
 | `no drive apart from the operating system's was found` | A note: the server has one filesystem. Recordings fill a drive, and a full operating system drive stops the whole server. | Add a data drive and mount it before the install, or go on and move the data folder later. The install asks again at the data-folder question. |
 | `port 8443 is already in use on this server` | A note before an install: something else listens there. | Answer the install's port question with another port, or stop what holds it (`sudo ss -ltnp` shows what). |
+| `build.protomaps.com does not answer from here: the street map cannot be fetched` | A note before an install only, and never needed by one: the street map is fetched by its own command when the office wants it. | Open the road for `./transcribe basemap fetch`, or leave it shut and place a file cut on a workstation by hand (the admin guide, Maps). |
 | `<host> does not answer from here` | A note: the server cannot reach one of the hosts it downloads from (the appendix). The line says what cannot be fetched. | Open the road in the office's firewall or proxy for the install and for upgrades; nothing is needed from those hosts at run time. |
 | `<name> is not in DNS yet, as seen from this server.` | A note right after the address is typed. | Create the record pointing at the server's LAN address before anybody tries the name (section 2, the certificate request, step 5). The install goes on either way. |
 | `There is no certificate in tls/ yet` from `bring-up` | The stack cannot start without one. | Put the office's `cert.pem` and `key.pem` in `tls/`, or `./transcribe tls self-signed`, then `./transcribe bring-up` again. |
@@ -820,5 +826,12 @@ At install and upgrade only:
 | `registry-1.docker.io` and `production.cloudflare.docker.com` | the upstream images: the database, the web server, the upload sidecar |
 | `huggingface.co` and `*.hf.co` | the models; `*.hf.co` covers the download hosts, which Hugging Face changes without notice |
 | `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org`, `deb.debian.org` | only when an image is built on the server rather than pulled |
+
+And when an Admin runs `./transcribe basemap fetch`, at that moment only:
+
+| Host | For |
+|---|---|
+| `build.protomaps.com` | the street map's builds: a public map of OpenStreetMap data, read in parts |
+| `registry-1.docker.io` and `production.cloudflare.docker.com` | Protomaps' cutting tool, an upstream image pulled once |
 
 At run time: your domain controllers on the LAN, the mail relay on `SMTP_PORT` when one is named, the backup store over SFTP when one is named, and the engine's network inside Docker. Nothing phones home, and the app never checks for updates.

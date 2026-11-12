@@ -647,6 +647,34 @@ def test_the_basemap_state_says_absent_until_the_file_is_there(settings, tmp_pat
     assert maps.basemap_json()["url"] == "/maps/basemap.pmtiles"
 
 
+def test_the_status_line_says_what_a_fetched_map_holds(settings, tmp_path, rf, person):
+    """v1.232.0: `./transcribe basemap fetch` leaves a note beside the map,
+    and the Status line reads it. A file placed by hand has none, and a note
+    that cannot be read changes nothing."""
+    maps.maps_dir().mkdir(parents=True, exist_ok=True)
+    maps.basemap_file().write_bytes(b"PMTiles" + b"\0" * 100)
+    by_hand = maps.basemap_state()["words"]
+    assert by_hand.startswith("installed, 0 MB, placed ")
+    note = maps.maps_dir() / maps.NOTE_NAME
+    note.write_text(
+        '{\n  "areas": "US",\n'
+        '  "words": "the whole United States and its territories",\n'
+        '  "build": "2026-11-11"\n}\n',
+        encoding="utf-8",
+    )
+    assert maps.basemap_state()["words"].startswith(
+        "installed, 0 MB, the whole United States and its territories, "
+        "build of 11 Nov 2026, placed "
+    )
+    for unreadable in ("not a note", '["a", "list"]', '{"words": 7, "build": "soon"}'):
+        note.write_text(unreadable, encoding="utf-8")
+        assert maps.basemap_state()["words"] == by_hand
+    # The note is the server's own: the map's route serves the map alone.
+    request = rf.get("/maps-auth", HTTP_X_FORWARDED_URI="/maps/basemap.json")
+    request.user = person
+    assert media_access.may_serve_map(request).status_code == 404
+
+
 # The joins -------------------------------------------------------------------------
 
 

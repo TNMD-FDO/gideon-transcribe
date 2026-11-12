@@ -317,3 +317,37 @@ def test_the_install_guide_opens_with_the_quickest_install():
         "**Everything in this section is optional.**",
     ):
         assert kept in text, kept
+
+
+def test_the_guides_lead_with_the_street_maps_one_command():
+    # v1.232.0: the Admin guide's Maps section leads with the fetch and keeps
+    # the way by hand beneath it; every territory is named, in the guide as
+    # on the command's own menu; and the install guide lists the command with
+    # the pieces added later and its host with the hosts.
+    script = (HERE / "transcribe").read_text(encoding="utf-8")
+    maps = text_of("admin-guide.md").split("## Maps", 1)[1].split("\n## ", 1)[0]
+    assert maps.index("./transcribe basemap fetch") < maps.index("pmtiles extract")
+    menu = script.split("choose_the_areas() {", 1)[1].split("\n}\n", 1)[0]
+    for words in (
+        "The whole United States and its territories",
+        "Only the states and territories you name",
+    ):
+        assert words in maps and words in menu, words
+    for territory in (
+        "Puerto Rico",
+        "the US Virgin",
+        "Guam",
+        "the Northern Mariana Islands",
+        "American Samoa",
+    ):
+        assert territory in maps and territory in menu, territory
+    assert "stays until the new one is whole" in maps
+    assert "does not copy the street map" in maps
+    install = text_of("install.md")
+    page = install.split("## Start here: the quickest install", 1)[1].split(
+        "## 1. What you need", 1
+    )[0]
+    assert "`./transcribe basemap fetch`" in page
+    hosts = install.split("### The hosts the server must reach", 1)[1]
+    assert "`build.protomaps.com`" in hosts
+    assert "fetch)" in script.split("cmd_basemap() {", 1)[1].split("\n}\n", 1)[0]

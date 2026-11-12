@@ -6,6 +6,8 @@ runner and on the office's server; where it is not, these are skipped."""
 
 from __future__ import annotations
 
+import datetime as dt
+import json
 import re
 import shutil
 import subprocess
@@ -375,11 +377,11 @@ def _figures() -> str:
     """The wider check's own numbers, as the script sets them."""
     found = re.findall(
         r"^(?:LEAST_CORES|LEAST_MEMORY_GB|DOCKER_GB_TO_KEEP|DATA_GB_TO_KEEP"
-        r"|USUAL_PORT|ROOT_GB_TO_BUILD)=\d+$|^REACH_HOSTS=.*$",
+        r"|USUAL_PORT|ROOT_GB_TO_BUILD)=\d+$|^REACH_HOSTS=.*$|^MAP_BUILD_HOST=.*$",
         text(),
         re.M,
     )
-    assert len(found) == 7, found
+    assert len(found) == 8, found
     return "\n".join(found) + "\n"
 
 
@@ -446,21 +448,39 @@ def test_a_host_that_does_not_answer_is_a_note_that_says_what_it_is_for():
     probe = (
         _sourced(
             ["what_a_host_is_for", "check_the_reach"],
-            _SAYS + _figures() + 'answers_from_here() { [ "$1" != "$SILENT" ]; }\n',
+            _SAYS
+            + _figures()
+            + "ENV_FILE=/nowhere/.env\n"
+            + 'answers_from_here() { [ "$1" != "$SILENT" ]; }\n',
         )
         + "\nSILENT=none check_the_reach"
         + "\nSILENT=huggingface.co check_the_reach"
-        + "\necho went-on\n"
+        + "\necho went-on"
+        + "\nSILENT=build.protomaps.com check_the_reach"
+        + "\necho installed"
+        # Once installed, the street map's host is the fetch command's own
+        # business: ./transcribe check does not go on about it.
+        + '\nENV_FILE="$BASH"; SILENT=build.protomaps.com check_the_reach\n'
     )
     done = subprocess.run([BASH, "-c", probe], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
-    out = done.stdout
+    out, later = done.stdout.split("went-on\n")
     assert (
         "pass  github.com, ghcr.io, registry-1.docker.io and huggingface.co "
         "answer from here" in out
     )
     assert "note  huggingface.co does not answer from here: the models" in out
-    assert out.rstrip().endswith("went-on")
+    assert "protomaps" not in out
+    # v1.232.0: the street map's host is a note of its own, before an install
+    # only, and it says the map can be placed by hand without it.
+    before, after = later.split("installed\n")
+    assert "pass  github.com, ghcr.io" in before
+    assert (
+        "note  build.protomaps.com does not answer from here: the street map "
+        "cannot be fetched with ./transcribe basemap fetch" in before
+    )
+    assert "placed by hand" in before
+    assert "pass  github.com, ghcr.io" in after and "protomaps" not in after
 
 
 @needs_bash
@@ -753,3 +773,481 @@ def test_the_free_space_of_a_value_that_is_no_path_does_not_spin():
     )
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "ended"
+
+
+# The street map with one command (v1.232.0) -----------------------------------
+
+_STATES = [
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
+]
+_TERRITORIES = ["PR", "VI", "GU", "MP", "AS"]
+
+_MAP = [
+    "map_areas",
+    "area_line",
+    "area_name",
+    "areas_in_words",
+    "areas_named",
+    "area_boxes",
+    "region_of",
+    "newest_build",
+    "build_in_words",
+    "map_note_value",
+    "write_the_map_note",
+    "size_said",
+    "whole_gb",
+    "map_tool",
+    "choose_the_areas",
+    "basemap_fetch",
+    "cmd_basemap",
+    "ask",
+    "ask_choice",
+    "ask_yes_no",
+]
+
+
+def _map_figures() -> str:
+    found = re.findall(
+        r"^(?:MAP_TOOL_IMAGE|MAP_BUILD_HOST|MAP_MARGIN|MAP_SPARE_GB|WHOLE_COUNTRY_GB"
+        r"|LOWER_48_BOX|AREAS_APART|DATA_GB_TO_KEEP)=.*$",
+        text(),
+        re.M,
+    )
+    assert len(found) == 8, found
+    return "\n".join(found) + "\n"
+
+
+def _areas() -> dict[str, dict]:
+    table = text().split("cat <<'AREAS'\n", 1)[1].split("\nAREAS\n", 1)[0]
+    found = {}
+    for line in table.splitlines():
+        code, name, boxes, other = line.split("|")
+        found[code] = {
+            "name": name,
+            "boxes": [tuple(float(v) for v in box.split(",")) for box in boxes.split()],
+            "other": [one for one in other.split(";") if one],
+        }
+    return found
+
+
+def test_the_areas_are_the_fifty_states_the_district_and_the_five_territories():
+    """Offices across the whole country use the app, the territories among
+    them: none can be dropped from the table by accident, and every one that
+    does not adjoin the others is cut by its own rectangle."""
+    areas = _areas()
+    assert sorted(areas) == sorted([*_STATES, "DC", *_TERRITORIES])
+    for code, area in areas.items():
+        for west, south, east, north in area["boxes"]:
+            assert -180 <= west < east <= 180 and -90 < south < north < 90, code
+    figures = _map_figures()
+    low = re.search(r'^LOWER_48_BOX="(.*)"$', figures, re.M).group(1)
+    west, south, east, north = (float(v) for v in low.split(","))
+    apart = re.search(r'^AREAS_APART="(.*)"$', figures, re.M).group(1).split()
+    assert sorted(apart) == sorted(["AK", "HI", *_TERRITORIES])
+    for code, area in areas.items():
+        if code in apart:
+            continue
+        ((w, s, e, n),) = area["boxes"]
+        assert west <= w and south <= s and e <= east and n <= north, code
+    # Alaska's last islands lie past the date line, and no rectangle crosses it.
+    assert sorted(box[0] for box in areas["AK"]["boxes"])[0] == -180.0
+    assert sorted(box[2] for box in areas["AK"]["boxes"])[-1] == 180.0
+
+
+@needs_bash
+def test_an_area_is_named_by_code_or_by_name_and_a_stranger_is_refused():
+    def named(typed: str) -> tuple[int, str]:
+        probe = _sourced(_MAP[:5], _map_figures()) + f"\nareas_named '{typed}'\n"
+        done = subprocess.run(
+            [BASH, "-c", probe], capture_output=True, text=True, timeout=60
+        )
+        return done.returncode, done.stdout
+
+    assert named("co pr gu") == (0, "CO PR GU")
+    assert named("New York, guam") == (0, "NY GU")
+    assert named("Puerto Rico") == (0, "PR")
+    assert named("the virgin islands; CNMI, d.c.") == (0, "VI MP DC")
+    assert named("co CO Colorado") == (0, "CO")
+    # The whole country takes the place of anything named beside it.
+    assert named("CO, US") == (0, "US")
+    assert named("PT") == (1, "PT")
+    # Two words that are not one name need a comma between them.
+    assert named("New York Guam") == (1, "New York")
+
+    probe = _sourced(_MAP[:5], _map_figures()) + (
+        "\nareas_in_words CO PR GU; echo"
+        "\nareas_in_words DC VI; echo"
+        "\nareas_in_words MP; echo"
+        "\nareas_in_words US; echo\n"
+    )
+    done = subprocess.run(
+        [BASH, "-c", probe], capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.splitlines() == [
+        "Colorado, Puerto Rico and Guam",
+        "the District of Columbia and the US Virgin Islands",
+        "the Northern Mariana Islands",
+        "the whole United States and its territories",
+    ]
+
+
+@needs_bash
+def test_the_whole_country_takes_in_every_state_and_every_territory():
+    probe = _sourced(_MAP[:7], _map_figures()) + "\narea_boxes US | region_of\n"
+    done = subprocess.run(
+        [BASH, "-c", probe], capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    region = json.loads(done.stdout)
+    assert region["type"] == "FeatureCollection"
+    boxes = []
+    for feature in region["features"]:
+        assert feature["geometry"]["type"] == "Polygon"
+        (ring,) = feature["geometry"]["coordinates"]
+        assert len(ring) == 5 and ring[0] == ring[-1]
+        lons = [point[0] for point in ring]
+        lats = [point[1] for point in ring]
+        assert min(lons) >= -180 and max(lons) <= 180
+        boxes.append((min(lons), min(lats), max(lons), max(lats)))
+    # The lower 48 as one rectangle, Alaska's two, Hawaii and the five territories.
+    assert len(boxes) == 9
+
+    def held(lon: float, lat: float) -> bool:
+        return any(w <= lon <= e and s <= lat <= n for w, s, e, n in boxes)
+
+    places = {
+        "San Juan, Puerto Rico": (-66.11, 18.47),
+        "Charlotte Amalie, US Virgin Islands": (-64.93, 18.34),
+        "Hagatna, Guam": (144.75, 13.47),
+        "Saipan, Northern Mariana Islands": (145.75, 15.19),
+        "Pago Pago, American Samoa": (-170.70, -14.28),
+        "Honolulu, Hawaii": (-157.86, 21.31),
+        "Anchorage, Alaska": (-149.90, 61.22),
+        "Attu, Alaska, past the date line": (172.90, 52.90),
+        "Key West, Florida": (-81.78, 24.56),
+        "Seattle, Washington": (-122.33, 47.61),
+        "Eastport, Maine": (-66.98, 44.91),
+        "San Diego, California": (-117.16, 32.72),
+    }
+    for place, (lon, lat) in places.items():
+        assert held(lon, lat), place
+    assert not held(2.35, 48.86), "Paris"
+    # Each rectangle is widened by the margin, so a path that crosses a
+    # state line or the border still has its streets.
+    one = _sourced(_MAP[:7], _map_figures()) + "\narea_boxes CO | region_of\n"
+    done = subprocess.run([BASH, "-c", one], capture_output=True, text=True, timeout=60)
+    (ring,) = json.loads(done.stdout)["features"][0]["geometry"]["coordinates"]
+    assert ring[0] == [-109.17, 41.11] and ring[2] == [-101.94, 36.89]
+
+
+_MAP_STANDS_IN = r"""
+APP_USER=nobody
+FAILURES=0
+green() { printf '%s\n' "$1"; }
+amber() { printf '%s\n' "$1"; }
+red() { printf '%s\n' "$1"; }
+pass() { echo "  pass  $1"; }
+note() { echo "  note  $1"; }
+need_env() { :; }
+env_value() {
+  case "$1" in
+    APP_DATA_DIR) printf '%s' "$DATA" ;;
+    APP_UID) printf 1001 ;;
+    *) printf 1002 ;;
+  esac
+}
+make_the_data_folders() { mkdir -p "$DATA/maps"; }
+folder_gb_free() { echo "$FREE"; }
+answers_from_here() { [ "${REACH:-yes}" = "yes" ]; }
+sudo() { "$@"; }
+chown() { :; }
+install() { cp "${@: -2:1}" "${@: -1}"; }
+# Today's build is not there yet; yesterday's is.
+build_answers() { [ "$1" = "$(date -u -d '1 days ago' +%Y%m%d)" ]; }
+# The tool: a dry run says a size; a fetch writes a map file, or fails.
+docker() {
+  echo "docker $*" >>"$DATA/docker.log"
+  local host=""
+  while [ $# -gt 0 ]; do
+    case "$1" in -v) host="${2%:/work}" ;; esac
+    case "$1" in
+      --dry-run)
+        echo "extract.go:612: Extract transferred 81 MB (overfetch 0.05)" \
+          "for an archive size of ${SIZE:-78 MB}"
+        return 0
+        ;;
+    esac
+    shift
+  done
+  [ -s "$host/.region.geojson" ] || { echo "no region file"; return 9; }
+  case "${FETCH:-whole}" in
+    whole) printf 'PMTiles-new' >"$host/.basemap.fetching.pmtiles" ;;
+    cut) printf '\0\0\0\0\0\0\0half' >"$host/.basemap.fetching.pmtiles" ;;
+    drop) printf 'half' >"$host/.basemap.fetching.pmtiles"; return 1 ;;
+  esac
+}
+"""
+
+
+def _fetch(tmp_path, command: str, typed: str = "\n", **env: str):
+    data = tmp_path / "data"
+    (data / "maps").mkdir(parents=True, exist_ok=True)
+    settings = "".join(f"{key}='{value}'\n" for key, value in env.items())
+    probe = (
+        _sourced(
+            _MAP,
+            _map_figures()
+            + f"DATA='{data.as_posix()}'\nFREE=900\n"
+            + settings
+            + _MAP_STANDS_IN,
+        )
+        + f"\n{command}\n"
+    )
+    # Run from a file, not from the command line: a script this long, with
+    # this many quotes, does not survive a Windows command line whole.
+    script = tmp_path / "probe.sh"
+    script.write_text(probe, encoding="utf-8", newline="\n")
+    done = subprocess.run(
+        [BASH, script.as_posix()],
+        input=typed,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    log = data / "docker.log"
+    calls = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+    return done, data / "maps", calls
+
+
+@needs_bash
+def test_a_fetch_sizes_first_then_puts_the_map_in_place_with_its_note(tmp_path):
+    done, maps, calls = _fetch(tmp_path, "basemap_fetch PR gu")
+    assert done.returncode == 0, done.stdout + done.stderr
+    out = done.stdout
+    assert "pass  this server can reach build.protomaps.com" in out
+    assert "pass  the newest build is " in out
+    assert "now   no street map is in place" in out
+    assert "Puerto Rico and Guam: 78 MB" in out
+    assert "The street map is in place: Puerto Rico and Guam, " in out
+    assert (maps / "basemap.pmtiles").read_bytes() == b"PMTiles-new"
+    note = json.loads((maps / "basemap.json").read_text(encoding="utf-8"))
+    yesterday = dt.datetime.now(dt.UTC).date() - dt.timedelta(days=1)
+    assert note == {
+        "areas": "PR GU",
+        "words": "Puerto Rico and Guam",
+        "build": yesterday.isoformat(),
+    }
+    # Nothing is left beside the map but its note.
+    assert sorted(p.name for p in maps.iterdir()) == ["basemap.json", "basemap.pmtiles"]
+    # Two runs of the pinned tool, as the app's account, seeing only the
+    # map folder: the size first, then the fetch.
+    assert len(calls) == 2 and "--dry-run" in calls[0] and "--dry-run" not in calls[1]
+    for call in calls:
+        assert re.search(
+            r" protomaps/go-pmtiles:v[\d.]+@sha256:[0-9a-f]{64} extract ", call
+        )
+        assert "--user 1001:1002" in call and f"-v {maps.as_posix()}:/work" in call
+        assert f"https://build.protomaps.com/{yesterday:%Y%m%d}.pmtiles" in call
+        assert "--region=/work/.region.geojson" in call
+
+
+@needs_bash
+def test_a_fetch_that_fails_leaves_what_was_in_place(tmp_path):
+    maps = tmp_path / "data" / "maps"
+    maps.mkdir(parents=True)
+    held = '{\n  "areas": "CO",\n  "words": "Colorado",\n  "build": "2026-11-01"\n}\n'
+
+    def before():
+        (maps / "basemap.pmtiles").write_bytes(b"PMTiles-old")
+        (maps / "basemap.json").write_text(held, encoding="utf-8")
+
+    def unchanged() -> bool:
+        return (
+            (maps / "basemap.pmtiles").read_bytes() == b"PMTiles-old"
+            and (maps / "basemap.json").read_text(encoding="utf-8") == held
+            and sorted(p.name for p in maps.iterdir())
+            == ["basemap.json", "basemap.pmtiles"]
+        )
+
+    # The line drops in the middle of the fetch.
+    before()
+    done, _, _ = _fetch(tmp_path, "basemap_fetch US", FETCH="drop")
+    assert done.returncode == 1 and "stop  the fetch ended early" in done.stdout
+    assert "now   Colorado, the build of 1 November 2026" in done.stdout
+    assert unchanged()
+    # The tool ends cleanly on a file that does not begin as a map file does.
+    done, _, _ = _fetch(tmp_path, "basemap_fetch US", FETCH="cut")
+    assert done.returncode == 1 and "is not a whole map file" in done.stdout
+    assert unchanged()
+    # Not enough room: said before a byte of map is fetched.
+    (tmp_path / "data" / "docker.log").unlink()
+    done, _, calls = _fetch(tmp_path, "basemap_fetch US", FREE="22", SIZE="20 GB")
+    assert done.returncode == 1
+    assert "stop  the map folder has 22 GB free, and this needs 20 GB with 5 GB" in (
+        done.stdout
+    )
+    assert len(calls) == 1 and "--dry-run" in calls[0] and unchanged()
+    # Room for the map, but it would take the app under what it keeps free:
+    # said, and the usual answer is then no.
+    done, _, _ = _fetch(tmp_path, "basemap_fetch PR", FREE="150")
+    assert done.returncode == 0 and "pauses uploads when it cannot" in done.stdout
+    assert "Nothing was changed." in done.stdout and unchanged()
+    # No route to the builds: nothing is run at all.
+    (tmp_path / "data" / "docker.log").unlink()
+    done, _, calls = _fetch(tmp_path, "basemap_fetch PR", REACH="no")
+    assert done.returncode == 1
+    assert "stop  this server cannot reach build.protomaps.com" in done.stdout
+    assert "place it by hand" in done.stdout and calls == [] and unchanged()
+    # A name that is no state or territory: nothing is looked at.
+    done, _, calls = _fetch(tmp_path, "basemap_fetch PT")
+    assert done.returncode == 1 and "no state or territory called: PT" in done.stdout
+    assert calls == [] and unchanged()
+
+
+@needs_bash
+def test_the_menu_offers_the_whole_country_first_and_remembers_what_is_held(tmp_path):
+    # A first fetch: Enter takes the whole country, territories named.
+    done, maps, _ = _fetch(tmp_path, "basemap_fetch", typed="\n\n")
+    assert done.returncode == 0, done.stdout + done.stderr
+    menu = done.stderr
+    assert "  1  The whole United States and its territories, about 20 GB" in menu
+    for name in (
+        "Puerto Rico",
+        "the US Virgin",
+        "Guam",
+        "the Northern Mariana Islands",
+        "American Samoa",
+    ):
+        assert name in menu, name
+    assert "  2  Only the states and territories you name" in menu
+    assert "  3  Not now" in menu
+    note = json.loads((maps / "basemap.json").read_text(encoding="utf-8"))
+    assert note["areas"] == "US"
+    assert note["words"] == "the whole United States and its territories"
+    # Run again: the same again is the first line and the usual answer.
+    done, _, _ = _fetch(tmp_path, "basemap_fetch", typed="\n\n")
+    assert (
+        "  1  The same again, from the newest build: the whole United States"
+        in done.stderr
+    )
+    assert (
+        "now   the whole United States and its territories, the build of" in done.stdout
+    )
+    assert "  3  Not now" in done.stderr and "  4  " not in done.stderr
+    # Naming: a stranger is said and asked again; names and codes both do.
+    done, _, _ = _fetch(tmp_path, "basemap_fetch", typed="2\nPT\nColorado, pr\n\n")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "There is no state or territory called: PT." in done.stderr
+    note = json.loads((maps / "basemap.json").read_text(encoding="utf-8"))
+    assert note["areas"] == "CO PR" and note["words"] == "Colorado and Puerto Rico"
+    # Not now changes nothing, and a small drive is offered names first.
+    done, _, calls = _fetch(tmp_path, "basemap_fetch", typed="4\n")
+    assert done.returncode == 0 and "Nothing was changed." in done.stdout
+    (maps / "basemap.pmtiles").unlink()
+    (maps / "basemap.json").unlink()
+    done, _, _ = _fetch(tmp_path, "basemap_fetch", typed="\n\n", FREE="210")
+    assert "[2]" in done.stderr and "Nothing was changed." in done.stdout
+
+
+@needs_bash
+def test_a_map_placed_by_hand_or_removed_takes_the_fetchs_note_with_it(tmp_path):
+    done, maps, _ = _fetch(tmp_path, "basemap_fetch GU")
+    assert done.returncode == 0 and (maps / "basemap.json").exists()
+    mine = tmp_path / "mine.pmtiles"
+    mine.write_bytes(b"PMTiles-by-hand")
+    done, _, _ = _fetch(tmp_path, f"cmd_basemap '{mine.as_posix()}'")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert (maps / "basemap.pmtiles").read_bytes() == b"PMTiles-by-hand"
+    assert not (maps / "basemap.json").exists()
+    # A fetch after it says a file placed by hand is there.
+    done, _, _ = _fetch(tmp_path, "basemap_fetch", typed="3\n")
+    assert "now   a street map placed by hand (" in done.stdout
+    done, _, _ = _fetch(tmp_path, "basemap_fetch GU")
+    assert (maps / "basemap.json").exists()
+    done, _, _ = _fetch(tmp_path, "cmd_basemap remove")
+    assert done.returncode == 0 and list(maps.iterdir()) == []
+    # No argument says the three ways.
+    done, _, _ = _fetch(tmp_path, "cmd_basemap")
+    assert done.returncode == 1 and "./transcribe basemap fetch" in done.stdout
+
+
+def test_the_street_map_is_never_fetched_unasked_and_its_tool_is_pinned():
+    body = text()
+    assert re.search(
+        r'^MAP_TOOL_IMAGE="protomaps/go-pmtiles:v[\d.]+@sha256:[0-9a-f]{64}"$',
+        body,
+        re.M,
+    )
+    # One place runs the tool, and one place asks the build host anything
+    # beyond whether it answers: the command an Admin types.
+    assert body.count('"$MAP_TOOL_IMAGE"') == 1
+    callers = [
+        name
+        for name in re.findall(r"^([a-z_]+)\(\) \{$", body, re.M)
+        if "map_tool " in body.split(f"\n{name}() {{", 1)[1].split("\n}\n", 1)[0]
+    ]
+    assert callers == ["basemap_fetch"]
+    # The reach check names the host before an install only, as a note.
+    reach = body.split("check_the_reach() {", 1)[1].split("\n}\n", 1)[0]
+    assert 'if [ ! -f "$ENV_FILE" ] && ! answers_from_here "$MAP_BUILD_HOST"' in reach
+    # The install does not fetch it; the bring-up names the command.
+    install = body.split("\ncmd_install() {", 1)[1].split("\n}\n", 1)[0]
+    assert "basemap" not in install
+    bring_up = body.split("\ncmd_bring_up() {", 1)[1].split("\n}\n", 1)[0]
+    assert "when you want it: ./transcribe basemap fetch" in bring_up
+    # The new file takes the old one's place only after it is known whole.
+    fetch = body.split("\nbasemap_fetch() {", 1)[1].split("\n}\n", 1)[0]
+    assert fetch.index("--dry-run") < fetch.index("ask_yes_no")
+    assert fetch.index('!= "PMTiles" ]') < fetch.index(
+        'sudo mv -f "$fetching" "$target"'
+    )

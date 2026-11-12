@@ -160,7 +160,7 @@
       state.media.running + " media job(s) running, " +
       state.media.pieces + " upload part(s) pending";
 
-    // The street map (Phase 12): placed by ./transcribe basemap, never fetched.
+    // The street map (Phase 12): fetched or placed on the server by ./transcribe basemap; the app never fetches it.
     var maps = document.getElementById("maps");
     if (maps && state.maps) {
       maps.textContent = "Street map: " + state.maps.words +
