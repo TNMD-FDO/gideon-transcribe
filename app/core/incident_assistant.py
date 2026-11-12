@@ -139,6 +139,10 @@ class IncidentMemo(models.Model):
     events_count = models.IntegerField(default=0)
     events_signature = models.CharField(max_length=32, blank=True, default="")
     cameras_signature = models.CharField(max_length=32, blank=True, default="")
+    # Which path files the cameras had when this was written (v1.235.0), so
+    # one written before a camera's file was added, replaced or removed says
+    # so. "" for a row from before this was kept, judged by the files' dates.
+    paths_signature = models.CharField(max_length=32, blank=True, default="")
     record_lines = models.IntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
     written_at = models.DateTimeField(null=True, blank=True)
@@ -1747,6 +1751,9 @@ def write_memo(memo_id, attempt: int = 1, from_sheet: bool = False) -> None:
         memo.events_count = len(event_lines)
         memo.events_signature = events_signature(incident)
         memo.cameras_signature = cameras_signature(incident)
+        from core import camera_paths
+
+        memo.paths_signature = camera_paths.paths_signature(incident)
         memo.record_lines = len(record["rows"])
         memo.stage = ""
         memo.state = DONE
@@ -1860,6 +1867,14 @@ def stale_words(memo: IncidentMemo, incident) -> str:
             changes.append("an event changed")
     if memo.cameras_signature != cameras_signature(incident):
         changes.append("a camera was synced or joined")
+    from core import camera_paths
+
+    # The memo is given each camera's own file (Phase 12 chapter 2), so one
+    # written before a file arrived, changed or left is short of it (v1.235.0).
+    if camera_paths.paths_changed_since(
+        incident, memo.paths_signature, memo.written_at
+    ):
+        changes.append("a camera's path file was added, replaced or removed")
     if not changes:
         return ""
     return (

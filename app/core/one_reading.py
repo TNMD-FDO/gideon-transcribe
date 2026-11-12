@@ -333,6 +333,10 @@ def read_line(turn) -> str:
         said = (
             f"Read the {_count(count, 'transcript')} narrowed to, whole, in {readings}"
         )
+    elif turn.route == case_scope.FILES:
+        # v1.235.0: a question the cameras' own files answer reads no
+        # transcript at all, which is why it is quick.
+        said = "Read the cameras' own files"
     elif count:
         said = f"Read {_count(count, 'transcript')} whole in {readings}"
     else:

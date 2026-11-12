@@ -12,6 +12,7 @@ question renders the Case afresh. Nothing asked or answered is ever logged.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -29,6 +30,7 @@ from core.assistant import (
     RUNNING,
     SAMPLING,
     STATES,
+    SUGGESTION_SAMPLING,
     THOUGHT_AWAY,
     PromptTemplate,
     ThoughtItAway,
@@ -531,6 +533,44 @@ def citations(text: str, starts_by_number: dict[int, dict]) -> dict:
     return found
 
 
+# What a question needs (v1.235.0) ----------------------------------------------------
+
+FILES_ONLY, TRANSCRIPTS_ONLY, BOTH = "files", "transcripts", "both"
+SORT_CAP = 40
+
+
+def sort_question(question: str, earlier_questions: list[str], one_call) -> str:
+    """Whether the cameras' own files answer a question alone, the
+    transcripts do, or it needs both: one small call, asked only in a case
+    whose cameras have files. A trial on an office's case had read ninety
+    transcripts in six parts, each handed the same sheet, to say when one
+    unit's lights came on. Anything but a clear answer is "both", which
+    reads everything, as every question did before."""
+    asked_before = (
+        "Earlier questions in this chat:\n" + "\n".join(earlier_questions[-3:])
+        if earlier_questions
+        else ""
+    )
+    user = "\n\n".join(
+        one for one in (asked_before, "The question: " + question) if one
+    )
+    try:
+        answer = one_call(
+            [
+                {"role": "system", "content": prompts.CASE_CHAT_SORT},
+                {"role": "user", "content": user},
+            ],
+            SORT_CAP,
+            schema=prompts.CASE_CHAT_SORT_SCHEMA,
+            think=False,
+            sampling=SUGGESTION_SAMPLING,
+        )
+        found = json.loads(answer["text"]).get("sort")
+    except (engine.Problem, ValueError, AttributeError, TypeError):
+        return BOTH
+    return found if found in (FILES_ONLY, TRANSCRIPTS_ONLY, BOTH) else BOTH
+
+
 # The task ---------------------------------------------------------------------------
 
 
@@ -613,7 +653,116 @@ def answer_case_turn(turn_id) -> None:
         read, skipped = readable(
             case, scope.get("recordings") if case_scope.narrowed(scope) else None
         )
-        from core import assistant
+        from core import assistant, camera_paths
+
+        # What the question needs (v1.235.0), asked once where the cameras
+        # it may read have files of their own. No file, no step: the case
+        # is read as before.
+        sort = ""
+        if read and camera_paths.paths_among(case, read):
+            sort = sort_question(
+                turn.question,
+                [
+                    one.question
+                    for one in chat.turns.filter(state=DONE, number__lt=turn.number)
+                ],
+                one_call,
+            )
+        if sort == FILES_ONLY:
+            # One call with the sheet for everything the question may read,
+            # however large the case: no transcript is rendered or sent.
+            files_system = prompts.system_message(
+                ground.text,
+                "",
+                prompts.CASE_CHAT_FILES_FORMAT + "\n\n" + camera_paths.CASE_RULE,
+            )
+            who = people_line(case)
+            so_far = prompts.history_that_fits(
+                [
+                    (one.question, case_scope.without_openings(one.answer))
+                    for one in chat.turns.filter(state=DONE, number__lt=turn.number)
+                ],
+                settings_store.chat_history_tokens(),
+            )
+            so_far_text = "\n".join(q + "\n" + a for q, a in so_far)
+            files_cap = settings_store.case_chat_part_cap()
+            sheet = ""
+            # With who was near whom, spell by spell; without, where a very
+            # large case's sheet would not fit one Reading.
+            for spells in (True, False):
+                candidate = camera_paths.readings_block(case, read, spells=spells)
+                if prompts.tokens(
+                    candidate
+                ) <= settings_store.reading_tokens() and prompts.fits(
+                    files_system,
+                    who,
+                    candidate,
+                    so_far_text,
+                    turn.question,
+                    answer_cap=cap(files_cap),
+                    window=engine.window(),
+                ):
+                    sheet = candidate
+                    break
+            text = ""
+            if sheet:
+                answer = one_call(
+                    _messages(
+                        files_system,
+                        turn.question,
+                        so_far,
+                        reading=who + "\n\n" + sheet,
+                    ),
+                    files_cap,
+                )
+                text = answer["text"].strip()
+            if text and not text.upper().startswith(prompts.NOT_IN_THE_FILES):
+                held = {one.recording_id: one for one in camera_paths.for_case(case)}
+                starts_by_number = {
+                    number: {
+                        "recording": str(recording.pk),
+                        "starts": {},
+                        "length": max(
+                            float(recording.duration_seconds or 0.0),
+                            float(
+                                getattr(held.get(recording.pk), "length", 0.0) or 0.0
+                            ),
+                        ),
+                    }
+                    for number, recording in enumerate(read, start=1)
+                }
+                calls["readings"] = 1
+                turn.route = case_scope.FILES
+                turn.parts = 0
+                turn.skipped = []
+                turn.readings = []
+                turn.cut_short = answer["finish_reason"] == "length"
+                turn.answer = with_recordings_named(text, holds_in(starts_by_number))
+                turn.citations = citations(turn.answer, starts_by_number)
+                turn.model = calls["model"]
+                turn.state = DONE
+                turn.reason_class = ""
+                turn.answered_at = timezone.now()
+                turn.save()
+                _record(
+                    case,
+                    actor=chat.asked_by,
+                    templates=f"ground-rules v{ground.version}; case-chat-files",
+                    model=turn.model,
+                    usage=usage,
+                    calls=calls,
+                    started=started,
+                    outcome="ok",
+                    cut_short=turn.cut_short,
+                    feature="case_chat_files",
+                    sorted_as=FILES_ONLY,
+                    **_scope_fields(turn),
+                    **expectation.for_audit(turn.expectation),
+                )
+                return
+            # The files did not hold it, or would not fit: read everything,
+            # the files with it, as a question was read before.
+            sort = BOTH
 
         overviews = assistant.overviews_for(read)
         turn.route = case_scope.route_for(read, overviews, scope)
@@ -787,9 +936,13 @@ def answer_case_turn(turn_id) -> None:
         turn.readings = readings_kept
         calls["read"] = total
 
-        from core import camera_paths
-
-        readings = camera_paths.readings_block(case, read)
+        # The cameras' own files (Phase 12 chapter 1; v1.235.0): not at all
+        # for a question sorted to the transcripts, and where the case is
+        # read in parts, given once, to the step that joins them.
+        readings = (
+            "" if sort == TRANSCRIPTS_ONLY else camera_paths.readings_block(case, read)
+        )
+        no_files = camera_paths.on() and not camera_paths.paths_among(case, read)
         system = prompts.system_message(
             ground.text,
             template.text,
@@ -800,7 +953,7 @@ def answer_case_turn(turn_id) -> None:
             )
             + ("\n\n" + notes.RULE if notes.any_on(read) else "")
             + ("\n\n" + documents.RULE if documents.of_case(case) else "")
-            + ("\n\n" + camera_paths.RULE if readings else ""),
+            + ("\n\n" + camera_paths.NO_FILES_RULE if no_files else ""),
         )
         people = people_line(case)
         # The Incidents' placements (Phase 6 chapter 3): each synced camera's
@@ -810,10 +963,6 @@ def answer_case_turn(turn_id) -> None:
         placements = incident_assistant.placements_block(case, read)
         if placements:
             people = people + "\n\n" + placements
-        # The cameras' own files (Phase 12 chapter 1): where each was and
-        # what its lights, siren and microphone did, in the time of day.
-        if readings:
-            people = people + "\n\n" + readings
         # The app's own opening lines are not the engine's to repeat (v1.121.3).
         earlier = [
             (one.question, case_scope.without_openings(one.answer))
@@ -895,6 +1044,14 @@ def answer_case_turn(turn_id) -> None:
                 raise engine.Problem(engine.TOO_LONG, "one transcript too long")
         turn.parts = len(groups) if len(groups) > 1 else 0
         turn.save(update_fields=["skipped", "readings", "parts"])
+        # One Reading with room for the sheet takes it; read in parts, the
+        # parts go without and the joining step is given it once.
+        sheet_in_reading = bool(
+            readings
+            and len(groups) == 1
+            and fits_request(*(by_number[number] for number in groups[0]), readings)
+        )
+        files_rule = "\n\n" + camera_paths.CASE_RULE
 
         def ask_reading(group: list[int], answer_cap: int) -> str:
             # A part is told which recordings it holds (v1.87.0).
@@ -910,12 +1067,18 @@ def answer_case_turn(turn_id) -> None:
                 [
                     *told,
                     people,
+                    *([readings] if sheet_in_reading else []),
                     *(by_number[number] for number in group),
                     *([papers] if papers else []),
                 ]
             )
             answer = one_call(
-                _messages(system, turn.question, history, reading=reading),
+                _messages(
+                    system + (files_rule if sheet_in_reading else ""),
+                    turn.question,
+                    history,
+                    reading=reading,
+                ),
                 answer_cap,
             )
             calls["readings"] += 1
@@ -923,7 +1086,8 @@ def answer_case_turn(turn_id) -> None:
                 turn.cut_short = answer["finish_reason"] == "length"
             return answer["text"].strip()
 
-        if len(groups) == 1:
+        sheet_at_the_join = bool(readings) and not sheet_in_reading
+        if len(groups) == 1 and not sheet_at_the_join:
             text = ask_reading(groups[0], part_cap)
         else:
             # A few at a time (the Readings at once setting; two by default);
@@ -944,9 +1108,21 @@ def answer_case_turn(turn_id) -> None:
                 f"Part {n} of {len(parts)}:\n{part}"
                 for n, part in enumerate(parts, start=1)
             )
-            user = "\n\n".join([prompts.COMBINING, turn.question, labelled])
+            user = "\n\n".join(
+                [
+                    prompts.COMBINING,
+                    *([prompts.COMBINING_FILES] if sheet_at_the_join else []),
+                    turn.question,
+                    labelled,
+                    *([readings] if sheet_at_the_join else []),
+                ]
+            )
             answer = one_call(
-                _messages(ground.text, user, history),
+                _messages(
+                    ground.text + (files_rule if sheet_at_the_join else ""),
+                    user,
+                    history,
+                ),
                 settings_store.case_chat_combined_cap(),
             )
             turn.cut_short = answer["finish_reason"] == "length"
@@ -988,6 +1164,7 @@ def answer_case_turn(turn_id) -> None:
             outcome="ok",
             cut_short=turn.cut_short,
             feature=_feature_of(turn),
+            **({"sorted_as": sort} if sort else {}),
             **_scope_fields(turn),
             **expectation.for_audit(turn.expectation),
         )

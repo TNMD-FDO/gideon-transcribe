@@ -542,7 +542,54 @@ COMBINING = (
     "two parts describe the same moment and say different things. Keep every "
     "[Recording n, hh:mm:ss] reference exactly as written and add none. Leave "
     "out a part's report that its recordings do not mention something, unless "
-    "no part found an answer; then say the transcripts do not answer it."
+    "no part found an answer; then say the transcripts do not answer it. "
+    "Write it as one answer in your own voice: never mention the parts, "
+    "their numbers, or that the question was answered in parts."
+)
+# When the question needs the cameras' own files as well (v1.235.0): the
+# parts read the transcripts without them, and this one step is given the
+# files, once, after the part answers.
+COMBINING_FILES = (
+    "After the part answers come the cameras' own files, which no part was "
+    "given. Where the question turns on a time, a place or a state the files "
+    "record (lights, a siren, a camera being activated, a stop, who was "
+    "near), take it from the files and give the reference that follows the "
+    "reading there, copied exactly; those references may be added."
+)
+# The sorting step (v1.235.0), asked once before a question is answered in
+# a case whose cameras have files of their own: plumbing, not a template.
+CASE_CHAT_SORT = (
+    "Sort a question about a case's recordings by what would answer it. "
+    "The cameras' own files record, for each camera and by the clock: when "
+    "it began and ended recording, when the officer activated it, when its "
+    "lights, siren and brakes were on, its speed, where it stood still, and "
+    "which other officers' cameras were near it and when. They hold nothing "
+    'that was said and nothing the picture showed. Answer "files" when the '
+    'files alone answer it. Answer "transcripts" when it is about what was '
+    "said, asked, done or shown and the files would add nothing. Answer "
+    '"both" when it needs what was said together with a time, a place or a '
+    "state from the files, and whenever you are unsure. Answer as JSON "
+    'only: {"sort": "files"}, {"sort": "transcripts"} or '
+    '{"sort": "both"}.'
+)
+CASE_CHAT_SORT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sort": {"type": "string", "enum": ["files", "transcripts", "both"]}
+    },
+    "required": ["sort"],
+    "additionalProperties": False,
+}
+# The answer from the files alone (v1.235.0): the sheet stands where the
+# transcripts would, and a question it cannot answer is handed back.
+NOT_IN_THE_FILES = "NOT IN THE FILES"
+CASE_CHAT_FILES_FORMAT = (
+    "For this question you are given the cameras' own files and no "
+    "transcript. Answer from the files alone, in plain text, shortly: the "
+    "officer or unit, the time of day, and the reference that follows the "
+    "reading, copied exactly. Do not guess at anything that was said or "
+    "shown. If the files do not hold the answer, reply with exactly "
+    "NOT IN THE FILES and nothing else."
 )
 
 

@@ -375,6 +375,7 @@ Decided by one rule the page's expectation and the task both use:
 - **Narrowed, within the ceiling**: the narrowed recordings read whole, in Readings as today; one Reading when they fit, and the answer is one call.
 - **Whole case, within the ceiling**: as today.
 - **Over the ceiling, with any Overview available**: the two passes below, over the whole case or over the narrowed set when a narrowed set is itself over the ceiling.
+- **The cameras' own files alone** (v1.235.0, Phase 12 chapter 1's amendment of 2026-11-12): before any of the routes here, where the recordings a question may read include a camera with a path file, one small call sorts the question; one the files alone answer is answered from them in one call, whatever the case's size, with no transcript read and no pass over the overviews. Any other question takes the routes here as before, with the files' sheet sent only where the sorting says it is needed.
 - **Over the ceiling, with no Overview at all**: today's Digest fallback and, failing that, the refusal, the one place `llm_case_too_large` survives; the answer says "No recording in this case has a summary yet" and offers Write the summaries tonight.
 
 ### Pass one: the overviews

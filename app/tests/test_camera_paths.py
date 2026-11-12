@@ -419,9 +419,34 @@ def test_the_chats_block_names_the_camera_and_the_time_and_never_a_coordinate(
     assert block.startswith("The cameras' own files")
     assert "Recording 1 (Dash-4; an in-car camera, unit 9082, officer Sam Roe" in block
     assert "clock from its own file" in block
-    assert "lights on 14:20:23 to 14:22:23" in block
+    # v1.235.0: each reading carries the reference that opens it, into the
+    # recording, and who was near at that moment, worked out by the app. A
+    # trial on an office's case had the engine write the time of day as the
+    # reference, which opened nothing.
+    lines = block.split("\n")
+    assert "- recording began 14:20:03 [Recording 1, 00:00:00]" in lines
+    assert (
+        "- lights on 14:20:23 [Recording 1, 00:00:20] to 14:22:23. Within 50 m "
+        "then: nobody else's camera. Nearest beyond: officer Pat Doe 189 m."
+    ) in lines
+    assert "- brakes 14:21:21 [Recording 1, 00:01:18]" in lines
+    assert "- recording ended 14:25:03 [Recording 1, 00:05:00]" in lines
     assert "Recording 2 (BWC2-1; a body camera, worn by Pat Doe" in block
-    assert "activated " in block and "camera's buffer" in block
+    assert (
+        "- activated 14:21:01 [Recording 2, 00:01:01] (the minute before is the "
+        "camera's buffer, without sound). Within 50 m then: nobody else's "
+        "camera. Nearest beyond: unit 9082 (officer Sam Roe) 612 m."
+    ) in lines
+    # Every reference is one the chat can open: inside its recording.
+    import re
+
+    for number, h, m, sec in re.findall(
+        r"\[Recording (\d+), (\d\d):(\d\d):(\d\d)\]", block
+    ):
+        length = camera_paths.of([car, body][int(number) - 1]).length
+        assert int(h) * 3600 + int(m) * 60 + int(sec) <= length
+    # No time of day stands inside a reference.
+    assert "[Recording 1, 14:" not in block and "[Recording 2, 14:" not in block
     assert str(LAT) not in block and str(LON) not in block and "N10" not in block
     # Nothing to say without a path, and nothing while maps are off.
     assert camera_paths.readings_block(a_case, []) == ""
@@ -432,12 +457,18 @@ def test_the_chats_block_names_the_camera_and_the_time_and_never_a_coordinate(
 def test_the_readings_rule_joins_both_chats():
     case_chat = (HERE / "core" / "case_chat.py").read_text(encoding="utf-8")
     incident_chat = (HERE / "core" / "incident_chat.py").read_text(encoding="utf-8")
+    # The case's chat has a rule of its own from v1.235.0: the reference is
+    # given with the reading, and who was near is the app's to work out.
     assert (
-        "camera_paths.readings_block(" in case_chat and "camera_paths.RULE" in case_chat
+        "camera_paths.readings_block(" in case_chat
+        and "camera_paths.CASE_RULE" in case_chat
+        and "camera_paths.RULE" not in case_chat
     )
     assert "readings_block_for_incident(" in incident_chat
     assert "camera_paths.RULE" in incident_chat
     assert "[Recording N, HH:MM:SS]" in camera_paths.RULE
+    assert "is never a time of day" in camera_paths.CASE_RULE
+    assert "do not work it out again" in camera_paths.CASE_RULE
 
 
 def test_two_cameras_that_kept_close_are_together_and_make_the_offer(person, a_case):
@@ -453,8 +484,37 @@ def test_two_cameras_that_kept_close_are_together_and_make_the_offer(person, a_c
     offer = told["offer"][0]
     assert sorted(offer["recordings"]) == sorted([str(a.pk), str(b.pk)])
     assert "within 50" in offer["line"] and "in no incident" in offer["line"]
+    # v1.235.0: one officer's own two cameras are not "someone nearby".
     block = camera_paths.readings_block(a_case, [a, b])
-    assert "Recording 1 and Recording 2 were within 50 m" in block
+    assert "for a minute or more" not in block
+    assert block.count("Within 50 m then: nobody else's camera.") == 2
+    # Two officers: each camera's paragraph names the other officer, at the
+    # moment of each reading and as the spell they kept close.
+    camera_paths.CameraPath.objects.filter(recording=b).update(wearer="Lee Kim")
+    block = camera_paths.readings_block(a_case, [a, b])
+    first, second = block.split("Recording 2 (")
+    assert "Within 50 m then: officer Lee Kim." in first
+    assert (
+        "- within 50 m of this camera for a minute or more: officer Lee Kim "
+        "13:53:20 to 14:00:00"
+    ) in first
+    assert "Within 50 m then: officer Pat Doe." in second
+    assert "for a minute or more: officer Pat Doe 13:53:20 to 14:00:00" in second
+    # Without the spells, for a case too large for them: the readings stay.
+    lean = camera_paths.readings_block(a_case, [a, b], spells=False)
+    assert "for a minute or more" not in lean
+    assert "Within 50 m then: officer Lee Kim." in lean
+    # Who was near at a moment, as data: within, and the nearest beyond.
+    paths = camera_paths.for_case(a_case)
+    zeros = {
+        one.recording_id: camera_paths.zero_of(one.recording, one) for one in paths
+    }
+    mine = camera_paths.of(a)
+    assert camera_paths.near_at(mine, 61.0, paths, zeros) == {
+        "within": ["officer Lee Kim"],
+        "nearest": [],
+    }
+    assert camera_paths.who_of(mine) == "officer Pat Doe"
     incident = Incident.objects.create(case=a_case, name="Stop", created_by=person)
     IncidentCamera.objects.create(incident=incident, recording=a)
     assert camera_paths.map_of(a_case, viewer=person)["offer"] == []
@@ -1104,3 +1164,82 @@ def test_a_vehicles_streams_are_one_camera_on_the_cap_the_wall_and_the_page(
     lanes = {bar["id"]: bar for bar in reading["bars"]}
     assert str(cabin.pk) not in lanes
     assert lanes[str(front.pk)]["streams"] == [str(front.pk), str(cabin.pk)]
+
+
+# A path file that arrives after the writing is done (v1.235.0) ------------------------
+
+
+def test_a_memo_or_comparison_written_before_a_path_file_says_so(person, a_case):
+    """The maintainer's question: what if a path file is added after the
+    summaries and everything else are written? What a page reads from the
+    files is read afresh every time. A memo and a comparison are given the
+    cameras' files when they are written, and had no way to say that one
+    arrived, changed or left afterwards; now each remembers which files its
+    cameras had."""
+    from core import comparison, incident_assistant
+    from core.assistant import DONE
+    from core.comparison import Comparison
+    from core.incident_assistant import IncidentMemo
+
+    car = video(person, a_case, "Dash-4")
+    incident = Incident.objects.create(case=a_case, name="Stop", created_by=person)
+    IncidentCamera.objects.create(incident=incident, recording=car)
+
+    def written(signature: str, when=None):
+        fields = {
+            "incident": incident,
+            "state": DONE,
+            "events_signature": incident_assistant.events_signature(incident),
+            "cameras_signature": incident_assistant.cameras_signature(incident),
+            "paths_signature": signature,
+            "written_at": when or timezone.now(),
+        }
+        return IncidentMemo(**fields), Comparison(**fields)
+
+    def marks(memo, compared) -> tuple[str, str]:
+        return (
+            incident_assistant.stale_words(memo, incident),
+            comparison.stale_words(compared),
+        )
+
+    # No camera has a file: the signature says so, and nothing is marked.
+    assert camera_paths.paths_signature(incident) == "none"
+    memo, compared = written(camera_paths.paths_signature(incident))
+    assert marks(memo, compared) == ("", "")
+    # A file arrives: both say so, with the offer they already make.
+    added(car, car_file(), by=person)
+    with_one = camera_paths.paths_signature(incident)
+    assert with_one != "none" and len(with_one) == 16
+    assert marks(memo, compared) == (
+        "The chronology has changed since this memo was written: a camera's "
+        "path file was added, replaced or removed. Regenerate to write it on them.",
+        "a camera's path file changed since",
+    )
+    # Written again with the file in hand: current.
+    memo, compared = written(with_one)
+    assert marks(memo, compared) == ("", "")
+    # The file is replaced by another, then removed: marked each time.
+    added(car, car_file(seconds=200), by=person, replace=True)
+    assert camera_paths.paths_signature(incident) != with_one
+    assert "path file" in marks(memo, compared)[0]
+    memo, compared = written(camera_paths.paths_signature(incident))
+    camera_paths.remove(camera_paths.of(car), by=person)
+    assert "path file" in marks(memo, compared)[0]
+    assert marks(memo, compared)[1] == "a camera's path file changed since"
+    # A row from before this was kept has no signature and is judged by the
+    # files' own dates: marked only when a file came after it was written.
+    added(car, car_file(), by=person)
+    before = timezone.now() - dt.timedelta(days=2)
+    after = timezone.now() + dt.timedelta(minutes=5)
+    assert "path file" in marks(*written("", before))[0]
+    assert marks(*written("", after)) == ("", "")
+    # A file on a camera of another incident, or of none, marks nothing here.
+    other = video(person, a_case, "Dash-9")
+    added(other, car_file(), by=person)
+    memo, compared = written(camera_paths.paths_signature(incident))
+    assert marks(memo, compared) == ("", "")
+    # With Maps off nothing about path files is said anywhere.
+    camera_paths.remove(camera_paths.of(car), by=person)
+    assert "path file" in marks(memo, compared)[0]
+    settings_store.set_to("maps", False)
+    assert marks(memo, compared) == ("", "")

@@ -17,6 +17,49 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.235.0, 2026-11-12
+
+```
+Models: unchanged
+Database: migrates (0109, one field on a memo and on a comparison; no data moves)
+```
+
+Asking the chat about the cameras themselves: the lights, the siren, when
+a camera came on, and who was near. From a trial on the office's own case.
+
+- **A reference that opens.** Asked when an officer's lights came on, the
+  chat gave the right time and a reference that opened nothing: it had
+  been told the time of day and left to work out the moment in the
+  recording. Each reading it is given now carries its reference, ready to
+  copy.
+- **Seconds, not minutes.** That question had read ninety transcripts in
+  six parts and taken nearly three minutes. One small step now sorts each
+  question in a case with path files: one the cameras' own files answer is
+  answered from them in a single call, with no transcript read. The line
+  under the answer says "Read the cameras' own files".
+- **Who was near is worked out, not guessed.** Asked who was nearby, the
+  parts of the answer had argued with each other, by name. The app now
+  works out who was within 50 metres at the moment of the lights, the
+  siren or a camera being activated, and who was nearest beyond that, and
+  writes it on that reading, by officer and unit. An officer's own body
+  camera and car camera are not "someone nearby".
+- **Read in parts, the files go once.** A question that needs what was said
+  and the files reads the transcripts in parts as before; only the step
+  that joins the parts is given the files. That step never names its
+  parts, whatever the question.
+- **A case with no path file** is asked nothing more than before. Asked
+  about lights or a siren, it now answers that no camera in the case has a
+  file that records it.
+- **A path file added later.** An incident's memo and a comparison with a
+  report are given the cameras' files when they are written, and had no
+  way to say one arrived afterwards. Each now says when a camera's path
+  file was added, replaced or removed since, with the offer to write it
+  again. Nothing is rewritten by itself.
+
+Not proven until tried on the office's case: how well the sorting step
+sorts. A question sorted wrongly to the files is read whole in the same
+turn, so the cost is a second, not the answer.
+
 ## v1.234.0, 2026-11-12
 
 ```

@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import datetime as dt
 import errno
+import hashlib
 import json
 import logging
 import math
@@ -50,6 +51,9 @@ STILL_METRES = 15.0
 STILL_SECONDS = 120.0
 # Together: two cameras within this many metres of each other.
 NEAR_METRES = 50.0
+# How far the chat's sheet looks for the nearest cameras beyond that, when
+# nobody was within it (v1.235.0): past this, a camera is not near at all.
+NEAREST_METRES = 2000.0
 # A jump (chapter 6.11, v1.211.0): two consecutive fixes further apart than
 # this many metres a second is not the camera moving. A fix far from both
 # its neighbours is a glitch and is left out; a coordinate that recurs this
@@ -91,6 +95,38 @@ RULE = (
     "moment as [Recording N, HH:MM:SS] so the person can open it. A body "
     "camera keeps the minute before the officer activates it without sound; "
     "its microphone coming on is the officer activating it."
+)
+# The case chat's own rule (v1.235.0), beside the sheet `readings_block`
+# writes: the reference is given with each reading, and who was near is
+# worked out by the app, since a trial on an office's case showed the
+# engine writing the time of day as a reference and each part of a question
+# reading the pairs its own way.
+CASE_RULE = (
+    "A camera's readings (its lights, siren and microphone, when it began and "
+    "ended, where it stood still, who was near it) come from its own file "
+    "beside the video, not from the picture or the words. Say which officer or "
+    "unit, give the time of day as the file gives it, and give the reference "
+    "that follows the reading, copied exactly: a reference is [Recording N, "
+    "HH:MM:SS] into the recording and is never a time of day. Who was near is "
+    "worked out from the files and written with the reading: repeat it as "
+    "given and do not work it out again. A body camera keeps the minute before "
+    "the officer activates it without sound; its microphone coming on is the "
+    "officer activating it."
+)
+SHEET_HEAD = (
+    "The cameras' own files, in the office's time of day. After each reading "
+    "comes its reference into the recording. Who was near is worked out from "
+    "the files' positions; an officer's own cameras are not counted as near "
+    "each other."
+)
+# A case with no path file among what a question reads (v1.235.0): asked
+# about what only a camera's file records, the answer says there is none,
+# not that "the transcripts do not say".
+NO_FILES_RULE = (
+    "No camera read for this question has a file of its own readings, so "
+    "nothing here records lights, a siren, when a camera was activated or who "
+    "was near. Asked about those, say that no camera in this case has a file "
+    "that records it, and answer only from what was said or shown."
 )
 
 
@@ -1502,20 +1538,183 @@ def together(paths: list[CameraPath], zeros: dict) -> list[tuple]:
     return out
 
 
-def readings_block(case, read: list) -> str:
-    """The chat's block (Phase 12 chapter 1): one short paragraph per camera
-    with a path among the recordings a question reads, numbered as the
-    question numbers them; times of day, distances and words, never a
-    coordinate. "" when there is nothing to say."""
-    if not on():
+def who_of(path: CameraPath) -> str:
+    """How a camera is named in a sentence about who was near: by its unit
+    and officer for an in-car camera, by its officer for a body camera, and
+    by its recording's title where the file names neither."""
+    wearer = (path.wearer or "").strip()
+    unit = (path.unit or "").strip()
+    if path.source == CAR and unit:
+        return f"unit {unit} (officer {wearer})" if wearer else f"unit {unit}"
+    if wearer:
+        return f"officer {wearer}"
+    return path.recording.title
+
+
+def same_officer(a: CameraPath, b: CameraPath) -> bool:
+    """An officer's own body camera and car camera, or one unit's two
+    streams, are not "someone nearby": the same wearer, or the same unit."""
+    wearer_a, wearer_b = (a.wearer or "").strip(), (b.wearer or "").strip()
+    if wearer_a and wearer_a.casefold() == wearer_b.casefold():
+        return True
+    unit_a, unit_b = (a.unit or "").strip(), (b.unit or "").strip()
+    return bool(unit_a) and unit_a.casefold() == unit_b.casefold()
+
+
+def near_at(path: CameraPath, t: float, paths: list, zeros: dict) -> dict | None:
+    """Who was near this camera at t seconds in, worked out from the files'
+    positions (v1.235.0): {"within": [who, ...]} inside NEAR_METRES, and
+    {"nearest": [(who, metres), ...]} for the two nearest beyond it and
+    inside NEAREST_METRES. None when the camera had no position then or is
+    not on the clock. An officer's own other cameras are not counted, and an
+    officer with two cameras is said once, at the nearer."""
+    zero = zeros.get(path.recording_id)
+    here = position_at(path, t)
+    if here is None or not zero or zero.get("second") is None:
+        return None
+    moment = zero["second"] + t
+    found: dict[str, float] = {}
+    for other in paths:
+        if other.recording_id == path.recording_id or not other.fixes:
+            continue
+        if same_officer(path, other):
+            continue
+        theirs = zeros.get(other.recording_id)
+        if not theirs or theirs.get("second") is None:
+            continue
+        if theirs.get("date") != zero.get("date"):
+            continue
+        there = position_at(other, moment - theirs["second"])
+        if there is None:
+            continue
+        metres = metres_between(here, there)
+        who = who_of(other)
+        if who not in found or metres < found[who]:
+            found[who] = metres
+    ordered = sorted(found.items(), key=lambda one: one[1])
+    return {
+        "within": [who for who, metres in ordered if metres <= NEAR_METRES],
+        "nearest": [
+            (who, metres)
+            for who, metres in ordered
+            if NEAR_METRES < metres <= NEAREST_METRES
+        ][:2],
+    }
+
+
+def near_words(near: dict | None) -> str:
+    """ " Within 50 m then: officer Ruiz. Nearest beyond: unit 7, 310 m." """
+    if near is None:
         return ""
-    numbers = {recording.pk: number for number, recording in enumerate(read, 1)}
-    paths = [one for one in for_case(case) if one.recording_id in numbers]
+    within = ", ".join(near["within"]) if near["within"] else "nobody else's camera"
+    words = f" Within {int(NEAR_METRES)} m then: {within}."
+    if near["nearest"]:
+        words += (
+            " Nearest beyond: "
+            + ", ".join(f"{who} {_km(metres)}" for who, metres in near["nearest"])
+            + "."
+        )
+    return words
+
+
+def _reference(number: int, t: float, length: float) -> str:
+    """[Recording N, HH:MM:SS] into the recording: the reference a reading
+    carries, ready to be copied, so nobody has to subtract a clock."""
+    whole = int(max(0.0, min(float(t), float(length or t))))
+    return (
+        f"[Recording {number}, {whole // 3600:02d}:{whole % 3600 // 60:02d}"
+        f":{whole % 60:02d}]"
+    )
+
+
+def sheet_lines(path: CameraPath, zero: dict | None, number: int, near) -> list[str]:
+    """One line per reading of one camera, each with its reference into the
+    recording, and for the lights, the siren, the camera being activated, a
+    bookmark and the crash sensor, who was near at that moment (`near` is a
+    function of t, or None)."""
+
+    def at(t: float) -> str:
+        return f"{_spell_words(t, None, zero)} {_reference(number, t, path.length)}"
+
+    def spell(t: float, until: float | None) -> str:
+        return at(t) + (f" to {_spell_words(until, None, zero)}" if until else "")
+
+    def nearby(t: float) -> str:
+        return near_words(near(t)) if near is not None else ""
+
+    out = []
+    for one in events_of(path):
+        kind, t = one["kind"], one["t"]
+        if kind == "camera":
+            out.append(f"recording {'began' if one['value'] else 'ended'} {at(t)}")
+        elif kind == "mic" and one["value"]:
+            if one["words"] == "Activated":
+                out.append(
+                    f"activated {at(t)} (the minute before is the camera's buffer, "
+                    f"without sound).{nearby(t)}"
+                )
+            else:
+                out.append(f"mic on {at(t)}")
+        elif kind == "mic":
+            out.append(f"muted {spell(t, one['until'])}")
+        elif kind in ("lights", "siren") and one["value"]:
+            out.append(f"{one['words'].lower()} {spell(t, one['until'])}.{nearby(t)}")
+        elif kind in ("aux", "low battery") and one["value"]:
+            out.append(f"{one['words'].lower()} {spell(t, one['until'])}")
+        elif kind == "still":
+            minutes = max(1, int(round(((one["until"] or t) - t) / 60)))
+            out.append(
+                f"stood still {spell(t, one['until'])} "
+                f"({minutes} minute{'' if minutes == 1 else 's'})"
+            )
+        elif kind in ("bookmark", "crash"):
+            out.append(f"{one['words'].lower()} {at(t)}.{nearby(t)}")
+        elif kind in ("brakes", "speed"):
+            out.append(f"{one['words'].lower()} {at(t)}")
+    for start, end in path.gaps or []:
+        out.append(f"no fix {spell(start, end)}")
+    left_out = dropped_count(path)
+    if left_out:
+        out.append(
+            f"{left_out} fix{'' if left_out == 1 else 'es'} left out as jumps the "
+            "camera could not have made"
+        )
+    if not path.fixes:
+        out.append("no position in its file")
+    return out
+
+
+def paths_among(case, read: list) -> list[CameraPath]:
+    """The path files of the recordings a question may read, or none."""
+    if not on():
+        return []
+    wanted = {recording.pk for recording in read}
+    return [one for one in for_case(case) if one.recording_id in wanted]
+
+
+def readings_block(case, read: list, *, spells: bool = True) -> str:
+    """The chat's sheet (Phase 12 chapter 1; rewritten v1.235.0): for each
+    camera with a path among the recordings numbered for a question, its
+    readings one to a line, each with the reference that opens it, and who
+    was near at the moments that matter; then, with `spells`, who was within
+    NEAR_METRES of it for a minute or more, and when. Times of day, distances
+    and words, never a coordinate. "" when there is nothing to say."""
+    paths = paths_among(case, read)
     if not paths:
         return ""
+    numbers = {recording.pk: number for number, recording in enumerate(read, 1)}
     zeros = {one.recording_id: zero_of(one.recording, one) for one in paths}
-    lines = ["The cameras' own files, in the office's time of day:"]
-    for path in paths:
+    beside: dict = {}
+    if spells:
+        for a, b, start, end in together(paths, zeros):
+            if same_officer(a, b):
+                continue
+            for mine, theirs in ((a, b), (b, a)):
+                beside.setdefault(mine.recording_id, {}).setdefault(
+                    who_of(theirs), []
+                ).append((start, end))
+    lines = [SHEET_HEAD]
+    for path in sorted(paths, key=lambda one: numbers[one.recording_id]):
         recording = path.recording
         number = numbers[recording.pk]
         kind = "an in-car camera" if path.source == CAR else "a body camera"
@@ -1531,23 +1730,63 @@ def readings_block(case, read: list) -> str:
             clock = "clock from its own file"
         elif zero["how"] == NAME:
             clock = "clock from the minute in its file name, to the minute"
-        words = readings_words(path, zero)
-        if not path.fixes:
-            words.append("no position in its file")
         lines.append(
             f"Recording {number} ({recording.title}; {head}"
             + (f"; {clock}" if clock else "")
-            + "): "
-            + "; ".join(words)
-            + "."
+            + "):"
         )
-    for a, b, start, end in together(paths, zeros):
-        lines.append(
-            f"Recording {numbers[a.recording_id]} and Recording "
-            f"{numbers[b.recording_id]} were within {int(NEAR_METRES)} m of each "
-            f"other from {_hms(start)} to {_hms(end)}."
-        )
+
+        def near(t: float, path=path) -> dict | None:
+            return near_at(path, t, paths, zeros)
+
+        lines.extend("- " + one for one in sheet_lines(path, zero, number, near))
+        if beside.get(recording.pk):
+            lines.append(
+                f"- within {int(NEAR_METRES)} m of this camera for a minute or more: "
+                + "; ".join(
+                    f"{who} "
+                    + " and ".join(
+                        f"{_hms(start)} to {_hms(end)}" for start, end in sorted(spans)
+                    )
+                    for who, spans in sorted(beside[recording.pk].items())
+                )
+            )
     return "\n".join(lines)
+
+
+def paths_signature(incident) -> str:
+    """Which path files an incident's cameras have, for a memo or a
+    comparison to remember (v1.235.0): one written before a camera's file
+    was added, replaced or removed says so. "none" when no camera has one,
+    which is not the "" of a row written before this was kept."""
+    held = {one.recording_id: one for one in for_case(incident.case)}
+    parts = sorted(
+        f"{camera.recording_id}:{held[camera.recording_id].pk}"
+        f":{held[camera.recording_id].size_bytes}"
+        for camera in incident.cameras.all()
+        if camera.recording_id in held
+    )
+    if not parts:
+        return "none"
+    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
+def paths_changed_since(incident, signature: str, written_at) -> bool:
+    """Whether a camera's path file was added, replaced or removed since a
+    memo or a comparison was written. A row from before the signature was
+    kept (v1.235.0) is judged by the files' own dates: one added after it
+    was written."""
+    if not on():
+        return False
+    if signature:
+        return signature != paths_signature(incident)
+    if written_at is None:
+        return False
+    cameras = {camera.recording_id for camera in incident.cameras.all()}
+    return any(
+        one.recording_id in cameras and one.created > written_at
+        for one in for_case(incident.case)
+    )
 
 
 def _hms(second: float) -> str:

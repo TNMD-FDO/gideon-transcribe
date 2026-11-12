@@ -137,6 +137,10 @@ class Comparison(models.Model):
     record_lines = models.IntegerField(default=0)
     events_signature = models.CharField(max_length=32, blank=True, default="")
     cameras_signature = models.CharField(max_length=32, blank=True, default="")
+    # Which path files the cameras had when this was written (v1.235.0), so
+    # one written before a camera's file was added, replaced or removed says
+    # so. "" for a row from before this was kept, judged by the files' dates.
+    paths_signature = models.CharField(max_length=32, blank=True, default="")
     created = models.DateTimeField(auto_now_add=True)
     written_at = models.DateTimeField(null=True, blank=True)
 
@@ -1012,6 +1016,11 @@ def compare(comparison_id, attempt: int = 1) -> None:
 
             comparison.events_signature = events_signature(comparison.incident)
             comparison.cameras_signature = cameras_signature(comparison.incident)
+            from core import camera_paths
+
+            comparison.paths_signature = camera_paths.paths_signature(
+                comparison.incident
+            )
         comparison.stage = ""
         comparison.state = DONE
         comparison.reason_class = ""
@@ -1358,6 +1367,13 @@ def stale_words(comparison: Comparison) -> str:
         return "the chronology changed since"
     if comparison.cameras_signature != cameras_signature(incident):
         return "the cameras changed since"
+    from core import camera_paths
+
+    # v1.235.0: the comparison reads each camera's own file beside the record.
+    if camera_paths.paths_changed_since(
+        incident, comparison.paths_signature, comparison.written_at
+    ):
+        return "a camera's path file changed since"
     return ""
 
 

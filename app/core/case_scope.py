@@ -25,6 +25,8 @@ from core import engine, prompts, settings_store
 from core.assistant import SUGGESTION_SAMPLING, PromptTemplate, cap, time_limit
 
 WHOLE, NARROWED, OVERVIEWS, DIGEST = "whole", "narrowed", "overviews", "digest"
+# Answered from the cameras' own files, with no transcript read (v1.235.0).
+FILES = "files"
 KINDS = ("all", "filter", "search", "notes")
 
 # The selection answer's cap, and the least an Overview may be cut to before
@@ -410,6 +412,8 @@ def read_words(turn) -> str:
         return f"Asked of the {count} recordings narrowed to on {where}."
     if turn.route in (WHOLE, DIGEST):
         return "Asked of every recording in the case."
+    if turn.route == FILES:
+        return "Asked of the cameras' own files."
     return ""
 
 

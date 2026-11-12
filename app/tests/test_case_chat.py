@@ -1044,3 +1044,257 @@ def test_the_panel_knows_whose_chat_and_whose_question(owner, a_case, client):
     assert [one["asked_by"] for one in turns] == [friend.shown_name, owner.shown_name]
     assert [one["yours"] for one in turns] == [False, True]
     assert mine.pk is not None
+
+
+# What a question needs: the cameras' own files, the transcripts, or both (v1.235.0) ---
+
+
+def a_case_with_a_car(owner, a_case):
+    """Two calls with transcripts, the first with an in-car camera's path file
+    (lights on from 20 s to 140 s by its own clock, which begins 14:20:03)."""
+    from tests.test_camera_paths import added, car_file
+
+    settings_store.set_to("maps", True)
+    one = a_recording(owner, a_case, "Dash-4")
+    two = a_recording(owner, a_case, "Call two")
+    added(one, car_file(), by=owner)
+    return one, two
+
+
+def said_to_the_engine(call) -> str:
+    return "\n".join(str(message["content"]) for message in call["messages"])
+
+
+@pytest.mark.django_db
+def test_a_question_the_cameras_files_answer_is_answered_from_the_files_alone(
+    owner, a_case, client, monkeypatch
+):
+    """From an office's trial: "when did the officer turn his lights on" read
+    ninety transcripts in six parts, took nearly three minutes, and gave a
+    reference that opened nothing. One small step sorts the question, and a
+    files question is one call with the files and no transcript."""
+    from core import camera_paths, one_reading
+
+    swallow_defer(monkeypatch)
+    one, _two = a_case_with_a_car(owner, a_case)
+    asked = reachable(
+        monkeypatch,
+        [
+            '{"sort": "files"}',
+            "Unit 9082 had its lights on from 14:20:23 [Recording 1, 00:00:20].",
+        ],
+    )
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(
+        chat=chat, number=1, question="When were the lights turned on?"
+    )
+    case_chat.answer_case_turn(turn.pk)
+
+    assert len(asked) == 2
+    # The sorting step: the question, a schema, no thinking, a few tokens.
+    sorting = asked[0]
+    assert sorting["messages"][0]["content"] == prompts.CASE_CHAT_SORT
+    assert "The question: When were the lights turned on?" in said_to_the_engine(
+        sorting
+    )
+    assert sorting["schema"] == prompts.CASE_CHAT_SORT_SCHEMA
+    assert sorting["thinking"] is False
+    assert "blue" not in said_to_the_engine(sorting)
+    # The answering call: the sheet, the two rules, and not a word of a transcript.
+    told = said_to_the_engine(asked[1])
+    assert "- lights on 14:20:23 [Recording 1, 00:00:20] to 14:22:23." in told
+    assert prompts.CASE_CHAT_FILES_FORMAT in told and camera_paths.CASE_RULE in told
+    assert "The car was blue." not in told and "Recording 1 of 2" not in told
+    turn.refresh_from_db()
+    assert turn.state == "done" and turn.route == "files"
+    assert turn.readings == [] and turn.parts == 0
+    # No opening line, and the reference opens the moment in the recording.
+    assert turn.answer == (
+        "Unit 9082 had its lights on from 14:20:23 [Recording 1, 00:00:20]."
+    )
+    assert turn.citations == {
+        "[Recording 1, 00:00:20]": {"recording": str(one.pk), "seconds": 20.0}
+    }
+    assert one_reading.read_line(turn).startswith("Read the cameras' own files")
+    row = Row.objects.get(category="llm", event="AI assistant call")
+    assert row.details["feature"] == "case_chat_files"
+    assert row.details["sorted_as"] == "files" and row.details["route"] == "files"
+    assert row.details["transcripts_read"] == 0 and row.details["readings"] == 1
+    assert "lights" not in json.dumps(row.details)
+
+
+@pytest.mark.django_db
+def test_a_files_answer_that_is_not_there_falls_back_to_reading_everything(
+    owner, a_case, client, monkeypatch
+):
+    """A question sorted wrongly costs a second, not the answer: the files
+    say they do not hold it, and the question is read as it was before."""
+    from core import camera_paths
+
+    swallow_defer(monkeypatch)
+    _one, two = a_case_with_a_car(owner, a_case)
+    asked = reachable(
+        monkeypatch,
+        ['{"sort": "files"}', "NOT IN THE FILES", "Blue [Recording 2, 00:12:45]."],
+    )
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(chat=chat, number=1, question="The colour?")
+    case_chat.answer_case_turn(turn.pk)
+
+    assert len(asked) == 3
+    told = said_to_the_engine(asked[2])
+    # One Reading with room for it takes the sheet beside the transcripts.
+    assert "The car was blue." in told and "Recording 1 of 2" in told
+    assert "- lights on 14:20:23 [Recording 1, 00:00:20]" in told
+    assert camera_paths.CASE_RULE in told and camera_paths.NO_FILES_RULE not in told
+    turn.refresh_from_db()
+    assert turn.route == "whole" and len(turn.readings) == 2
+    assert turn.answer == "Blue [Recording 2, 00:12:45]."
+    assert turn.citations["[Recording 2, 00:12:45]"]["recording"] == str(two.pk)
+    row = Row.objects.get(category="llm", event="AI assistant call")
+    assert row.details["sorted_as"] == "both" and row.details["feature"] == (
+        "case_chat_turn"
+    )
+
+
+@pytest.mark.django_db
+def test_a_question_about_what_was_said_is_not_sent_the_files(
+    owner, a_case, client, monkeypatch
+):
+    from core import camera_paths
+
+    swallow_defer(monkeypatch)
+    a_case_with_a_car(owner, a_case)
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+
+    def ask(number: int, answers: list[str]) -> list:
+        asked = reachable(monkeypatch, answers)
+        turn = CaseChatTurn.objects.create(chat=chat, number=number, question="Colour?")
+        case_chat.answer_case_turn(turn.pk)
+        return asked
+
+    asked = ask(1, ['{"sort": "transcripts"}', "Blue [Recording 2, 00:12:45]."])
+    assert len(asked) == 2
+    told = said_to_the_engine(asked[1])
+    assert "The car was blue." in told
+    assert "The cameras' own files" not in told
+    assert camera_paths.CASE_RULE not in told and camera_paths.NO_FILES_RULE not in told
+    # Anything but a clear answer is "both": everything is read, as before.
+    for unclear in ("maybe", '{"sort": "the files, probably"}', "[]"):
+        asked = ask(asked and len(chat.turns.all()) + 1, [unclear, "Blue."])
+        assert "- lights on 14:20:23 [Recording 1, 00:00:20]" in said_to_the_engine(
+            asked[1]
+        ), unclear
+    # A follow-up is sorted with the questions before it in view.
+    assert "Earlier questions in this chat:\nColour?" in said_to_the_engine(asked[0])
+
+
+@pytest.mark.django_db
+def test_a_case_with_no_path_file_is_asked_nothing_more_and_says_so(
+    owner, a_case, client, monkeypatch
+):
+    """No file, no sorting step: one call, as before. The one difference is
+    the sentence that lets the answer say why a question about the lights
+    cannot be answered here."""
+    from core import camera_paths
+
+    swallow_defer(monkeypatch)
+    settings_store.set_to("maps", True)
+    a_recording(owner, a_case, "Call one")
+    asked = reachable(monkeypatch, ["Blue [Recording 1, 00:12:45]."])
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(chat=chat, number=1, question="Colour?")
+    case_chat.answer_case_turn(turn.pk)
+    assert len(asked) == 1
+    told = said_to_the_engine(asked[0])
+    assert camera_paths.NO_FILES_RULE in told
+    assert "no camera in this case has a file that records it" in told
+    assert camera_paths.CASE_RULE not in told
+    row = Row.objects.get(category="llm", event="AI assistant call")
+    assert "sorted_as" not in row.details
+    # With Maps off nothing about the cameras' files is said at all.
+    settings_store.set_to("maps", False)
+    asked = reachable(monkeypatch, ["Blue."])
+    turn = CaseChatTurn.objects.create(chat=chat, number=2, question="Again?")
+    case_chat.answer_case_turn(turn.pk)
+    assert len(asked) == 1
+    assert camera_paths.NO_FILES_RULE not in said_to_the_engine(asked[0])
+
+
+@pytest.mark.django_db
+def test_read_in_parts_the_files_go_once_to_the_step_that_joins_them(
+    owner, a_case, client, monkeypatch
+):
+    """The trial's second fault: every part was handed the same sheet, each
+    read it its own way, and the joined answer reported them arguing, by
+    name. The parts read the transcripts; the joining step alone is given
+    the files, and never names a part."""
+    from core import camera_paths
+
+    swallow_defer(monkeypatch)
+    a_case_with_a_car(owner, a_case)
+    monkeypatch.setattr(settings_store, "reading_tokens", lambda: 10)
+    by_content = {
+        prompts.CASE_CHAT_SORT: '{"sort": "both"}',
+        "Recording 1 of 2": "Part one says hello [Recording 1, 00:00:00].",
+        "Recording 2 of 2": "Part two says blue [Recording 2, 00:12:45].",
+        prompts.COMBINING: (
+            "He said blue [Recording 2, 00:12:45] after the lights came on "
+            "[Recording 1, 00:00:20]."
+        ),
+    }
+    asked = reachable(monkeypatch, [""])
+
+    def by_the_question(messages, **options):
+        asked.append({"messages": messages, **options})
+        user = " ".join(str(m["content"]) for m in messages)
+        # The joining call holds the parts' words too: it is asked for first.
+        for key in (prompts.COMBINING, prompts.CASE_CHAT_SORT, *by_content):
+            if key in user:
+                text = by_content[key]
+                break
+        return {
+            "text": text,
+            "finish_reason": "stop",
+            "input_tokens": 100,
+            "output_tokens": 10,
+            "model": "the-model",
+        }
+
+    monkeypatch.setattr(engine, "complete", by_the_question)
+    signed_in(client, owner)
+    chat = CaseChat.objects.create(case=a_case, asked_by=owner)
+    turn = CaseChatTurn.objects.create(
+        chat=chat, number=1, question="What did he say after the lights came on?"
+    )
+    case_chat.answer_case_turn(turn.pk)
+
+    assert len(asked) == 4
+    parts = [one for one in asked if "Recording 1 of 2" in said_to_the_engine(one)]
+    parts += [one for one in asked if "Recording 2 of 2" in said_to_the_engine(one)]
+    parts = [one for one in parts if prompts.COMBINING not in said_to_the_engine(one)]
+    assert len(parts) == 2
+    for part in parts:
+        told = said_to_the_engine(part)
+        assert "The cameras' own files" not in told
+        assert camera_paths.CASE_RULE not in told
+    joining = said_to_the_engine(asked[-1])
+    assert prompts.COMBINING in joining and prompts.COMBINING_FILES in joining
+    assert camera_paths.CASE_RULE in joining
+    assert joining.count("The cameras' own files, in the office's time of day.") == 1
+    assert "- lights on 14:20:23 [Recording 1, 00:00:20]" in joining
+    # The sheet comes after the part answers, as the wording says.
+    assert joining.index("Part 2 of 2:") < joining.index("- lights on 14:20:23")
+    turn.refresh_from_db()
+    assert turn.state == "done" and turn.parts == 2
+    assert set(turn.citations) == {
+        "[Recording 2, 00:12:45]",
+        "[Recording 1, 00:00:20]",
+    }
+    # The joining step writes one answer and never names its parts.
+    assert "never mention the parts" in prompts.COMBINING
+    assert "may be added" in prompts.COMBINING_FILES
