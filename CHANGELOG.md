@@ -17,6 +17,30 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.234.0, 2026-11-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+What the camera showed, in the player, only from a chat answer or a search.
+
+- **Playing a moment from a note shows the words alone.** The player (the
+  Preview) had listed the picture's descriptions as "Seen" rows in among
+  the spoken lines whoever opened it. At the maintainer's word it now does
+  so only when opened from a chat answer's reference or from a Search hit.
+- **Everywhere else it is the lines alone:** a note's time, the Notes page,
+  the case's chronology, the Map, a comparison, a proposed event or a
+  finding, the speaker picker and the Voices place.
+- **Unchanged:** inside a chat reference's or a Search hit's player; the
+  hover on a chat reference; Search's Seen hits; the recording page's
+  Find; a video's Summary and its camera references; the incident
+  chronology's events that came from what a camera showed.
+
+This amends chapter 5 of Phase 7, which had put the descriptions among the
+lines of every Preview.
+
 ## v1.233.0, 2026-11-12
 
 ```

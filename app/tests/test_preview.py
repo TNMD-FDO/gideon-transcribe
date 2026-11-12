@@ -107,7 +107,11 @@ def test_the_reading_gives_the_lines_and_the_picture_around_the_moment(
 ):
     signed_in(client, person)
     before = Row.objects.count()
-    got = client.get(f"/recording/{camera.pk}/around", {"t": "764.2"}).json()
+    # Asked as a chat answer's reference and a Search hit ask: with what the
+    # camera showed.
+    got = client.get(
+        f"/recording/{camera.pk}/around", {"t": "764.2", "seen": "1"}
+    ).json()
     assert [one["start"] for one in got["lines"]] == [758.0, 764.0, 769.0]
     assert [one["clock"] for one in got["lines"]] == [
         "00:12:38",
@@ -129,16 +133,71 @@ def test_the_reading_gives_the_lines_and_the_picture_around_the_moment(
     assert Row.objects.count() == before
 
 
+def test_what_the_camera_showed_comes_only_when_it_is_asked_for(camera, person, client):
+    """v1.234.0, the maintainer's word: a seen moment is met in a chat
+    answer and in Search, and nowhere else. The player opened from a note,
+    the chronology, the Map or a voice asks for the lines alone, and gets
+    the lines alone: nothing seen, and no seen line marked as the one cited."""
+    signed_in(client, person)
+    for asked in (
+        {"t": "764.2"},
+        {"t": "761"},
+        {"t": "761", "whole": "1"},
+        {"t": "761", "seen": "0"},
+        {"t": "761", "seen": "yes"},
+    ):
+        got = client.get(f"/recording/{camera.pk}/around", asked).json()
+        assert got["seen"] == [] and got["cited_seen"] is None, asked
+        assert got["lines"], asked
+    # The note still goes on the line being spoken at the moment.
+    got = client.get(f"/recording/{camera.pk}/around", {"t": "761"}).json()
+    assert got["cited"] is None and got["note_on"] == line(camera, 758.0).pk
+    # And the whole recording, as the Notes page reads it, is words alone;
+    # asked for, the seen lines are there.
+    whole = {"t": "761", "whole": "1", "seen": "1"}
+    got = client.get(f"/recording/{camera.pk}/around", whole).json()
+    assert [one["at"] for one in got["seen"]] == [761.0]
+
+
+def test_only_a_chat_reference_and_a_search_hit_ask_for_what_was_seen():
+    """The two openers that ask, and that no other does."""
+    from pathlib import Path
+
+    app = Path(__file__).resolve().parent.parent
+    static = app / "static"
+    player = (static / "preview.js").read_text(encoding="utf-8")
+    assert '(asked.seen ? "&seen=1" : "")' in player
+    assert 'seen: hit.dataset.previewSeen === "1"' in player
+    asking = []
+    for script in sorted(static.glob("*.js")):
+        text = script.read_text(encoding="utf-8")
+        if "Preview.open(" in text and "seen: true" in text:
+            asking.append(script.name)
+    assert asking == ["chat-ui.js"]
+    marked = []
+    for page in sorted((app / "templates").rglob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        if 'data-preview-seen="1"' in text:
+            marked.append(page.name)
+            row = text.split('data-preview-seen="1"', 1)[0].rsplit("<button", 1)[1]
+            assert "hit-play" in row and "hit.preview.recording" in row
+    assert marked == ["case.html"]
+    # A note's time on the Notes tab opens the same player, unmarked.
+    case = (app / "templates" / "case.html").read_text(encoding="utf-8")
+    note = case.split('<li class="note-row"', 1)[1].split("</li>", 1)[0]
+    assert "data-preview-recording" in note and "data-preview-seen" not in note
+
+
 def test_a_thing_only_seen_is_cited_and_its_note_goes_where_it_belongs(
     camera, person, client
 ):
     signed_in(client, person)
-    got = client.get(f"/recording/{camera.pk}/around", {"t": "761"}).json()
+    got = client.get(f"/recording/{camera.pk}/around", {"t": "761", "seen": "1"}).json()
     assert got["cited"] is None
     assert got["cited_seen"] == str(Moment.objects.get().pk)
     assert got["note_on"] == line(camera, 758.0).pk
     # The chat cites the Digest's time, which may fall outside the span.
-    got = client.get(f"/recording/{camera.pk}/around", {"t": "780"}).json()
+    got = client.get(f"/recording/{camera.pk}/around", {"t": "780", "seen": "1"}).json()
     assert got["cited"] is None and got["cited_seen"] == str(Moment.objects.get().pk)
     # Nothing is being said there, so no line takes the note (v1.99.0).
     assert got["note_on"] is None

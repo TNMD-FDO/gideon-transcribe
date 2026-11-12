@@ -444,7 +444,7 @@
         if (window.Preview && play.dataset.recording) {
           Array.prototype.forEach.call(root.querySelectorAll(".cite.play.previewing"), function (one) { one.classList.remove("previewing"); });
           play.classList.add("previewing");
-          window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.seconds), from: play });
+          window.Preview.open({ recording: play.dataset.recording, seconds: parseFloat(play.dataset.seconds), from: play, seen: true });
           return;
         }
         showPreview(play);

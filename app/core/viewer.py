@@ -640,10 +640,16 @@ def still(request: HttpRequest, recording_id) -> HttpResponse:
 
 @login_required
 def around(request: HttpRequest, recording_id) -> JsonResponse:
-    """The Preview's reading (v1.98.0): the recording's lines and what the
-    camera showed around one moment, with what the card needs to play it, to
-    open it and to write a note. Read by whoever may read the transcript;
-    nothing is written and the moment is never logged."""
+    """The Preview's reading (v1.98.0): the recording's lines around one
+    moment, with what the card needs to play it, to open it and to write a
+    note. Read by whoever may read the transcript; nothing is written and
+    the moment is never logged.
+
+    What the camera showed comes with the lines only when it is asked for
+    (`seen=1`, v1.234.0), and only a chat answer's reference and a Search
+    hit ask: those are the two places a person meets a seen moment, and the
+    player opened from anywhere else (a note, the chronology, the Map, a
+    comparison, a voice) plays the words alone."""
     from core import exports, incidents, speakers_page
     from core.assistant import DONE, Moment
 
@@ -660,6 +666,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
     # The whole recording (Phase 9 chapter 4, the Notes page's pop-out): every
     # line, not the minutes around the moment.
     whole = request.GET.get("whole", "") == "1"
+    with_seen = request.GET.get("seen", "") == "1"
     length = float(recording.duration_seconds or 0)
     if whole:
         low, high = 0.0, max(length, at) + 1.0
@@ -676,6 +683,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
             .select_related("note_by")
             .order_by("start")
         )
+    if transcript is not None and with_seen:
         seen = list(
             Moment.objects.filter(
                 transcript=transcript,

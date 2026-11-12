@@ -517,7 +517,11 @@
     }
 
     function url(seconds) {
+      // What the camera showed is asked for only by a chat answer's
+      // reference and a Search hit (v1.234.0); from a note, the
+      // chronology, the Map or anywhere else the card plays the words alone.
       return "/recording/" + asked.recording + "/around?t=" + encodeURIComponent(seconds.toFixed(2)) + (options.whole ? "&whole=1" : "") +
+        (asked.seen ? "&seen=1" : "") +
         (asked.speaker ? "&speaker=" + encodeURIComponent(asked.speaker) : "");
     }
 
@@ -728,7 +732,9 @@
         // A comparison's finding with no moment (v1.170.0): Choose the
         // moment, Make it a note here in the foot.
         finding: given.finding || null,
-        exact: !!given.exact
+        exact: !!given.exact,
+        // Opened from a chat answer or a Search hit: the seen lines too.
+        seen: !!given.seen
       };
       if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); }
       noting = null;
@@ -737,7 +743,7 @@
       if (card && !host && card.classList.contains("snippet") !== isSnippet()) { close(); asked = {
         recording: given.recording, seconds: seconds, from: given.from || null,
         person: given.person || "", role: given.role || "", tabs: Array.isArray(tabs) ? tabs : [],
-        speaker: given.speaker || given.person || "", proposed: given.proposed || null, finding: given.finding || null, exact: !!given.exact
+        speaker: given.speaker || given.person || "", proposed: given.proposed || null, finding: given.finding || null, exact: !!given.exact, seen: !!given.seen
       }; if (asked.from && asked.from.classList) { asked.from.classList.add("previewing"); } }
       if (!card) { build(); }
       if (same && media()) {
@@ -829,7 +835,9 @@
     floating.open({
       recording: hit.dataset.previewRecording, seconds: hit.dataset.previewAt, from: hit,
       person: hit.dataset.previewPerson || "", role: hit.dataset.previewRole || "",
-      tabs: hit.dataset.previewTabs || "", speaker: hit.dataset.previewSpeaker || ""
+      tabs: hit.dataset.previewTabs || "", speaker: hit.dataset.previewSpeaker || "",
+      // A Search hit says so on its button; a note's time does not.
+      seen: hit.dataset.previewSeen === "1"
     });
   });
 
