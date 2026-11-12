@@ -109,7 +109,7 @@ The case chat (`case_chat.answer_case_turn`) appends a readings block beside the
 - **The combining call never names its parts**, whatever the question: one answer, in one voice.
 - **A case with no path file among what a question reads** (Maps on): one sentence joins the system message, so a question about lights, a siren, a camera being activated or who was near is answered "no camera in this case has a file that records it" and from what was said or shown, not "the transcripts do not say".
 
-The audit row gains `sorted_as` (files, transcripts or both) where the step ran; never a word of the question. Left for a later release, at the maintainer's word: a line of status in the Preview. Search finding readings (v1.236.0; Phase 7's amendment of that date) and the officers who were near first in the speaker picker (v1.237.0; chapter 4's amendment) followed the same day.
+The audit row gains `sorted_as` (files, transcripts or both) where the step ran; never a word of the question. Search finding readings (v1.236.0; Phase 7's amendment of that date), the officers who were near first in the speaker picker (v1.237.0; chapter 4's amendment) and a line of status in the Preview (v1.238.0; Phase 7's amendment) followed the same day, each at the maintainer's word.
 
 ### The basemap
 

@@ -3119,6 +3119,16 @@ body.gideon-open .preview-card { right: calc(var(--gideon, 420px) + 28px); botto
 .preview-media { flex: none; }
 .preview-media video { display: block; width: 100%; max-height: 40vh; background: var(--well); }
 .preview-media audio { display: block; width: 100%; }
+/* What the camera's own file says was happening (v1.238.0): one line between
+   the picture and the words, kept in step as it plays. */
+.preview-status { flex: none; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 5px 10px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: var(--t-label); }
+.preview-status[hidden] { display: none; }
+.preview-status .when { font-size: var(--t-small); margin-right: 2px; }
+.preview-status .pill { background: var(--surface); border: 1px solid var(--line); }
+.preview-status .pill.st-on { background: var(--warn-soft); border-color: transparent; color: var(--warn); font-weight: 600; }
+.preview-status .pill.st-near { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.preview-status .pill.st-quiet { color: var(--muted); }
+.preview-status .src { margin-left: auto; }
 .preview-none { margin: 0; padding: 10px; }
 .preview-lines { flex: 1 1 auto; min-height: 60px; max-height: 170px; overflow: auto; border-bottom: 1px solid var(--line); }
 .preview-line { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 10px; border-top: 1px solid var(--line); }

@@ -1370,3 +1370,109 @@ def test_the_cameras_file_says_whose_cameras_were_near_for_the_picker(
     # The two places a line is given a speaker pass the line's own moment.
     for script in ("viewer.js", "speakers-page.js"):
         assert "at: segment.start," in (static / script).read_text(encoding="utf-8")
+
+
+# The player's line: what the camera's own file says was happening (v1.238.0) ----------
+
+
+def test_the_players_line_says_what_the_cameras_file_says(person, a_case, client):
+    """One line in the Preview, kept in step with the picture: the lights and
+    the siren while they are on, the speed, whether a body camera had been
+    activated, standing still or moving, and who was near. From the file
+    alone, wherever the player opens; without a path file, no line."""
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    body = video(person, a_case, "BWC2-1", name="BWC2-1_202511061420_x.mp4")
+    added(body, body_file(), by=person)
+
+    def at(told: dict, t: float) -> list[dict]:
+        return next(s for s in told["spans"] if s["from"] <= t < s["to"])["pills"]
+
+    def words(told: dict, t: float) -> list[str]:
+        return [one["text"] for one in at(told, t)]
+
+    told = camera_paths.status_spans(car, 0.0, 300.0)
+    # The recording's first second by the office's clock: 14:20:03.
+    assert told["clock"] == 14 * 3600 + 20 * 60 + 3
+    # Lights from 20 s to 140 s, the siren from 20 s to 80 s, each shown from
+    # its own second and not from the next sample.
+    assert "lights on" not in words(told, 10.0)
+    assert {"lights on", "siren on"} <= set(words(told, 30.0))
+    assert "lights on" in words(told, 100.0) and "siren on" not in words(told, 100.0)
+    assert "lights on" not in words(told, 200.0)
+    starts = {span["from"] for span in told["spans"]}
+    assert {20.0, 80.0, 140.0} <= starts
+    assert {"text": "lights on", "kind": "on"} in at(told, 30.0)
+    # An in-car unit's speed, in its own unit; and who was near, or nearest.
+    assert any(one.endswith(" mph") for one in words(told, 90.0))
+    last = at(told, 30.0)[-1]
+    assert last["kind"] in ("near", "quiet")
+    assert last["text"].startswith(("near: ", "nearest: ", "nobody else within 50 m"))
+    assert "officer" not in last["text"]
+    # The spans cover the stretch asked for, end to end, in order.
+    assert told["spans"][0]["from"] == 0.0 and told["spans"][-1]["to"] == 300.0
+    for one, following in zip(told["spans"], told["spans"][1:], strict=False):
+        assert one["to"] == following["from"] and one["pills"] != following["pills"]
+
+    # A body camera: the silent minute before the officer activates it, then
+    # that it was activated, and moving.
+    mine = camera_paths.status_spans(body, 0.0, 120.0)
+    assert words(mine, 30.0)[0] == "not yet activated: no sound"
+    assert at(mine, 30.0)[0]["kind"] == "quiet"
+    assert "activated 14:21:01" in words(mine, 90.0) and "moving" in words(mine, 90.0)
+    assert 61.0 in {span["from"] for span in mine["spans"]}
+    # Standing in one place, and for how long.
+    stood = video(
+        person, a_case, "BWC5-1", name="BWC5-1_202511061420_z.mp4", seconds=400
+    )
+    added(stood, body_file(seconds=400, still=True), by=person)
+    there = camera_paths.status_spans(stood, 0.0, 400.0)
+    assert "stood still 3 min" in words(there, 200.0)
+    assert "moving" not in words(there, 200.0)
+    # A stretch with no position says so, and names nobody as near.
+    gapped = video(person, a_case, "BWC3-1", name="BWC3-1_202511061420_g.mp4")
+    added(gapped, body_file(gap=(30, 50)), by=person)
+    lost = camera_paths.status_spans(gapped, 0.0, 120.0)
+    assert words(lost, 40.0)[-1] == "no position just now"
+    # A whole long recording is sampled more coarsely, never without end.
+    assert len(told["spans"]) <= camera_paths.STATUS_MOST + 10
+    # Never a position.
+    every = json.dumps([told, mine, there, lost])
+    # (the latitude, 10.0, is also a time in seconds here: the longitude tells)
+    assert str(LON) not in every and "lat" not in every and "lon" not in every
+
+    # The player's reading carries it, asked for or not, wherever it opens.
+    signed_in(client, person)
+    got = client.get(f"/recording/{car.pk}/around", {"t": "30"}).json()
+    assert got["seen"] == [] and got["status"]["clock"] == told["clock"]
+    assert any(
+        {"text": "lights on", "kind": "on"} in span["pills"]
+        for span in got["status"]["spans"]
+    )
+    # No path file, or Maps off: no line at all.
+    nothing = video(person, a_case, "Call")
+    assert camera_paths.status_spans(nothing, 0.0, 60.0) is None
+    assert (
+        client.get(f"/recording/{nothing.pk}/around", {"t": "5"}).json()["status"]
+        is None
+    )
+    settings_store.set_to("maps", False)
+    assert camera_paths.status_spans(car, 0.0, 300.0) is None
+    settings_store.set_to("maps", True)
+
+    # The player: the line sits between the picture and the words, is drawn
+    # for every opener (not only chat and Search, the maintainer's choice),
+    # and is left out only of the small window that plays a voice sample.
+    script = (HERE / "static" / "preview.js").read_text(encoding="utf-8")
+    card = script.split("card.innerHTML =", 1)[1].split("if (column)", 1)[0]
+    assert card.index("preview-media") < card.index("preview-status")
+    assert card.index("preview-status") < card.index("preview-lines")
+    assert "var status = told && !isSnippet() ? told.status : null;" in script
+    assert "from the camera's file" in script
+    line = script.split("function drawStatus(now)", 1)[1].split("function follow(", 1)[
+        0
+    ]
+    assert "asked.seen" not in line
+    assert "drawStatus(now);" in script.split("function follow(now, jump)", 1)[1][:200]
+    css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
+    assert ".preview-status[hidden] { display: none; }" in css

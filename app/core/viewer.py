@@ -650,7 +650,7 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
     hit ask: those are the two places a person meets a seen moment, and the
     player opened from anywhere else (a note, the chronology, the Map, a
     comparison, a voice) plays the words alone."""
-    from core import exports, incidents, speakers_page
+    from core import camera_paths, exports, incidents, speakers_page
     from core.assistant import DONE, Moment
 
     recording = Recording.objects.filter(pk=recording_id).first()
@@ -809,6 +809,10 @@ def around(request: HttpRequest, recording_id) -> JsonResponse:
                 }
                 for one in lines
             ],
+            # What the camera's own file says was happening (v1.238.0), for
+            # the line the player keeps in step with the picture; None
+            # without a path file, and the player then shows no line.
+            "status": camera_paths.status_spans(recording, low, high),
             "seen": [
                 {
                     "id": str(one.pk),

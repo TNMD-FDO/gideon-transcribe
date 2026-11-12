@@ -17,6 +17,35 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.238.0, 2026-11-12
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The player says what the camera's own file says was happening.
+
+- **One line between the picture and the words,** kept in step as the
+  recording plays: the time of day, the lights and the siren while they
+  are on, an in-car unit's speed, whether a body camera had been activated
+  yet, standing still or moving, and who was near.
+- **Who was near** is the officers within 50 metres at that second; where
+  none was, the nearest and how far; or that nobody else was. An officer's
+  own cameras never count.
+- **"Not yet activated: no sound"** through the minute a body camera keeps
+  before the officer presses record, which is why there is a picture and
+  no words.
+- **Wherever the player opens,** at the maintainer's choice of the two
+  ways drawn: a note, the chronology, the Map, a comparison, chat, Search.
+  It is the file's own record, not a description of the picture, so it is
+  not kept to chat and Search as the Seen rows are.
+- **It never invents.** No path file, no line: the player is as it was.
+  Where the camera had no position, it says so and names nobody.
+
+After a jump to another part of a recording the line shows the time alone
+for a moment, until that part has been read.
+
 ## v1.237.0, 2026-11-12
 
 ```

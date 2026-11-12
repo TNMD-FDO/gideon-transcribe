@@ -111,6 +111,9 @@
         "<div class='preview-person' id='preview-person' hidden></div>" +
         "<div class='preview-samples' id='preview-samples' hidden></div>" +
         "<div class='preview-media'></div>" +
+        // What the camera's own file says was happening (v1.238.0), in step
+        // with the picture: between the picture and the words.
+        "<div class='preview-status' id='preview-status' hidden></div>" +
         "<div class='preview-proposed' hidden></div>" +
         "<div class='preview-lines' id='preview-lines'></div>" +
         "<div class='preview-foot'></div>" +
@@ -485,10 +488,56 @@
       if (options.onLoaded) { options.onLoaded(told, first); }
     }
 
+    // The camera's own file, said as one line (v1.238.0): the time of day,
+    // the lights and the siren while they are on, the speed, whether a body
+    // camera had been activated, standing still or moving, and who was
+    // near. Shown wherever the player opens, for a camera with a path file;
+    // without one there is no line. Written only when its words change.
+    var statusShown = "";
+    function clockWords(second) {
+      var whole = Math.floor(((second % 86400) + 86400) % 86400);
+      function two(n) { return (n < 10 ? "0" : "") + n; }
+      return two(Math.floor(whole / 3600)) + ":" + two(Math.floor(whole % 3600 / 60)) + ":" + two(whole % 60);
+    }
+    function drawStatus(now) {
+      var box = card ? card.querySelector("#preview-status") : null;
+      if (!box) { return; }
+      var status = told && !isSnippet() ? told.status : null;
+      var spans = status ? status.spans || [] : [];
+      var span = null;
+      for (var i = 0; i < spans.length; i += 1) {
+        if (spans[i].from <= now + 0.05) { span = spans[i]; } else { break; }
+      }
+      // Outside the stretch that was read (a jump to another part of the
+      // recording, until its own reading arrives): the time alone, never the
+      // words of another moment beside it.
+      if (span && now > span.to + 0.05) { span = null; }
+      if (!span && spans.length) { span = { from: -1, pills: [] }; }
+      if (!span) {
+        if (statusShown !== "" || !box.hidden) { box.hidden = true; box.innerHTML = ""; statusShown = ""; }
+        return;
+      }
+      var at = Math.max(0, now);
+      var when = status.clock !== null && status.clock !== undefined
+        ? clockWords(status.clock + at)
+        : Math.floor(at / 60) + ":" + (Math.floor(at % 60) < 10 ? "0" : "") + Math.floor(at % 60) + " in";
+      var key = when + "|" + span.from;
+      // A card built afresh has an empty line, whatever was shown before.
+      if (key === statusShown && !box.hidden && box.firstChild) { return; }
+      statusShown = key;
+      box.hidden = false;
+      box.innerHTML = "<span class='when mono'>" + escape(when) + "</span>" +
+        (span.pills || []).map(function (one) {
+          return "<span class='pill small" + (one.kind ? " st-" + escape(one.kind) : "") + "'>" + escape(one.text) + "</span>";
+        }).join("") +
+        "<span class='src muted small'>from the camera's file</span>";
+    }
+
     // The line being spoken is lit and kept in view; past the lines that were
     // read, the next ones are asked for.
     function follow(now, jump) {
       if (!card || !told) { return; }
+      drawStatus(now);
       var lit = null;
       var rows = card.querySelectorAll(".preview-line");
       Array.prototype.forEach.call(rows, function (row) {

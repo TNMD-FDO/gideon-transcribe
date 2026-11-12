@@ -54,6 +54,11 @@ NEAR_METRES = 50.0
 # How far the chat's sheet looks for the nearest cameras beyond that, when
 # nobody was within it (v1.235.0): past this, a camera is not near at all.
 NEAREST_METRES = 2000.0
+# The Preview's line (v1.238.0): how often what the file says is sampled
+# between the moments it changes, and the most samples one reading takes
+# (a whole recording, on the Notes page, is sampled more coarsely).
+STATUS_STEP = 5.0
+STATUS_MOST = 400
 # A jump (chapter 6.11, v1.211.0): two consecutive fixes further apart than
 # this many metres a second is not the camera moving. A fix far from both
 # its neighbours is a glitch and is left out; a coordinate that recurs this
@@ -1730,6 +1735,132 @@ def readings_for_search(case) -> list[dict]:
                 }
             )
     return found
+
+
+def status_spans(recording, low: float, high: float) -> dict | None:
+    """The Preview's line (v1.238.0): what the camera's own file says was
+    happening between `low` and `high` seconds into the recording, as spans
+    over which the words do not change, for the player to keep in step with
+    the picture. {"clock": the recording's first second by the office's
+    clock or None, "spans": [{"from", "to", "pills": [{"text", "kind"}]}]}.
+
+    The pills: the lights and the siren while they are on (kind "on"); the
+    speed of an in-car unit; for a body camera whether the officer had
+    activated it yet; standing still and for how long, or moving; and who
+    was near, or the nearest and how far, or that nobody was ("near" and
+    "quiet"). Never a street or a coordinate. None when the recording has no
+    path file or Maps is off, and the player then shows no line at all."""
+    path = of(recording)
+    if path is None or not on():
+        return None
+    length = float(path.length or recording.duration_seconds or 0.0)
+    low = max(0.0, float(low))
+    high = min(float(high), length) if length else float(high)
+    if high <= low:
+        return None
+    paths = for_case(recording.case) if recording.case_id else [path]
+    zeros = {one.recording_id: zero_of(one.recording, one) for one in paths}
+    zero = zeros.get(path.recording_id)
+    on_clock = bool(zero) and zero.get("second") is not None
+    events = events_of(path)
+    flags = [
+        (one["t"], one["until"] if one["until"] is not None else length, one["kind"])
+        for one in events
+        if one["kind"] in ("lights", "siren") and one["value"]
+    ]
+    activated = next(
+        (
+            one["t"]
+            for one in events
+            if one["kind"] == "mic" and one["value"] and one["words"] == "Activated"
+        ),
+        None,
+    )
+    stills = still_spells(path)
+    speeds = sorted(
+        (t, value) for t, key, value in (path.marks or []) if key == "speed"
+    )
+    # As the readings say it elsewhere ("reached 41 mph"): the unit in small letters.
+    unit = (path.speed_unit or "mph").lower()
+
+    def pills_at(t: float) -> list[dict]:
+        out = []
+        for start, end, kind in flags:
+            if start <= t < end:
+                out.append({"text": f"{kind} on", "kind": "on"})
+        if path.source == CAR and speeds:
+            known = [value for when, value in speeds if when <= t]
+            if known:
+                out.append({"text": f"{int(round(known[-1]))} {unit}", "kind": ""})
+        if path.source == BODY and activated is not None:
+            if t < activated:
+                out.append({"text": "not yet activated: no sound", "kind": "quiet"})
+            else:
+                out.append(
+                    {
+                        "text": f"activated {_spell_words(activated, None, zero)}",
+                        "kind": "",
+                    }
+                )
+        still = next((start for start, end in stills if start <= t < end), None)
+        here = position_at(path, t)
+        if still is not None:
+            minutes = int((t - still) // 60)
+            word = "stopped" if path.source == CAR else "stood still"
+            out.append(
+                {"text": f"{word} {minutes} min" if minutes else word, "kind": ""}
+            )
+        elif here is not None and path.source == BODY:
+            out.append({"text": "moving", "kind": ""})
+        if here is None:
+            if path.fixes:
+                out.append({"text": "no position just now", "kind": "quiet"})
+            return out
+        if not on_clock:
+            return out
+        near = near_at(path, t, paths, zeros)
+        if near is None:
+            return out
+
+        def short(who: str) -> str:
+            return who.replace("officer ", "")
+
+        if near["within"]:
+            names = [short(who) for who in near["within"]]
+            more = len(names) - 3
+            said = ", ".join(names[:3]) + (f" and {more} more" if more > 0 else "")
+            out.append({"text": f"near: {said}", "kind": "near"})
+        elif near["nearest"]:
+            who, metres = near["nearest"][0]
+            out.append({"text": f"nearest: {short(who)} {_km(metres)}", "kind": "near"})
+        else:
+            out.append(
+                {"text": f"nobody else within {int(NEAR_METRES)} m", "kind": "quiet"}
+            )
+        return out
+
+    # Sampled at a steady step, and at every moment the file itself says
+    # something changed, so a light coming on is shown at its own second.
+    step = max(STATUS_STEP, (high - low) / STATUS_MOST)
+    moments = set()
+    t = low
+    while t < high:
+        moments.add(round(t, 1))
+        t += step
+    changes = [when for start, end, _kind in flags for when in (start, end)]
+    changes += [when for start, end in stills for when in (start, end)]
+    if activated is not None:
+        changes.append(activated)
+    moments.update(round(when, 1) for when in changes if low <= when < high)
+    spans: list[dict] = []
+    for moment in sorted(moments):
+        pills = pills_at(moment)
+        if spans and spans[-1]["pills"] == pills:
+            continue
+        if spans:
+            spans[-1]["to"] = moment
+        spans.append({"from": moment, "to": high, "pills": pills})
+    return {"clock": float(zero["second"]) if on_clock else None, "spans": spans}
 
 
 def paths_among(case, read: list) -> list[CameraPath]:
