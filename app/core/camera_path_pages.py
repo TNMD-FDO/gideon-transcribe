@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, JsonResponse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core import camera_paths, cases
@@ -297,6 +298,104 @@ def picture(request: HttpRequest, case_id) -> JsonResponse:
             + (f", {words}." if words else "."),
         }
     )
+
+
+def _whole(text, least: int, most: int) -> int | None:
+    """A whole number from a request, inside its bounds, or None."""
+    try:
+        value = int(str(text))
+    except (TypeError, ValueError):
+        return None
+    return value if least <= value <= most else None
+
+
+@login_required
+@require_POST
+def timelapse(request: HttpRequest, case_id) -> JsonResponse:
+    """Save a timelapse (chapter 6.12, v1.241.0): the frames the browser
+    drew, taken a batch at a time and joined into one GIF, kept as a
+    Document of the case. One address, four steps: begin, frames, finish
+    and stop."""
+    from core import documents
+    from core import timelapse as maker
+    from core.incidents import Incident
+
+    _maps_or_404()
+    case = _their_case(request, case_id)
+    if not case.role_of(request.user):
+        return JsonResponse({"error": "You cannot add to this case."}, status=403)
+    step = request.POST.get("step", "")
+    token = request.POST.get("token", "")
+    try:
+        if step == "begin":
+            frames = _whole(request.POST.get("frames"), 1, 100000)
+            width = _whole(request.POST.get("width"), 1, 100000)
+            height = _whole(request.POST.get("height"), 1, 100000)
+            cameras = _whole(request.POST.get("cameras"), 0, 100000)
+            span = _whole(request.POST.get("span"), 0, 200000)
+            if None in (frames, width, height, cameras, span):
+                return JsonResponse(
+                    {"error": "The timelapse was not described."}, status=400
+                )
+            token = maker.begin(
+                case,
+                by=request.user,
+                frames=frames,
+                width=width,
+                height=height,
+                cameras=cameras,
+                span=span,
+            )
+            return JsonResponse({"ok": True, "token": token, "batch": maker.BATCH})
+        if step == "frames":
+            arrived = []
+            for key, upload in request.FILES.items():
+                index = (
+                    _whole(key[1:], 0, maker.FRAMES_MOST) if key[:1] == "f" else None
+                )
+                if index is None or upload.size > maker.FRAME_MOST:
+                    return JsonResponse(
+                        {"error": "A frame arrived that is not a picture of the map."},
+                        status=400,
+                    )
+                arrived.append((index, upload.read()))
+            have = maker.add_frames(case, token, by=request.user, frames=arrived)
+            return JsonResponse({"ok": True, "have": have})
+        if step == "stop":
+            maker.stop(case, token, by=request.user)
+            return JsonResponse({"ok": True})
+        if step == "finish":
+            incident = None
+            if request.POST.get("incident"):
+                incident = Incident.objects.filter(
+                    pk=request.POST.get("incident"), case=case
+                ).first()
+            about = documents.about_of(case, incident=incident)
+            document = maker.finish(
+                case,
+                token,
+                by=request.user,
+                about=about,
+                title=request.POST.get("title", ""),
+                request=request,
+            )
+            words = documents.about_words(about)
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "url": document.url(),
+                    "download": reverse(
+                        "document-download", args=[case.pk, document.pk]
+                    ),
+                    "title": document.title,
+                    "bytes": document.size_bytes,
+                    "words": "Saved to the case's Documents tab"
+                    + (f", {words}." if words else "."),
+                }
+            )
+    except documents.Refused as refused:
+        return JsonResponse({"error": str(refused)}, status=400)
+    return JsonResponse({"error": "No such step."}, status=400)
 
 
 @login_required

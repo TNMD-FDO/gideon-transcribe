@@ -233,7 +233,7 @@
   var tickedAt = null, tickedKey = "";
   function tickKey() { return [S.playing ? 1 : 0, S.speed, S.show, S.following || "", S.selected ? S.selected.key : "", S.lit || ""].join("|"); }
   function tickIfMoved() {
-    if (document.hidden || !S.loaded) { return; }
+    if (document.hidden || !S.loaded || S.capturing) { return; }
     followPreview();
     var key = tickKey();
     if (!S.playing && now() === tickedAt && key === tickedKey) { return; }
@@ -320,7 +320,7 @@
     if (!layout.wired) {
       layout.wired = true;
       var sizing = null;
-      window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(function () { sizeFrame(); if (el.strip && trackWidth() !== S.piledAt) { drawStrip(); } }, 80); });
+      window.addEventListener("resize", function () { window.clearTimeout(sizing); sizing = window.setTimeout(function () { if (S.capturing) { return; } sizeFrame(); drawTransport(); if (el.strip && trackWidth() !== S.piledAt) { drawStrip(); } }, 80); });
       // A menu on the bar (More, Day) closes on a press outside it.
       document.addEventListener("click", function (e) { host.querySelectorAll("details.menu[open]").forEach(function (m) { if (!m.contains(e.target)) { m.removeAttribute("open"); } }); });
       // The edge between the map and the lanes band: drag it up or down, remembered per person.
@@ -339,7 +339,7 @@
   // never under 120, and scrolls inside itself when the day has more lanes.
   var PANE_LEAST = 320, BAND_LEAST = 120, SPLIT = 8;
   function sizeFrame() {
-    if (CLOCKED || PICK || !el.wrap || !el.pane) { return; }
+    if (CLOCKED || PICK || !el.wrap || !el.pane || S.capturing) { return; }
     if (host.classList.contains("full")) { el.pane.style.height = ""; if (el.lanes) { el.lanes.style.height = ""; } return; }
     var top = el.wrap.getBoundingClientRect().top + window.scrollY;
     var frame = Math.max(PANE_LEAST + SPLIT + BAND_LEAST, Math.round(window.innerHeight - top - 12));
@@ -425,7 +425,7 @@
       return;
     }
     var scope = S.scope ? "<span class='pill small acc' title='" + esc(S.scope.name) + "'>" + esc(S.scope.name) + "</span> <button type='button' class='tiny ghost' data-act='whole-day'>whole day</button>" : "";
-    el.transport.innerHTML =
+    var bar = function () { return "" +
       scope +
       "<button type='button' class='small primary' data-act='play'>" + (S.playing ? "<svg class='i' aria-hidden='true'><use href='#i-pause'></use></svg> Pause" : "<svg class='i' aria-hidden='true'><use href='#i-play'></use></svg> Play") + "</button>" +
       "<button type='button' class='small' data-act='back'>−10 s</button><button type='button' class='small' data-act='forward'>+10 s</button>" +
@@ -438,18 +438,37 @@
       (pinnedCount() ? "<span class='pill small acc' title='Names and tiles you have put somewhere; Tidy names lets them all go'>" + pinnedCount() + " pinned</span>" : "") +
       (S.asking ? "<span class='pill small acc'>press a place on the map</span>" : "") +
       (S.circle ? "<span class='pill small acc' id='map-radius'>" + Math.round(S.circle.radius) + " m</span><button type='button' class='tiny ghost' data-act='clear-circle'>clear the circle</button>" : "") +
-      // The presses a person reaches for now and then sit behind More
-      // (v1.208.0), so the bar is one row.
-      "<details class='menu map-more' id='map-more'><summary class='btn small' title='Note here, Note on all shown, Within a circle, Save a picture, Tidy names'>More \u25BE</summary><div class='menu-body'>" +
-        "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
-        (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
-        "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>" +
-        (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about the incident shown or the camera pressed when there is one'>Save a picture</button>" : "") +
-        "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>" +
-      "</div></details>" +
+      moreHtml() +
       dayChips() +
-      "<span class='grow'></span>" + helpHtml();
+      "<span class='grow'></span>" + helpHtml(); };
+    // Unfolded first, and measured (v1.241.0): where the presses would wrap
+    // to a second row they go back behind More, so the bar is always one row.
+    S.moreFolded = false; el.transport.innerHTML = bar();
+    if (barWraps()) { S.moreFolded = true; el.transport.innerHTML = bar(); }
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
+  }
+  // The presses a person reaches for now and then. v1.208.0 put them behind
+  // More so the bar is one row; from v1.241.0 they sit on the bar wherever
+  // it has room for them on that row, and Save a timelapse is the sixth.
+  function morePresses() {
+    var can = lapseCams().length > 0;
+    return "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
+      (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
+      "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>" +
+      (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about the incident shown or the camera pressed when there is one'>Save a picture</button>" : "") +
+      (host.dataset.edit && host.dataset.timelapse ? "<button type='button' class='small' data-act='timelapse'" + (can ? " title='A GIF of the ticked cameras moving over a span of the clock, kept on the case&#39;s Documents tab'" : " disabled title='Tick at least one camera in the list first'") + ">Save a timelapse</button>" : "") +
+      "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>";
+  }
+  function moreHtml() {
+    if (S.moreFolded) { return "<details class='menu map-more' id='map-more'><summary class='btn small' title='Note here, Note on all shown, Within a circle, Save a picture, Save a timelapse, Tidy names'>More \u25BE</summary><div class='menu-body'>" + morePresses() + "</div></details>"; }
+    return "<span class='map-more-open' id='map-more-open'>" + morePresses() + "</span>";
+  }
+  // Whether the bar has gone to a second row, or run off its edge.
+  function barWraps() {
+    var kids = el.transport ? el.transport.children : [], top = null, wrapped = false;
+    Array.prototype.forEach.call(kids, function (kid) { if (!kid.offsetParent) { return; } if (top === null || kid.offsetTop < top) { top = kid.offsetTop; } });
+    Array.prototype.forEach.call(kids, function (kid) { if (kid.offsetParent && kid.offsetTop > top + 20) { wrapped = true; } });
+    return wrapped || el.transport.scrollWidth > el.transport.clientWidth + 1;
   }
   // The explanation that stood above the map, now behind a help mark at the
   // bar's end (v1.208.0); the page writes it once, map.js only moves it.
@@ -714,7 +733,7 @@
       }
     });
     movePlayhead(m);
-    syncTiles(m);
+    if (!S.capturing) { syncTiles(m); }
     drawLeaders();
     if (REC) { recTick(m); }
   }
@@ -798,7 +817,7 @@
       if (S.events.notes && (cam.notes || []).length && cam.onClock) {
         cam.notes.forEach(function (n) { var q = positionAt(cam, n.t); if (!q) { return; } var pp = map.project([q.lon, q.lat]); if (pp.x < -PIP_R || pp.y < -PIP_R || pp.x > w + PIP_R || pp.y > h + PIP_R) { return; } placed.push({ x: pp.x - PIP_R, y: pp.y - PIP_R, w: 2 * PIP_R, h: 2 * PIP_R }); });
       }
-      var tile = S.tiles[cam.id];
+      var tile = S.capturing ? null : S.tiles[cam.id];
       if (tile) {
         if (tag && tag.node && tag.node.parentNode) { tag.node.remove(); }
         tile.w = tile.node.offsetWidth || tile.w || 168; tile.h = tile.node.offsetHeight || tile.h || 120;
@@ -1259,7 +1278,7 @@
   function setHidden(cam, hide) { if (!cam) { return; } if (hide) { S.hidden[cam.id] = true; } else { delete S.hidden[cam.id]; } afterTicks(); }
   function tickAll(on) { S.hidden = {}; if (!on) { dayCams().forEach(function (c) { S.hidden[c.id] = true; }); } afterTicks(); }
   function only(cam, add) { if (!add) { dayCams().forEach(function (c) { if (c.id !== cam.id) { S.hidden[c.id] = true; } }); } delete S.hidden[cam.id]; afterTicks(); }
-  function afterTicks() { rememberHidden(); drawList(); drawStrip(); refreshLayers(); tick(); }
+  function afterTicks() { rememberHidden(); drawList(); drawStrip(); refreshLayers(); tick(); if (!CLOCKED && !PICK) { drawTransport(); } }
 
   // The strip ---------------------------------------------------------------------
   // The lanes (v1.209.0): every camera of the day, ticked or not, the circle's
@@ -1786,6 +1805,7 @@
         case "whole-day": S.scope = null; S.incident = ""; setAddress(); drawTransport(); drawList(); drawStrip(); refreshLayers(); fitAll(); return;
         case "large": if (INC) { S.large = !S.large; remember("map-inc-large", S.large ? "1" : "0"); applyLarge(); } return;
         case "picture": savePicture(); return;
+        case "timelapse": lapseBox(); return;
         case "leave-full": if (document.exitFullscreen) { document.exitFullscreen(); } return;
         case "play-here": if (cam) { select(cam); openPreview(cam); } return;
         case "own": if (cam) { if (cam.own !== undefined) { delete cam.own; var mk = markers[cam.id]; if (mk) { mk.getElement().classList.add("before"); } } else { cam.own = 0; } drawList(); tick(); if (cam.own !== undefined) { flyTo(cam); } } return;
@@ -1849,7 +1869,7 @@
   function pictureTitle(m) { return "Map at " + hms(m) + (S.day ? ", " + dayWords(S.day) : ""); }
   // The names and the tiles as the person laid them out, with their lines
   // (chapter 6, amended): a tile's picture is the frame its video is on.
-  function pictureNames(ctx, ratio, font) {
+  function pictureNames(ctx, ratio, font, noTiles) {
     var lines = el.pane.querySelectorAll(".map-leaders line");
     ctx.lineWidth = ratio;
     Array.prototype.forEach.call(lines, function (line) {
@@ -1859,7 +1879,7 @@
     });
     ctx.globalAlpha = 1;
     S.cams.forEach(function (cam) {
-      var tag = S.tags[cam.id], tile = S.tiles[cam.id];
+      var tag = S.tags[cam.id], tile = noTiles ? null : S.tiles[cam.id];
       if (tile) {
         var tx = tile.x * ratio, ty = tile.y * ratio, tw = tile.w * ratio, th = tile.h * ratio, bar = 22 * ratio;
         ctx.fillStyle = token("--surface"); ctx.strokeStyle = tile.pinned ? token("--accent") : token("--line"); ctx.lineWidth = ratio;
@@ -1879,49 +1899,74 @@
       ctx.fillText(String(nameOf(cam)).slice(0, 28), x + 18 * ratio, y + h / 2);
     });
   }
+  // One frame of the map as drawn: the canvas, the markers and the names on
+  // a copy, and a band under it. `band` says what the band's left end
+  // carries: {words} for a picture, {clock, words} for a timelapse's frame
+  // (v1.241.0), which also leaves the tiles and, when asked, the names out.
+  // Called inside the map's render, where the canvas can be read.
+  function composeFrame(band, options) {
+    options = options || {};
+    var src = map.getCanvas();
+    var ratio = src.width / Math.max(1, src.clientWidth);
+    var bandH = Math.round(34 * ratio);
+    var out = document.createElement("canvas"); out.width = src.width; out.height = src.height + bandH;
+    var ctx = out.getContext("2d");
+    var font = getComputedStyle(document.body).fontFamily || "sans-serif";
+    ctx.fillStyle = token("--surface"); ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, 0, 0);
+    S.cams.forEach(function (cam) {
+      var marker = markers[cam.id]; if (!marker) { return; }
+      var node = marker.getElement(); if (node.classList.contains("before")) { return; }
+      var pt = map.project(marker.getLngLat());
+      var x = pt.x * ratio, y = pt.y * ratio, r = 7 * ratio, ended = node.classList.contains("ended");
+      ctx.globalAlpha = node.classList.contains("nofix") ? 0.45 : 1;
+      ctx.fillStyle = ended ? token("--surface") : colourOf(cam); ctx.strokeStyle = ended ? colourOf(cam) : token("--surface"); ctx.lineWidth = 2 * ratio;
+      ctx.beginPath();
+      if (cam.source === "car") { ctx.rect(x - r, y - r, 2 * r, 2 * r); } else { ctx.arc(x, y, r, 0, Math.PI * 2); }
+      ctx.fill(); ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+    if (!options.noNames) { pictureNames(ctx, ratio, font, !!options.noTiles); }
+    var y0 = src.height, mid = y0 + bandH / 2, left = 10 * ratio;
+    ctx.fillStyle = token("--surface"); ctx.fillRect(0, y0, out.width, bandH);
+    ctx.strokeStyle = token("--line"); ctx.lineWidth = ratio; ctx.beginPath(); ctx.moveTo(0, y0 + 0.5); ctx.lineTo(out.width, y0 + 0.5); ctx.stroke();
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    if (band.clock) {
+      var mono = getComputedStyle(document.documentElement).getPropertyValue("--mono") || "monospace";
+      ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(16 * ratio) + "px " + mono;
+      ctx.fillText(band.clock, left, mid); left += ctx.measureText(band.clock).width + 12 * ratio;
+      ctx.fillStyle = token("--muted"); ctx.font = Math.round(11 * ratio) + "px " + font;
+    } else { ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(12 * ratio) + "px " + font; }
+    ctx.fillText(band.words || "", left, mid);
+    var wordsEnd = left + ctx.measureText(band.words || "").width;
+    var sc = el.pane.querySelector(".maplibregl-ctrl-scale");
+    if (sc && sc.offsetWidth) {
+      // The scale sits mid-band, and steps right of the words on a narrow frame.
+      var w = sc.offsetWidth * ratio, sx = Math.max(out.width / 2 - w / 2, wordsEnd + 14 * ratio);
+      if (sx + w < out.width - 8 * ratio) {
+        ctx.strokeStyle = token("--text"); ctx.lineWidth = 2 * ratio; ctx.beginPath(); ctx.moveTo(sx, mid - 4 * ratio); ctx.lineTo(sx, mid + 4 * ratio); ctx.lineTo(sx + w, mid + 4 * ratio); ctx.lineTo(sx + w, mid - 4 * ratio); ctx.stroke();
+        ctx.fillStyle = token("--text"); ctx.font = Math.round(10 * ratio) + "px " + font; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText(sc.textContent, sx + w / 2, mid - 5 * ratio);
+        wordsEnd = sx + w;
+      }
+    }
+    if (host.dataset.basemap) {
+      ctx.font = Math.round(10 * ratio) + "px " + font;
+      var credit = host.dataset.attribution || "";
+      if (out.width - 10 * ratio - ctx.measureText(credit).width > wordsEnd + 10 * ratio) { ctx.fillStyle = token("--muted"); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(credit, out.width - 10 * ratio, mid); }
+    }
+    return out;
+  }
   function savePicture() {
     if (!map || !mapReady) { toast("The map is not drawn yet.", true); return; }
     var home = pictureHome();
     var m = now();
     map.once("render", function () {
       try {
-        var src = map.getCanvas();
-        var ratio = src.width / Math.max(1, src.clientWidth);
-        var band = Math.round(34 * ratio);
-        var out = document.createElement("canvas"); out.width = src.width; out.height = src.height + band;
-        var ctx = out.getContext("2d");
-        var font = getComputedStyle(document.body).fontFamily || "sans-serif";
-        ctx.fillStyle = token("--surface"); ctx.fillRect(0, 0, out.width, out.height);
-        ctx.drawImage(src, 0, 0);
-        S.cams.forEach(function (cam) {
-          var marker = markers[cam.id]; if (!marker) { return; }
-          var node = marker.getElement(); if (node.classList.contains("before")) { return; }
-          var pt = map.project(marker.getLngLat());
-          var x = pt.x * ratio, y = pt.y * ratio, r = 7 * ratio, ended = node.classList.contains("ended");
-          ctx.globalAlpha = node.classList.contains("nofix") ? 0.45 : 1;
-          ctx.fillStyle = ended ? token("--surface") : colourOf(cam); ctx.strokeStyle = ended ? colourOf(cam) : token("--surface"); ctx.lineWidth = 2 * ratio;
-          ctx.beginPath();
-          if (cam.source === "car") { ctx.rect(x - r, y - r, 2 * r, 2 * r); } else { ctx.arc(x, y, r, 0, Math.PI * 2); }
-          ctx.fill(); ctx.stroke();
-          ctx.globalAlpha = 1;
-        });
-        pictureNames(ctx, ratio, font);
-        var y0 = src.height, mid = y0 + band / 2;
-        ctx.fillStyle = token("--surface"); ctx.fillRect(0, y0, out.width, band);
-        ctx.strokeStyle = token("--line"); ctx.lineWidth = ratio; ctx.beginPath(); ctx.moveTo(0, y0 + 0.5); ctx.lineTo(out.width, y0 + 0.5); ctx.stroke();
-        ctx.fillStyle = token("--text"); ctx.font = "600 " + Math.round(12 * ratio) + "px " + font; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.fillText(pictureTitle(m) + (home.words ? " · " + home.words : ""), 10 * ratio, mid);
-        var sc = el.pane.querySelector(".maplibregl-ctrl-scale");
-        if (sc && sc.offsetWidth) {
-          var w = sc.offsetWidth * ratio, sx = out.width / 2 - w / 2;
-          ctx.strokeStyle = token("--text"); ctx.lineWidth = 2 * ratio; ctx.beginPath(); ctx.moveTo(sx, mid - 4 * ratio); ctx.lineTo(sx, mid + 4 * ratio); ctx.lineTo(sx + w, mid + 4 * ratio); ctx.lineTo(sx + w, mid - 4 * ratio); ctx.stroke();
-          ctx.font = Math.round(10 * ratio) + "px " + font; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText(sc.textContent, sx + w / 2, mid - 5 * ratio);
-        }
-        if (host.dataset.basemap) { ctx.fillStyle = token("--muted"); ctx.font = Math.round(10 * ratio) + "px " + font; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(host.dataset.attribution || "", out.width - 10 * ratio, mid); }
-        out.toBlob(function (blob) {
+        var title = pictureTitle(m) + (home.words ? " · " + home.words : "");
+        composeFrame({ words: title }).toBlob(function (blob) {
           if (!blob) { toast("The picture could not be drawn.", true); return; }
           var form = new FormData();
-          form.append("file", blob, "map.png"); form.append("title", pictureTitle(m) + (home.words ? " · " + home.words : ""));
+          form.append("file", blob, "map.png"); form.append("title", title);
           if (home.incident) { form.append("incident", home.incident); }
           if (home.recording) { form.append("recording", home.recording); }
           postForm(host.dataset.picture, form).then(function (told) { toast(told.words || "Saved."); }).catch(function (err) { toast(err.message, true); });
@@ -1929,6 +1974,199 @@
       } catch (e) { toast("The picture could not be drawn.", true); }
     });
     map.triggerRepaint();
+  }
+
+  // Save a timelapse (Phase 12 chapter 6.12, v1.241.0) ---------------------------
+  //
+  // A GIF of the ticked cameras moving over a span of the clock. The page
+  // draws the frames, since only it has the map as the person framed it:
+  // the map is drawn again at the GIF's own size for a minute (so a street's
+  // name is as readable in the GIF as on the page), the clock is stepped,
+  // and each frame is the same drawing Save a picture makes. The frames go
+  // to the server a batch at a time, which joins them and keeps the GIF on
+  // the Documents tab. The page is put back as it was whatever happens.
+  var LAPSE = { fps: 8, runs: [15, 30, 60], widths: [[960, "For a slide, 960 wide"], [640, "Small, 640 wide"]], band: 34 };
+  function lapseCams() { return CLOCKED || PICK ? [] : shownCams().filter(function (c) { return c.fixes.length; }); }
+  function lapseSpan(cams) { var low = Infinity, high = -Infinity; cams.forEach(function (c) { low = Math.min(low, c.zero.second); high = Math.max(high, c.zero.second + (c.length || 0)); }); return [Math.floor(low), Math.ceil(high)]; }
+  function clockSeconds(text) { var m = /^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$/.exec(text || ""); if (!m) { return null; } var h = +m[1], mi = +m[2], se = +(m[3] || 0); return h > 23 || mi > 59 || se > 59 ? null : h * 3600 + mi * 60 + se; }
+  function spanWords(seconds) { seconds = Math.max(0, Math.round(seconds)); var h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), sec = seconds % 60; return (h ? plural(h, "hour") + " " : "") + (h || m ? plural(m, "minute") + " " : "") + plural(sec, "second"); }
+  function speedWords(span, runs) {
+    var speed = span / runs;
+    var each = speed < 90 ? "about " + plural(Math.max(1, Math.round(speed)), "second") : "about " + plural(Math.round(speed / 60), "minute");
+    return (speed >= 10 ? Math.round(speed) : speed.toFixed(1)) + " times real speed: a second of the GIF is " + each + " on the clock.";
+  }
+  // A rough size before it is made: the first frame whole, then only what
+  // moves in each (the join writes nothing for a pixel that stood still).
+  // From the build's own trials; the box says "roughly".
+  function lapseBytes(frames, width, height) { var px = width * height; return px * 0.6 + frames * (1500 + px * 0.004); }
+  function sizeWords(bytes) { return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB"; }
+  function lapseHeight(width) { return Math.round(width * el.pane.clientHeight / Math.max(1, el.pane.clientWidth)); }
+  function lapseBox() {
+    if (!map || !mapReady) { toast("The map is not drawn yet.", true); return; }
+    var cams = lapseCams();
+    if (!cams.length) { toast("Tick at least one camera in the list first.", true); return; }
+    var whole = lapseSpan(cams), day = dayCams().length;
+    var L = { from: whole[0], to: whole[1], runs: 30, width: LAPSE.widths[0][0], names: true, trails: S.show !== "markers", events: EVENT_KINDS.some(function (k) { return S.events[k]; }), making: false, stopped: false };
+    var layer = document.createElement("div");
+    layer.className = "map-layer";
+    layer.innerHTML = "<div class='map-layer-card map-lapse'><div class='h'><b>Save a timelapse</b><button type='button' class='tiny ghost' data-act='lapse-close'>Close</button></div>" +
+      "<div class='map-lapse-rows'>" +
+      "<div><label>Cameras</label><div><div class='map-lapse-cams'>" + cams.map(function (c) { return "<span class='pill small'><i class='" + (c.source === "car" ? "sq" : "") + "' style='background: " + paint(c.colour) + "'></i>" + esc(nameOf(c)) + "</span>"; }).join("") + "</div>" +
+        "<p class='muted small'>The " + cams.length + " ticked in the list, of " + day + " on this day. Untick one in the list to leave it out.</p></div></div>" +
+      "<div><label for='lapse-from'>From, to</label><div><input type='text' class='small mono' id='lapse-from' size='8' maxlength='8' value='" + hms(L.from) + "' aria-label='From'> to <input type='text' class='small mono' id='lapse-to' size='8' maxlength='8' value='" + hms(L.to) + "' aria-label='To'> " +
+        "<button type='button' class='tiny ghost' data-act='lapse-now' title='Start at the moment the map&#39;s clock stands at'>from the clock now</button><button type='button' class='tiny ghost' data-act='lapse-whole' title='The first ticked camera&#39;s start to the last one&#39;s end'>whole span</button>" +
+        "<p class='muted small' id='lapse-span'></p></div></div>" +
+      "<div><label>The GIF runs</label><div><span class='seg' id='lapse-runs'>" + LAPSE.runs.map(function (r) { return "<button type='button' data-runs='" + r + "'>" + r + " s</button>"; }).join("") + "</span><p class='muted small' id='lapse-speed'></p></div></div>" +
+      "<div><label>Size</label><div><span class='seg' id='lapse-width'>" + LAPSE.widths.map(function (w) { return "<button type='button' data-width='" + w[0] + "'>" + w[1] + "</button>"; }).join("") + "</span><p class='muted small' id='lapse-size'></p></div></div>" +
+      "<div><label>Drawn</label><div><span class='map-ev'><label><input type='checkbox' id='lapse-names' checked> Names beside the markers</label><label><input type='checkbox' id='lapse-trails'" + (L.trails ? " checked" : "") + "> Trails</label><label><input type='checkbox' id='lapse-events'" + (L.events ? " checked" : "") + "> Event marks</label></span>" +
+        "<p class='muted small'>Starts as the map is set now. The map stays where you framed it; it does not follow a camera. Video tiles are left out.</p></div></div>" +
+      "</div>" +
+      "<div class='map-lapse-foot' id='lapse-foot'></div></div>";
+    document.body.appendChild(layer);
+    function q(id) { return layer.querySelector(id); }
+    function frames() { return L.runs * LAPSE.fps; }
+    function problem() {
+      if (L.from === null || L.to === null) { return "Write the times as hours, minutes and seconds, like 14:20:03."; }
+      if (L.to - L.from < 10) { return "The span is under ten seconds: set To later than From."; }
+      return "";
+    }
+    function foot(html) { q("#lapse-foot").innerHTML = html; }
+    function draw() {
+      var bad = problem();
+      Array.prototype.forEach.call(layer.querySelectorAll("#lapse-runs button"), function (b) { b.classList.toggle("on", +b.dataset.runs === L.runs); });
+      Array.prototype.forEach.call(layer.querySelectorAll("#lapse-width button"), function (b) { b.classList.toggle("on", +b.dataset.width === L.width); });
+      q("#lapse-span").textContent = bad || spanWords(L.to - L.from) + " on the clock" + (S.day ? ", " + dayWords(S.day) : "") + ".";
+      q("#lapse-span").classList.toggle("problem", !!bad);
+      q("#lapse-speed").textContent = bad ? "" : speedWords(L.to - L.from, L.runs);
+      var h = lapseHeight(L.width) + LAPSE.band;
+      q("#lapse-size").textContent = L.width + " by " + h + ", roughly " + sizeWords(lapseBytes(frames(), L.width, h)) + ". A GIF holds 256 colours, so a street map looks a little coarser than the page.";
+      if (!L.making) {
+        foot("<button type='button' class='small primary' data-act='lapse-make'" + (bad ? " disabled" : "") + ">Make the GIF</button><button type='button' class='small' data-act='lapse-close'>Cancel</button><span class='grow'></span><span class='muted small'>Kept on the case&#39;s Documents tab" + (S.scope ? ", about " + esc(S.scope.name) : "") + ", where it can be downloaded.</span>");
+      }
+    }
+    function read() { L.from = clockSeconds(q("#lapse-from").value); L.to = clockSeconds(q("#lapse-to").value); L.names = q("#lapse-names").checked; L.trails = q("#lapse-trails").checked; L.events = q("#lapse-events").checked; draw(); }
+    function close() { if (L.making) { return; } layer.remove(); }
+    layer.addEventListener("input", read);
+    layer.addEventListener("change", read);
+    layer.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) { return; }
+      if (b.dataset.runs) { L.runs = +b.dataset.runs; draw(); return; }
+      if (b.dataset.width) { L.width = +b.dataset.width; draw(); return; }
+      switch (b.dataset.act) {
+        case "lapse-close": close(); return;
+        case "lapse-now": q("#lapse-from").value = hms(Math.max(whole[0], Math.min(whole[1], now()))); read(); return;
+        case "lapse-whole": q("#lapse-from").value = hms(whole[0]); q("#lapse-to").value = hms(whole[1]); read(); return;
+        case "lapse-stop": L.stopped = true; b.disabled = true; b.textContent = "Stopping"; return;
+        case "lapse-make":
+          if (problem()) { return; }
+          L.making = true; L.stopped = false;
+          Array.prototype.forEach.call(layer.querySelectorAll(".map-lapse-rows input, .map-lapse-rows button"), function (i) { i.disabled = true; });
+          foot("<span id='lapse-said'>Starting</span><span class='map-lapse-bar'><i id='lapse-done'></i></span><button type='button' class='small' data-act='lapse-stop'>Stop</button><span class='muted small wide'>Keep this page open. Nothing is kept if you stop.</span>");
+          lapseMake(L, cams.length, function (done, total) { var said = q("#lapse-said"), fill = q("#lapse-done"); if (said) { said.textContent = done < total ? "Drawing frame " + (done + 1) + " of " + total : "Joining the frames"; } if (fill) { fill.style.width = (100 * done / total).toFixed(1) + "%"; } })
+            .then(function (told) {
+              L.making = false;
+              foot("<span>Saved to Documents: " + esc(told.title) + " · " + sizeWords(told.bytes) + ".</span><a class='btn small' href='" + esc(told.download) + "'>Download</a><a class='btn small ghost' href='" + esc(told.url) + "'>Open it</a><span class='grow'></span><button type='button' class='small' data-act='lapse-close'>Close</button>");
+            })
+            .catch(function (err) {
+              L.making = false;
+              Array.prototype.forEach.call(layer.querySelectorAll(".map-lapse-rows input, .map-lapse-rows button"), function (i) { i.disabled = false; });
+              draw();
+              if (L.stopped) { toast("Stopped. Nothing was kept."); } else { toast(err && err.message ? err.message : "The timelapse could not be made.", true); }
+            });
+          return;
+      }
+    });
+    draw();
+  }
+  // The map settled after a step of the clock: the trails' new lines are
+  // drawn by the map in its own time, so wait for it to say it is idle.
+  function mapSettled() {
+    return new Promise(function (done) {
+      var over = false;
+      function go() { if (!over) { over = true; done(); } }
+      map.once("idle", go);
+      window.setTimeout(go, 1500);
+      map.triggerRepaint();
+    });
+  }
+  function lapseMake(L, cameras, progress) {
+    var total = L.runs * LAPSE.fps, span = L.to - L.from;
+    var paneW = el.pane.clientWidth, outW = L.width, outH = lapseHeight(outW), frameH = outH + LAPSE.band;
+    var kept = { moment: now(), playing: S.playing, show: S.show, center: map.getCenter(), zoom: map.getZoom(), width: el.pane.style.width, height: el.pane.style.height, least: el.pane.style.minHeight, flex: el.pane.style.flex, tags: {} };
+    var speed = span / L.runs, token0 = "", pending = [];
+    var words = (S.day ? dayWords(S.day) : "") + (host.dataset.tz ? " · " + host.dataset.tz : "") + " · " + (speed >= 10 ? Math.round(speed) : speed.toFixed(1)) + "×" + (S.scope ? " · " + S.scope.name : "");
+    var title = "Timelapse " + hms(L.from) + " to " + hms(L.to) + (S.day ? ", " + dayWords(S.day) : "") + (S.scope ? " · " + S.scope.name : "");
+    function form(step) { var data = new FormData(); data.append("step", step); if (token0) { data.append("token", token0); } return data; }
+    function eventsShown(on) { ["map-events", "map-events-hit"].forEach(function (id) { if (map.getLayer(id)) { map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); } }); }
+    function enter() {
+      if (S.playing) { pause(); }
+      // Every name rides while the frames are drawn; where the person had
+      // pinned one is kept and put back after.
+      Object.keys(S.tags).forEach(function (id) { var t = S.tags[id]; kept.tags[id] = { x: t.x, y: t.y, pinned: t.pinned }; t.pinned = false; });
+      S.capturing = true;
+      S.show = L.trails ? (kept.show === "markers" ? "trails" : kept.show) : "markers";
+      host.classList.add("map-capturing");
+      // The pane is never under 320 high on the page; a frame of a wide map is.
+      el.pane.style.flex = "none"; el.pane.style.minHeight = "0"; el.pane.style.width = outW + "px"; el.pane.style.height = outH + "px";
+      map.resize();
+      map.jumpTo({ center: kept.center, zoom: kept.zoom + Math.log(outW / paneW) / Math.LN2 });
+      eventsShown(L.events);
+      refreshLayers();
+    }
+    function leave() {
+      S.capturing = false;
+      host.classList.remove("map-capturing");
+      el.pane.style.flex = kept.flex; el.pane.style.minHeight = kept.least; el.pane.style.width = kept.width; el.pane.style.height = kept.height;
+      S.show = kept.show; S.moment = kept.moment;
+      Object.keys(kept.tags).forEach(function (id) { var t = S.tags[id]; if (t) { t.x = kept.tags[id].x; t.y = kept.tags[id].y; t.pinned = kept.tags[id].pinned; } });
+      try { map.resize(); map.jumpTo({ center: kept.center, zoom: kept.zoom }); eventsShown(true); } catch (e) { /* the map went with its pane */ }
+      sizeFrame(); drawShow(); refreshLayers(); tick(); drawTransport();
+    }
+    function grab(m) {
+      return new Promise(function (done, fail) {
+        map.once("render", function () {
+          try {
+            var drawn = composeFrame({ clock: hms(m), words: words }, { noTiles: true, noNames: !L.names });
+            var out = document.createElement("canvas"); out.width = outW; out.height = frameH;
+            var ctx = out.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(drawn, 0, 0, outW, frameH);
+            out.toBlob(function (blob) { if (blob) { done(blob); } else { fail(new Error("A frame could not be drawn.")); } }, "image/jpeg", 0.92);
+          } catch (e) { fail(new Error("A frame could not be drawn.")); }
+        });
+        map.triggerRepaint();
+      });
+    }
+    function send() {
+      if (!pending.length) { return Promise.resolve(); }
+      var data = form("frames"); pending.forEach(function (one) { data.append("f" + one[0], one[1], "f" + one[0] + ".jpg"); }); pending = [];
+      return postForm(host.dataset.timelapse, data);
+    }
+    function frame(i, batch) {
+      if (L.stopped) { return Promise.reject(new Error("stopped")); }
+      if (i >= total) { return send(); }
+      progress(i, total);
+      S.moment = L.from + span * (total > 1 ? i / (total - 1) : 0);
+      tick();
+      return mapSettled().then(function () { return grab(S.moment); }).then(function (blob) {
+        pending.push([i, blob]);
+        return pending.length >= batch ? send() : null;
+      }).then(function () { return frame(i + 1, batch); });
+    }
+    var begin = form("begin");
+    begin.append("frames", total); begin.append("width", outW); begin.append("height", frameH); begin.append("cameras", cameras); begin.append("span", Math.round(span));
+    return postForm(host.dataset.timelapse, begin).then(function (told) {
+      token0 = told.token;
+      enter();
+      return mapSettled().then(function () { return frame(0, told.batch || 20); }).then(function () {
+        progress(total, total);
+        var last = form("finish"); last.append("title", title); if (S.scope) { last.append("incident", S.scope.id); }
+        return postForm(host.dataset.timelapse, last);
+      }).then(function (told2) { leave(); return told2; }, function (err) {
+        leave();
+        // Stopped or failed: the frames sent so far go.
+        try { postForm(host.dataset.timelapse, form("stop")).catch(function () { /* swept later */ }); } catch (e) { /* swept later */ }
+        throw err;
+      });
+    });
   }
 
   // The recording page's Map tab (v1.223.0) --------------------------------------

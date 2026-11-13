@@ -47,6 +47,13 @@ REPORT = "report"
 PICTURE = "picture"
 # A picture of the map, as the browser draws it: a few megabytes at most.
 PICTURE_MOST = 12 * 1024 * 1024
+# A timelapse of the map (Phase 12 chapter 6.12, v1.241.0): a GIF of the
+# Map over a span of the clock, kept beside the pictures; its one page's
+# picture is its first frame, still, and the file itself moves.
+TIMELAPSE = "timelapse"
+TIMELAPSE_MOST = 60 * 1024 * 1024
+# What has no words to read and is never compared.
+PICTURES = (PICTURE, TIMELAPSE)
 
 TITLE_MOST = 200
 # A page with fewer words of its own than this is read from its picture.
@@ -119,13 +126,20 @@ class Document(models.Model):
 
     @property
     def original_path(self) -> Path:
+        if self.kind == TIMELAPSE:
+            return self.folder / "original.gif"
         if self.kind == PICTURE:
             return self.folder / "original.png"
         return self.folder / "original.pdf"
 
     @property
     def is_picture(self) -> bool:
-        return self.kind == PICTURE
+        """A picture of the map, still or moving: no words, never compared."""
+        return self.kind in PICTURES
+
+    @property
+    def is_timelapse(self) -> bool:
+        return self.kind == TIMELAPSE
 
     def picture_path(self, number: int) -> Path:
         return self.folder / f"page-{number:03d}.png"
@@ -164,6 +178,8 @@ class Document(models.Model):
 
     def pages_line(self) -> str:
         """ "42 pages, read by OCR, 3 poorly read" as the tab says it."""
+        if self.kind == TIMELAPSE:
+            return "A timelapse of the map"
         if self.kind == PICTURE:
             return "A picture of the map"
         if self.state == READING:
@@ -407,6 +423,86 @@ def add_picture(
     return document
 
 
+def add_timelapse(
+    case,
+    *,
+    about: dict,
+    data: bytes,
+    still: bytes,
+    size: tuple[int, int],
+    title: str,
+    by,
+    request=None,
+    frames: int = 0,
+    cameras: int = 0,
+    span: float = 0.0,
+):
+    """Save a timelapse (Phase 12 chapter 6.12, v1.241.0): the GIF ffmpeg
+    joined from the frames the browser drew, kept as a Document of one
+    page whose picture is the first frame, about the incident shown when
+    there is one. Ready at once, counted against the case's cap, never
+    compared. The row says how many cameras, how long a span and how
+    many frames; never a place."""
+    if not on():
+        raise Refused("Documents are off.")
+    if not data.startswith((b"GIF89a", b"GIF87a")):
+        raise Refused("The timelapse could not be made into a GIF.")
+    if len(data) > TIMELAPSE_MOST:
+        raise Refused("That timelapse is too large to keep. Try a shorter one.")
+    _room_or_refused(case)
+    width_px, height_px = size
+    title = " ".join(str(title or "").split())[:TITLE_MOST] or "Timelapse"
+    document = Document.objects.create(
+        case=case,
+        kind=TIMELAPSE,
+        title=title,
+        # The title without what a PC refuses in a file's name (the colons).
+        original_filename=re.sub(r"[^A-Za-z0-9 ,.-]+", "", title).strip()[:200]
+        + ".gif",
+        size_bytes=len(data),
+        pages=1,
+        state=READY,
+        read_at=timezone.now(),
+        read_version=READ_VERSION,
+        added_by=by,
+        incident=about.get("incident"),
+        recording=about.get("recording"),
+    )
+    document.folder.mkdir(parents=True, exist_ok=True)
+    document.original_path.write_bytes(data)
+    document.picture_path(1).write_bytes(still)
+    DocumentPage.objects.create(
+        document=document,
+        number=1,
+        width=width_px * 72.0 / PICTURE_DPI,
+        height=height_px * 72.0 / PICTURE_DPI,
+        text="",
+        paragraphs=[],
+        ocr=False,
+        poor=False,
+    )
+    audit.write(
+        audit.Category.CASES,
+        "Document added",
+        actor=by,
+        request=request,
+        affected_user=case.owner if case.owner_id != by.pk else None,
+        object_type="document",
+        object_id=document.pk,
+        object_label=document.title,
+        pages=1,
+        kind=TIMELAPSE,
+        about=document.about_kind(),
+        frames=int(frames),
+        cameras=int(cameras),
+        span_seconds=round(float(span)),
+    )
+    from core import cases
+
+    cases.note_activity(case, by=by)
+    return document
+
+
 # Reading ------------------------------------------------------------------------------
 
 
@@ -538,7 +634,7 @@ def read(document_id) -> None:
 def _read(document: Document) -> None:
     import pdfplumber
 
-    if document.kind == PICTURE:
+    if document.kind in PICTURES:
         # A picture has no words to read: it was made ready when it was saved.
         return
     document.page_rows.all().delete()
@@ -812,7 +908,7 @@ def shelf(case) -> dict:
                 "document-download", args=[document.case_id, document.pk]
             ),
         }
-        if document.kind == PICTURE:
+        if document.kind in PICTURES:
             row["map_url"] = picture_map_url(document)
             pictures.append(row)
             continue
@@ -844,8 +940,10 @@ def shelf(case) -> dict:
     }
 
 
+# A timelapse's title opens with its span, and the link goes to its start.
 _PICTURE_TITLE = re.compile(
-    r"^Map at (\d{2}):(\d{2}):(\d{2}), (\d{1,2}) ([A-Z][a-z]{2}) (\d{4})"
+    r"^(?:Map at|Timelapse) (\d{2}):(\d{2}):(\d{2})(?: to \d{2}:\d{2}:\d{2})?, "
+    r"(\d{1,2}) ([A-Z][a-z]{2}) (\d{4})"
 )
 _MONTHS = (
     "Jan",

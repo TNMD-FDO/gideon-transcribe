@@ -17,6 +17,31 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.241.0, 2026-11-13
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+A timelapse of the Map, and More unfolded.
+
+- **Save a timelapse.** On the Map page, a GIF of the ticked cameras moving
+  over a span of the clock: 15, 30 or 60 seconds long, in two sizes, with
+  the time of day, the day and the scale under every frame. The box starts
+  filled in; the span, the length, the size and what is drawn can be
+  changed. The page draws the frames (keep it open; about a minute and a
+  half for a 30 second GIF) and the server joins them with the tool it
+  already cuts clips with. Nothing new is installed.
+- **Kept on the Documents tab**, with the pictures of the map, marked
+  Timelapse, about the incident shown when there is one. It moves on its
+  own page and downloads as the GIF. Each download is written to the audit
+  log.
+- **More unfolded.** The Map page's presses (Note here, Note on all shown,
+  Within a circle, Save a picture, Save a timelapse, Tidy names) sit on the
+  bar itself wherever the window is wide enough, and fold back behind More
+  where they would not fit on one row.
+
 ## v1.240.0, 2026-11-13
 
 ```

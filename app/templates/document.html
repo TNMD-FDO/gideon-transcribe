@@ -51,8 +51,8 @@
       <div class="doc-pictures" id="doc-pictures">
         {% for row in rows %}
           <figure class="doc-sheet" id="sheet-{{ row.number }}" data-number="{{ row.number }}" data-width="{{ row.width }}" data-height="{{ row.height }}" style="aspect-ratio: {{ row.width }} / {{ row.height }}">
-            <img src="{% url 'document-picture' case.pk document.pk row.number %}" alt="Page {{ row.number }}" loading="lazy">
-            <figcaption class="muted small">Page {{ row.number }}{% if row.ocr %} &middot; read by OCR{% endif %}{% if row.poor %} &middot; <span class="warn-ink">poorly read</span>{% endif %}</figcaption>
+            <img src="{% url 'document-picture' case.pk document.pk row.number %}{% if document.is_timelapse %}?moving=1{% endif %}" alt="{% if document.is_timelapse %}{{ document.title }}{% else %}Page {{ row.number }}{% endif %}" loading="lazy">
+            {% if not document.is_timelapse %}<figcaption class="muted small">Page {{ row.number }}{% if row.ocr %} &middot; read by OCR{% endif %}{% if row.poor %} &middot; <span class="warn-ink">poorly read</span>{% endif %}</figcaption>{% endif %}
             {% for b in row.boxes %}
               <span class="doc-box" data-page="{{ row.number }}" data-n="{{ b.n }}" title="Page {{ row.number }}, paragraph {{ b.n }}"
                     style="left: {{ b.left }}%; top: {{ b.top }}%; width: {{ b.width }}%; height: {{ b.height }}%"></span>
@@ -68,7 +68,7 @@
             {% for p in row.paragraphs %}
               <p class="doc-para" data-page="{{ row.number }}" data-n="{{ p.n }}"><span class="doc-n muted small">{{ p.n }}</span> {{ p.text }}</p>
             {% empty %}
-              <p class="muted small">{% if document.is_picture %}A picture of the map as it was saved: it has no words to read.{% else %}No words were read from this page.{% endif %}</p>
+              <p class="muted small">{% if document.is_timelapse %}A timelapse of the map as it was saved: it has no words to read. Download gives the GIF itself.{% elif document.is_picture %}A picture of the map as it was saved: it has no words to read.{% else %}No words were read from this page.{% endif %}</p>
             {% endfor %}
           </section>
         {% endfor %}

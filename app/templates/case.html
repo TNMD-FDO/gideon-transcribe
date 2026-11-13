@@ -215,13 +215,13 @@
 
           {% if shelf.pictures %}
             <section class="shelf-section" id="shelf-pictures" data-shelf="pictures">
-              <div class="row shelf-pics-head"><h2 class="shelf-h grow">Pictures of the map</h2><span class="muted small">saved with Save a picture on the Map page or an incident's map pane; the markers at that moment, the day and time in the name</span></div>
+              <div class="row shelf-pics-head"><h2 class="shelf-h grow">Pictures of the map</h2><span class="muted small">saved with Save a picture on the Map page or an incident's map pane (the markers at that moment, the day and time in the name), or with Save a timelapse on the Map page (a GIF of the ticked cameras over a span)</span></div>
               <div class="shelf-gallery" id="pictures">
                 {% for row in shelf.pictures %}
                   {% with one=row.document %}
                   <div class="card shelf-picture" data-kind="picture">
-                    <a href="{{ one.url }}" class="shelf-thumb" title="Open the picture"><img src="{% url 'document-picture' case.pk one.pk 1 %}" alt="{{ one.title }}" loading="lazy"></a>
-                    <div><b>{{ one.title }}</b></div>
+                    <a href="{{ one.url }}" class="shelf-thumb" title="Open the {% if one.is_timelapse %}timelapse{% else %}picture{% endif %}"><img src="{% url 'document-picture' case.pk one.pk 1 %}" alt="{{ one.title }}" loading="lazy"></a>
+                    <div><b>{{ one.title }}</b>{% if one.is_timelapse %} <span class="pill small acc" title="A GIF of the map over a span; the small picture is its first frame">Timelapse &middot; {{ one.size_bytes|filesizeformat }}</span>{% endif %}</div>
                     <div class="muted small">{% if row.about %}about <a class="pill small inc" href="{{ row.about_url }}">{{ row.about }}</a> &middot; {% endif %}{% if one.added_by %}saved by {{ one.added_by.shown_name }}, {% endif %}{{ one.created|date:"j M Y H:i" }}</div>
                     <div class="row shelf-acts">
                       <a class="btn small" href="{{ one.url }}">Open</a>

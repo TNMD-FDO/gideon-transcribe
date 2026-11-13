@@ -11,7 +11,7 @@ from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core import case_bar, chronology, documents, incidents
+from core import audit, case_bar, chronology, documents, incidents
 from core import home as home_page
 from core.case_pages import _on_or_404, _their_case
 from core.documents import READY, Document
@@ -372,7 +372,7 @@ def comparison_page(request: HttpRequest, case_id, document_id) -> HttpResponse:
     document = _their_document(request, case_id, document_id)
     if not comparison.on():
         raise Http404("the comparison is off")
-    if document.kind == documents.PICTURE:
+    if document.is_picture:
         raise Http404("a picture of the map has no words to compare")
     home = _compare_home(request, document, request.GET)
     made = comparison.of(document, home)
@@ -483,9 +483,7 @@ def page(request: HttpRequest, case_id, document_id) -> HttpResponse:
             "about_incident": document.incident,
             "about_recording": document.recording,
             "comparisons": (
-                comparison.shelf_rows(document)
-                if document.kind != documents.PICTURE
-                else []
+                comparison.shelf_rows(document) if not document.is_picture else []
             ),
         },
     )
@@ -496,10 +494,15 @@ def picture(request: HttpRequest, case_id, document_id, number: int) -> HttpResp
     """One page's picture, off the disk, for whoever may open the case."""
     document = _their_document(request, case_id, document_id)
     path = document.picture_path(number)
+    kind = "image/png"
+    # A timelapse's page moves when it is asked to (v1.241.0): the Document
+    # page shows the GIF itself, the shelf's small picture its first frame.
+    if document.is_timelapse and request.GET.get("moving"):
+        path, kind = document.original_path, "image/gif"
     if document.state != READY or not path.exists():
         raise Http404("no such page")
     # FileResponse closes the file itself once the picture has gone out.
-    answer = FileResponse(open(path, "rb"), content_type="image/png")  # noqa: SIM115
+    answer = FileResponse(open(path, "rb"), content_type=kind)  # noqa: SIM115
     # Never kept on the disk of the machine that looked (v1.130.0): a report's
     # pages are privileged, like every playback copy.
     answer["Cache-Control"] = "private, no-store"
@@ -514,14 +517,33 @@ def download(request: HttpRequest, case_id, document_id) -> HttpResponse:
     document = _their_document(request, case_id, document_id)
     if not document.original_path.exists():
         raise Http404("no such file")
-    picture = document.kind == documents.PICTURE
+    kind, ending = "application/pdf", "pdf"
+    if document.is_timelapse:
+        kind, ending = "image/gif", "gif"
+    elif document.is_picture:
+        kind, ending = "image/png", "png"
+    if document.is_timelapse:
+        # A timelapse is a file the app made to be taken away, as a Clip is
+        # (v1.241.0): its download is a row. A report's own PDF and a
+        # picture's PNG write none, as before.
+        audit.write(
+            audit.Category.EXPORTS,
+            "Timelapse downloaded",
+            actor=request.user,
+            request=request,
+            affected_user=document.case.owner
+            if document.case.owner_id != request.user.pk
+            else None,
+            object_type="document",
+            object_id=document.pk,
+            object_label=document.title,
+            kind=documents.TIMELAPSE,
+        )
     answer = FileResponse(
         open(document.original_path, "rb"),  # noqa: SIM115 - closed by the response
-        content_type="image/png" if picture else "application/pdf",
+        content_type=kind,
     )
-    name = quote(
-        document.original_filename or f"{document.title}.{'png' if picture else 'pdf'}"
-    )
+    name = quote(document.original_filename or f"{document.title}.{ending}")
     answer["Content-Disposition"] = f"attachment; filename*=UTF-8''{name}"
     return answer
 

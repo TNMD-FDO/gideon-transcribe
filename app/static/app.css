@@ -4928,3 +4928,27 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
   .usage-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .usage-panes { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* The Map page's bar with More unfolded, and Save a timelapse's box
+   (Phase 12 chapter 6.12, v1.241.0). */
+.map-more-open { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; margin: 0 2px; border-left: 1px solid var(--line); }
+.map-layer-card.map-lapse { max-width: 760px; }
+.map-lapse-rows { display: flex; flex-direction: column; }
+.map-lapse-rows > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--surface-2); }
+.map-lapse-rows > div:last-child { border-bottom: 0; }
+.map-lapse-rows > div > label { color: var(--muted); font-size: var(--t-small); padding-top: 3px; }
+.map-lapse-rows p { margin: 5px 0 0; }
+.map-lapse-rows p.problem { color: var(--danger); }
+.map-lapse .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.map-lapse .seg button { border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--muted); min-height: 26px; padding: 2px 10px; font-size: var(--t-small); }
+.map-lapse .seg button:last-child { border-right: 0; }
+.map-lapse .seg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.map-lapse-cams { display: flex; flex-wrap: wrap; gap: 5px; }
+.map-lapse-cams .pill i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.map-lapse-cams .pill i.sq { border-radius: 2px; }
+.map-lapse-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--line); font-size: var(--t-small); }
+.map-lapse-foot .wide { flex-basis: 100%; }
+.map-lapse-bar { flex: 1; min-width: 120px; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.map-lapse-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+/* While the frames are drawn the map is the GIF's own size, behind the box. */
+.map-tab.map-capturing .map-pane { margin: 0 auto; }
