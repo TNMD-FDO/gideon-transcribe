@@ -159,8 +159,26 @@ AI = (
     ("memo", "Incident memos", ("incident_memo",)),
     ("comparison", "Comparisons", ("compare_report",)),
     ("translation", "Translations", ("translation",)),
+    ("names", "Speaker suggestions", ("speaker_suggestions",)),
 )
+# Vision's own work on a video (v1.239.1): a call for every span described,
+# every part of a Digest and every camera clock read, thousands where a
+# person asked for tens. Counted, and said in a sentence under the bars, so
+# the bars stay what people asked for.
+AI_BACKGROUND = (
+    ("described", "descriptions of the picture", ("moment", "moment_finder")),
+    ("digest", "parts of a Digest", ("digest",)),
+    ("stamp", "camera clocks read", ("stamp",)),
+)
+AI_BACKGROUND_ONE = {
+    "described": "description of the picture",
+    "digest": "part of a Digest",
+    "stamp": "camera clock read",
+}
 AI_OTHER = ("other", "Other")
+# What the first count of v1.239.0 got wrong and v1.239.1 counts again.
+AI_KEYS = ("ai", "ai_failed", "ai_reasons", "chat_timed", "chat_typical")
+WAIT_KEYS = ("waits", "wait_typical", "wait_longest")
 # Why an AI assistant call failed, in the page's words.
 REASON_WORDS = {
     "llm_unreachable": "the engine could not be reached",
@@ -242,15 +260,31 @@ def count(month: date) -> dict:
         Job.objects.filter(
             kind="", state=JobState.DONE, finished__gte=start, finished__lt=end
         )
-        .select_related("recording", "recording__transcript")
+        .select_related("recording", "recording__transcript", "batch")
         .order_by("finished")
     )
     recordings: dict = {}
     waits: list[float] = []
     for job in jobs.iterator(chunk_size=500):
         recordings[job.recording_id] = job.recording
-        if job.created and job.finished and job.finished >= job.created:
-            waits.append((job.finished - job.created).total_seconds())
+        # The wait a person feels (v1.239.1): from the file's arrival, since
+        # a Job is made only once the file has been prepared. A Process
+        # again and a Live recording are timed from the Job's own making:
+        # the first's file arrived long before, the second's while it was
+        # still being recorded.
+        began = job.created
+        batch = job.batch
+        if (
+            batch is not None
+            and not batch.is_reprocessing
+            and not batch.is_live
+            and job.recording.created
+        ):
+            began = (
+                min(began, job.recording.created) if began else job.recording.created
+            )
+        if began and job.finished and job.finished >= began:
+            waits.append((job.finished - began).total_seconds())
     types: dict[str, float] = {}
     languages: dict[str, float] = {}
     seconds = translated = 0.0
@@ -317,7 +351,11 @@ def count(month: date) -> dict:
 
     # The AI assistant, by feature and outcome.
     calls = rows.filter(category=audit.Category.LLM, event="AI assistant call")
-    group_of = {feature: key for key, _words, features in AI for feature in features}
+    group_of = {
+        feature: key
+        for key, _words, features in (*AI, *AI_BACKGROUND)
+        for feature in features
+    }
     asked: dict[str, int] = {}
     failed = 0
     for row in (
@@ -395,6 +433,36 @@ def merged(old: dict, new: dict) -> dict:
         if key in new and new.get(basis, 0) >= (old.get(basis) or 0):
             out[key] = new[key]
     return out
+
+
+def recount() -> int:
+    """Count again, once, what v1.239.0's first count got wrong (v1.239.1):
+    the AI assistant's calls by kind, which put Vision's own work under
+    Other, and the waits, which began at the Job's making. A month's figures
+    are replaced only where the server still holds as much as was counted,
+    so a month the audit log no longer reaches keeps what it has."""
+    done = 0
+    for row in UsageMonth.objects.all():
+        fresh = count(row.month)
+        old = row.counts
+        changed = False
+        if sum((fresh.get("ai") or {}).values()) >= sum((old.get("ai") or {}).values()):
+            for key in AI_KEYS:
+                old.pop(key, None)
+                if key in fresh:
+                    old[key] = fresh[key]
+            changed = True
+        if fresh.get("waits", 0) >= (old.get("waits") or 0):
+            for key in WAIT_KEYS:
+                old.pop(key, None)
+                if key in fresh:
+                    old[key] = fresh[key]
+            changed = True
+        if changed:
+            row.counts = old
+            row.save(update_fields=["counts"])
+            done += 1
+    return done
 
 
 def _earliest() -> date | None:
@@ -621,7 +689,7 @@ def page(period: str = TWELVE) -> dict:
         },
         {
             "figure": length(wait) if wait is not None else "none yet",
-            "words": "typical wait, from sending to ready",
+            "words": "typical wait, from a file's arrival to ready",
             "more": f"longest: {length(longest)}" if longest else "",
             "warn": bool(wait) and longest > wait * 6,
         },
@@ -709,6 +777,16 @@ def page(period: str = TWELVE) -> dict:
     if asked.get(AI_OTHER[0]):
         pairs.append((AI_OTHER[1], asked[AI_OTHER[0]]))
     shown["ai"] = _bars([pair for pair in pairs if pair[1]], _number)
+    behind = [
+        f"{_number(asked[key])} {AI_BACKGROUND_ONE[key] if asked[key] == 1 else words}"
+        for key, words, _features in AI_BACKGROUND
+        if asked.get(key)
+    ]
+    shown["ai_behind"] = (
+        ", ".join(behind[:-1]) + " and " + behind[-1]
+        if len(behind) > 1
+        else "".join(behind)
+    )
     failed = total("ai_failed")
     reasons = sorted(totals("ai_reasons").items(), key=lambda pair: -pair[1])
     timed = [row for row in rows if row.counts.get("chat_typical") is not None]
@@ -774,7 +852,7 @@ def page(period: str = TWELVE) -> dict:
         f"{shown['tiles'][3]['words'].capitalize()}: {shown['tiles'][3]['figure']}",
     ]
     if wait is not None:
-        lines.append(f"Typical wait from sending to ready: {length(wait)}")
+        lines.append(f"Typical wait from a file's arrival to ready: {length(wait)}")
     if translated:
         lines.append(f"Translated to English: {_share(translated, seconds)} of hours")
     if calls:

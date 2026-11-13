@@ -17,6 +17,27 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.239.1, 2026-11-13
+
+```
+Models: unchanged
+Database: migrates (0111, a catch-up that counts the stored months again; no new table)
+```
+
+Two figures on the Usage page, put right.
+
+- **The AI assistant's bars are what people asked for.** Vision's own work
+  on videos, a call for every stretch of picture described, every part of
+  a Digest and every camera clock read, was counted under Other and
+  swamped the rest. It is now given in one sentence under the bars, and
+  Speaker suggestions has a bar of its own.
+- **The typical wait runs from a file's arrival.** It had begun when the
+  transcription job was made, which is after the file has arrived and been
+  prepared, so it read as seconds.
+
+The months already counted are counted again once for these figures,
+where the server still holds what they were counted from.
+
 ## v1.239.0, 2026-11-13
 
 ```

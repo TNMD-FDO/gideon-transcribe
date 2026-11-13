@@ -101,8 +101,9 @@
           </div>
           <p class="muted small usage-note">
             {% if ai_words.chat_typical %}Typical time for a chat answer: {{ ai_words.chat_typical }}.{% endif %}
-            Calls that failed: {{ ai_words.failed }}{% if ai_words.failed_share %} ({{ ai_words.failed_share }}){% endif %}{% if ai_words.reason %}, most often {{ ai_words.reason }}{% endif %}.
+            Calls that failed: {{ ai_words.failed }}{% if ai_words.failed_share %} ({{ ai_words.failed_share }} of every call){% endif %}{% if ai_words.reason %}, most often {{ ai_words.reason }}{% endif %}.
           </p>
+          {% if ai_behind %}<p class="muted small usage-note">Vision's own work on videos, a call each: {{ ai_behind }}.</p>{% endif %}
         {% else %}
           <p class="muted small m0">The AI assistant was not asked for anything in this period.</p>
         {% endif %}

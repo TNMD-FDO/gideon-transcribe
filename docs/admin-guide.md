@@ -72,13 +72,15 @@ When mail is configured and the Operator address is set (see Email), each report
 
 ## The Usage page
 
-How much the office uses the app (v1.239.0): the hours and recordings transcribed, how many people used it, the cases worked on, how long people wait from sending a recording to its being ready, which parts of the app are used, what the AI assistant was asked for and how often it failed, how fast the disk is filling, and what went wrong. Use it to justify the server, to plan training (the grey bars are the parts hardly anybody has found), and to tell another office what to expect.
+How much the office uses the app (v1.239.0): the hours and recordings transcribed, how many people used it, the cases worked on, how long people wait from a file's arrival to its being ready, which parts of the app are used, what the AI assistant was asked for and how often it failed, how fast the disk is filling, and what went wrong. Use it to justify the server, to plan training (the grey bars are the parts hardly anybody has found), and to tell another office what to expect.
 
 - **Counts only.** The page never shows a recording's or a case's name, a word that was said, a question that was asked, or who did anything. Opening it writes no audit row.
 - **Counted each night, and kept.** At half past three the app counts this month and last and keeps the numbers, one small row a month, for as long as the app is installed. Removing a case or sweeping the audit log does not lower a month already counted. Today's work appears after tonight's count.
 - **The first count** was made when v1.239.0 was installed, from what the server still held that day. Months that had already ended then are drawn lighter and may be low, because recordings and audit rows removed before that day could not be counted.
 - **People are counted a month at a time.** The app keeps no record of who, so over a year the page shows a typical month's people and cases, and the parts of the app for the last whole month. Search in a case, the Map and Bulk transcription are counted from the day v1.239.0 was installed; the app kept no record of them before.
 - **Copy the figures** puts the figures on your clipboard as a few lines of plain words, to paste into a mail or a report. The app sends them nowhere.
+- **The AI assistant's bars are what people asked for**: chat questions, summaries, speaker checks and the rest. Vision's own work on videos (a call for every stretch of picture described, every part of a Digest and every camera clock read) runs to thousands of calls, so it is given in one sentence under the bars (v1.239.1). The share that failed is of every call, Vision's included.
+- **The wait** runs from a file's arrival to its transcript being ready (v1.239.1). A recording processed again, or recorded live, is timed from when its job was made.
 
 Three periods: **This month**, **Last 12 months** and **Since the install**. The twelve bars are always the last twelve months.
 

@@ -382,3 +382,92 @@ def test_the_words_for_sizes_and_waits():
     assert usage.length(540) == "9 min"
     assert usage.length(11400) == "3 h 10 min"
     assert usage.size(1.9 * 1024**4) == "1.9 TB"
+
+
+# v1.239.1: what the first count got wrong ---------------------------------------
+
+
+def test_the_wait_runs_from_the_files_arrival(admin, a_case):
+    now = timezone.now()
+    first = transcribed(admin, a_case, "Arrived an hour ago", waited=60)
+    Recording.objects.filter(pk=first.pk).update(created=now - timedelta(hours=1))
+    # A Process again is timed from its own Job: its file arrived long before.
+    again = transcribed(admin, a_case, "Processed again", waited=90)
+    Recording.objects.filter(pk=again.pk).update(created=now - timedelta(days=30))
+    Batch.objects.filter(pk=again.batch_id).update(is_reprocessing=True)
+    # And a Live recording, whose file was still being recorded.
+    live = transcribed(admin, a_case, "Recorded here", waited=30)
+    Recording.objects.filter(pk=live.pk).update(created=now - timedelta(hours=2))
+    Batch.objects.filter(pk=live.batch_id).update(is_live=True)
+    counts = usage.count(usage.this_month())
+    assert counts["waits"] == 3
+    assert counts["wait_longest"] == 3600
+    assert counts["wait_typical"] == 90
+    usage.tally()
+    tile = usage.page(usage.MONTH)["tiles"][4]
+    assert tile["words"] == "typical wait, from a file's arrival to ready"
+
+
+def test_visions_own_work_is_a_sentence_and_not_a_bar(admin, a_case):
+    for _ in range(40):
+        asked(admin, a_case, "moment")
+    for _ in range(6):
+        asked(admin, a_case, "digest")
+    asked(admin, a_case, "stamp")
+    asked(admin, a_case, "speaker_suggestions")
+    asked(admin, a_case)
+    asked(admin, a_case, "something_new")
+    counts = usage.count(usage.this_month())
+    assert counts["ai"] == {
+        "described": 40,
+        "digest": 6,
+        "stamp": 1,
+        "names": 1,
+        "chat": 1,
+        "other": 1,
+    }
+    usage.tally()
+    shown = usage.page(usage.MONTH)
+    assert [(one["words"], one["figure"]) for one in shown["ai"]] == [
+        ("Chat questions", "1"),
+        ("Speaker suggestions", "1"),
+        ("Other", "1"),
+    ]
+    assert shown["ai_behind"] == (
+        "40 descriptions of the picture, 6 parts of a Digest and 1 camera clock read"
+    )
+    assert "descriptions of the picture" not in shown["copy"]
+
+
+def test_the_recount_replaces_only_what_the_server_still_holds(admin, a_case):
+    month = usage.this_month()
+    for _ in range(5):
+        asked(admin, a_case, "moment")
+    asked(admin, a_case)
+    transcribed(admin, a_case, "Camera 1", waited=600)
+    # As v1.239.0 counted it: Vision under Other, and a wait from the Job.
+    UsageMonth.objects.create(
+        month=month,
+        counts={
+            "recordings": 9,
+            "ai": {"other": 5, "chat": 1},
+            "ai_failed": 0,
+            "waits": 1,
+            "wait_typical": 20,
+            "wait_longest": 20,
+        },
+    )
+    # A month the audit log no longer reaches keeps what it has.
+    old = usage.before(usage.before(usage.before(month)))
+    UsageMonth.objects.create(
+        month=old,
+        counts={"ai": {"other": 70, "summary": 2}, "waits": 4, "wait_typical": 25},
+    )
+    assert usage.recount() == 1
+    now = UsageMonth.objects.get(month=month).counts
+    assert now["ai"] == {"described": 5, "chat": 1}
+    assert now["wait_typical"] == 600 and now["wait_longest"] == 600
+    # What the recount does not own is left alone.
+    assert now["recordings"] == 9
+    kept = UsageMonth.objects.get(month=old).counts
+    assert kept["ai"] == {"other": 70, "summary": 2} and kept["wait_typical"] == 25
