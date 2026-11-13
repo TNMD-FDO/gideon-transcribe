@@ -17,6 +17,33 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.240.0, 2026-11-13
+
+```
+Models: unchanged
+Database: migrates (0112, a catch-up that places cameras from their path files; no new table)
+```
+
+An incident places an in-car video from its path file.
+
+- **The fault.** An in-car video whose path file carries the unit's own
+  clock was right on the case's clock and on the Map, and wrong on an
+  incident: it stood at the incident's start, "Not synced yet", so it played
+  minutes out of step with the body cameras beside it. An incident had
+  never read a path file's clock.
+- **From its path file.** A camera is now placed from that clock as the
+  incident is made, as a camera is added, on Sync all, and when a path file
+  is added later to a video already in an incident. The pill reads "From
+  its path file" and the camera counts as synced. A camera's controls gain
+  a **From its path file** press.
+- **What stands.** A place from the picture's clock, by sound, by hand or
+  from the file's time is never moved by a path file.
+- **A better guess.** A camera with nothing to go by but its file's name
+  starts at the minute in the name, still marked "Not synced yet", not at
+  the incident's start.
+- **At the upgrade** the cameras that stood at the app's guess and have
+  such a file are placed once.
+
 ## v1.239.1, 2026-11-13
 
 ```

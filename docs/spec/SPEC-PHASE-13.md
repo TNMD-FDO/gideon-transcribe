@@ -284,7 +284,7 @@ on the incident page).
 
 ## 3. Usage (v1.239.0)
 
-On 2026-11-13 the maintainer asked what would make the app better, chose two of six ideas ("let's do 5 and 6"), and after a drawing of each (local pages, as the mock-ups of this period are) said "They stand, build". This is the first: a page in the Panel that says how much the office uses the app, so the server can be justified and another office can be told what to expect. The second, a practice case, is a later chapter.
+On 2026-11-13 the maintainer asked what would make the app better, chose two of six ideas ("let's do 5 and 6"), and after a drawing of each (local pages, as the mock-ups of this period are) said "They stand, build". This is the first: a page in the Panel that says how much the office uses the app, so the server can be justified and another office can be told what to expect. The second, a practice case, was drawn and scripted and then cancelled at the maintainer's word the same day; nothing of it was built.
 
 ### Principles
 
@@ -320,7 +320,6 @@ On 2026-11-13 the maintainer asked what would make the app better, chose two of 
 ### Carried
 
 - A split by Unit, where an office lists Units, only if asked for; a Unit of fewer than five people folded into the rest. A figure by person is ruled out.
-- The practice case's recordings and people are to be left out of every count here, save one line saying how many people made one.
 
 ### Left to the build
 

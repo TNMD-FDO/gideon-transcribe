@@ -84,7 +84,7 @@
   var soundPinned = false;     // the sound stays put rather than following the focus
   var LAYOUTS = ["focus", "side", "grid2", "grid3", "grid4"];
   // The tile's short pill (chapter 4); the full words are its hover title.
-  var SHORT_PILL = { clock: "Clock", clock_unchecked: "Clock?", sound: "Sound", file: "File", hand: "Hand", guess: "Guess" };
+  var SHORT_PILL = { clock: "Clock", clock_unchecked: "Clock?", sound: "Sound", file: "File", hand: "Hand", path: "Path file", guess: "Guess" };
   function shortPill(cam) { return SHORT_PILL[cam.placed] || cam.placed_words || ""; }
   // The surety word beside the placed pill (v1.183.0): how surely the
   // camera sits where it does, with why on hover.
@@ -2277,6 +2277,8 @@
     var html = "";
     if (cam.has_clock) { html += "<button type='button' class='tiny' data-act='place' data-how='clock' data-camera='" + cam.id + "'>From its clock</button> "; }
     if (cam.file_time && S.incident.has_clock) { html += "<button type='button' class='tiny' data-act='place' data-how='file' data-camera='" + cam.id + "' title='The file says " + quoted(cam.file_time) + "'>From its file</button> "; }
+    // From its path file (v1.240.0): an in-car unit's file carries its own clock.
+    if (cam.path_time) { html += "<button type='button' class='tiny' data-act='place' data-how='path' data-camera='" + cam.id + "' title='Its path file says " + quoted(cam.path_time) + "'>From its path file</button> "; }
     if (S.incident.sound_match) {
       var others = placedCameras().filter(function (one) { return one.id !== cam.id && one.synced; });
       if (others.length) {
@@ -2719,7 +2721,7 @@
     var html = "<div class='row' style='gap: 8px; align-items: center; flex-wrap: wrap'>" +
       "<span class='eyebrow'>Sync</span>" +
       "<span class='small grow'>" + synced + " of " + cams.length + " synced. " + escape(syncSaid) + "</span>" +
-      "<button type='button' class='small primary' id='sync-all' title='The app tries each camera not yet synced: its clock, then the sound against a camera in step, then asks for a hand'>Sync all</button>" +
+      "<button type='button' class='small primary' id='sync-all' title='The app tries each camera not yet synced: its clock, then its path file, then the sound against a camera in step, then asks for a hand'>Sync all</button>" +
       "<button type='button' class='small' id='sync-ticked' title='The rounds on the ticked cameras, synced or not'" + (ticked.length ? "" : " disabled") + ">Sync ticked</button>" +
       "<button type='button' class='small ghost' id='sync-close'>Done</button></div>";
     // Check the clocks and Sync ticked by the sound (v1.129.3).
@@ -2746,7 +2748,7 @@
         "<b style='color: " + cam.colour + "'>" + escape(cam.camera_id) + "</b><span class='muted small grow'>" + escape(cam.title) + "</span>" +
         "<span class='pill " + escape(cam.placed_tone) + " small'>" + escape(cam.placed_words) + "</span>" + suretyPill(cam) + "</div>" +
         "<div class='facts'>" +
-        (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture") + "</span>") +
+        (cam.clock ? "<span class='pill " + escape(cam.clock_tone) + " small'>" + escape(cam.clock) + "</span>" : "<span class='muted small'>" + (cam.has_clock ? "" : "no clock in the picture" + (cam.path_time ? "; its path file says " + escape(cam.path_time) : "")) + "</span>") +
         (cam.placed_by && cam.synced ? "<span class='muted small'>by " + escape(cam.placed_by) + "</span>" : "") +
         (open ? "" : "<span class='grow'></span><button type='button' class='tiny ghost' data-act='sync-open' data-camera='" + cam.id + "'>More</button>") +
         "</div>" +

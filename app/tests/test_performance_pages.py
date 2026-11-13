@@ -481,7 +481,9 @@ def test_the_incident_state_asks_a_handful_and_the_busy_form_three(
     # One more since v1.205.0: the vehicles' streams, read once for the state.
     # One more since v1.213.0: the comparisons against the incident, read
     # once for the Reports line on Details and the documents Gideon reads.
-    assert count < 45, count
+    # One more since v1.240.0: the path files that carry a clock, their
+    # clock alone, read once for every camera (From its path file).
+    assert count < 46, count
     with CaptureQueriesContext(connection) as asked:
         busy = incident_pages.busy_json(incident)
     assert busy == {"busy": False} and len(asked) <= 3, len(asked)

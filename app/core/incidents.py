@@ -36,6 +36,9 @@ CLOCK_UNCHECKED = "clock_unchecked"
 SOUND = "sound"
 FILE = "file"
 HAND = "hand"
+# From the clock of its path file (v1.240.0): an in-car unit's file beside
+# the video says when its recording began. Settled, as a read clock is.
+PATH = "path"
 # The app's best guess for a camera with no clock (v1.60.0): its file's time
 # when the Incident has a clock and the file carries one, else the
 # Incident's start. On the wall, marked Not synced yet, until Sync fixes it.
@@ -49,6 +52,7 @@ PLACED_WORDS = {
     SOUND: "Matched by sound",
     FILE: "From its file, unchecked",
     HAND: "Synced by hand",
+    PATH: "From its path file",
 }
 PLACED_TONES = {
     NOT_PLACED: "warn",
@@ -58,9 +62,10 @@ PLACED_TONES = {
     SOUND: "ok",
     FILE: "warn",
     HAND: "",
+    PATH: "ok",
 }
 # The states a person has settled, as against the app's guess.
-SYNCED = (CLOCK, CLOCK_UNCHECKED, SOUND, FILE, HAND)
+SYNCED = (CLOCK, CLOCK_UNCHECKED, SOUND, FILE, HAND, PATH)
 
 # The sound match's states, on the camera row while one runs.
 MATCH_QUEUED = "queued"
@@ -341,6 +346,41 @@ def clock_zero_of(recording) -> float | None:
     if seconds is None:
         return None
     return float((seconds - int(float(stamp.get("at", 0.0)))) % DAY)
+
+
+def path_clocks(recording_ids) -> dict:
+    """The path files that carry a clock of their own (an in-car unit's),
+    by recording id, in one query: the page asks for every camera of an
+    incident at once (v1.240.0). Only the clock is read, never the fixes:
+    the page asks every few seconds."""
+    from core.camera_paths import CameraPath
+
+    return {
+        one.recording_id: one
+        for one in CameraPath.objects.filter(
+            recording_id__in=list(recording_ids), clock_start__isnull=False
+        ).only("recording_id", "clock_start", "clock_agrees")
+    }
+
+
+def _path_of(recording, clocks: dict | None = None):
+    if clocks is not None:
+        return clocks.get(recording.pk)
+    return path_clocks([recording.pk]).get(recording.pk)
+
+
+def path_time_of(recording, clocks: dict | None = None) -> tuple[str, float | None]:
+    """When the recording began by its path file's own clock, in the
+    office's time: the words and the second of the day; ("", None) when
+    it has no path file or the file carries no clock (a body camera's).
+    `clocks` is path_clocks' answer when the caller asked already."""
+    path = _path_of(recording, clocks)
+    if path is None or path.clock_start is None:
+        return "", None
+    local = timezone.localtime(path.clock_start)
+    return local.strftime("%d %b %Y %H:%M:%S"), float(
+        local.hour * 3600 + local.minute * 60 + local.second + local.microsecond / 1e6
+    )
 
 
 def stamp_checked(recording) -> bool:
@@ -686,6 +726,12 @@ def _add(incident: Incident, recordings, *, by) -> list[IncidentCamera]:
     for camera in ordered:
         if clock_zero_of(camera.recording) is not None and not camera.is_placed():
             place_from_clock(camera, by=by, quietly=True)
+    # Then the path file's own clock (v1.240.0), which the case's clock
+    # already goes by: an in-car video arrives where its file says.
+    clocks = path_clocks([one.recording_id for one in ordered])
+    for camera in ordered:
+        if not camera.is_placed() and camera.recording_id in clocks:
+            place_from_path(camera, by=by, quietly=True)
     for camera in ordered:
         if not camera.is_placed():
             guess(camera)
@@ -697,6 +743,8 @@ def guess(camera: IncidentCamera) -> None:
     Not synced yet, so Sync has something to nudge."""
     incident = camera.incident
     _, second = file_time_of(camera.recording)
+    if second is None and incident.clock_zero is not None:
+        second = _known_start(camera.recording)
     if incident.clock_zero is not None and second is not None:
         starts_at = _wrapped(second - incident.clock_zero)
     else:
@@ -706,6 +754,23 @@ def guess(camera: IncidentCamera) -> None:
     camera.placed = GUESS
     camera.save(update_fields=["starts_at", "placed"])
     _notes_follow(camera)
+
+
+def _known_start(recording) -> float | None:
+    """Where else the app has a start for a video whose file carries no
+    time (v1.240.0): the case's clock, when something placed it there (a
+    sound match taken on the case, the minute in a name), else the minute
+    in its own file's name. Only ever a guess's start: the camera still
+    says Not synced yet."""
+    from core import camera_paths, case_chronology
+
+    _date, start, _how = case_chronology.clock_of(recording)
+    if start is not None:
+        return float(start)
+    named = camera_paths.name_moment_of(recording.original_filename)
+    if named is None:
+        return None
+    return float(named.hour * 3600 + named.minute * 60)
 
 
 def _notes_follow(camera: IncidentCamera) -> None:
@@ -721,19 +786,24 @@ def _notes_follow(camera: IncidentCamera) -> None:
 # order that works, before it asks for a hand.
 ROUND_CLOCK = "clock"
 ROUND_UNCHECKED = "unchecked"
+ROUND_PATH = "path"
 ROUND_MATCHING = "matching"
 ROUND_HAND = "hand"
 ROUND_SYNCED = "synced"
 
 
-def needs_hand_reason(camera: IncidentCamera) -> str:
+def needs_hand_reason(camera: IncidentCamera, clocks: dict | None = None) -> str:
     """Why the app could not sync this camera by itself, in one line, or ""
-    while it is synced or the app still has a round to try."""
+    while it is synced or the app still has a round to try. `clocks` is
+    path_clocks' answer when the page asked for every camera at once."""
     if camera.is_synced():
         return ""
     recording = camera.recording
     if clock_zero_of(recording) is not None:
         # The clock is there: From its clock is one press away.
+        return ""
+    if path_time_of(recording, clocks)[1] is not None:
+        # So is its path file's: From its path file.
         return ""
     if camera.match_state in (MATCH_QUEUED, MATCH_RUNNING):
         return ""
@@ -773,9 +843,12 @@ def _match_partner(camera: IncidentCamera) -> IncidentCamera | None:
 
 def sync_rounds(incident: Incident, cameras, *, by, request=None, force=False) -> dict:
     """Sync all, or Sync ticked: each camera tried in the order that works
-    (its clock checked, its clock unchecked, the sound against the camera it
-    overlaps most, then a hand). Returns what each round got, by camera id."""
+    (its clock checked, its clock unchecked, its path file's clock, the
+    sound against the camera it overlaps most, then a hand). Returns what
+    each round got, by camera id."""
     got: dict[str, str] = {}
+    cameras = list(cameras)
+    clocks = path_clocks([one.recording_id for one in cameras])
     for camera in cameras:
         if camera.is_synced() and not force:
             got[str(camera.pk)] = ROUND_SYNCED
@@ -786,6 +859,11 @@ def sync_rounds(incident: Incident, cameras, *, by, request=None, force=False) -
             got[str(camera.pk)] = (
                 ROUND_CLOCK if camera.placed == CLOCK else ROUND_UNCHECKED
             )
+            continue
+        if camera.recording_id in clocks and place_from_path(
+            camera, by=by, request=request
+        ):
+            got[str(camera.pk)] = ROUND_PATH
             continue
         partner = _match_partner(camera) if sound_match_on() else None
         if partner is not None and ask_for_match(camera, partner, by=by):
@@ -839,6 +917,7 @@ def rounds_line(got: dict) -> str:
         for key in (
             ROUND_CLOCK,
             ROUND_UNCHECKED,
+            ROUND_PATH,
             ROUND_MATCHING,
             ROUND_HAND,
             ROUND_SYNCED,
@@ -860,6 +939,11 @@ def rounds_line(got: dict) -> str:
                 if counts[ROUND_UNCHECKED]
                 else ""
             )
+        )
+    if counts[ROUND_PATH]:
+        parts.append(
+            f"{counts[ROUND_PATH]} from "
+            + ("its path file" if counts[ROUND_PATH] == 1 else "their path files")
         )
     if counts[ROUND_MATCHING]:
         parts.append(f"{counts[ROUND_MATCHING]} matching the sound")
@@ -1125,6 +1209,8 @@ def place_from_clock(
                     theirs = clock_zero_of(other.recording)
                 elif other.placed == FILE:
                     _, theirs = file_time_of(other.recording)
+                elif other.placed == PATH:
+                    _, theirs = path_time_of(other.recording)
                 else:
                     continue
                 if theirs is not None:
@@ -1164,6 +1250,78 @@ def place_from_file(camera: IncidentCamera, *, by, request=None) -> bool:
         quietly=False,
     )
     return True
+
+
+def place_from_path(
+    camera: IncidentCamera, *, by, request=None, quietly: bool = False
+) -> bool:
+    """From the clock of its path file (v1.240.0): an in-car unit's file
+    says when its recording began, and the case's clock goes by it already
+    (Phase 12 chapter 2). With no clock on the Incident yet, this one sets
+    it, said to be checked when the file's first and last readings agree.
+    False when the recording has no such file."""
+    path = _path_of(camera.recording)
+    _, second = path_time_of(camera.recording, {camera.recording_id: path})
+    if second is None:
+        return False
+    incident = camera.incident
+    if incident.clock_zero is None:
+        incident.clock_zero = second
+        incident.clock_date = timezone.localtime(path.clock_start).strftime("%m/%d/%Y")
+        incident.clock_checked = bool(path.clock_agrees)
+        incident.save(update_fields=["clock_zero", "clock_date", "clock_checked"])
+    _placed(
+        camera,
+        PATH,
+        _wrapped(second - incident.clock_zero),
+        by=by,
+        request=request,
+        quietly=quietly,
+    )
+    return True
+
+
+def path_file_changed(recording, *, by) -> int:
+    """A path file was added to, replaced on or taken off a video that sits
+    in incidents (v1.240.0). Where the app's own guess stands, or an
+    earlier path file's place, the camera takes the file's clock; where the
+    file that placed it has gone or carries no clock, it goes back to the
+    guess. A place from the picture's clock, by the sound, by hand or from
+    the file's time stands. Returns how many cameras moved."""
+    moved = 0
+    for camera in recording.incident_cameras.select_related("incident", "recording"):
+        if camera.placed not in (NOT_PLACED, GUESS, PATH):
+            continue
+        if place_from_path(camera, by=by, quietly=True):
+            moved += 1
+        elif camera.placed == PATH:
+            guess(camera)
+            moved += 1
+    return moved
+
+
+def catch_up_path_places() -> int:
+    """Once, at the upgrade to v1.240.0: every incident camera the app had
+    only guessed at, whose path file carries a clock, takes it, under the
+    name of whoever added the file. Nothing settled moves. Returns how
+    many were placed."""
+    from core.camera_paths import CameraPath
+
+    placed = 0
+    for path in CameraPath.objects.filter(clock_start__isnull=False).select_related(
+        "recording", "added_by"
+    ):
+        for camera in path.recording.incident_cameras.select_related(
+            "incident", "recording"
+        ):
+            if camera.placed not in (NOT_PLACED, GUESS):
+                continue
+            try:
+                if place_from_path(camera, by=path.added_by, quietly=True):
+                    placed += 1
+            except Exception:  # noqa: BLE001 - one odd file must not stop the rest
+                log.exception("catch-up path place of camera %s failed", camera.pk)
+    return placed
 
 
 def place_by_hand(
@@ -1308,10 +1466,11 @@ SURETY_WORDS = {
 }
 
 
-def surety_of(camera: IncidentCamera) -> dict:
+def surety_of(camera: IncidentCamera, clocks: dict | None = None) -> dict:
     """How surely a camera sits where it does (v1.183.0): a word, why, and a
     tone, from how it was placed and, for a sound match, how the match was
-    found. Shown beside the placed pill everywhere the pill is."""
+    found. Shown beside the placed pill everywhere the pill is. `clocks`
+    is path_clocks' answer when the page asked for every camera at once."""
     how = camera.placed
     if how == CLOCK:
         word, why, tone = "Clear", "from its clock, checked on two frames", "ok"
@@ -1330,6 +1489,16 @@ def surety_of(camera: IncidentCamera) -> dict:
             "Unchecked",
             "from its file's own time, checked by nobody",
             "warn",
+        )
+    elif how == PATH:
+        # The map's own words for the same clock (Phase 12 chapter 2).
+        from core import camera_paths
+
+        path = _path_of(camera.recording, clocks)
+        word, why, tone = (
+            camera_paths.SURETY_PATH_CLEAR
+            if path is not None and path.clock_agrees
+            else camera_paths.SURETY_PATH_ONCE
         )
     else:
         word, why, tone = "Not placed", "", "warn"

@@ -523,7 +523,7 @@ The time of day, with its date, that an Incident's cameras run on, taken from th
 _Avoid_: timeline, offset, master clock
 
 **Placed**:
-How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; Synced by hand; or Not synced yet (the app's guess, from v1.60.0: the file's time, else the Incident's start, until Sync on the camera fixes it). Every camera in an Incident is on the Wall; the page's control for a camera's place is **Sync**. Phase 6. Since v1.183.0 a **Surety** word stands beside the pill.
+How a camera came to sit where it does on the Incident clock, shown as a pill beside it everywhere: From its clock, checked; From its clock, unchecked; Matched by sound; From its file, unchecked; From its path file (v1.240.0: an in-car unit's path file carries its own clock); Synced by hand; or Not synced yet (the app's guess, from v1.60.0: the file's time, else what the case's clock or the file's name has, else the Incident's start, until Sync on the camera fixes it). Every camera in an Incident is on the Wall; the page's control for a camera's place is **Sync**. Phase 6. Since v1.183.0 a **Surety** word stands beside the pill.
 _Avoid_: aligned, calibrated, offset
 
 **Surety**:
@@ -694,7 +694,7 @@ The Chronology's one paragraph before the events, up to 2,000 characters, kept o
 _Avoid_: description (that is a Recording's note), summary, introduction
 
 **Sync sheet**:
-The one place syncing is done on the incident page (Phase 6 chapter 5): opened by Sync in the transport, on a tile, or on the Cameras tab; one row per camera with its clock, its place, a tick and its controls; Sync all has the app try each camera in the order that works (its clock checked, its clock unchecked, the sound against a camera in step, then a person's hand), and a camera the app could not sync says why and shows what to do next (needs a hand).
+The one place syncing is done on the incident page (Phase 6 chapter 5): opened by Sync in the transport, on a tile, or on the Cameras tab; one row per camera with its clock, its place, a tick and its controls; Sync all has the app try each camera in the order that works (its clock checked, its clock unchecked, its path file's clock, the sound against a camera in step, then a person's hand), and a camera the app could not sync says why and shows what to do next (needs a hand).
 _Avoid_: auto-sync, calibrate, align, offset, drift
 
 **Incident clip**:

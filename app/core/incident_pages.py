@@ -265,13 +265,21 @@ def _others(case, incident: Incident, cameras=None) -> list[dict]:
 
 
 def _camera_json(
-    camera: IncidentCamera, colour: str, on_wall: bool, reading: set | None = None
+    camera: IncidentCamera,
+    colour: str,
+    on_wall: bool,
+    reading: set | None = None,
+    clocks: dict | None = None,
 ) -> dict:
     """One camera as the page draws it; `reading` is the set of recording
-    ids whose clock is being read, from one query for the incident."""
+    ids whose clock is being read, and `clocks` the path files that carry
+    a clock (v1.240.0), each from one query for the incident."""
     recording = camera.recording
     if reading is None:
         reading = incidents.stamp_reading_in([recording.pk])
+    if clocks is None:
+        clocks = incidents.path_clocks([recording.pk])
+    path_words, _ = incidents.path_time_of(recording, clocks)
     words, tone = incidents.stamp_words(recording)
     file_words, _ = incidents.file_time_of(recording)
     return {
@@ -292,6 +300,9 @@ def _camera_json(
         "clock": words,
         "clock_tone": tone,
         "file_time": file_words,
+        # When its path file's own clock says it began (v1.240.0), for
+        # From its path file; "" without such a file.
+        "path_time": path_words,
         "has_clock": incidents.clock_zero_of(recording) is not None,
         # Confirmed by the second frame (v1.129.3, for Check the clocks).
         "clock_checked": incidents.stamp_checked(recording),
@@ -300,7 +311,7 @@ def _camera_json(
         "synced": camera.is_synced(),
         "ends_at": camera.ends_at(),
         # Why the app could not sync it by itself (Phase 6 chapter 5).
-        "needs_hand": incidents.needs_hand_reason(camera),
+        "needs_hand": incidents.needs_hand_reason(camera, clocks),
         "has_transcript": hasattr(recording, "transcript"),
         "viewer_url": reverse("viewer", args=[recording.pk]),
         "match": {
@@ -313,7 +324,7 @@ def _camera_json(
         },
         # How surely it sits where it does (v1.183.0): a word beside the
         # placed pill.
-        "surety": incidents.surety_of(camera),
+        "surety": incidents.surety_of(camera, clocks),
     }
 
 
@@ -336,6 +347,7 @@ def state_json(incident: Incident, user) -> dict:
     )
     incidents.guess_the_unplaced(incident, cameras)
     reading = incidents.stamp_reading_in([one.recording_id for one in cameras])
+    clocks = incidents.path_clocks([one.recording_id for one in cameras])
     placed = sorted(
         (one for one in cameras if one.is_placed()),
         key=lambda one: (one.starts_at, one.added),
@@ -423,7 +435,9 @@ def state_json(incident: Incident, user) -> dict:
             ),
         },
         "cameras": [
-            _camera_json(one, colours[str(one.pk)], str(one.pk) in wall, reading)
+            _camera_json(
+                one, colours[str(one.pk)], str(one.pk) in wall, reading, clocks
+            )
             for one in ordered
         ],
         # The Wall's order, the person's or the clock's (v1.60.1).
@@ -581,6 +595,13 @@ def act(request: HttpRequest, case_id, incident_id) -> JsonResponse:
                             "has no clock yet."
                         )
                     },
+                    status=400,
+                )
+        elif how == "path":
+            # From its path file (v1.240.0): an in-car unit's own clock.
+            if not incidents.place_from_path(camera, by=user, request=request):
+                return JsonResponse(
+                    {"error": "This camera has no path file with a clock of its own."},
                     status=400,
                 )
         elif how == "hand":

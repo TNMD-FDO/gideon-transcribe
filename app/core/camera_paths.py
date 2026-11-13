@@ -721,6 +721,11 @@ def add(
     path.save()
     recording.measure_disk()
     place_from_path(path, by=by, request=request)
+    # And on the clock of every incident the video sits in (v1.240.0),
+    # where only the app's guess stood.
+    from core import incidents
+
+    incidents.path_file_changed(recording, by=by)
     from core import cases
 
     audit.write(
@@ -760,6 +765,11 @@ def remove(path: CameraPath, *, by, request=None, replacing: bool = False) -> No
     recording.measure_disk()
     if replacing:
         return
+    # An incident camera the file had placed goes back to the app's guess
+    # (v1.240.0); a replacement places afresh in add.
+    from core import incidents
+
+    incidents.path_file_changed(recording, by=by)
     from core import cases
 
     audit.write(

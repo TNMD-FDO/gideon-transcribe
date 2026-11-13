@@ -1176,14 +1176,18 @@ def test_a_memo_or_comparison_written_before_a_path_file_says_so(person, a_case)
     cameras' files when they are written, and had no way to say that one
     arrived, changed or left afterwards; now each remembers which files its
     cameras had."""
-    from core import comparison, incident_assistant
+    from core import comparison, incident_assistant, incidents
     from core.assistant import DONE
     from core.comparison import Comparison
     from core.incident_assistant import IncidentMemo
 
     car = video(person, a_case, "Dash-4")
     incident = Incident.objects.create(case=a_case, name="Stop", created_by=person)
-    IncidentCamera.objects.create(incident=incident, recording=car)
+    camera = IncidentCamera.objects.create(incident=incident, recording=car)
+    # Synced by a person already, so the file's arrival moves nothing
+    # (v1.240.0: over the app's guess it would sync the camera, and the memo
+    # would say that too).
+    incidents.place_by_hand(camera, 0.0, by=person)
 
     def written(signature: str, when=None):
         fields = {
@@ -1476,3 +1480,212 @@ def test_the_players_line_says_what_the_cameras_file_says(person, a_case, client
     assert "drawStatus(now);" in script.split("function follow(now, jump)", 1)[1][:200]
     css = (HERE / "static" / "app.css").read_text(encoding="utf-8")
     assert ".preview-status[hidden] { display: none; }" in css
+
+
+# The path file's clock on an incident (v1.240.0) --------------------------------------
+#
+# The in-car file's clock in these tests is 14:20:03, second 51603 of the day.
+
+
+def test_an_incident_places_an_in_car_video_from_its_path_file(person, a_case):
+    """Until v1.240.0 an incident never read a path file's clock: the in-car
+    video stood at the incident's start, Not synced yet, while the case's
+    clock had it right."""
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = incidents.make(a_case, "Stop", [car, body], by=person)
+    cams = {one.recording.title: one for one in incident.cameras.all()}
+    assert cams["BWC2-1"].placed == incidents.CLOCK and cams["BWC2-1"].starts_at == 0.0
+    # Ten minutes after the body camera, as the two clocks say.
+    assert cams["Dash-4"].placed == incidents.PATH
+    assert cams["Dash-4"].starts_at == pytest.approx(600.0)
+    assert cams["Dash-4"].is_synced() and cams["Dash-4"].placed_by == person
+    assert incidents.PLACED_WORDS[incidents.PATH] == "From its path file"
+    assert incidents.surety_of(cams["Dash-4"])["word"] == "Clear"
+    assert incidents.placed_words(incident)[0] == "2 of 2 synced"
+    # Placed in the making, as a read clock is: no row of its own.
+    assert not Row.objects.filter(event="camera placed").exists()
+
+
+def test_with_no_clock_in_any_picture_the_path_file_sets_the_incidents_clock(
+    person, a_case
+):
+    from core import incidents
+
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(drift=5.0), by=person)
+    mute = video(person, a_case, "Mute", seconds=300)
+    incident = incidents.make(a_case, "Stop", [mute, car], by=person)
+    incident.refresh_from_db()
+    assert incident.clock_zero == pytest.approx(51603.0)
+    assert incident.clock_date == "11/06/2025"
+    # First and last readings five seconds apart: said to be unchecked.
+    assert incident.clock_checked is False
+    camera = incident.cameras.get(recording=car)
+    assert camera.placed == incidents.PATH and camera.starts_at == 0.0
+    assert incidents.surety_of(camera)["word"] == "Likely"
+
+
+def test_sync_all_takes_the_path_file_before_the_sound_and_says_so(person, a_case):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = incidents.make(a_case, "Stop", [body, car], by=person)
+    camera = incident.cameras.get(recording=car)
+    # As it stood before this release: the app's guess at the start.
+    IncidentCamera.objects.filter(pk=camera.pk).update(
+        placed=incidents.GUESS, starts_at=0.0
+    )
+    camera.refresh_from_db()
+    assert incidents.needs_hand_reason(camera) == "", "one press away"
+    got = incidents.sync_rounds(incident, list(incident.cameras.all()), by=person)
+    assert got[str(camera.pk)] == incidents.ROUND_PATH
+    assert incidents.rounds_line(got) == "Syncing 1 camera: 1 from its path file."
+    camera.refresh_from_db()
+    assert camera.placed == incidents.PATH and camera.starts_at == pytest.approx(600.0)
+    row = Row.objects.get(event="camera placed")
+    assert row.details["how"] == "path"
+
+
+def test_a_path_file_that_comes_or_goes_moves_only_what_the_app_guessed(person, a_case):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    by_hand = video(person, a_case, "Dash-5", seconds=300)
+    incident = incidents.make(a_case, "Stop", [body, car, by_hand], by=person)
+    hand = incident.cameras.get(recording=by_hand)
+    incidents.place_by_hand(hand, 42.0, by=person)
+    assert incident.cameras.get(recording=car).placed == incidents.GUESS
+    # The files arrive after the incident was made.
+    added(car, car_file(), by=person)
+    added(by_hand, car_file(), by=person)
+    camera = incident.cameras.get(recording=car)
+    assert camera.placed == incidents.PATH and camera.starts_at == pytest.approx(600.0)
+    hand.refresh_from_db()
+    assert hand.placed == incidents.HAND and hand.starts_at == 42.0, "a person's stands"
+    # A replacement places afresh; a removal sends the camera back to the guess.
+    added(car, car_file(drift=5.0), by=person, replace=True)
+    camera.refresh_from_db()
+    assert camera.placed == incidents.PATH
+    assert incidents.surety_of(camera)["word"] == "Likely"
+    camera_paths.remove(camera_paths.of(car), by=person)
+    camera.refresh_from_db()
+    assert camera.placed == incidents.GUESS and not camera.is_synced()
+
+
+def test_the_incident_page_offers_from_its_path_file(person, a_case, client):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = incidents.make(a_case, "Stop", [body, car], by=person)
+    camera = incident.cameras.get(recording=car)
+    incidents.place_by_hand(camera, 0.0, by=person)
+    signed_in(client, person)
+    told = client.get(reverse("incident-state", args=[a_case.pk, incident.pk])).json()
+    by_title = {one["title"]: one for one in told["cameras"]}
+    assert by_title["Dash-4"]["path_time"] == "06 Nov 2025 14:20:03"
+    assert by_title["BWC2-1"]["path_time"] == ""
+    act = reverse("incident-act", args=[a_case.pk, incident.pk])
+    answer = client.post(
+        act, {"action": "place", "camera": str(camera.pk), "how": "path"}
+    )
+    assert answer.status_code == 200
+    mine = {one["title"]: one for one in answer.json()["state"]["cameras"]}["Dash-4"]
+    assert mine["placed"] == "path" and mine["placed_words"] == "From its path file"
+    assert mine["starts_at"] == pytest.approx(600.0) and mine["synced"] is True
+    assert mine["surety"]["word"] == "Clear"
+    refused = client.post(
+        act,
+        {
+            "action": "place",
+            "camera": str(incident.cameras.get(recording=body).pk),
+            "how": "path",
+        },
+    )
+    assert refused.status_code == 400
+    script = (HERE / "static" / "incident.js").read_text(encoding="utf-8")
+    assert "data-how='path'" in script and 'path: "Path file"' in script
+
+
+def test_the_catch_up_places_the_guessed_cameras_with_a_path_clock_once(person, a_case):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    settled = video(person, a_case, "Dash-5", seconds=300)
+    added(car, car_file(), by=person)
+    added(settled, car_file(), by=person)
+    incident = incidents.make(a_case, "Stop", [body, car, settled], by=person)
+    # As the two stood before this release, one of them set by a person since.
+    IncidentCamera.objects.filter(recording=car).update(
+        placed=incidents.GUESS, starts_at=0.0, placed_by=None
+    )
+    incidents.place_by_hand(incident.cameras.get(recording=settled), 7.0, by=person)
+    assert incidents.catch_up_path_places() == 1
+    camera = incident.cameras.get(recording=car)
+    assert camera.placed == incidents.PATH and camera.starts_at == pytest.approx(600.0)
+    assert camera.placed_by == person, "whoever added the file"
+    assert incident.cameras.get(recording=settled).placed == incidents.HAND
+    assert incidents.catch_up_path_places() == 0, "run again, nothing moves"
+    migration = (
+        HERE / "core" / "migrations" / "0112_incident_path_places.py"
+    ).read_text(encoding="utf-8")
+    assert "incidents.catch_up_path_places()" in migration
+
+
+def test_a_guess_starts_at_the_minute_in_the_name_when_the_file_has_no_time(
+    person, a_case
+):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    named = video(person, a_case, "BWC3-1", name="BWC3-1_202511062027_abc.mp4")
+    plain = video(person, a_case, "Plain")
+    incident = incidents.make(a_case, "Stop", [body, named, plain], by=person)
+    minute = camera_paths.name_moment_of(named.original_filename)
+    wanted = incidents._wrapped(minute.hour * 3600 + minute.minute * 60 - 51003.0)
+    camera = incident.cameras.get(recording=named)
+    assert camera.placed == incidents.GUESS and not camera.is_synced()
+    assert camera.starts_at == pytest.approx(wanted)
+    # With nothing to go by, the incident's start, as before.
+    assert incident.cameras.get(recording=plain).starts_at == 0.0
+
+
+def test_the_clocks_camera_read_again_moves_the_path_placed_with_it(person, a_case):
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    car = video(person, a_case, "Dash-4", seconds=300)
+    added(car, car_file(), by=person)
+    incident = incidents.make(a_case, "Stop", [body, car], by=person)
+    body.stamp = stamp("14:10:15", "BWC2-1")
+    body.save(update_fields=["stamp"])
+    incidents.place_from_clock(incident.cameras.get(recording=body), by=person)
+    camera = incident.cameras.get(recording=car)
+    assert camera.placed == incidents.PATH and camera.starts_at == pytest.approx(590.0)
+
+
+def test_a_time_typed_on_the_cases_clock_stands_over_the_path_file(person, a_case):
+    """From the strip or the chronology a camera placed by hand on the case's
+    clock arrives by hand, whatever its path file says."""
+    from core import incidents
+
+    body = video(person, a_case, "BWC2-1", stamp=stamp("14:10:05", "BWC2-1"))
+    body.stamp["date"] = "11/06/2025"
+    body.save(update_fields=["stamp"])
+    car = video(person, a_case, "Dash-4", seconds=300)
+    case_chronology.place(car, dt.date(2025, 11, 6), 51303.0, by=person)
+    added(car, car_file(), by=person)
+    incident = case_chronology.make_incident(
+        a_case, dt.date(2025, 11, 6), (51000.0, 52000.0), "Stop", [body, car], by=person
+    )
+    camera = incident.cameras.get(recording=car)
+    assert camera.placed == incidents.HAND and camera.starts_at == pytest.approx(300.0)
