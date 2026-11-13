@@ -14,6 +14,7 @@ Nothing in this document is office-specific. One column on the person's account 
 
 1. Home as the desk
 2. The recording page, redrawn
+3. Usage
 
 ## 1. Home as the desk (v1.215.0)
 
@@ -280,3 +281,45 @@ Sources: the maintainer's asks of 2026-11-09; the drawing
 Desk layout); Phase 8 chapter 1 (the case's recordings under the video);
 Phase 12 chapters 1, 4 and 5 (the map, where a line was said, the map pane
 on the incident page).
+
+## 3. Usage (v1.239.0)
+
+On 2026-11-13 the maintainer asked what would make the app better, chose two of six ideas ("let's do 5 and 6"), and after a drawing of each (local pages, as the mock-ups of this period are) said "They stand, build". This is the first: a page in the Panel that says how much the office uses the app, so the server can be justified and another office can be told what to expect. The second, a practice case, is a later chapter.
+
+### Principles
+
+- **Counts only.** Never a Recording's name, a Case's name, a word that was said, a question that was asked, or who did anything. The page names no person and no Unit.
+- **History that does not shrink.** The audit log is kept a set number of months and a Case that reaches its Retention policy takes its Recordings with it, so a figure counted from what the server still holds would fall as it was swept. The app keeps one row of numbers a month, for the life of the install.
+- **Nothing leaves the building.** The page sends nothing anywhere. Its one button puts plain words on the Admin's clipboard.
+
+### What is kept
+
+- One row a month (the month's first day in the office's time, and a set of numbers). Each night at half past three, with the other nightly work, the month being lived in and the month before it are counted again from the Jobs, the Recordings and the audit log, and the numbers are joined to the row's: **a count never goes down** (the higher of the stored figure and the fresh one stands, so a Case swept between two counts changes nothing), a level (the disk held, the disk free, the accounts) is the newest and is set only by the month being lived in, and a typical figure is the one worked out from more.
+- The first count is made at the upgrade (migration 0110), or on the first night where that did not finish: every month the server still holds anything of, up to thirty-six, counted once. A month that had already ended at the first count could only be counted from what was still held that day; the page tells those months apart (a lighter bar and one sentence).
+- **What a month's numbers are.** The Recordings transcribed (each once, however often it was run; the speakers pass is not a transcription) and their hours, by Recording type and by spoken language, and the hours marked for translation. The waits from a Job's making to its finish: how many, the typical (the median) and the longest. The people who did anything the audit log records; the Cases worked on (a Case named on a row, or holding a Recording named on one) and the Cases opened. The people who used each part of the app. The AI assistant's calls by kind, how many failed and why, and the typical time of a chat answer. The uploads accepted and refused, and the transcriptions that failed. The levels: what the Recordings hold on disk, the drive's size and free room, and the accounts not deactivated or blocked.
+- **The parts of the app.** Notes, Corrections, Naming speakers, Chat, Clips, Exports, Incidents, Comparison, Sharing, Dictation and Live recording are read from the audit rows a person's use already writes. A search in a Case, the Map and Bulk transcription write no audit row (the audit log records the thing that happened, never the page that showed it), so for those three the app keeps a mark: the month, the part and the person, one row however often. A mark is deleted once the month after its own has ended, when its month's count is final: what stays is the number and never who. The page says these three are counted from the first count's day.
+
+### The page
+
+- **Usage**, in the Panel's rail after Queue, for Admins alone. Opening it writes no audit row, as no Panel page does: it holds counts and is no reading of anybody's work.
+- Three periods: **This month**, **Last 12 months** (the default) and **Since the install**. Five figures across the top: the hours transcribed, the Recordings, the people, the Cases worked on, and the typical wait with the longest. Under them: twelve months of hours as bars (always the last twelve, the month so far outlined); what was transcribed by Recording type (the six largest, the rest folded) with the spoken languages and the share translated; the parts of the app by people; the AI assistant; the disk (held, free, how fast it grows over the last three month-to-month steps, and the months of room that leaves above the free-space floor, amber under six); and what went wrong.
+- **People are counted a month at a time**, because the app keeps no record of who and so cannot tell the same person in two months from two people. Over a period longer than a month the people and the Cases are a typical month's (the median of the months that have ended), and the parts are the last whole month's, named on the page; until a whole month has been counted as it was lived, they are the month so far.
+- **Copy the figures** puts the period's figures on the clipboard as a few lines of plain words, which the page also shows folded; where the browser gives no clipboard the words open to be selected by hand.
+- Before anything has been counted the page says the first count is made tonight.
+
+### Where this differs from the drawing
+
+- The short period is the month so far and not a rolling thirty days, which a tally by the month cannot give.
+- The drawing said opening the page would write an audit row. It does not: no Panel page does, and this one shows nobody's work.
+- The drawing's line for the server's graphics cards is left out of the copied words; the Release is given.
+
+### Carried
+
+- A split by Unit, where an office lists Units, only if asked for; a Unit of fewer than five people folded into the rest. A figure by person is ruled out.
+- The practice case's recordings and people are to be left out of every count here, save one line saying how many people made one.
+
+### Left to the build
+
+- The six Recording types shown before the fold, the four languages named, the thirty-six months a first count reaches, and the six months under which the disk's room turns amber.
+
+Sources: the maintainer's ask and choice of 2026-11-13; the drawing `.claude/tools/preview/usage-figures.html` (local); Phase 1's audit log and Panel chapters; Phase 2's Retention policy.

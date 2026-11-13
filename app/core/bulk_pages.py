@@ -22,6 +22,7 @@ from core import (
     settings_store,
     translation,
     uploads,
+    usage,
     vision,
     whisperx,
 )
@@ -35,6 +36,7 @@ def page(request: HttpRequest) -> HttpResponse:
     """The drop, or this session's batch where it stands, or its download."""
     from core.pages import batch_mail_for, standing_line
 
+    usage.seen(request.user, usage.BULK)
     running = Batch.unfinished_for(request.user)
     ready = home.ready_batches(request.user)
     shown = running if running is not None else (ready[0]["batch"] if ready else None)

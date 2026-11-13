@@ -4894,3 +4894,37 @@ body.gideon-open .passage-win { right: calc(var(--gideon, 420px) + 28px); }
   .case-column-foot { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
   .case-column-foot b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 }
+
+/* The Panel's Usage page (Phase 13 chapter 3, v1.239.0): tiles of figures,
+   twelve months as bars, and lists with a bar behind each figure. */
+.usage-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.usage-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 12px; min-width: 0; }
+.usage-figure { font-size: var(--t-title); font-weight: 600; line-height: 1.15; }
+.usage-words { font-size: var(--t-small); color: var(--muted); }
+.usage-more { font-size: var(--t-label); color: var(--ok); margin-top: 2px; }
+.usage-more.warn { color: var(--warn); }
+.usage-panes { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; align-items: start; }
+.usage-panes h2 { font-size: var(--t-body); margin: 0 0 10px; }
+.usage-panes h2 span { font-weight: 400; }
+.usage-panes h2.usage-next { margin-top: 18px; margin-bottom: 4px; }
+.usage-note { margin: 10px 0 0; }
+.usage-months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; height: 170px; }
+.usage-month { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+.usage-month-n { font-size: var(--t-label); color: var(--muted); text-align: center; min-height: 14px; }
+.usage-month i { display: block; height: calc(var(--h) * 0.88); background: var(--accent); border-radius: 3px 3px 0 0; }
+.usage-month.late i { opacity: 0.45; }
+.usage-month.now i { background: var(--accent-soft); border: 1px dashed var(--accent); border-bottom: 0; }
+.usage-month-names { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; border-top: 1px solid var(--line); padding-top: 3px; font-size: var(--t-label); color: var(--muted); text-align: center; }
+.usage-bars { display: grid; gap: 6px; font-size: var(--t-small); }
+.usage-bars > div { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 5.5rem; gap: 8px; align-items: center; }
+.usage-bars.wide > div { grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 6rem; }
+.usage-bars > div > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-bars > div > span:last-child { text-align: right; font-family: var(--mono); font-size: var(--t-label); white-space: nowrap; }
+.usage-bars i { display: block; height: 10px; border-radius: 5px; background: var(--accent); width: var(--w); min-width: 3px; }
+.usage-bars i.quiet { background: var(--line); }
+.usage-plain { margin-bottom: 12px; }
+.usage-plain pre { font-family: var(--mono); font-size: var(--t-small); background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; white-space: pre-wrap; margin: 8px 0; }
+@media (max-width: 1100px) {
+  .usage-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .usage-panes { grid-template-columns: minmax(0, 1fr); }
+}

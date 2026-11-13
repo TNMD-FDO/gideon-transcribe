@@ -17,6 +17,35 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.239.0, 2026-11-13
+
+```
+Models: unchanged
+Database: migrates
+```
+
+The Panel says how much the office uses the app.
+
+- **A Usage page in the Panel,** after Queue: the hours and recordings
+  transcribed, the people and the cases in a month, the typical wait, the
+  parts of the app by how many people used each, the AI assistant's calls
+  and failures, the disk and how fast it fills, and what went wrong.
+- **Counts only.** Never a recording's or a case's name, a word that was
+  said, a question that was asked, or who did anything. Opening the page
+  writes no audit row.
+- **Counted each night and kept,** one small row a month, so removing a
+  case or sweeping the audit log does not lower a month already counted.
+  The first count is made at this upgrade from what the server holds;
+  months that had already ended are drawn lighter and may be low.
+- **Copy the figures** gives a few lines of plain words to paste where you
+  choose. The app sends them nowhere.
+- Search in a case, the Map and Bulk transcription are counted from this
+  upgrade: the app kept no record of them before, and keeps only a mark
+  until the month's count is final.
+
+The migration adds two small tables and makes the first count. The box
+ledger takes GIDEON's v0.3.197 entry and answers it.
+
 ## v1.238.0, 2026-11-12
 
 ```

@@ -785,6 +785,7 @@ urlpatterns = [
     ),
     path("panel/status/lines", panel_pages.status_lines, name="panel-status-lines"),
     path("panel/queue", panel_pages.queue_page, name="panel-queue"),
+    path("panel/usage", panel_pages.usage_page, name="panel-usage"),
     path("panel/queue/state", panel_pages.queue_state, name="panel-queue-state"),
     path(
         "panel/queue/<uuid:job_id>/cancel",

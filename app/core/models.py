@@ -322,5 +322,6 @@ from core.reports import Report  # noqa: E402, F401
 from core.settings_store import Setting  # noqa: E402, F401
 from core.sharing import Share  # noqa: E402, F401
 from core.system_voices import SystemVoice  # noqa: E402, F401
+from core.usage import UsageMark, UsageMonth  # noqa: E402, F401
 from core.vision import VisionRequest  # noqa: E402, F401
 from core.voice_book import UnitVoice, UnitVoiceCheck  # noqa: E402, F401

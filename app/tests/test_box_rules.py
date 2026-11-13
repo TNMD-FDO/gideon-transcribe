@@ -211,6 +211,9 @@ def test_the_ledger_answers_the_directions_by_number():
     # The rules version moves at every merge; the entries below are ours.
     assert "**Rules version:** 2026-11-12.2" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.239.0 (six releases since the v1.233.0 entry" in ours
+    assert "**For Transcribe 1** (the sentence workflow-2 ticket 67 drafts" in ours
+    assert "at v0.3.197 (the batch release of two landed tickets" in ledger
     assert "at v1.233.0 (the four Nemotron-probe build-cache records removed" in ours
     assert "**Line 1 of your v0.3.189, closed.**" in ours
     assert "about 81 MB on the Docker volume (18 MB to pull)" in ledger

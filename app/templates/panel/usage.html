@@ -1,0 +1,141 @@
+{% extends "panel/base.html" %}
+{% load static %}
+{% block title %}Usage{% endblock %}
+{% block page_class %} workbench{% endblock %}
+
+{% block panel %}
+  <h1>Usage</h1>
+  <p class="lead">
+    How much the office uses the app: counts only, never a recording's or a
+    case's name, a word that was said, a question that was asked, or who did
+    anything. Counted each night and kept, so a swept case or audit log does
+    not change the history.
+  </p>
+
+  {% if not any %}
+    <div class="card">
+      <b>Nothing has been counted yet.</b>
+      <p class="muted m0">The first count is made tonight at half past three, from what the server holds then.</p>
+    </div>
+  {% else %}
+    <div class="row m0 mb8 gap8">
+      {% for one in periods %}
+        <a href="{% url 'panel-usage' %}?period={{ one.key }}" class="btn small{% if one.here %} on{% endif %}">{{ one.words }}</a>
+      {% endfor %}
+      <span class="grow"></span>
+      <span class="muted small" id="usage-copied" role="status"></span>
+      <button type="button" class="small" id="usage-copy" data-words="{{ copy }}">Copy the figures</button>
+    </div>
+
+    <div class="usage-tiles">
+      {% for one in tiles %}
+        <div class="usage-tile">
+          <div class="usage-figure">{{ one.figure }}</div>
+          <div class="usage-words">{{ one.words }}</div>
+          {% if one.more %}<div class="usage-more{% if one.warn %} warn{% endif %}">{{ one.more }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="usage-panes">
+      <section class="card">
+        <h2>Hours transcribed, month by month <span class="muted small">the outlined bar is the month so far</span></h2>
+        <div class="usage-months" role="img" aria-label="Hours of recordings transcribed in each of the last twelve months">
+          {% for one in months %}
+            <div class="usage-month{% if one.now %} now{% endif %}{% if one.late %} late{% endif %}" title="{{ one.title }}{% if one.figure %}: {{ one.figure }} h{% endif %}">
+              <span class="usage-month-n">{{ one.figure }}</span>
+              <i style="--h: {{ one.height }}%"></i>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="usage-month-names">
+          {% for one in months %}<span>{{ one.label }}</span>{% endfor %}
+        </div>
+        {% if late %}
+          <p class="muted small usage-note">
+            The lighter bars are months that had ended before the first count
+            on {{ first_count|date:"j M Y" }}. They were counted from what the
+            server still held that day, so they may be low.
+          </p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <h2>What was transcribed <span class="muted small">by Recording type</span></h2>
+        {% if types %}
+          <div class="usage-bars">
+            {% for one in types %}
+              <div><span>{{ one.words }}</span><i class="{% if one.quiet %}quiet{% endif %}" style="--w: {{ one.width }}%"></i><span>{{ one.figure }}</span></div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted small m0">Nothing was transcribed in this period.</p>
+        {% endif %}
+        {% if languages %}<p class="muted small usage-note">Spoken: {{ languages }}.{% if translated %} Translated to English: {{ translated }}.{% endif %}</p>{% endif %}
+      </section>
+    </div>
+
+    <div class="usage-panes">
+      <section class="card">
+        <h2>Which parts of the app are used <span class="muted small">{% if parts_month %}people who used each at least once in {{ parts_month }}, of the {{ parts_people }} who used the app{% endif %}</span></h2>
+        <div class="usage-bars wide">
+          {% for one in parts %}
+            <div><span>{{ one.words }}</span><i class="{% if one.quiet %}quiet{% endif %}" style="--w: {{ one.width }}%"></i><span>{{ one.figure }}</span></div>
+          {% endfor %}
+        </div>
+        <p class="muted small usage-note">
+          The grey bars are the parts hardly anybody has found: the list to
+          train on, or to ask people about. People are counted a month at a
+          time, because the page keeps no record of who.
+          {{ marked }} are counted from {{ first_count|date:"j M Y" }}; the app kept no record of them before.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>The AI assistant</h2>
+        {% if ai %}
+          <div class="usage-bars">
+            {% for one in ai %}
+              <div><span>{{ one.words }}</span><i class="{% if one.quiet %}quiet{% endif %}" style="--w: {{ one.width }}%"></i><span>{{ one.figure }}</span></div>
+            {% endfor %}
+          </div>
+          <p class="muted small usage-note">
+            {% if ai_words.chat_typical %}Typical time for a chat answer: {{ ai_words.chat_typical }}.{% endif %}
+            Calls that failed: {{ ai_words.failed }}{% if ai_words.failed_share %} ({{ ai_words.failed_share }}){% endif %}{% if ai_words.reason %}, most often {{ ai_words.reason }}{% endif %}.
+          </p>
+        {% else %}
+          <p class="muted small m0">The AI assistant was not asked for anything in this period.</p>
+        {% endif %}
+
+        <h2 class="usage-next">Disk</h2>
+        {% if disk %}
+          <p class="muted small m0">
+            Recordings hold {{ disk.held }}{% if disk.total %} of {{ disk.total }}{% endif %}{% if disk.free %}, with {{ disk.free }} free{% endif %}.
+            {% if disk.growth %}Growing about {{ disk.growth }} a month.
+              {% if disk.room %}<span class="pill small {% if disk.tight %}warn{% else %}ok{% endif %}">{{ disk.room }} of room at this rate</span>{% endif %}
+            {% elif disk.steps %}Not growing over the last months counted.
+            {% else %}How fast it grows is shown once two months have been counted.{% endif %}
+          </p>
+        {% else %}
+          <p class="muted small m0">Measured at tonight's count.</p>
+        {% endif %}
+
+        <h2 class="usage-next">Went wrong</h2>
+        <p class="muted small m0">
+          Uploads refused: {{ wrong.refused }}{% if wrong.refused_share %} ({{ wrong.refused_share }}){% endif %}.
+          Transcriptions that failed: {{ wrong.jobs_failed }}.
+        </p>
+      </section>
+    </div>
+
+    <details class="usage-plain">
+      <summary>The figures as plain words</summary>
+      <pre id="usage-words">{{ copy }}</pre>
+      <p class="muted small m0">Copy the figures puts these words on the clipboard, to paste where you choose. The app sends them nowhere.</p>
+    </details>
+
+    <p class="muted small">Last counted {{ last_count|date:"j M Y, H:i" }}. Today's work is added at tonight's count.</p>
+  {% endif %}
+
+  <script src="{% static 'panel-usage.js' %}"></script>
+{% endblock %}

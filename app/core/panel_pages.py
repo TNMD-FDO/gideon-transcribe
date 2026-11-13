@@ -61,6 +61,24 @@ def status(request: HttpRequest) -> HttpResponse:
 
 
 @admins_only
+def usage_page(request: HttpRequest) -> HttpResponse:
+    """The Usage page (Phase 13 chapter 3): how much the office uses the app,
+    from the monthly rows the nightly count keeps. Counts only, so opening it
+    is no reading of anybody's work and writes no audit row, as no Panel page
+    does."""
+    from core import usage
+
+    return render(
+        request,
+        "panel/usage.html",
+        {
+            **furniture(request, "panel-usage"),
+            **usage.page(request.GET.get("period", usage.TWELVE)),
+        },
+    )
+
+
+@admins_only
 def reports_page(request: HttpRequest) -> HttpResponse:
     """The Reports page (Phase 8 chapter 3): every Report, newest first, New
     before Seen before Done, with a filter and the marks."""

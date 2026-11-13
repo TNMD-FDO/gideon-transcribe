@@ -47,6 +47,7 @@ from core import (
     sitting,
     summaries_tonight,
     uploads,
+    usage,
     vision,
     vocabulary,
 )
@@ -339,6 +340,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
     # Phase 2's ?q= on the case URL opens the Search tab (Phase 7 chapter 3).
     if asked and not request.GET.get("tab"):
         tab = "search"
+    if asked and tab == "search":
+        usage.seen(request.user, usage.SEARCH)
 
     # The pane about the case says where its clock stands, as its row on the
     # Cases page does.
@@ -549,6 +552,7 @@ def map_page(request: HttpRequest, case_id) -> HttpResponse:
         )
         return redirect(reverse("case", args=[case.pk]))
     cases.note_activity(case, by=request.user)
+    usage.seen(request.user, usage.MAP)
     role = case.role_of(request.user)
     if role == "collaborator":
         sharing.note_opened(case, request.user)

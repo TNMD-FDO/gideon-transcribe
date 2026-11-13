@@ -784,6 +784,21 @@ def sweep_audit_log(timestamp: int) -> None:
     audit.sweep(settings_store.audit_retention_months())
 
 
+@app.periodic(cron="30 * * * *")
+@app.task(queue="default", name="count_usage")
+def count_usage(timestamp: int) -> None:
+    """Usage (Phase 13 chapter 3), nightly at half past three: this month
+    and last counted again from the Jobs and the audit log into their rows,
+    numbers only, and the marks older than last month deleted. It shares the
+    minute with the audit sweep; the order does not matter, since a month is
+    counted every night while its rows are months from being swept."""
+    from core import usage
+
+    if _not_half_past_three():
+        return
+    usage.tally()
+
+
 @app.task(queue="default", name="check_audit_integrity")
 def check_audit_integrity(by_id: str = "") -> None:
     """The Status page's Integrity check, run here rather than in the request
