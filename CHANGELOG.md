@@ -17,6 +17,23 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.241.1, 2026-11-13
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Map page's bar shows as many presses as fit.
+
+- v1.241.0 put the six presses (Note here, Note on all shown, Within a
+  circle, Save a picture, Save a timelapse, Tidy names) on the bar only
+  when all six fitted, which takes a window about 1,800 wide. On anything
+  narrower all six stayed behind More, with room on the bar for several
+  of them.
+- The bar now holds as many as fit on its one row, in that order, and
+  More holds only the rest. With all six on the bar there is no More.
+
 ## v1.241.0, 2026-11-13
 
 ```

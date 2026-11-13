@@ -441,27 +441,36 @@
       moreHtml() +
       dayChips() +
       "<span class='grow'></span>" + helpHtml(); };
-    // Unfolded first, and measured (v1.241.0): where the presses would wrap
-    // to a second row they go back behind More, so the bar is always one row.
-    S.moreFolded = false; el.transport.innerHTML = bar();
-    if (barWraps()) { S.moreFolded = true; el.transport.innerHTML = bar(); }
+    // The row is filled (v1.241.1): every press on the bar first, then one
+    // fewer at a time until the bar is one row again, the rest behind More.
+    // v1.241.0 folded all six together, which left a bar with room for
+    // three of them showing none.
+    S.moreOn = morePresses().length; el.transport.innerHTML = bar();
+    while (S.moreOn > 0 && barWraps()) { S.moreOn -= 1; el.transport.innerHTML = bar(); }
     el.transport.querySelector("#map-speed").addEventListener("change", function (e) { S.speed = parseInt(e.target.value, 10) || 1; if (S.playing) { S.anchorMoment = now(); S.anchorNow = performance.now(); } tick(); });
   }
   // The presses a person reaches for now and then. v1.208.0 put them behind
-  // More so the bar is one row; from v1.241.0 they sit on the bar wherever
-  // it has room for them on that row, and Save a timelapse is the sixth.
+  // More so the bar is one row; from v1.241.0 they sit on the bar where it
+  // has room on that row, as many as fit from v1.241.1, in this order; Save
+  // a timelapse is the fifth of six.
   function morePresses() {
-    var can = lapseCams().length > 0;
-    return "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>" +
-      (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : "") +
-      "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>" +
-      (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about the incident shown or the camera pressed when there is one'>Save a picture</button>" : "") +
-      (host.dataset.edit && host.dataset.timelapse ? "<button type='button' class='small' data-act='timelapse'" + (can ? " title='A GIF of the ticked cameras moving over a span of the clock, kept on the case&#39;s Documents tab'" : " disabled title='Tick at least one camera in the list first'") + ">Save a timelapse</button>" : "") +
-      "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>";
+    var can = lapseCams().length > 0, out = [];
+    function add(words, html) { if (html) { out.push([words, html]); } }
+    add("Note here", "<button type='button' class='small' data-act='note' title='A note on the selected camera at this moment'>Note here</button>");
+    add("Note on all shown", (host.dataset.edit ? "<button type='button' class='small' data-act='note-all' title='One note on every ticked camera at this moment of each'>Note on all shown</button>" : ""));
+    add(S.circle ? "Clear the circle" : "Within a circle", "<button type='button' class='small " + (S.asking || S.circle ? "on" : "") + "' data-act='circle' title='Press, then press a place on the map: a circle you can widen, and the cameras that passed inside it'>" + (S.circle ? "Clear the circle" : "Within a circle") + "</button>");
+    add("Save a picture", (host.dataset.edit ? "<button type='button' class='small' data-act='picture' title='Keep this view of the map as a picture on the case&#39;s Documents tab, about the incident shown or the camera pressed when there is one'>Save a picture</button>" : ""));
+    add("Save a timelapse", (host.dataset.edit && host.dataset.timelapse ? "<button type='button' class='small' data-act='timelapse'" + (can ? " title='A GIF of the ticked cameras moving over a span of the clock, kept on the case&#39;s Documents tab'" : " disabled title='Tick at least one camera in the list first'") + ">Save a timelapse</button>" : ""));
+    add("Tidy names", "<button type='button' class='small' data-act='tidy' title='Let every name and tile ride beside its marker again, laid out afresh'>Tidy names</button>");
+    return out;
   }
+  // The first S.moreOn presses on the bar, the rest behind More; More is
+  // not drawn when nothing is behind it.
   function moreHtml() {
-    if (S.moreFolded) { return "<details class='menu map-more' id='map-more'><summary class='btn small' title='Note here, Note on all shown, Within a circle, Save a picture, Save a timelapse, Tidy names'>More \u25BE</summary><div class='menu-body'>" + morePresses() + "</div></details>"; }
-    return "<span class='map-more-open' id='map-more-open'>" + morePresses() + "</span>";
+    var all = morePresses(), on = all.slice(0, S.moreOn), behind = all.slice(S.moreOn);
+    function buttons(list) { return list.map(function (one) { return one[1]; }).join(""); }
+    return (on.length ? "<span class='map-more-open' id='map-more-open'>" + buttons(on) + "</span>" : "") +
+      (behind.length ? "<details class='menu map-more' id='map-more'><summary class='btn small' title='" + esc(behind.map(function (one) { return one[0]; }).join(", ")) + "'>More \u25BE</summary><div class='menu-body'>" + buttons(behind) + "</div></details>" : "");
   }
   // Whether the bar has gone to a second row, or run off its edge.
   function barWraps() {

@@ -9,8 +9,8 @@ else's timelapse is refused; stopping keeps nothing, and a failed join
 leaves nothing behind; a folder a closed page left is swept; the Document
 moves on its page and stands still on the shelf, downloads as a GIF, is
 never compared, and its row says counts and never a place; the Map page's
-bar carries the six presses where it has room and folds them behind More
-where they would wrap; the word is in the glossary.
+bar carries as many of the six presses as fit on its one row and keeps
+the rest behind More (v1.241.1); the word is in the glossary.
 """
 
 from __future__ import annotations
@@ -349,16 +349,24 @@ def test_the_map_page_carries_the_press_the_box_and_the_frames(client, person, a
     assert "composeFrame({ words: title }).toBlob(" in script
 
 
-def test_more_is_unfolded_where_the_bar_has_room_and_folds_where_it_wraps():
+def test_the_bar_holds_as_many_presses_as_fit_and_more_holds_the_rest():
+    """v1.241.1: v1.241.0 folded all six together, so a bar with room for
+    three of them showed none. The row is filled, one fewer at a time."""
     script = (HERE / "static" / "map.js").read_text(encoding="utf-8")
     for piece in (
         "function morePresses()",
         "function moreHtml()",
         "function barWraps()",
-        "<span class='map-more-open' id='map-more-open'>",
-        "class='menu map-more' id='map-more'",
-        "S.moreFolded = false; el.transport.innerHTML = bar();",
-        "if (barWraps()) { S.moreFolded = true; el.transport.innerHTML = bar(); }",
+        # Every press first, then one fewer until the bar is one row.
+        "S.moreOn = morePresses().length; el.transport.innerHTML = bar();",
+        "while (S.moreOn > 0 && barWraps()) { S.moreOn -= 1; "
+        "el.transport.innerHTML = bar(); }",
+        # The first of them on the bar, the rest behind More, which says
+        # what it holds and is not drawn when it holds nothing.
+        "on = all.slice(0, S.moreOn), behind = all.slice(S.moreOn);",
+        "(on.length ? \"<span class='map-more-open' id='map-more-open'>\"",
+        "(behind.length ? \"<details class='menu map-more' id='map-more'>",
+        'behind.map(function (one) { return one[0]; }).join(", ")',
         # Measured again when the window changes and when the ticks do.
         "sizeFrame(); drawTransport();",
         "if (!CLOCKED && !PICK) { drawTransport(); }",
