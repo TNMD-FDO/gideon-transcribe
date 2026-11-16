@@ -10,6 +10,11 @@
         {% if someone_elses %}{{ someone_elses.shown_name }}'s recordings{% else %}My recordings{% endif %}
       </h1>
       {% if someone_elses %}{% include "admin-pill.html" with owner=someone_elses what="Workspace" %}{% endif %}
+      {% if any_done %}
+        {% comment %}Every transcript of theirs that is in no case, as Word or text (v1.242.0).{% endcomment %}
+        {% url 'workspace-download' 'transcripts' as all_url %}
+        {% include "transcripts-menu.html" with url=all_url label="Download all transcripts" classes="" what="every recording of yours that is in no case" %}
+      {% endif %}
     </div>
 
     {% if recorded_here %}
@@ -53,7 +58,7 @@
                       <b>Uploaded {{ group.batch.created|date:"j M" }} at {{ group.batch.created|time:"g:i a" }}</b>
                       <span class="muted small">{{ group.rows|length }} recording{{ group.rows|length|pluralize }}{% if group.done %}, {{ group.done }} transcript{{ group.done|pluralize }} ready{% endif %}</span>
                       <span class="grow"></span>
-                      {% if group.done %}<a href="{{ group.download }}" class="btn small{% if group.finished %} primary{% endif %}">{% icon "download" %} Download transcripts</a>{% endif %}
+                      {% if group.done %}{% if group.finished %}{% include "transcripts-menu.html" with url=group.download label="Download transcripts" classes="small primary" what="this batch" %}{% else %}{% include "transcripts-menu.html" with url=group.download label="Download transcripts" classes="small" what="this batch, as far as it has got" %}{% endif %}{% endif %}
                       <a href="{{ group.url }}" class="btn ghost small">Open the batch</a>
                       {% if not someone_elses and group.finished %}<button type="button" class="btn ghost small clear-recordings" data-batch="{{ group.batch.pk }}">Done with these</button>{% endif %}
                     </div>

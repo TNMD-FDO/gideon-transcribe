@@ -1132,13 +1132,37 @@ def without_clashes(taken: set[str], name: str) -> str:
 # Many at once -----------------------------------------------------------------
 
 
-def transcripts_zip(recordings) -> tuple:
-    """One plain-text file per Done Recording, and which ones went in.
+TEXT = "text"
+WORD = "word"
 
-    Recordings not yet Done are left out. The caller writes the audit rows: a
-    zip writes one row per file inside it. The zip is built in a spool file
-    (v1.134.0), not in memory, and the caller hands it over with
-    hand_over_file so the response streams it.
+
+def zip_shape(request) -> str:
+    """Which file each Transcript is in a zip of many: `?as=word` asks for
+    the Word document, anything else is plain text, as the zips always were."""
+    return WORD if request.GET.get("as") == WORD else TEXT
+
+
+def zip_kind(shape: str) -> str:
+    """The word the audit row carries for one file of such a zip."""
+    return "transcript word" if shape == WORD else "transcript text"
+
+
+def zip_label(shape: str, label: str = "Transcripts") -> str:
+    """The zip's name says which it holds, so two taken together are told
+    apart in a Downloads folder."""
+    return f"{label} Word" if shape == WORD else label
+
+
+def transcripts_zip(recordings, shape: str = TEXT, exported_by: str = "") -> tuple:
+    """One file per Done Recording, and which ones went in.
+
+    Plain text, or with `shape` WORD the Word document (v1.242.0): the very
+    document Export to Word gives for that Recording alone, with its notice
+    and its Processing record, never a document of many. Recordings not yet
+    Done are left out. The caller writes the audit rows: a zip writes one row
+    per file inside it. The zip is built in a spool file (v1.134.0), not in
+    memory, and the caller hands it over with hand_over_file so the response
+    streams it.
     """
     holder = spool()
     taken: set[str] = set()
@@ -1147,8 +1171,12 @@ def transcripts_zip(recordings) -> tuple:
         for recording in recordings:
             if not hasattr(recording, "transcript"):
                 continue
-            name = without_clashes(taken, export_name(recording, "transcript.txt"))
-            bundle.writestr(name, plain_text(recording).encode("utf-8"))
+            if shape == WORD:
+                name = without_clashes(taken, export_name(recording, "transcript.docx"))
+                bundle.writestr(name, word(recording, exported_by))
+            else:
+                name = without_clashes(taken, export_name(recording, "transcript.txt"))
+                bundle.writestr(name, plain_text(recording).encode("utf-8"))
             included.append(recording)
     return holder, included
 
@@ -1367,11 +1395,12 @@ def batch_download(request: HttpRequest, batch_id) -> HttpResponse:
     if not cases.folder_management_on():
         wanted = wanted.filter(case__isnull=True)
 
-    bundle, included = transcripts_zip(wanted)
+    shape = zip_shape(request)
+    bundle, included = transcripts_zip(wanted, shape, request.user.username)
     for recording in included:
-        record_export(request, recording, "transcript text")
+        record_export(request, recording, zip_kind(shape))
 
-    return hand_over_file(bundle, zip_name(), "application/zip")
+    return hand_over_file(bundle, zip_name(zip_label(shape)), "application/zip")
 
 
 @login_required
@@ -1397,10 +1426,13 @@ def workspace_download(request: HttpRequest, shape: str) -> HttpResponse:
             _record_clip(request, clip)
         return hand_over_file(bundle, zip_name("Everything"), "application/zip")
 
-    bundle, included = transcripts_zip(recordings)
+    # My recordings asks for the Word documents with `?as=word` (v1.242.0);
+    # the sign-out dialog's own link is the text, as it always was.
+    as_shape = zip_shape(request)
+    bundle, included = transcripts_zip(recordings, as_shape, request.user.username)
     for recording in included:
-        record_export(request, recording, "transcript text")
-    return hand_over_file(bundle, zip_name(), "application/zip")
+        record_export(request, recording, zip_kind(as_shape))
+    return hand_over_file(bundle, zip_name(zip_label(as_shape)), "application/zip")
 
 
 # The Summary and Chat exports -----------------------------------------------------

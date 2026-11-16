@@ -256,6 +256,10 @@
       // who does not own the recording may play and download and no more.
       var mine = one.here !== false;
       var change = one.may_change !== false;
+      // Delete is wider than change (v1.242.0): an Admin who is not on the
+      // case may delete a clip, and nothing else about it.
+      var deleteOnly = mine && !change && one.may_delete === true
+        ? "<button type='button' class='small ghost danger clip-delete'>Delete</button>" : "";
       if (!doing && one.state === "ready") {
         tools =
           "<a href='/clip/" + one.id + "/download' class='btn primary small'>" +
@@ -275,10 +279,13 @@
             "<button type='button' class='small clip-rename'>Rename</button>" +
             "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
         }
+        tools += deleteOnly;
       } else if (!doing && mine && change) {
         tools =
           "<button type='button' class='small clip-rerender'>Retry</button>" +
           "<button type='button' class='small ghost danger clip-delete'>Delete</button>";
+      } else if (!doing) {
+        tools = deleteOnly;
       }
 
       return heading + "<div class='clipcard' data-clip='" + one.id +
@@ -358,7 +365,14 @@
       });
     } else if (event.target.closest(".clip-delete")) {
       UI.confirm({ title: "Delete this clip?", body: "The clip and its file go together.", ok: "Delete clip", danger: true })
-        .then(function (yes) { if (yes) { send("/clip/" + id + "/delete").then(load); } });
+        .then(function (yes) {
+          if (!yes) { return; }
+          send("/clip/" + id + "/delete").then(function (told) {
+            // A refusal is said, never swallowed (v1.242.0).
+            if (told && told.error) { UI.toast(told.error, { problem: true }); }
+            load();
+          });
+        });
     }
   });
 

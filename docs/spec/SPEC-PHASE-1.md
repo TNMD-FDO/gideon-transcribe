@@ -2818,7 +2818,7 @@ This removes the recording and its 2 clips, 1 not downloaded
 ### The AI assistant, Admins, the toggle
 
 - There is no link between a Clip and a Chat or Summary. A Citation already seeks the player; a Clip is a file for outside the app.
-- Through "Open their Workspace" an Admin sees the user's Clips page and every Recording's Clips sheet under the audit banner, and may play and download, each download an audit row with the affected user; an Admin does not adjust, rename, or delete another user's Workspace Clip.
+- Through "Open their Workspace" an Admin sees the user's Clips page and every Recording's Clips sheet under the audit banner, and may play and download, each download an audit row with the affected user; an Admin does not adjust or rename another user's Workspace Clip, and from v1.242.0 may delete it, the "Clip deleted" row carrying the affected user (see this chapter's amendments).
 - **"Clips available" Off** hides New Clip, the Clips sheet, and the Clips page; Clip files already made stay until their Recording goes; the sign-out dialog and Download everything omit them meanwhile.
 
 ### Files on disk
@@ -2898,6 +2898,7 @@ Clips: model, lifecycle, and management; Transcript viewer and synced player.
 - From the Upload page ticket to the Clips page and quota: the Workspace's "Using X of Y GB" line no longer exists; storage is shown only as a warning near the limit; the Clips page keeps its own total-size line.
 - From the viewer chapter's Timeline amendment on the v1.3.0 build: the "bare waveform with no Speaker lanes" the viewer opened with before the Transcript is now simply the Timeline; nothing about Clips changes.
 - From the maintainer, on the v1.6.0 build, to the Clips page: the Workbench Layout's third page. One table with the Recording as a column and a filter by Recording, in place of a table per Recording; the chosen Clip's details and its inline player in a pane from 1280 pixels, under its row below that.
+- **2026-11-16, v1.242.0, at the maintainer's word ("Any clip"), to "The AI assistant, Admins, the toggle":** an Admin may delete any Clip they can reach, in another user's Workspace as in a Case they are not on. The rule that an Admin plays and downloads and no more had two faults in use. An Admin may delete the whole Recording, its Clips with it, so refusing one Clip guarded nothing; and an Admin could save a Clip on somebody else's Recording, find it listed on their own Clips page with a Delete, and never remove it, the refusal unsaid because the page reloaded on any answer (found on the office's own server: three such Clips, four refusals in three days). Adjust, Rename and Re-render stay with the people the Recording belongs to, and a refusal of any of them now says so in words on the page: "Only the people this clip's recording belongs to may change it. An Admin may play it, download it and delete it." The Clips sheet and the Case's Clips tab offer such an Admin Delete and nothing else that changes a Clip.
 
 
 ## 10. AI assistant
@@ -3325,6 +3326,7 @@ Export offers "Captions (SRT)": one cue per Segment with the Segment's start and
 - **Batch page**: one button, "Download N transcripts (M not ready)" (for example "Download 22 transcripts (3 not ready)"): a zip of one plain-text file per Done Recording, each as under Plain text with its notice at the head; Recordings not yet Done are left out. There is no bulk Word button.
 - **Sign-out dialog** (the Workspace lifecycle chapter): "Download all transcripts", the same zip across every Done Recording in the Workspace rather than one Batch; and "Download everything", a zip holding, for every Done Recording, its combined Word document (the Transcript with its Summaries and Chats inside; the Word Transcript alone when it has neither) plus its plain-text file, and every Ready Clip as the Clips chapter fixes: the Clip's media file with the `.txt` and `.srt` beside it where "Include the transcript excerpt" is on, placed beside that Recording's combined Word and text files. A Clip's SRT cue times start at zero, shifted by the Clip's start, while its plain-text excerpt keeps the Recording's times; both are built from the live Transcript at download time and never stored. "Download everything" is not on the Batch page.
 - **Zip names**: `Transcripts <yyyy-mm-dd> <hhmm>.zip` for the Batch download and for "Download all transcripts"; `Everything <yyyy-mm-dd> <hhmm>.zip` for "Download everything".
+- **As Word, from My recordings and from a Case (v1.242.0)**: on My recordings each Batch's "Download transcripts", and a new "Download all transcripts" at the page's head (every Done Recording of the person's that is in no Case, the sign-out dialog's own zip), are a menu of two: **As Word (.docx)** and **As text (.txt)**. A Case's "Download all transcripts" on its Details tab is the same menu, and the Recordings tab carries it too as "Download transcripts", beside Download the list. The Word choice is the same zip with one Word document per Done Recording in place of the text file: each the very document "Export to Word" gives for that Recording alone (its cover, its notice, its Processing record naming who exported it), named `<title> - transcript.docx`, never one document of many and never the combined document. The address is the zip's own with `?as=word`; anything else is the text, so every older link gives what it gave. The zip is named `Transcripts Word <yyyy-mm-dd> <hhmm>.zip` (a Case's, `<case> transcripts Word ...`). The Batch page's own button, Home's Ready to download, the sign-out dialog and the viewer's case list are unchanged and give text. Measured on the office's largest Case before it was built: 90 Word documents in under four seconds, against the web server's limit of 120.
 
 ### File names
 
@@ -3359,7 +3361,7 @@ No new settings. This chapter depends on these rows of the admin settings catalo
 
 | Row | When it is written |
 |---|---|
-| "export made", kind transcript Word | each Word Transcript exported from the viewer |
+| "export made", kind transcript Word | each Word Transcript exported from the viewer, and from v1.242.0 each Word file inside a zip of many asked for as Word, one row per Recording included |
 | "export made", kind combined | each combined document (Transcript with Summaries or Chats inside), from the viewer or inside "Download everything" |
 | "export made", kind transcript text | each plain-text file, from the viewer or inside a zip; the Batch download and "Download all transcripts" write one "export made, plain text" row per Recording included |
 | "export made", kind captions | each SRT exported |
@@ -3408,6 +3410,7 @@ Word export contents and layout (and the prototype notes at `prototypes/word-exp
 - From the Clips ticket to "Batch download and Download everything": every Ready Clip in "Download everything", the cue-time shift, both files built live at download time.
 - From the Case Chat ticket to "Summary and Chat exports": the Case Chat export and its file name (Carried for Phase 2).
 - From the Word export ticket to the queue and Workspace lifecycle tickets, carried here as rules: no bulk Word button on the Batch page; "Download everything" on the sign-out dialog only; the zip and file names.
+- **2026-11-16, v1.242.0, at the maintainer's word ("export all transcripts to either word or txt"; asked which pages and which shape, the answers were My recordings and a Case's Recordings tab, and a zip of Word files), to "Batch download and Download everything":** the zips of many Transcripts come as Word documents as well as text from My recordings and from a Case, as that section now says. Until then Word for many existed only inside the sign-out dialog's Download everything. No new document was designed: each file is the Recording's own Word export.
 
 
 ## 12. Workspace lifecycle

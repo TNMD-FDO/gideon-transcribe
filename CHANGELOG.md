@@ -17,6 +17,35 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.242.0, 2026-11-16
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+An Admin can delete any clip, and many transcripts download as Word.
+
+- **Deleting a clip.** An Admin may now delete any clip they can
+  reach, in a case they are not on as in somebody else's recordings.
+  Until now an Admin could save a clip in somebody else's case, see it
+  on their own Clips page with a Delete button, and never remove it:
+  the delete was refused and the page reloaded without a word. The
+  audit row names whose material it was. Adjusting, renaming and
+  rendering again stay with the people on the case.
+- **A refusal is said.** When a clip cannot be deleted or rendered
+  again, the page now says why instead of reloading as if nothing had
+  been pressed.
+- **Transcripts as Word or text.** On My recordings, each batch's
+  Download transcripts, and a new Download all transcripts at the top
+  of the page, ask As Word (.docx) or As text (.txt). A case offers
+  the same on its Recordings tab and its Details tab. Either way it
+  is one zip with one file per recording; the Word files are the same
+  documents Export to Word gives on a recording's own page, one audit
+  row each.
+- Unchanged: the batch page's own button, Home's Ready to download and
+  the sign-out dialog still give text.
+
 ## v1.241.1, 2026-11-13
 
 ```

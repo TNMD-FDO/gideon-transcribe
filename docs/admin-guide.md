@@ -213,7 +213,7 @@ With **Record now** on (Features page, under Live recording), the rail offers **
 
 With **Sharing** on (Cases page of the settings, under Folder management), a case's owner shares it with named colleagues from the case page: people who have signed in at least once and are active, never local admins, never anyone outside the office. Everyone shared with can edit; a collaborator may not share, rename, transfer or delete the case, and may delete or reprocess only the recordings they added. The audit log writes **Share granted** and **Share revoked** in the Cases category, naming the collaborator's username, with the owner as affected user when you act on somebody else's case. A collaborator opening a recording writes the usual **Recording opened** row with the owner as affected user, so the log's "Access to their material" filter shows collaborators' openings beside Admins'.
 
-You may share and remove shares on any case, under the audit banner as for any other act on somebody else's case. An Admin who is themselves a collaborator on a case is a colleague there: no banner, no Admin access row, and their use counts as the case's activity. Off never deletes a share.
+You may share and remove shares on any case, under the audit banner as for any other act on somebody else's case. In a case you are not on you may play, download and (from v1.242.0) delete any clip, each written to the audit log with whose material it was; adjusting, renaming and rendering a clip again stay with the people on the case. An Admin who is themselves a collaborator on a case is a colleague there: no banner, no Admin access row, and their use counts as the case's activity. Off never deletes a share.
 
 ## The Retention policy and the Recycle bin
 

@@ -16,12 +16,21 @@
     });
   }
 
+  // A refusal is said (v1.242.0): until then the page reloaded on any answer,
+  // so a refused Delete looked like a Delete that did nothing.
+  function done(answer) {
+    if (answer.ok) { window.location.reload(); return; }
+    answer.json().catch(function () { return {}; }).then(function (told) {
+      UI.toast(told.error || "That did not work; nothing was changed.", { problem: true });
+    });
+  }
+
   document.addEventListener("click", function (event) {
     var again = event.target.closest(".rerender");
     if (again) {
       again.disabled = true;
       post("/clip/" + again.dataset.clip + "/rerender")
-        .then(function () { window.location.reload(); });
+        .then(function (answer) { again.disabled = false; done(answer); });
       return;
     }
 
@@ -34,8 +43,7 @@
         danger: true
       }).then(function (yes) {
         if (!yes) { return; }
-        post("/clip/" + gone.dataset.clip + "/delete")
-          .then(function () { window.location.reload(); });
+        post("/clip/" + gone.dataset.clip + "/delete").then(done);
       });
     }
   });

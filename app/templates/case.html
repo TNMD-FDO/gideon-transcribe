@@ -325,7 +325,8 @@
           {% if sharing_on and may_share %}
             <button type="button" class="btn" id="share">Share</button>
           {% endif %}
-          <a href="{% url 'case-download' case.pk %}" class="btn">Download all transcripts</a>
+          {% url 'case-download' case.pk as transcripts_url %}
+          {% include "transcripts-menu.html" with url=transcripts_url label="Download all transcripts" classes="" what="every recording in this case" %}
           {% if warned %}<button type="button" class="small keep" data-case="{{ case.pk }}">Keep</button>{% endif %}
         </div>
 
@@ -836,6 +837,9 @@
                                 {% if clip.state == "failed" %}Retry{% else %}Re-render{% endif %}
                               </button>
                             {% endif %}
+                          {% endif %}
+                          {% comment %}Delete is also an Admin's who is not on the case (v1.242.0).{% endcomment %}
+                          {% if clip.may_delete %}
                             <button type="button" class="small ghost danger delete-clip"
                                     data-clip="{{ clip.id }}" data-title="{{ clip.title }}">Delete</button>
                           {% endif %}
@@ -932,6 +936,9 @@
                 <button type="button" class="btn small" id="divide-the-work" title="Give the recordings to the people on the team: tick rows and assign them, or divide them evenly">Divide the work</button>
               {% endif %}
               <span class="grow"></span>
+              {% comment %}The case's transcripts from the Recordings tab itself (v1.242.0); until then only the Details tab had them, as text.{% endcomment %}
+              {% url 'case-download' case.pk as tab_transcripts_url %}
+              {% include "transcripts-menu.html" with url=tab_transcripts_url label="Download transcripts" classes="small" what="every recording in this case" %}
               <a class="btn small" href="{{ list_url }}" title="Every recording in the case as a spreadsheet, with its type, length, state, speakers, notes and assignments">{% icon "download" %} Download the list</a>
             </div>
             {% if may_direct %}

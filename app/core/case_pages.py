@@ -1441,7 +1441,8 @@ def set_details(request: HttpRequest, recording_id) -> JsonResponse:
 
 @login_required
 def download_case(request: HttpRequest, case_id) -> HttpResponse:
-    """Every Transcript in one Case, as plain text, in one zip.
+    """Every Transcript in one Case in one zip: plain text, or with
+    `?as=word` each Recording's Word document (v1.242.0).
 
     Transcripts only, and not the media: a Workspace is bounded by a Login
     session and a Case is not, so "everything" for a Case could be hundreds of
@@ -1451,16 +1452,21 @@ def download_case(request: HttpRequest, case_id) -> HttpResponse:
     _on_or_404()
     case = _their_case(request, case_id)
 
+    shape = exports.zip_shape(request)
     bundle, included = exports.transcripts_zip(
-        case.recordings.select_related("transcript", "user").order_by("created")
+        case.recordings.select_related("transcript", "user").order_by("created"),
+        shape,
+        request.user.username,
     )
     for one in included:
-        exports.record_export(request, one, "transcript text")
+        exports.record_export(request, one, exports.zip_kind(shape))
 
     cases.note_activity(case, by=request.user)
     # Streamed from the spool the zip was built in (v1.134.0).
     return exports.hand_over_file(
-        bundle, exports.zip_name(f"{case.name} transcripts"), "application/zip"
+        bundle,
+        exports.zip_name(exports.zip_label(shape, f"{case.name} transcripts")),
+        "application/zip",
     )
 
 

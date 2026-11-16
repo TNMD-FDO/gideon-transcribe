@@ -82,6 +82,8 @@ def recordings(request: HttpRequest) -> HttpResponse:
             "recordings": rows,
             # Grouped by batch (Phase 8 chapter 13), each with its download.
             "groups": batch_groups(rows),
+            # Download all transcripts (v1.242.0) is offered once one is ready.
+            "any_done": any(hasattr(one, "transcript") for one in rows),
             "standing_line": standing_line(),
             "recorded_here": bool(recorded_here),
             **recorded_here,

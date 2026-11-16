@@ -1,0 +1,14 @@
+{% load icons %}
+{% comment %}
+  Many transcripts in one zip, as Word or as text (v1.242.0). `url` is the
+  zip's address, which gives plain text as it always did; `?as=word` asks for
+  each recording's own Word document instead. `label` is the button's words,
+  `classes` its size and weight, `what` the words its hover ends with.
+{% endcomment %}
+<details class="menu transcripts-menu">
+  <summary class="btn {{ classes }}" title="One file for each transcript that is ready, in one zip: {{ what }}">{% icon "download" %} {{ label }} {% icon "chevron-down" %}</summary>
+  <ul>
+    <li><a href="{{ url }}?as=word" title="Each one as Export to Word gives it, with its notice and its processing record">{% icon "word" %} As Word (.docx)</a></li>
+    <li><a href="{{ url }}" title="Each one as Export as text gives it, with its notice">{% icon "text" %} As text (.txt)</a></li>
+  </ul>
+</details>

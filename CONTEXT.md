@@ -42,7 +42,7 @@ _Avoid_: excerpt (that is the text that goes with a Clip), cut, segment (that is
 _Avoid_: clip library
 
 **Adjust**:
-Changing a saved Clip's start, end, or options, which renders its file again and clears its downloaded mark. Changing only the title or note is a Rename and renders nothing.
+Changing a saved Clip's start, end, or options, which renders its file again and clears its downloaded mark. Changing only the title or note is a Rename and renders nothing. Adjust, Rename and Re-render belong to the people the Recording belongs to (its uploader, the members of its Case); deleting a Clip is theirs and, from v1.242.0, any Admin's.
 _Avoid_: edit (that is a Correction), re-cut
 
 **Transcript**:
@@ -356,7 +356,7 @@ Submitting a Done Recording again with different settings. The new Transcript re
 _Avoid_: reprocess, re-transcribe
 
 **Batch download**:
-The zip a user takes from a Batch page, or from the sign-out dialog as "Download all transcripts": one plain-text Transcript per Done Recording, each carrying its notice.
+The zip a user takes from a Batch page, or from the sign-out dialog as "Download all transcripts": one plain-text Transcript per Done Recording, each carrying its notice. From v1.242.0 My recordings (each Batch, and the whole page) and a Case (its Recordings and Details tabs) offer the same zip two ways, **As Word (.docx)** and **As text (.txt)**: the Word one holds each Recording's own Word export, one document per Recording, never one document of many.
 
 **Batch page**:
 What the Upload page shows from Submit until every Recording in the Batch has ended: each Recording's state and Step, its place in line and Estimated wait, the count strip, the "everything done by about" line, Cancel, Retry, and the Batch download. There is no list of past Batches.

@@ -1119,7 +1119,7 @@ Phase 2 adds Cases (the Folder management toggle On), and with them a second pla
 | Saved by and saved on are recorded but not shown. | In a Case the Clips tab shows "Saved by", because Collaborators exist. |
 | A Clip and its file go with the Recording at the Discard. | A Clip on a Recording in a Case is never discarded at sign-out. It is retained, moved to the Recycle bin, restored, and wiped with its Case. |
 | The Clips page shows a Downloaded column and the sign-out dialog counts undownloaded Clips. | The Case's Clips tab has no Downloaded column, since nothing is lost at sign-out there. The sign-out dialog's count and zips cover Workspace Clips only. |
-| An Admin does not adjust, rename, or delete another user's Workspace Clip. | The same holds in a Case for an Admin who is not a Collaborator. An Admin who is a Collaborator acts as any Collaborator does. |
+| An Admin does not adjust or rename another user's Workspace Clip, and from v1.242.0 may delete it. | The same holds in a Case for an Admin who is not a Collaborator. An Admin who is a Collaborator acts as any Collaborator does. |
 | "Clips available" Off hides New Clip, the Clips sheet, and the Clips page. | It also hides the Case's Clips tab. |
 | Workspace Clips are never backed up. | Clips inside a Case ride in the nightly Snapshot with their Recording and come back with a restore. |
 
@@ -1149,7 +1149,7 @@ New in Phase 2: saving or downloading a Clip in a Case is Last activity for the 
 
 ### Admins
 
-- An Admin who is not a Collaborator sees the Case's Clips tab and every Recording's Clips sheet under the audit banner, and may play and download, each download an audit row with the affected user; such an Admin does not adjust, rename, or delete a Clip in the Case. An Admin's audited opening of a Case is not Last activity.
+- An Admin who is not a Collaborator sees the Case's Clips tab and every Recording's Clips sheet under the audit banner, and may play and download, each download an audit row with the affected user; such an Admin does not adjust, rename, or re-render a Clip in the Case, and from v1.242.0 may delete one, their own or a colleague's, the "Clip deleted" row carrying the affected user (Phase 1's Clips chapter, the amendment of 2026-11-16, has the reasons). An Admin's audited opening of a Case is not Last activity.
 
 ### Retention, the Recycle bin, and Backup
 
@@ -1210,6 +1210,7 @@ Clips: model, lifecycle, and management (its Phase 2 section, and the facts it r
 - From the Clips ticket to the Sharing rules: a Collaborator's Clips appear on the Case's tab only; an Admin who is not a Collaborator downloads under the banner.
 - From the Clips ticket to the Retention policy rules: downloading a Clip in a Case is Last activity.
 - From the Clips ticket to the admin settings rules: "Clips available" Off also hides the Case's Clips tab.
+- **2026-11-16, v1.242.0, at the maintainer's word, to "Admins":** an Admin who is not a Collaborator may delete a Clip in the Case, and the Clips tab and the Clips sheet offer them Delete and nothing else that changes a Clip. Phase 1's Clips chapter records why.
 - **From the maintainer, on the v1.29.2 build, to "listed in one place":** a Clip made inside a Case seemed to vanish, because the Clips page in the navigation listed the Workspace's only and people expected their own clips there too. Amended in v1.30.0: the Clips page is **My clips**, one table of every Clip the person saved, with a heading row for each place it lives (a Case, Recorded here, This session), the place touched last on top; a Clip in a Case is listed there under the Case's name and on the Case's Clips tab both, and the heading opens that tab. The Case's tab remains the Case's list, colleagues' Clips included; My clips is the person's own. Download all on My clips takes every Clip on the page. A Clip in a binned Case is left out until the Case is restored.
 
 

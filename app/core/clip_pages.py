@@ -53,13 +53,34 @@ def _their_clip(request, clip_id) -> Clip | None:
 
 
 def _may_change(clip: Clip, asker) -> bool:
-    """Who may adjust, re-render, or delete a Clip.
+    """Who may adjust, rename, or re-render a Clip.
 
     The uploader and every member of the Case, because a Clip can be redone
     and nothing inside a shared Case is one person's. An Admin who is not on
-    the Case plays and downloads and no more.
+    the Case plays, downloads and deletes (see _may_delete) and no more.
     """
     return asker is None or cases.standing(clip.recording, asker) == "own"
+
+
+NOT_THEIRS = (
+    "Only the people this clip's recording belongs to may change it. "
+    "An Admin may play it, download it and delete it."
+)
+
+
+def _may_delete(clip: Clip, asker) -> bool:
+    """Who may delete a Clip: whoever may change it, and any Admin (v1.242.0).
+
+    An Admin may already delete a whole Recording in somebody else's Case,
+    its Clips with it, so refusing them one Clip guarded nothing; and an
+    Admin could save a Clip there that they could then never remove. The
+    row written names whose material it was, as every Admin act does.
+    """
+    if _may_change(clip, asker):
+        return True
+    return bool(
+        getattr(asker, "is_admin", False) and cases.standing(clip.recording, asker)
+    )
 
 
 def _row(clip: Clip, here=None, asker=None) -> dict:
@@ -76,6 +97,7 @@ def _row(clip: Clip, here=None, asker=None) -> dict:
         "here": here is None or clip.recording_id == here.pk,
         "in_a_case": in_a_case,
         "may_change": may_change,
+        "may_delete": _may_delete(clip, asker),
         # Who saved it, which a Case shows because Collaborators exist. In a
         # Workspace it is always the one person, so it is not drawn.
         "saved_by": clip.user.shown_name or clip.user.username,
@@ -309,8 +331,9 @@ def change_clip(request: HttpRequest, clip_id) -> JsonResponse:
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
     if not _may_change(clip, request.user):
-        # An Admin plays and downloads another person's Clip and no more.
-        return JsonResponse({"error": "this clip is not yours"}, status=403)
+        # An Admin plays, downloads and deletes another person's Clip and
+        # no more.
+        return JsonResponse({"error": NOT_THEIRS}, status=403)
 
     try:
         wanted = json.loads(request.body or b"{}")
@@ -367,7 +390,7 @@ def rerender_clip(request: HttpRequest, clip_id) -> JsonResponse:
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
     if not _may_change(clip, request.user):
-        return JsonResponse({"error": "this clip is not yours"}, status=403)
+        return JsonResponse({"error": NOT_THEIRS}, status=403)
 
     _start_render(clip)
     return JsonResponse({"rendering": True})
@@ -380,8 +403,8 @@ def delete_clip(request: HttpRequest, clip_id) -> JsonResponse:
     clip = _their_clip(request, clip_id)
     if clip is None:
         return JsonResponse({"error": "no such clip"}, status=404)
-    if not _may_change(clip, request.user):
-        return JsonResponse({"error": "this clip is not yours"}, status=403)
+    if not _may_delete(clip, request.user):
+        return JsonResponse({"error": NOT_THEIRS}, status=403)
 
     _record(request, clip, "Clip deleted")
     clip.path.unlink(missing_ok=True)
