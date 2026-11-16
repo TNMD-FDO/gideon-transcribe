@@ -158,6 +158,9 @@ def all_incidents(case) -> list[dict]:
                 "memo": row["memo"],
                 # Who built it, when, and by which door (Phase 12 chapter 8).
                 "built": _built_words(incident),
+                # When it was made (v1.243.0): the band of the day's incidents
+                # and the list of every day's are newest first by this.
+                "made": incident.created.isoformat(),
                 "date": when.isoformat() if when else "",
                 "map_url": camera_paths.incident_map_url(incident, on_map),
                 # A still of the first camera at its start (v1.207.0), for

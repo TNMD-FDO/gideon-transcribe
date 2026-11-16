@@ -417,9 +417,7 @@
             <div class="lead grow m0 inc-counts" id="incident-counts">
               {% if incident_counts %}
                 <span class="pill small" title="Videos of the case with a time on the case's clock, over every day.">{{ incident_counts.on_clock }} camera{{ incident_counts.on_clock|pluralize }} on the clock</span>
-                {% comment %}The count is a button (v1.207.0): it lists every incident of the case, at any moment of the build.{% endcomment %}
-                <button type="button" class="pill small {% if incident_counts.incidents %}acc{% endif %}" id="incidents-built" aria-expanded="false" title="Every incident built in this case, with Open and On map">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }} built ▾{% else %}No incident built yet{% endif %}</button>
-                <div class="inc-list card" id="incidents-list" hidden></div>
+                {% comment %}The count of incidents left the lead with v1.243.0: the band under this row lists them.{% endcomment %}
                 {% if incident_counts.unclocked %}<a class="pill small warn" href="#unclocked-host" title="Videos whose clock nobody has read or placed; Put on the clock under the strip offers a time or a sound match.">{{ incident_counts.unclocked }} not on the clock</a>{% endif %}
               {% else %}
                 <span class="pill small">{% if incident_rows %}{{ incident_rows|length }} incident{{ incident_rows|length|pluralize }}{% else %}No incident built yet{% endif %}</span>
@@ -427,10 +425,25 @@
             </div>
             {% comment %}The span box (v1.207.0): two times and Set; the drag across the ruler's track does the same.{% endcomment %}
             <span class="span-box small" id="span-box"><span class="muted">Span</span><input type="text" id="span-from" class="small" placeholder="from" maxlength="5" size="5" title="From, as hh:mm"><span class="muted">to</span><input type="text" id="span-to" class="small" placeholder="to" maxlength="5" size="5" title="To, as hh:mm"><button type="button" class="tiny" id="span-set">Set</button><button type="button" class="tiny ghost" id="span-clear" hidden>Clear the span</button></span>
-            {% comment %}The desk's two presses (Phase 12 chapter 10, v1.212.0): Make the incident with its count, greyed until a camera is ticked, and Clear the ticks.{% endcomment %}
+            {% comment %}The desk's press (Phase 12 chapter 10, v1.212.0): Make the incident with its count, greyed until a camera is ticked. Clear the ticks sits at the head of the tick boxes from v1.243.0.{% endcomment %}
             <button type="button" class="small primary" id="desk-make" disabled title="Tick a camera first">Make the incident</button>
-            <button type="button" class="small ghost" id="desk-clear" disabled>Clear the ticks</button>
           </div>
+          {% comment %}
+            The band (Phase 12 chapter 10 as amended, v1.243.0; the drawing
+            docs/spec/mockups/phase-12-incidents-tab-made.html): the day's
+            incidents as one row of cards across the top of the tab, newest
+            first, each with Open; the one just made is marked. Drawn by
+            chronology.js from the strip's reading. Its two lists (every
+            day's, and the rest of the day's when the row is full) open under
+            its right end.
+          {% endcomment %}
+          {% if incident_counts %}
+            <div class="inc-band-wrap">
+              {% comment %}Until the strip is read the band says how many the case holds, as the lead's count did.{% endcomment %}
+              <div class="inc-band card" id="desk-band" aria-live="polite"><div class="head"><b>Incidents</b><span class="muted">{% if incident_counts.incidents %}{{ incident_counts.incidents }} incident{{ incident_counts.incidents|pluralize }} built in this case{% else %}No incident built yet{% endif %}</span></div></div>
+              <div class="inc-list card" id="incidents-list" hidden></div>
+            </div>
+          {% endif %}
           {% comment %}
             The strip (Phase 10 chapter 5, v1.180.0; the drawing
             docs/spec/mockups/phase-10-incidents-tab.html): the chronology's
@@ -450,12 +463,12 @@
           {% comment %}
             The desk (Phase 12 chapter 10, v1.212.0; the drawing
             docs/spec/mockups/phase-12-incident-builder-desk.html): the
-            strip over the wall on the left, the map over Your incident
-            and Built on this day on the right, all in view at once; the
-            desk takes the window's height and its boxes scroll inside
-            themselves. The Reader column is gone: Your incident is a
-            compact panel sized for the most an incident holds, and the
-            day's incidents are rows under it.
+            strip over the wall on the left, the map over Your incident on
+            the right, all in view at once; the desk takes the window's
+            height and its boxes scroll inside themselves. The Reader
+            column is gone: Your incident is a compact panel sized for the
+            most an incident holds. The day's incidents were rows under it
+            until v1.243.0 and are the band above the desk since.
           {% endcomment %}
           <div class="builder" id="incident-desk">
             <div class="builder-left">
@@ -486,7 +499,6 @@
             </div>
           {% endif %}
               <div class="card desk-panel" id="desk-yours" aria-live="polite"></div>
-              <div class="card desk-panel desk-built" id="desk-built"></div>
             </div>
           </div>
         {% comment %}The Map tab (Phase 12 chapter 1) is a page of its own from v1.210.0 (chapter 6.10): the view sends ?tab=map there with its query, so every On the map address keeps working.{% endcomment %}

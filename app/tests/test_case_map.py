@@ -928,7 +928,8 @@ def test_the_circle_moves_and_makes_an_incident_and_the_strip_suggests():
     assert "incident-clock" in strip and "function settleTags(box)" in strip
     assert "function wireBuild(tags, box, d)" in strip
     assert "overlap(b, span) - overlap(a, span)" in strip and "class='film" not in strip
-    assert '["date", state.day.date]' in strip
+    # From v1.243.0 the span goes in the page's own request, not a form's.
+    assert 'form.append("date", d.date)' in strip
     assert 'addEventListener("incident-clock"' in script and "S.pickAt" in script
     assert ".chron .tags .clock-line {" in css and ".chron .tags .hdl {" in css
     assert ".chron .lanes-scroll {" in css and ".chron .lane-row.held {" in css

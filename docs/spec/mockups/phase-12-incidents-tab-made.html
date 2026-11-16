@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Incidents tab: after an incident is made</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --ok: #2f7d4f; --ok-soft: #e2f1e7; --warn: #9a5b06; --warn-soft: #fbefd9; --danger: #b3261e;
+  --sp1: #1f6fb2; --sp2: #c2410c; --sp3: #8e24aa; --sp4: #1f6fb2; --sp5: #2e7d32;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .tiny { font-size: var(--t-label); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1980px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p, .fig .why { margin: 6px 0; color: var(--muted); max-width: 105ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); max-width: 115ch; }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ol, .brief ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 4px; } .brief li b { display: inline; color: var(--text); margin: 0; }
+.fig { margin-top: 44px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin-bottom: 12px; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); overflow-x: auto; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.at { display: inline-block; font-size: var(--t-label); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin: 0 0 6px; }
+
+/* The picture of the tab as it stands, with numbered marks. */
+.today { position: relative; width: 1920px; }
+.today img { display: block; width: 1920px; }
+.mark { position: absolute; border: 2px solid var(--danger); border-radius: 6px; background: rgba(179, 38, 30, .06); }
+.mark b { position: absolute; top: -13px; left: -13px; width: 24px; height: 24px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.num { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 12px; align-items: center; justify-content: center; margin-right: 4px; }
+.num.new { background: var(--ok); }
+
+/* The tab, drawn. */
+.tab { width: 1880px; padding: 12px 14px 14px; }
+.lead { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.grow { flex: 1; }
+.pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--surface-2); font-size: var(--t-small); white-space: nowrap; }
+.pill.acc { background: var(--accent-soft); color: var(--accent); }
+.pill.new { background: var(--ok); color: #fff; height: 18px; padding: 0 7px; font-size: var(--t-label); font-weight: 600; }
+.btn { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-small); font-weight: 500; white-space: nowrap; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); }
+.btn.tiny { height: 22px; padding: 0 8px; font-size: var(--t-label); }
+.btn[disabled] { color: var(--muted); background: var(--surface-2); border-color: var(--line); }
+.inp { display: inline-flex; align-items: center; height: 28px; padding: 0 9px; border: 1px solid var(--line); border-radius: var(--radius); font-family: var(--mono); font-size: var(--t-small); background: var(--surface); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.eye { font-size: var(--t-label); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.cols { display: grid; grid-template-columns: 1fr 548px; gap: 12px; }
+
+/* The band of built incidents. */
+.band { display: flex; align-items: stretch; gap: 8px; margin-bottom: 10px; padding: 8px 10px; }
+.band .head { display: flex; flex-direction: column; justify-content: center; padding-right: 6px; border-right: 1px solid var(--line); margin-right: 2px; min-width: 132px; }
+.band .head b { font-size: var(--t-small); }
+.inc { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 5px 8px 5px 10px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+.inc .n { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--t-small); white-space: nowrap; }
+.inc .f { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.inc.fresh { border-color: var(--ok); border-left-color: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); background: #fbfefc; }
+.inc.on { background: var(--accent-soft); }
+.band .more { display: flex; align-items: center; }
+.made { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 7px 10px; border: 1px solid var(--ok); border-radius: var(--radius); background: var(--ok-soft); font-size: var(--t-small); }
+
+/* The strip. */
+.strip { padding: 10px 12px 8px; }
+.days { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ruler { display: flex; justify-content: space-between; margin: 0 6px 4px 196px; }
+.tags { position: relative; height: 22px; margin: 0 6px 2px 196px; }
+.tag { position: absolute; top: 2px; height: 18px; padding: 0 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: var(--t-label); display: inline-flex; align-items: center; white-space: nowrap; }
+.tag.solid { background: var(--accent); color: #fff; font-weight: 600; }
+.tag.fresh { background: var(--ok); color: #fff; font-weight: 600; }
+.tag.build { background: var(--text); color: #fff; }
+.lanes { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.lanes-head { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-bottom: 1px solid var(--line); background: #fafbfc; border-radius: var(--radius) var(--radius) 0 0; }
+.lane { display: grid; grid-template-columns: 188px 1fr; align-items: center; height: 21px; padding: 0 6px 0 8px; }
+.lane.held { background: #f3f8fb; }
+.lane.rule { border-bottom: 2px solid var(--text); }
+.lane .who { display: flex; align-items: center; gap: 6px; font-size: var(--t-label); white-space: nowrap; }
+.lane .who i { width: 7px; height: 7px; border-radius: 50%; }
+.lane .who a { color: var(--accent); font-weight: 600; text-decoration: underline; }
+.lane .who small { margin-left: auto; color: var(--muted); font-size: 10px; padding-right: 8px; }
+.tk { width: 13px; height: 13px; border: 1.5px solid #6b7682; border-radius: 3px; background: #fff; flex: none; position: relative; }
+.tk.on { background: var(--accent); border-color: var(--accent); }
+.tk.on::after { content: ""; position: absolute; left: 3px; top: 0; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.tk.some { background: var(--accent); border-color: var(--accent); }
+.tk.some::after { content: ""; position: absolute; left: 2px; top: 4px; width: 6px; height: 2px; background: #fff; }
+.track { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); }
+.bar { position: absolute; top: 0; height: 10px; border-radius: 5px; }
+.col { position: absolute; top: 28px; bottom: 0; background: rgba(15, 94, 134, .16); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; }
+.col.fresh { background: rgba(47, 125, 79, .18); border-color: var(--ok); }
+.col.build { background: rgba(23, 27, 33, .10); border: 2px solid var(--text); }
+.legend { margin-top: 6px; }
+.wall { margin-top: 10px; padding: 10px 12px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.tile { height: 170px; border-radius: var(--radius); background: repeating-linear-gradient(90deg, #c9d2db 0 60px, #dbe2e9 60px 120px); display: flex; align-items: flex-end; padding: 6px 8px; font-size: var(--t-label); }
+.tile.empty { background: var(--surface-2); align-items: center; justify-content: center; color: var(--muted); font-size: var(--t-small); }
+.tile span { background: #fff; border-radius: 4px; padding: 1px 6px; }
+.map { height: 250px; border-radius: var(--radius-lg); background: #e7ebf0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--t-small); border: 1px solid var(--line); }
+.panel { margin-top: 10px; padding: 10px 12px; }
+.panel .h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.name { display: block; width: 100%; height: 30px; padding: 0 9px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--t-small); line-height: 28px; margin-bottom: 6px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; margin-bottom: 6px; }
+.cam-row { display: flex; align-items: center; gap: 6px; font-size: var(--t-small); }
+.cam-row i { width: 8px; height: 8px; border-radius: 50%; }
+.cam-row u { margin-left: auto; color: var(--accent); font-size: var(--t-label); }
+.acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.built-row { padding: 7px 0; border-top: 1px solid var(--surface-2); }
+.built-row:first-of-type { border-top: 0; }
+.built-row .n { font-weight: 600; font-size: var(--t-small); display: flex; align-items: center; gap: 6px; }
+.note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--t-small); color: var(--muted); max-width: 115ch; }
+.call { position: absolute; z-index: 3; }
+.call b { display: flex; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 13px; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #fff; }
+table.picks { border-collapse: collapse; margin-top: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); max-width: 1500px; }
+table.picks th, table.picks td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--surface-2); font-size: var(--t-small); }
+table.picks th { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table.picks td:first-child { font-weight: 600; white-space: nowrap; }
+.rec { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--ok-soft); color: var(--ok); font-size: var(--t-label); font-weight: 600; margin-left: 4px; }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>The Incidents tab: after an incident is made</h1>
+    <p>Three asks, the maintainer's words of 16 November 2026: "When an incident is made, the ticked cameras should auto clear"; "we need to make created incidents more prominent ... when incidents are created it's obvious where to find them"; and "Clear the ticks should be closer to where the ticks actually occur, so it's not confusing". Every name and time below is the local demo's made-up case.</p>
+    <div class="brief">
+      <b>What this page holds</b>
+      <ul>
+        <li>The tab as it stands, on the local demo, with the three faults marked and one more found while looking.</li>
+        <li>Figure A: the tab with cameras ticked, as proposed. Figure B: the tab on coming back after Make the incident. Figure C: the other place the built incidents could sit. Figure D: a busy day.</li>
+        <li>Five numbered picks at the foot, each with a recommendation. Nothing is built until they are answered.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>As it stands</h2>
+    <p class="why">The local demo at 1920 by 1080 with two cameras ticked.</p>
+    <p class="why">The picture of the local demo with the faults marked is not kept in the repository; the list below is what it showed.</p>
+    <div class="brief" style="margin-top: 12px">
+      <b>What is wrong</b>
+      <ul>
+        <li><span class="num">1</span><b>Clear the ticks is a screen away from the ticks.</b> The tick boxes are at the far left of the lanes; the press that clears them is at the far right of the row above, about 1,500 pixels away at this width and more on an ultrawide.</li>
+        <li><span class="num">2</span><b>The built incidents are in the least looked-at corner.</b> They are a small pill in the top row ("6 incidents built") and a panel at the bottom right, under the map and under Your incident, with a small grey heading and most of its rows below the fold.</li>
+        <li><span class="num">3</span><b>The ticks outlive the incident.</b> Make the incident opens the new incident on its own page. The tab remembers the ticks, the span and the name for each day on this browser, so on coming back the same cameras are still ticked and the same name is still offered, as if nothing had been made.</li>
+        <li><span class="num">4</span><b>Found while looking: Your incident is squeezed.</b> With two cameras ticked the panel needs 258 pixels and gets 96 at 1080 high and 189 at 1440 high, because Built on this day takes the room below it. Its own Make the incident and Clear the ticks are scrolled out of view at every window size measured (1920, 2560 and 3440 wide).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure A. Cameras ticked, as proposed</h2>
+    <p class="why">The built incidents move to a band of their own across the top. Clear the ticks moves to the head of the tick boxes. Your incident takes the room the old panel held, so its own buttons are in view.</p>
+    <span class="at">1920 wide</span>
+    <div class="frame">
+      <div class="tab">
+        <div class="lead">
+          <span class="pill">5 cameras on the clock</span>
+          <span class="grow"></span>
+          <span class="muted small">Span</span><span class="inp">14:20</span><span class="muted small">to</span><span class="inp">20:38</span><span class="btn tiny">Set</span>
+          <span class="btn primary">Make the incident · 2</span>
+        </div>
+
+        <div style="position: relative">
+          <div class="call" style="left: -6px; top: -10px"><b>B</b></div>
+          <div class="band card">
+            <div class="head"><b>Incidents on 6 Nov</b><span class="muted tiny">3 built · newest first</span></div>
+            <div class="inc"><div class="n">Harbour car park</div><div class="f"><span class="muted tiny">3 cameras · 20:25 to 20:38 · 14 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span><span class="btn tiny ghost">Add the ticked</span></div></div>
+            <div class="inc"><div class="n">Walk incident, 6 Nov</div><div class="f"><span class="muted tiny">2 cameras · 20:25 to 20:38 · 7 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span><span class="btn tiny ghost">Add the ticked</span></div></div>
+            <div class="inc"><div class="n">Wall walk, 6 Nov</div><div class="f"><span class="muted tiny">2 cameras · 14:20 to 14:33 · 0 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span><span class="btn tiny ghost">Add the ticked</span></div></div>
+            <span class="grow"></span>
+            <div class="more"><span class="btn ghost">Every day · 6</span></div>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div>
+            <div class="strip card">
+              <div class="days"><span class="muted small">Days</span><span class="pill acc">6 Nov 2025 · 6 videos · 16 notes</span></div>
+              <div class="ruler mono tiny muted"><span>13:04</span><span>14:20</span><span>15:35</span><span>16:51</span><span>18:06</span><span>19:22</span><span>20:38</span><span>21:53</span></div>
+              <div class="tags">
+                <span class="tag build" style="left: 14%">your incident · 14:20 to 20:38</span>
+                <span class="tag solid" style="left: 60%">Wall walk, 6 Nov</span>
+                <span class="tag solid" style="left: 72%">Walk incident, 6 Nov</span>
+                <span class="tag solid" style="left: 84.5%">Harbour car park</span>
+              </div>
+              <div class="lanes">
+                <div class="call" style="left: 252px; top: -12px"><b>C</b></div>
+                <div class="lanes-head">
+                  <span class="tk some"></span>
+                  <b class="small">2 ticked</b>
+                  <span class="btn tiny">Clear the ticks</span>
+                  <span class="muted tiny">of 8 at most</span>
+                </div>
+                <div class="col build" style="left: calc(196px + (100% - 202px) * .14); width: calc((100% - 202px) * .71)"></div>
+                <div class="col" style="left: calc(196px + (100% - 202px) * .835); width: calc((100% - 202px) * .015)"></div>
+                <div class="lane held"><div class="who"><span class="tk on"></span><i style="background: var(--sp1)"></i><a>Sam Roe</a><small>378 min</small></div><div class="track"><span class="bar" style="left: 14%; width: 71%; background: var(--sp1)"></span></div></div>
+                <div class="lane held rule"><div class="who"><span class="tk on"></span><i style="background: var(--sp2)"></i><a>Lee Fox</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp2)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp3)"></i><a>Kit Vale</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp3)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp4)"></i><a>Jo Marsh</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp4)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp5)"></i><a>Ash Kim</a><small>12 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2%; background: var(--sp5)"></span></div></div>
+              </div>
+              <div class="legend muted small">Tick a camera and it plays on the wall; the ticked lanes stay at the top while the rest scroll.</div>
+            </div>
+            <div class="wall card">
+              <span class="eye">The wall · 2 of 8 at 14:20:00</span>
+              <div class="tiles"><div class="tile"><span>Sam Roe</span></div><div class="tile"><span>Lee Fox</span></div></div>
+            </div>
+          </div>
+          <div>
+            <div class="map">the map, as today</div>
+            <div class="panel card">
+              <div class="h"><span class="eye">Your incident</span><span class="small"><b>2 of 8</b></span></div>
+              <span class="name">Harbour Street stop, 14:20</span>
+              <div class="two">
+                <div class="cam-row"><i style="background: var(--sp1)"></i><b>Sam Roe</b><u>untick</u></div>
+                <div class="cam-row"><i style="background: var(--sp2)"></i><b>Lee Fox</b><u>untick</u></div>
+              </div>
+              <div class="muted tiny">Span 14:20 to 20:38 · 6 h 18 min · the handles or Set</div>
+              <div class="acts"><span class="btn tiny">Tick everyone running now</span><span class="btn tiny" disabled>Tick the near</span></div>
+              <div class="muted small" style="margin-top: 6px">One sitting: about 4 minutes to read both.</div>
+              <div class="acts"><span class="btn primary">Make the incident</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b style="color: var(--text)">B, the band.</b> One card for each incident built on the day shown, newest first, with Open as the filled button. A press on a card's name lights its column and its cameras on the lanes, as a press on a name does today. Add the ticked shows only while something is ticked. Every day opens the list of the whole case's incidents, which the pill opened before. The names over the shaded columns become filled so they read as the same things as the cards.<br><b style="color: var(--text)">C, the lanes' head.</b> A row above the tick boxes says how many are ticked and holds the one Clear the ticks. With nothing ticked it reads "Tick a camera to start" and the press is greyed. The top row keeps Make the incident alone.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Figure B. Coming back after Make the incident</h2>
+    <p class="why">Make the incident still opens the new incident on its own page (pick 1). This is the tab when the person comes back to it: nothing ticked, and the new incident first in the band.</p>
+    <span class="at">1920 wide</span>
+    <div class="frame">
+      <div class="tab">
+        <div class="lead">
+          <span class="pill">5 cameras on the clock</span>
+          <span class="grow"></span>
+          <span class="muted small">Span</span><span class="inp muted">from</span><span class="muted small">to</span><span class="inp muted">to</span><span class="btn tiny">Set</span>
+          <span class="btn primary" disabled>Make the incident</span>
+        </div>
+        <div style="position: relative">
+          <div class="call" style="left: -6px; top: -10px"><b>A</b></div>
+          <div class="band card">
+            <div class="head"><b>Incidents on 6 Nov</b><span class="muted tiny">4 built · newest first</span></div>
+            <div class="inc fresh"><div class="n">Harbour Street stop, 14:20 <span class="pill new">New</span></div><div class="f"><span class="muted tiny">2 cameras · 14:20 to 20:38 · made by you, just now</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+            <div class="inc"><div class="n">Harbour car park</div><div class="f"><span class="muted tiny">3 cameras · 20:25 to 20:38 · 14 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+            <div class="inc"><div class="n">Walk incident, 6 Nov</div><div class="f"><span class="muted tiny">2 cameras · 20:25 to 20:38 · 7 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+            <div class="inc"><div class="n">Wall walk, 6 Nov</div><div class="f"><span class="muted tiny">2 cameras · 14:20 to 14:33</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+            <span class="grow"></span>
+            <div class="more"><span class="btn ghost">Every day · 7</span></div>
+          </div>
+        </div>
+        <div class="cols">
+          <div>
+            <div class="strip card">
+              <div class="days"><span class="muted small">Days</span><span class="pill acc">6 Nov 2025 · 6 videos · 16 notes</span></div>
+              <div class="ruler mono tiny muted"><span>13:04</span><span>14:20</span><span>15:35</span><span>16:51</span><span>18:06</span><span>19:22</span><span>20:38</span><span>21:53</span></div>
+              <div class="tags">
+                <span class="tag fresh" style="left: 14%">Harbour Street stop, 14:20 · new</span>
+                <span class="tag solid" style="left: 60%">Wall walk, 6 Nov</span>
+                <span class="tag solid" style="left: 72%">Walk incident, 6 Nov</span>
+                <span class="tag solid" style="left: 84.5%">Harbour car park</span>
+              </div>
+              <div class="lanes">
+                <div class="lanes-head">
+                  <span class="tk"></span>
+                  <span class="muted small">Tick a camera to start</span>
+                  <span class="btn tiny" disabled>Clear the ticks</span>
+                </div>
+                <div class="col fresh" style="left: calc(196px + (100% - 202px) * .14); width: calc((100% - 202px) * .71)"></div>
+                <div class="col" style="left: calc(196px + (100% - 202px) * .835); width: calc((100% - 202px) * .015)"></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp1)"></i><a>Sam Roe</a><small>378 min</small></div><div class="track"><span class="bar" style="left: 14%; width: 71%; background: var(--sp1)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp2)"></i><a>Lee Fox</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp2)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp3)"></i><a>Kit Vale</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp3)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp4)"></i><a>Jo Marsh</a><small>13 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2.2%; background: var(--sp4)"></span></div></div>
+                <div class="lane"><div class="who"><span class="tk"></span><i style="background: var(--sp5)"></i><a>Ash Kim</a><small>12 min</small></div><div class="track"><span class="bar" style="left: 83.5%; width: 2%; background: var(--sp5)"></span></div></div>
+              </div>
+              <div class="legend muted small">Tick a camera and it plays on the wall; the ticked lanes stay at the top while the rest scroll.</div>
+            </div>
+            <div class="wall card">
+              <span class="eye">The wall · nothing ticked</span>
+              <div class="tiles"><div class="tile empty" style="grid-column: 1 / 3">Tick a camera and it plays here.</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="map">the map, as today</div>
+            <div class="panel card">
+              <div class="h"><span class="eye">Your incident</span><span class="muted small">0 of 8</span></div>
+              <p class="muted small" style="margin: 0">Tick cameras on the lanes, or press one on the map; they play on the wall. Nothing is made until Make the incident.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b style="color: var(--text)">A, what clears and when.</b> The ticks, the name offered and the clock line for that day are forgotten once the incident really exists. If the app refuses to make it, nothing is forgotten. The New mark and the green edge stay on the incident's card and on its name over the lanes until the person leaves the case or makes another; they are for the person who made it, on this browser, as the ticks were.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Figure C. The other place: the top of the right column</h2>
+    <p class="why">The same rows, kept as a panel but moved above the map, with a stronger heading and Open filled. It takes no height from the lanes and the wall; the map gives up the room instead, and on a day with many incidents the panel scrolls.</p>
+    <span class="at">the right column alone, 548 wide</span>
+    <div class="frame" style="width: 590px">
+      <div class="tab" style="width: 576px">
+        <div class="panel card" style="margin-top: 0">
+          <div class="h"><b class="small">Incidents on 6 Nov · 4</b><span class="btn tiny ghost">Every day · 7</span></div>
+          <div class="built-row"><div class="n">Harbour Street stop, 14:20 <span class="pill new">New</span></div><div class="muted tiny">2 cameras · 14:20 to 20:38 · made by you, just now</div><div class="acts"><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <div class="built-row"><div class="n">Harbour car park</div><div class="muted tiny">3 cameras · 20:25 to 20:38 · 14 events</div><div class="acts"><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <div class="built-row"><div class="n">Walk incident, 6 Nov</div><div class="muted tiny">2 cameras · 20:25 to 20:38 · 7 events</div><div class="acts"><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+        </div>
+        <div class="map" style="height: 150px; margin-top: 10px">the map, shorter</div>
+        <div class="panel card"><div class="h"><span class="eye">Your incident</span><span class="muted small">0 of 8</span></div><p class="muted small" style="margin: 0">Tick cameras on the lanes ...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure D. The band on a busy day</h2>
+    <p class="why">The band is always one row. It shows as many cards as fit, newest first, and the rest are behind "and N more". On an ultrawide more fit; the rule is the one the Map page's bar uses.</p>
+    <span class="at">1920 wide, nine incidents on the day</span>
+    <div class="frame">
+      <div class="tab">
+        <div class="band card" style="margin-bottom: 0">
+          <div class="head"><b>Incidents on 11 Mar</b><span class="muted tiny">9 built · newest first</span></div>
+          <div class="inc"><div class="n">Stop on Quay Road</div><div class="f"><span class="muted tiny">6 cameras · 20:05 to 20:31 · 22 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <div class="inc"><div class="n">Transport to the station</div><div class="f"><span class="muted tiny">2 cameras · 20:31 to 20:58 · 4 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <div class="inc"><div class="n">Search of the car</div><div class="f"><span class="muted tiny">4 cameras · 20:12 to 20:40 · 9 events</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <div class="inc"><div class="n">Booking</div><div class="f"><span class="muted tiny">1 camera · 21:02 to 21:40</span><span class="btn tiny primary">Open</span><span class="btn tiny">On map</span></div></div>
+          <span class="grow"></span>
+          <div class="more"><span class="btn">and 5 more</span><span class="btn ghost">Every day · 14</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>The picks</h2>
+    <p class="why">Each has my recommendation marked. Answer by number, or "they stand" for all five as recommended.</p>
+    <table class="picks">
+      <tr><th>Pick</th><th>The question</th><th>The choices</th></tr>
+      <tr><td>1</td><td>What Make the incident does next.</td><td><b>a.</b> Opens the new incident on its own page, as today; the tab is clean and shows it as New on coming back (Figure B). <span class="rec">recommended</span><br><b>b.</b> Stays on the tab: the ticks clear, the new incident appears in the band as New with Open beside it, and the person can build the next one straight away.</td></tr>
+      <tr><td>2</td><td>Where the built incidents sit.</td><td><b>a.</b> A band across the top of the tab (Figures A, B and D). It costs about 60 pixels of height from the lanes and the wall, and gives Your incident its room back. <span class="rec">recommended</span><br><b>b.</b> A panel at the top of the right column, above the map (Figure C). No height lost on the left; the map is shorter.</td></tr>
+      <tr><td>3</td><td>How many Clear the ticks there are.</td><td><b>a.</b> One, at the head of the tick boxes (Figure A, C). The one in the top row and the one inside Your incident both go. <span class="rec">recommended</span><br><b>b.</b> The one at the head of the tick boxes, and Your incident keeps its own as well.</td></tr>
+      <tr><td>4</td><td>A span the person set by hand (the Span box or a drag on the ruler), after the incident is made.</td><td><b>a.</b> It stays, since it has its own Clear the span and the person may be building several incidents inside it. <span class="rec">recommended</span><br><b>b.</b> It clears with the ticks, so the tab comes back wholly clean.</td></tr>
+      <tr><td>5</td><td>Add the ticked (adding the ticked cameras to an incident already built).</td><td><b>a.</b> The ticks clear after it too, by the same rule, and that incident shows the green edge as "Added to". <span class="rec">recommended</span><br><b>b.</b> The ticks stay after Add the ticked; only Make the incident clears them.</td></tr>
+    </table>
+    <p class="note">Not changed by any of this: how an incident is made, what it holds, the incident's own page, the Map page, the wall, the map beside the strip, the lanes and the span. No setting and no change to the database: the ticks live on the person's own browser, so clearing them is done there.</p>
+  </div>
+  <div class="fig">
+    <h2>As built (v1.243.0)</h2>
+    <div class="brief">
+      <b>Where the build departs from the figures</b>
+      <ul>
+        <li>The band and the lanes' head cost about 90 pixels of height together, not the 60 said under pick 2.</li>
+        <li>The New mark is kept for the browser tab: it goes when another incident is made or added to, or the browser tab is closed. Leaving the case cannot be told from the page.</li>
+        <li>The card of the one just made says "made by you" in place of its events.</li>
+        <li>Phase 12 chapter 10, "Once an incident is made, and where the built ones are", is the build.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</html>

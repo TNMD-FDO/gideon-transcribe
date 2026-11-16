@@ -76,7 +76,7 @@
       state.most = told.most || 20; state.mayMake = told.may_make !== false;
       state.unclocked = told.unclocked || []; state.panelMost = told.panel_most || 5;
       // The reader's incidents and the lead's counts (Phase 12 chapter 7).
-      state.incidentsAll = told.incidents_all || []; state.counts = told.counts || null;
+      state.incidentsAll = (told.incidents_all || []).slice().sort(function (a, b) { return String(b.made || "") < String(a.made || "") ? -1 : String(b.made || "") > String(a.made || "") ? 1 : 0; }); state.counts = told.counts || null;
       // The rail on its own (v1.170.1): the recordings to place, day or no day.
       state.railOnly = { rail: told.rail || [], rail_more: told.rail_more || 0, rail_all: told.rail_all || [] };
       state.lit = null; if (!quiet) { state.open = {}; }
@@ -126,7 +126,11 @@
     if (!drawStrip.wired) {
       drawStrip.wired = true;
       var sizing = null;
-      window.addEventListener("resize", function () { if (sizing) { window.clearTimeout(sizing); } sizing = window.setTimeout(function () { sizeDesk(); if (state.day) { columns(state.day); } }, 120); });
+      window.addEventListener("resize", function () { if (sizing) { window.clearTimeout(sizing); } sizing = window.setTimeout(function () { bandDraw(state.day); sizeDesk(); if (state.day) { columns(state.day); } }, 120); });
+      // Back from the incident's page out of the browser's own keep
+      // (v1.243.0): the page is shown as it was left, so it is read again and
+      // the new incident is there with nothing ticked.
+      window.addEventListener("pageshow", function (ev) { if (ev.persisted) { state.making = false; load(state.day ? state.day.date : "", null); } });
     }
     // Ticks carried from the Map tab's circle (chapter 9, v1.203.0): the
     // lanes named in the address are ticked once, up to the cap.
@@ -137,7 +141,7 @@
     if (!d) {
       host.innerHTML = "<p class='muted small'>No video of this case is on the clock yet. A video whose clock was read places itself; the rest are placed on the Notes tab's chronology, by a drag or a typed time.</p>";
       yoursDraw(null);
-      builtDraw(null);
+      bandDraw(null);
       panel(null);
       tellMap(null);
       return;
@@ -147,20 +151,31 @@
     // phase-12-incident-builder-desk.html): the ruler and the names' row
     // held above a box of lanes that scrolls inside itself, the ticked
     // lanes held at its top; the wall of videos under it (incident-desk.js),
-    // the map, Your incident and Built on this day beside.
-    host.innerHTML = dayChips() + ruler(d) + "<div class='tags-row'><div class='tags' id='chron-tags'></div></div><div class='lanes-scroll' id='chron-scroll'>" + lanes(d) + "</div>" + unclockedRow() + stripFoot(d);
+    // the map and Your incident beside; the day's incidents in the band
+    // across the top (v1.243.0).
+    host.innerHTML = dayChips() + ruler(d) + "<div class='tags-row'><div class='tags' id='chron-tags'></div></div>" + ticksHead() + "<div class='lanes-scroll' id='chron-scroll'>" + lanes(d) + "</div>" + unclockedRow() + stripFoot(d);
     columns(d);
     wire();
     wireSpanTrack(d);
     spanBox(d);
     yoursDraw(d);
-    builtDraw(d);
+    bandDraw(d);
     panel(d);
     leadButtons(d);
     tellMap(d);
     remember(d);
     sizeDesk();
     rearm();
+  }
+  // The lanes' head (v1.243.0; the drawing phase-12-incidents-tab-made.html,
+  // Figure A): how many are ticked and the one Clear the ticks, in a row
+  // right above the tick boxes, where the ticks are made.
+  function ticksHead() {
+    var n = ticked().length, cap = most();
+    return "<div class='ticks-head' id='chron-ticks-head'><span class='tk-mark" + (n ? " some" : "") + "' aria-hidden='true'></span>" +
+      (n ? "<b>" + n + " ticked</b>" : "<span class='muted'>Tick a camera to start</span>") +
+      "<button type='button' class='tiny' data-act='clear-ticks'" + (n ? " title='Unticks every camera. A span you set by hand stays; Clear the span takes that off.'" : " disabled title='Nothing is ticked'") + ">Clear the ticks</button>" +
+      (n ? "<span class='muted'>of " + cap + " at most</span>" : "") + "</div>";
   }
   function stripFoot(d) {
     return "<div class='legend'><span>Tick a camera and it plays on the wall; the ticked lanes stay at the top while the rest scroll.</span>" +
@@ -173,6 +188,18 @@
   function remember(d) {
     if (!d) { return; }
     try { localStorage.setItem(deskKey(d.date), JSON.stringify({ ticks: ticked(), at: state.clockAt, set: state.setSpan, build: state.buildSpan, name: state.buildName })); } catch (e) { /* no storage */ }
+  }
+  // Once the incident exists (v1.243.0): the ticks, the name offered, the
+  // clock line and the handles' narrowing of that day are let go, here and
+  // in what the browser keeps, so coming back finds a clean desk. A span set
+  // by hand stays; it has its own Clear the span. What was made or added to
+  // is kept for this browser tab, so the band can mark it.
+  var freshKey = "desk-fresh:" + caseId;
+  function freshOf() { try { var f = JSON.parse(sessionStorage.getItem(freshKey) || "null"); return f && f.id ? f : null; } catch (e) { return null; } }
+  function madeClean(d, id, kind) {
+    ticks = {}; state.buildSpan = null; state.clockAt = null; state.buildName = undefined; state.sel = null;
+    remember(d);
+    try { sessionStorage.setItem(freshKey, JSON.stringify({ id: String(id), kind: kind })); } catch (e) { /* no storage */ }
   }
   function restore(date) {
     var kept = null;
@@ -187,7 +214,7 @@
   }
   // The desk takes the window (chapter 10): its height is what is left under
   // its top, so the page itself never scrolls for it; the lanes' box and
-  // Built on this day scroll inside themselves and the wall takes the rest.
+  // Your incident scroll inside themselves and the wall takes the rest.
   function sizeDesk() {
     var desk = host.closest(".builder"); if (!desk) { return; }
     var top = desk.getBoundingClientRect().top + window.scrollY;
@@ -224,14 +251,13 @@
     set.addEventListener("click", go);
     [from, to].forEach(function (f) { f.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); go(); } }); });
     if (clear) { clear.addEventListener("click", function () { clearSpan(); }); }
-    // The lead's two presses (chapter 10): Make the incident with its count, and Clear the ticks.
-    var make = document.getElementById("desk-make"), clearTk = document.getElementById("desk-clear");
+    // The lead's one press (chapter 10; alone from v1.243.0, Clear the
+    // ticks having moved to the lanes' head): Make the incident with its count.
+    var make = document.getElementById("desk-make");
     if (make) { make.addEventListener("click", function () { var box = document.getElementById("desk-yours"); if (box) { makeIncident(box); } }); }
-    if (clearTk) { clearTk.addEventListener("click", function () { clearTicks(); }); }
-    var btn = document.getElementById("incidents-built");
-    if (btn) {
-      btn.addEventListener("click", function () { incidentsMenu(); });
-      document.addEventListener("click", function (ev) { var box = document.getElementById("incidents-list"); if (box && !box.hidden && !ev.target.closest("#incidents-list, #incidents-built")) { incidentsMenu(false); } });
+    // The band's lists close on a press elsewhere and on Escape.
+    if (document.getElementById("incidents-list")) {
+      document.addEventListener("click", function (ev) { var box = document.getElementById("incidents-list"); if (box && !box.hidden && !ev.target.closest("#incidents-list, [data-act='every-day'], [data-act='more-day']")) { incidentsMenu(false); } });
       document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { incidentsMenu(false); } });
     }
   }
@@ -253,13 +279,12 @@
       win.addEventListener("pointerup", function (ev) { if (startX === null) { return; } var dw = d.ruler.to - d.ruler.from, dx = (ev.clientX - startX) / (track.getBoundingClientRect().width || 1) * dw; startX = null; if (Math.abs(dx) >= 15) { state.setSpan = [Math.round(startSpan[0] + dx), Math.round(startSpan[1] + dx)]; state.buildSpan = null; } draw(); });
     }
   }
-  // The lead's two presses (chapter 10): Make the incident carries the
-  // count and is greyed until something is ticked; Clear the ticks beside it.
+  // The lead's press (chapter 10): Make the incident carries the count and
+  // is greyed until something is ticked, and while one is being made.
   function leadButtons(d) {
-    var make = document.getElementById("desk-make"), clearTk = document.getElementById("desk-clear");
+    var make = document.getElementById("desk-make");
     var n = ticked().length;
-    if (make) { make.textContent = n ? "Make the incident · " + n : "Make the incident"; make.disabled = !n || !d; make.title = n ? "Makes the incident in your name, with the span and the " + plural(n, "ticked camera") + ", and opens it on its own page" : "Tick a camera first"; }
-    if (clearTk) { clearTk.disabled = !n; }
+    if (make) { make.textContent = state.making ? "Making the incident..." : n ? "Make the incident · " + n : "Make the incident"; make.disabled = !n || !d || !!state.making; make.title = n ? "Makes the incident in your name, with the span and the " + plural(n, "ticked camera") + ", and opens it on its own page; the ticks are cleared once it is made" : "Tick a camera first"; }
   }
   // The panel for what is not on the clock (Phase 10 chapter 5, v1.186.0):
   // every video of the case with no clock, under the cards, one row each
@@ -601,11 +626,11 @@
     if (!first) { box.innerHTML = ""; tags.innerHTML = ""; return; }
     box.style.left = first.offsetLeft + "px"; box.style.width = first.offsetWidth + "px";
     tags.style.left = first.offsetLeft + "px"; tags.style.width = first.offsetWidth + "px";
-    var html = "", names = "";
+    var html = "", names = "", fresh = freshOf();
     (d.incidents || []).forEach(function (one) {
-      var l = x(one.from, d), w = Math.max(0.6, x(one.to, d) - l);
-      html += "<div class='col inc" + (selected("inc", one.id) ? " on" : "") + "' style='left: " + l + "%; width: " + w + "%'></div>";
-      names += "<button type='button' class='tag" + (selected("inc", one.id) ? " on" : "") + "' style='left: " + l + "%' data-sel='inc:" + one.id + "' title='" + esc(one.words + " · " + hm(one.from) + " to " + hm(one.to) + "; press to light its cameras, and again to let go") + "'>" + esc(one.name) + "</button>";
+      var l = x(one.from, d), w = Math.max(0.6, x(one.to, d) - l), isFresh = fresh && fresh.id === one.id;
+      html += "<div class='col inc" + (selected("inc", one.id) ? " on" : "") + (isFresh ? " fresh" : "") + "' style='left: " + l + "%; width: " + w + "%'></div>";
+      names += "<button type='button' class='tag" + (selected("inc", one.id) ? " on" : "") + (isFresh ? " fresh" : "") + "' style='left: " + l + "%' data-sel='inc:" + one.id + "' title='" + esc(one.words + " · " + hm(one.from) + " to " + hm(one.to) + (isFresh ? (fresh.kind === "added" ? " · you added cameras to it" : " · you made it") : "") + "; press to light its cameras, and again to let go") + "'>" + esc(one.name) + "</button>";
     });
     // Your incident (Phase 12 chapter 8): the span, one bright column with
     // its words on top; its two handles and the clock line (chapter 9) sit
@@ -691,6 +716,9 @@
   function settleTags(box) {
     var tags = Array.prototype.slice.call(box.querySelectorAll(".tag:not(.build)"));
     if (!tags.length) { return; }
+    // The one just made or added to is placed first (v1.243.0), so it is
+    // never the name that gives way.
+    tags.sort(function (p, q) { return (q.classList.contains("fresh") ? 1 : 0) - (p.classList.contains("fresh") ? 1 : 0); });
     var edge = box.getBoundingClientRect().right, placed = [];
     function hits(a, b) { var r = a.getBoundingClientRect(), s = b.getBoundingClientRect(); return r.width > 0 && s.width > 0 && r.left < s.right && s.left < r.right && r.top < s.bottom && s.top < r.bottom; }
     function hit(t) { return placed.some(function (p) { return hits(p, t); }); }
@@ -726,7 +754,6 @@
     var box = document.getElementById("desk-yours"); if (!box) { return; }
     box.innerHTML = yoursHtml(d);
     box.querySelectorAll("[data-untick]").forEach(function (b) { b.addEventListener("click", function () { toggleTick(b.dataset.untick, false); }); });
-    box.querySelectorAll("[data-act='clear-ticks']").forEach(function (b) { b.addEventListener("click", function () { clearTicks(); }); });
     box.querySelectorAll("[data-act='tick-running'], [data-act='tick-near'], [data-act='tick-many']").forEach(function (b) { b.addEventListener("click", function () { tickMany((b.dataset.ids || "").split(" ").filter(Boolean)); }); });
     box.querySelectorAll("[data-act='clear-span']").forEach(function (b) { b.addEventListener("click", function () { clearSpan(); }); });
     box.querySelectorAll("[data-tick]").forEach(function (t) { t.addEventListener("change", function () { toggleTick(t.dataset.tick, t.checked); }); });
@@ -735,52 +762,89 @@
     if (nameBox) { nameBox.addEventListener("input", function () { state.buildName = nameBox.value; remember(d); }); }
     box.querySelectorAll("[data-sitting-for]").forEach(function (el) { sittingBar(el.parentNode, el.dataset.sittingFor.split(" ")); });
   }
-  // Built on this day (chapter 10): the day's incidents as rows under Your
-  // incident, each with a small bar of its span on the day, Open, On map and
-  // Add the ticked; a press on the name lights its lanes and its column.
-  // Every day's incidents are behind the lead's count, as before.
-  function builtDraw(d) {
-    var box = document.getElementById("desk-built"); if (!box) { return; }
-    box.innerHTML = builtHtml(d);
-    box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { var at = b.dataset.sel.indexOf(":"); select({ kind: "inc", id: b.dataset.sel.slice(at + 1) }); }); });
-    box.querySelectorAll("[data-act='add-ticked']").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.inc, (b.dataset.ids || "").split(" ").filter(Boolean), d); }); });
-    box.querySelectorAll("[data-act='every-day']").forEach(function (b) { b.addEventListener("click", function () { incidentsMenu(true); }); });
-  }
   // A help mark (v1.207.0): the long words behind a press, so a box stays short.
   function helpHtml(words) { return "<details class='help'><summary title='How this works'>?</summary><div class='muted small'>" + words + "</div></details>"; }
-  function builtHtml(d) {
-    var today = d ? (d.incidents || []) : [], all = state.incidentsAll || [], by = {};
-    all.forEach(function (i) { by[i.id] = i; });
-    var html = "<div class='h'><span class='eye'>Built on this day · " + today.length + "</span><button type='button' class='link small' data-act='every-day' title='Every incident built in this case, newest first'>every day ▾</button></div>";
-    if (!d) { return html + "<p class='muted small'>No video is on the clock yet.</p>"; }
-    if (!today.length) { return html + "<p class='muted small'>No incident built on " + esc(d.words) + " yet" + (all.length ? "; " + plural(all.length, "incident") + " on other days." : ".") + "</p>"; }
-    var fresh = tickedBars(d);
-    today.forEach(function (one) {
-      var i = by[one.id] || {}, l = x(one.from, d), w = Math.max(1, x(one.to, d) - l);
-      var add = fresh.filter(function (b) { return (one.camera_ids || []).indexOf(b.id) < 0; });
-      html += "<div class='built-row" + (selected("inc", one.id) ? " on" : "") + "'><button type='button' class='link w' data-sel='inc:" + one.id + "' title='" + esc(one.words + " · " + hm(one.from) + " to " + hm(one.to) + "; press to light its cameras on the lanes") + "'>" + esc(one.name) + "</button>" +
-        "<div class='muted tiny'>" + plural(one.cameras, "camera") + " · " + hm(one.from) + " to " + hm(one.to) + " · " + plural(one.events, "event") + (i.built ? " · " + esc(i.built) : "") + "</div>" +
-        "<span class='mini' aria-hidden='true'><i style='left: " + l + "%; width: " + w + "%'></i></span>" +
-        "<div class='acts'><a class='btn tiny' href='" + esc(one.url) + "'>Open</a>" + (one.map_url ? "<a class='btn tiny ghost' href='" + esc(one.map_url) + "' title='Its cameras on the Map page, this incident alone'>On map</a>" : "") +
-        (add.length ? "<button type='button' class='tiny ghost' data-act='add-ticked' data-inc='" + one.id + "' data-ids='" + add.map(function (b) { return b.id; }).join(" ") + "' title='Add the cameras you ticked that are not in it; the incident widens to hold them'>Add the ticked</button>" : "") + "</div></div>";
+  // The band (v1.243.0; the drawing phase-12-incidents-tab-made.html,
+  // Figures A, B and D): the day's incidents as one row of cards across the
+  // top of the tab, newest first, each with Open, On map and, while cameras
+  // are ticked that it does not hold, Add the ticked. As many cards as fit
+  // the row; the rest behind "and N more". The one just made, or added to,
+  // carries a mark for the person who did it. Until v1.243.0 these were a
+  // pill in the lead and a panel under Your incident, the least looked-at
+  // corner of the tab; a press on a name lights its lanes and its column,
+  // as it did there.
+  function bandRows(d) {
+    var all = state.incidentsAll || [], by = {}, order = {};
+    all.forEach(function (i, n) { by[i.id] = i; order[i.id] = n; });
+    var rows = (d ? d.incidents || [] : []).map(function (one) {
+      return { id: one.id, name: one.name, cameras: one.cameras, events: one.events, span: hm(one.from) + " to " + hm(one.to), url: one.url, map_url: one.map_url, camera_ids: one.camera_ids || [], words: one.words, lights: true };
     });
-    return html;
+    // One just made of videos that are not on the clock has no column on
+    // the day; it is still shown, so what was made is never out of sight.
+    var fresh = freshOf(), f = fresh && by[fresh.id];
+    if (f && !rows.some(function (r) { return r.id === f.id; }) && (!d || !f.date || f.date === d.date)) {
+      rows.push({ id: f.id, name: f.name, cameras: f.cameras, events: f.events, span: f.span || "", url: f.url, map_url: f.map_url, camera_ids: [], words: f.name, lights: false });
+    }
+    rows.sort(function (a, b) { return (order[a.id] === undefined ? -1 : order[a.id]) - (order[b.id] === undefined ? -1 : order[b.id]); });
+    return rows;
+  }
+  function bandCard(one, d) {
+    var fresh = freshOf(), isFresh = fresh && fresh.id === one.id, mark = isFresh ? (fresh.kind === "added" ? "Added to" : "New") : "";
+    var add = d ? tickedBars(d).filter(function (b) { return one.camera_ids.indexOf(b.id) < 0; }) : [];
+    var facts = plural(one.cameras, "camera") + (one.span ? " · " + one.span : "") + (isFresh && fresh.kind !== "added" ? " · made by you" : one.events ? " · " + plural(one.events, "event") : "");
+    var name = one.lights
+      ? "<button type='button' class='link w' data-sel='inc:" + one.id + "' title='" + esc(one.words + (one.span ? " · " + one.span : "") + "; press to light its cameras on the lanes, and again to let go") + "'>" + esc(one.name) + "</button>"
+      : "<b class='w' title='" + esc(one.name + ". Its videos are not on the clock yet, so it has no column on the lanes.") + "'>" + esc(one.name) + "</b>";
+    return "<div class='inc-card" + (isFresh ? " fresh" : "") + (selected("inc", one.id) ? " on" : "") + "' data-inc='" + one.id + "'>" +
+      "<div class='n'>" + name + (mark ? "<span class='new-mark'>" + mark + "</span>" : "") + "</div>" +
+      "<div class='f'><span class='muted'>" + esc(facts) + "</span><a class='btn tiny primary' href='" + esc(one.url) + "' title='Open this incident on its own page'>Open</a>" +
+      (one.map_url ? "<a class='btn tiny' href='" + esc(one.map_url) + "' title='Its cameras on the Map page, this incident alone'>On map</a>" : "") +
+      (add.length && one.lights ? "<button type='button' class='tiny ghost' data-act='add-ticked' data-inc='" + one.id + "' data-ids='" + add.map(function (b) { return b.id; }).join(" ") + "' title='Add the cameras you ticked that are not in it; the incident widens to hold them, and the ticks are cleared'>Add the ticked</button>" : "") +
+      "</div></div>";
+  }
+  function bandHtml(d, rows, shown) {
+    var all = state.incidentsAll || [];
+    var every = all.length ? "<button type='button' class='tiny ghost' data-act='every-day' aria-expanded='false' title='Every incident built in this case, newest first, with Open and On map'>Every day · " + all.length + "</button>" : "";
+    if (!d) { return "<div class='head'><b>Incidents</b><span class='muted'>No video is on the clock yet.</span></div><span class='grow'></span>" + every; }
+    var html = "<div class='head'><b>Incidents on " + esc(d.words) + "</b><span class='muted'>" + (rows.length ? rows.length + " built · newest first" : "none built yet") + "</span></div>";
+    if (!rows.length) { return html + "<span class='muted small none'>Tick cameras on the lanes below, then Make the incident. It will be listed here." + (all.length ? " " + plural(all.length, "incident") + " on other days." : "") + "</span><span class='grow'></span>" + every; }
+    rows.slice(0, shown).forEach(function (one) { html += bandCard(one, d); });
+    html += "<span class='grow'></span>";
+    if (rows.length > shown) { html += "<button type='button' class='tiny' data-act='more-day' aria-expanded='false' title='The rest of this day&#39;s incidents'>and " + (rows.length - shown) + " more</button>"; }
+    return html + every;
+  }
+  function bandDraw(d) {
+    var box = document.getElementById("desk-band"); if (!box) { return; }
+    var rows = bandRows(d), shown = rows.length;
+    box.innerHTML = bandHtml(d, rows, shown);
+    // One row, as many cards as fit (the rule the Map page's bar keeps):
+    // one is taken off the end until the row no longer overflows.
+    while (shown > 1 && box.scrollWidth > box.clientWidth + 1) { shown -= 1; box.innerHTML = bandHtml(d, rows, shown); }
+    state.bandHidden = rows.slice(shown).map(function (r) { return r.id; });
+    box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { var at = b.dataset.sel.indexOf(":"); select({ kind: "inc", id: b.dataset.sel.slice(at + 1) }); }); });
+    box.querySelectorAll("[data-act='add-ticked']").forEach(function (b) { b.addEventListener("click", function () { addDay(b.dataset.inc, (b.dataset.ids || "").split(" ").filter(Boolean), d); }); });
+    box.querySelectorAll("[data-act='every-day']").forEach(function (b) { b.addEventListener("click", function () { incidentsMenu(state.menu === "all" ? false : "all"); }); });
+    box.querySelectorAll("[data-act='more-day']").forEach(function (b) { b.addEventListener("click", function () { incidentsMenu(state.menu === "day" ? false : "day"); }); });
+    if (state.menu) { incidentsMenu(state.menu); }
   }
   function incidentRowHtml(i) {
     var onDay = state.day && (state.day.incidents || []).some(function (one) { return one.id === i.id; });
     return "<div class='inc-row'>" + (i.still ? "<span class='still sm'><img alt='' data-still='" + esc(i.still) + "'></span>" : "") + "<div class='grow'><b>" + (onDay ? "<button type='button' class='link' data-sel='inc:" + i.id + "'>" + esc(i.name) + "</button>" : esc(i.name)) + "</b><div class='muted tiny'>" + plural(i.cameras, "camera") + " · " + esc(i.span) + (i.events ? " · " + plural(i.events, "event") : "") + "</div><div class='muted tiny'>" + esc(i.built || "") + "</div></div><div class='acts'><a class='btn tiny' href='" + esc(i.url) + "'>Open</a>" + (i.map_url ? "<a class='btn tiny ghost' href='" + esc(i.map_url) + "'>On map</a>" : "") + "</div></div>";
   }
-  // The lead's "N incidents built" (v1.207.0) opens the list of every
-  // incident in the case, at any moment of the build.
-  function incidentsMenu(open) {
-    var box = document.getElementById("incidents-list"), btn = document.getElementById("incidents-built");
+  // The band's two lists (the lead's count opened the first from v1.207.0
+  // to v1.242.0): every incident of the case, newest first, or the rest of
+  // the day's that the row had no room for. `which` is "all", "day" or false.
+  function incidentsMenu(which) {
+    var box = document.getElementById("incidents-list");
     if (!box) { return; }
-    if (open === undefined) { open = box.hidden; }
-    box.hidden = !open;
-    if (btn) { btn.setAttribute("aria-expanded", open ? "true" : "false"); }
-    if (!open) { return; }
-    var all = state.incidentsAll || [];
-    box.innerHTML = "<div class='h'><b>Incidents built in this case</b><span class='muted small'>newest first · every day</span></div>" + (all.length ? all.map(incidentRowHtml).join("") : "<p class='muted small'>None yet.</p>");
+    state.menu = which || null;
+    box.hidden = !which;
+    document.querySelectorAll("#desk-band [data-act='every-day']").forEach(function (b) { b.setAttribute("aria-expanded", which === "all" ? "true" : "false"); });
+    document.querySelectorAll("#desk-band [data-act='more-day']").forEach(function (b) { b.setAttribute("aria-expanded", which === "day" ? "true" : "false"); });
+    if (!which) { return; }
+    var all = state.incidentsAll || [], hidden = state.bandHidden || [];
+    var rows = which === "day" ? all.filter(function (i) { return hidden.indexOf(i.id) >= 0; }) : all;
+    box.innerHTML = "<div class='h'><b>" + (which === "day" ? "The rest of this day's incidents" : "Incidents built in this case") + "</b><span class='muted small'>newest first" + (which === "day" ? "" : " · every day") + "</span></div>" + (rows.length ? rows.map(incidentRowHtml).join("") : "<p class='muted small'>None yet.</p>");
     box.querySelectorAll("[data-sel]").forEach(function (b) { b.addEventListener("click", function () { incidentsMenu(false); var at = b.dataset.sel.indexOf(":"); select({ kind: "inc", id: b.dataset.sel.slice(at + 1) }); }); });
     stills(box);
   }
@@ -816,7 +880,7 @@
     if (!n) { return "<div class='h'><span class='eye'>Your incident</span><span class='muted small'>0 of " + cap + "</span></div><p class='muted small'>Tick cameras on the lanes, or press one on the map; they play on the wall. Nothing is made until Make the incident.</p>"; }
     var bars = tickedBars(d), loose = tickedUnclocked(), span = spanOf(d), at = clockLine(d);
     var name = state.buildName !== undefined ? state.buildName : (host.dataset.caseName || "Incident") + ", " + hm(span[0]);
-    var html = "<div class='h'><span class='eye'>Your incident</span><span class='small'><b>" + n + " of " + cap + "</b>" + (n >= cap ? " · the most an incident holds" : "") + "</span>" + helpHtml("Drag the line on the lanes or the scrub under the wall to move the clock; the wall and the map follow it. Drag the handles at the bright column's edges to move the span" + (state.setSpan ? "; the span you set holds as you tick" : "") + ". Make the incident makes it in your name, with this span, and opens it on its own page. Nothing is made until then: the ticks and the clock are remembered for you on this browser, so the desk is also a place to watch several videos of a day together.") + "</div>" +
+    var html = "<div class='h'><span class='eye'>Your incident</span><span class='small'><b>" + n + " of " + cap + "</b>" + (n >= cap ? " · the most an incident holds" : "") + "</span>" + helpHtml("Drag the line on the lanes or the scrub under the wall to move the clock; the wall and the map follow it. Drag the handles at the bright column's edges to move the span" + (state.setSpan ? "; the span you set holds as you tick" : "") + ". Make the incident makes it in your name, with this span, opens it on its own page, and clears the ticks here; it is then first in the row of incidents above the lanes. Nothing is made until then: the ticks and the clock are remembered for you on this browser, so the desk is also a place to watch several videos of a day together. Clear the ticks is at the head of the tick boxes.") + "</div>" +
       "<input type='text' id='build-name' class='name' maxlength='200' value='" + esc(name) + "' aria-label='Name' title='The incident&#39;s name; change it here'>" +
       "<div class='two'>";
     bars.forEach(function (b) {
@@ -840,25 +904,32 @@
       // the near marks are its answer.
       (document.getElementById("strip-map") ? "<button type='button' class='tiny' data-act='tick-near' data-ids='" + nearIds.join(" ") + "'" + (nearIds.length && n < cap ? "" : " disabled") + " title='" + (n >= cap ? cap + " is the most an incident holds" : nearIds.length ? "Tick the cameras within 50 m of a ticked one at the clock line, by their paths" : "No other camera was within 50 m of a ticked one at the clock line, by the paths the map holds") + "'>Tick the near</button>" : "") + "</div>";
     html += "<p class='small muted' data-most='" + cap + "'><span data-sitting data-sitting-for='" + bars.map(function (b) { return b.id; }).join(" ") + "'></span></p>";
-    html += "<div class='acts'><button type='button' class='small primary' data-act='make'>Make the incident</button><button type='button' class='small ghost' data-act='clear-ticks'>Clear the ticks</button>" + (state.setSpan ? "<button type='button' class='small ghost' data-act='clear-span'>Clear the span</button>" : "") + "</div>";
+    html += "<div class='acts'><button type='button' class='small primary' data-act='make'" + (state.making ? " disabled" : "") + ">Make the incident</button>" + (state.setSpan ? "<button type='button' class='small ghost' data-act='clear-span'>Clear the span</button>" : "") + "</div>";
     return html;
   }
+  // Make the incident (chapter 9; asked in the page's own voice from
+  // v1.243.0): the app answers with the new incident's address or with why
+  // none was made. Only once it exists are the ticks cleared and the page
+  // left for the incident's own; a refusal leaves every tick as it was.
   function makeIncident(box) {
     var ids = ticked();
-    if (!ids.length) { return; }
-    var nameBox = box.querySelector("#build-name");
-    var form = document.createElement("form");
-    form.method = "post"; form.action = host.dataset.new;
+    if (!ids.length || state.making) { return; }
+    var d = state.day, nameBox = box ? box.querySelector("#build-name") : null;
+    var form = new FormData();
+    form.append("answer", "json"); form.append("how", "strip"); form.append("name", nameBox ? nameBox.value.trim() : "");
     // The span goes with it (chapter 9): the day and two times of day in
     // seconds; the incident keeps it and opens at its start.
-    var span = state.day ? spanOf(state.day) : null;
-    var fields = [["csrfmiddlewaretoken", cookie("csrftoken")], ["how", "strip"], ["name", nameBox ? nameBox.value.trim() : ""]];
-    if (span) { fields.push(["date", state.day.date], ["from", String(Math.round(span[0]))], ["to", String(Math.round(span[1]))]); }
+    var span = d ? spanOf(d) : null;
+    if (span) { form.append("date", d.date); form.append("from", String(Math.round(span[0]))); form.append("to", String(Math.round(span[1]))); }
     // Every stream of a ticked vehicle goes in (v1.205.0); the server counts
     // them as one camera. A ticked video not on the clock goes in unplaced.
-    var recordings = state.day ? streamsOf(tickedBars(state.day)).concat(tickedUnclocked().map(function (r) { return r.id; })) : ids;
-    fields.concat(recordings.map(function (id) { return ["recordings", id]; })).forEach(function (f) { var i = document.createElement("input"); i.type = "hidden"; i.name = f[0]; i.value = f[1]; form.appendChild(i); });
-    document.body.appendChild(form); form.submit();
+    var recordings = d ? streamsOf(tickedBars(d)).concat(tickedUnclocked().map(function (r) { return r.id; })) : ids;
+    recordings.forEach(function (id) { form.append("recordings", id); });
+    state.making = true; leadButtons(d);
+    fetch(host.dataset.new, { method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": cookie("csrftoken") }, body: form })
+      .then(function (answer) { return answer.json().then(function (told) { if (!answer.ok || !told.url) { throw new Error(told.error || "The incident could not be made."); } return told; }); })
+      .then(function (told) { if (d) { madeClean(d, told.id, "made"); } location.href = told.url; })
+      .catch(function (err) { state.making = false; leadButtons(state.day); window.UI.toast((err && err.message && !/JSON|token/i.test(err.message) ? err.message : "The incident could not be made.") + " Your ticks are as you left them.", { problem: true, icon: "warning" }); });
   }
   // The stills (Phase 10 chapter 5, v1.185.0): one frame of a video, cut on
   // request from its playback copy by a small address of its own and never
@@ -892,7 +963,8 @@
     if (!bars.length) { return; }
     var from = Math.min.apply(null, bars.map(function (b) { return b.from; })), to = Math.max.apply(null, bars.map(function (b) { return b.to; }));
     post("/case/" + caseId + "/incident/" + incidentId + "/add-from-chronology", { day: d.date, from: hm(from), to: hm(to), recordings: ids })
-      .then(function (done) { location.href = done.url; })
+      // The ticks are cleared once the cameras are in (v1.243.0), as after Make.
+      .then(function (done) { madeClean(d, incidentId, "added"); location.href = done.url; })
       .catch(function (err) { window.UI.toast(err.message || "That did not work.", { problem: true, icon: "warning" }); });
   }
 
@@ -1256,6 +1328,7 @@
     // wall); its tick (v1.200.0) puts the camera in your incident.
     host.querySelectorAll("[data-cam]").forEach(function (b) { b.addEventListener("click", function (ev) { ev.preventDefault(); select({ kind: "cam", id: b.dataset.cam }); }); });
     host.querySelectorAll("[data-tick]").forEach(function (t) { t.addEventListener("change", function () { toggleTick(t.dataset.tick, t.checked); }); });
+    host.querySelectorAll("[data-act='clear-ticks']").forEach(function (b) { b.addEventListener("click", function () { clearTicks(); }); });
     host.querySelectorAll("[data-act='unclocked']").forEach(function (b) { b.addEventListener("click", function () { var box = document.querySelector(host.dataset.unclocked || "#unclocked-host"); if (box) { box.hidden = !box.hidden; if (!box.hidden) { box.scrollIntoView({ block: "nearest", behavior: "smooth" }); } } }); });
     host.querySelectorAll("[data-bar]").forEach(function (bar) {
       bar.addEventListener("click", function () {

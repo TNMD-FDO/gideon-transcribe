@@ -17,6 +17,36 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.243.0, 2026-11-16
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+The Incidents tab once an incident is made.
+
+- **The ticks clear themselves.** Once Make the incident has made
+  the incident, the ticked cameras, the name and the clock line are
+  cleared on the tab, so coming back finds a clean desk. A span set
+  by hand stays. If the incident could not be made, nothing is
+  cleared and the page says so. Add the ticked clears them the same
+  way.
+- **The built incidents are a row across the top.** Incidents on the
+  day shown is one row of cards, newest first, each with Open, On map
+  and Add the ticked; as many as fit, the rest behind "and N more",
+  and Every day for the whole case. The incident just made is first,
+  marked New. The small count in the top row and the panel at the
+  bottom right are gone.
+- **Clear the ticks is at the tick boxes.** A row at the head of the
+  tick boxes says how many are ticked and holds the one Clear the
+  ticks. The top row keeps Make the incident alone.
+- Your incident has the room the old panel took, so its own Make the
+  incident is in view; its reading-cost bar, which had lost its
+  shape, is drawn again.
+- The lists of incidents said "newest first" over an oldest-first
+  order; they are newest first now.
+
 ## v1.242.0, 2026-11-16
 
 ```

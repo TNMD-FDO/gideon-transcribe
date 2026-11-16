@@ -211,7 +211,8 @@ def test_the_strip_fits_the_cameras_folds_a_gap_and_zooms_to_a_span():
     piece = strip.split("function barPiece(")[1].split("\n  }")[0]
     assert "!stripMode && b.surety" in piece
     assert 'hm(b.from) + " to " + hm(b.to)' in piece
-    assert 'id="incidents-built"' in (APP / "templates" / "case.html").read_text(
+    # The lead's count of incidents built left with v1.243.0: the band lists them.
+    assert 'id="incidents-built"' not in (APP / "templates" / "case.html").read_text(
         encoding="utf-8"
     )
     page = (APP / "templates" / "case.html").read_text(encoding="utf-8")
@@ -222,7 +223,7 @@ def test_the_strip_fits_the_cameras_folds_a_gap_and_zooms_to_a_span():
         'id="span-set"',
         'id="span-clear"',
         'id="desk-yours"',
-        'id="desk-built"',
+        'id="desk-band"',
         'id="unclocked-host"',
     ):
         assert wanted in page, wanted

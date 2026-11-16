@@ -906,9 +906,21 @@ def export(request: HttpRequest, case_id, incident_id, kind: str) -> HttpRespons
 @login_required
 @require_POST
 def new_incident(request: HttpRequest, case_id) -> HttpResponse:
-    """New incident, or the offer's Make it: the videos ticked, named, opened."""
+    """New incident, or the offer's Make it: the videos ticked, named, opened.
+
+    The Incidents tab asks with `answer=json` (v1.243.0) and is told the new
+    incident's id and address, or why none was made: the tab clears its ticks
+    only once the incident exists, and goes to the address itself.
+    """
     _on_or_404()
     case = _their_case(request, case_id)
+    as_json = request.POST.get("answer") == "json"
+
+    def made(incident, at=""):
+        if as_json:
+            return JsonResponse({"id": str(incident.pk), "url": incident.url() + at})
+        return redirect(incident.url() + at)
+
     wanted = request.POST.getlist("recordings")
     chosen = [
         one
@@ -916,6 +928,10 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
         if incidents.is_video(one)
     ]
     if not chosen:
+        if as_json:
+            return JsonResponse(
+                {"error": "Tick at least one video for the incident."}, status=400
+            )
         messages.error(request, "Tick at least one video for the incident.")
         return redirect("case", case.pk)
     how = {
@@ -935,7 +951,7 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
         incident = incidents.make(
             case, name, chosen, by=request.user, how=how, request=request
         )
-        return redirect(incident.url())
+        return made(incident)
     from core import case_chronology
 
     date, low, high = span
@@ -945,7 +961,7 @@ def new_incident(request: HttpRequest, case_id) -> HttpResponse:
     at = ""
     if incident.clock_zero is not None:
         at = f"?t={max(0.0, low - float(incident.clock_zero)):.1f}"
-    return redirect(incident.url() + at)
+    return made(incident, at)
 
 
 def _posted_span(request: HttpRequest):

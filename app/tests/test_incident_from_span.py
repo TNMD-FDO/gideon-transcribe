@@ -445,3 +445,69 @@ def test_the_builder_posts_its_span_and_the_incident_opens_at_its_start(
     # The hidden dialog is gone from the case page; the strip stands alone.
     body = client.get(reverse("case", args=[a_case.pk]) + "?tab=incidents").content
     assert b'id="incident-box"' not in body and b'id="incident-strip"' in body
+
+
+def test_the_tab_is_told_the_incident_it_made_or_why_none_was(
+    owner, a_case, a_day, client
+):
+    """v1.243.0: the Incidents tab asks Make the incident with answer=json
+    and is told the new incident's id and its address at the span's start,
+    so it clears its ticks only once the incident exists; with nothing to
+    make it is told why, in words, and nothing is made. A form's post is
+    answered by a redirect, as it always was."""
+    first, second, third, later = a_day
+    signed_in(client, owner)
+    answer = client.post(
+        reverse("new-incident", args=[a_case.pk]),
+        {
+            "answer": "json",
+            "how": "strip",
+            "name": "Harbour Street stop, 20:25",
+            "date": DAY.isoformat(),
+            "from": str(seconds("20:25")),
+            "to": str(seconds("20:38")),
+            "recordings": [str(first.pk), str(second.pk)],
+        },
+    )
+    incident = incidents.Incident.objects.get(case=a_case)
+    assert answer.status_code == 200
+    assert answer.json() == {
+        "id": str(incident.pk),
+        "url": incident.url() + f"?t={60.0 + 2.0:.1f}",
+    }
+    assert incident.how == incidents.FROM_STRIP
+    assert incident.cameras.count() == 2
+
+    # No span that reads: made as before, told its plain address.
+    plain = client.post(
+        reverse("new-incident", args=[a_case.pk]),
+        {"answer": "json", "how": "strip", "recordings": [str(third.pk)]},
+    )
+    other = incidents.Incident.objects.exclude(pk=incident.pk).get(case=a_case)
+    assert plain.json() == {"id": str(other.pk), "url": other.url()}
+
+    # Nothing to make it of: told why, nothing made, no redirect to follow.
+    refused = client.post(
+        reverse("new-incident", args=[a_case.pk]),
+        {"answer": "json", "how": "strip", "recordings": []},
+    )
+    assert refused.status_code == 400
+    assert refused.json() == {"error": "Tick at least one video for the incident."}
+    assert incidents.Incident.objects.filter(case=a_case).count() == 2
+
+
+def test_the_strips_reading_says_when_each_incident_was_made(
+    owner, a_case, a_day, client
+):
+    """v1.243.0: the band and its lists are newest first, by `made`."""
+    first, second, third, later = a_day
+    signed_in(client, owner)
+    older = incidents.make(a_case, "Older", [first], by=owner)
+    newer = incidents.make(a_case, "Newer", [second], by=owner)
+    told = client.get(
+        reverse("case-incident-strip", args=[a_case.pk]) + f"?day={DAY.isoformat()}"
+    ).json()
+    made = {row["id"]: row["made"] for row in told["incidents_all"]}
+    assert set(made) == {str(older.pk), str(newer.pk)}
+    assert made[str(older.pk)] < made[str(newer.pk)]
+    assert made[str(newer.pk)] == newer.created.isoformat()

@@ -49,9 +49,10 @@ def test_the_tab_is_the_desk_and_the_reader_is_gone(client, db):
         'class="builder-right"',
         'id="desk-wall"',
         'id="desk-yours"',
-        'id="desk-built"',
+        # Built on this day is the band from v1.243.0, and Clear the ticks
+        # is at the head of the tick boxes, drawn by the strip.
+        'id="desk-band"',
         'id="desk-make"',
-        'id="desk-clear"',
         "incident-desk.",
     ):
         assert wanted in page, wanted
@@ -71,7 +72,7 @@ def test_the_strip_scrolls_with_the_ticked_held_and_the_names_row_above():
         "class='clock-rule' data-rule",
         "function wireBuild(tags, box, d)",
         "function yoursHtml(d)",
-        "function builtHtml(d)",
+        "function bandHtml(d, rows, shown)",
         "function spanHtml(d)",
         "function tellWallCams(d)",
         "data-act='every-day'",
@@ -162,7 +163,7 @@ def test_the_stylesheet_holds_the_desk_on_the_tokens():
         ".desk-wall .wnear {",
         ".desk-panel {",
         ".desk-panel .two {",
-        ".desk-built .built-row {",
+        ".inc-band {",
     ):
         assert wanted in css, wanted
     assert ".chron .lane-row .film {" not in css and ".strip-wrap {" not in css
@@ -197,7 +198,7 @@ def test_the_words_are_in_the_glossary_the_guide_the_spec_and_the_changelog():
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
     assert "**Built on this day**" in glossary and "v1.212.0" in glossary
     guide = (ROOT / "docs" / "user-guide.md").read_text(encoding="utf-8")
-    assert "**Built on this day**" in guide and "plays on the wall" in guide
+    assert "**Incidents on**" in guide and "plays on the wall" in guide
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-12.md").read_text(encoding="utf-8")
     assert "## 10. The Incidents tab as a desk" in spec
     assert "phase-12-incident-builder-desk.html" in spec
