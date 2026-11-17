@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_GET, require_POST
 
-from core import audit, cases, pdf_maker, preservation
+from core import audit, cases, preservation
 from core.case_pages import _on_or_404, _their_case
 from core.cases import Case
 
@@ -45,10 +45,7 @@ def status(request: HttpRequest, case_id) -> JsonResponse:
 def make(request: HttpRequest, case_id) -> JsonResponse:
     _on_or_404()
     case = _their_case(request, case_id)
-    try:
-        preservation.start(case, request.user, request)
-    except pdf_maker.Failed as error:
-        return JsonResponse({"error": str(error)}, status=409)
+    preservation.start(case, request.user, request)
     cases.note_activity(case, by=request.user)
     return JsonResponse(_told(case))
 

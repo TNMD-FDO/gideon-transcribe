@@ -370,9 +370,9 @@ Beside the units' tabs on the Voices place, **Phone systems** (v1.159.0) lists t
 
 ### The Preservation copy
 
-What is made in a case is part of the client's record: the transcripts, the summaries and chats, the notes, the chronology, the incidents' work. The **Preservation copy** is all of it in one zip of PDFs, laid out to be saved to the client's file of record as it is.
+What is made in a case is part of the client's record: the transcripts, the summaries and chats, the notes, the chronology, the incidents' work. The **Preservation copy** is all of it in one zip of Word documents, laid out to be saved to the client's file of record as it is.
 
-It is on the case's **Details** tab, at the foot of the left column, above Delete case. Press **Make the Preservation copy**. It is made in the background and the page counts the documents as they are done ("12 of 31 documents"); you can leave the page and come back. A large case takes some minutes. **Stop** ends it and leaves nothing behind.
+It is on the case's **Details** tab, at the foot of the left column, above Delete case. Press **Make the Preservation copy**. It is made in the background and the page counts the documents as they are done ("16 of 31 documents"); you can leave the page and come back. Most cases take seconds; a large one can take a minute or more. **Stop** ends it and leaves nothing behind.
 
 When it is ready the part says when it was made, by whom, how many documents it holds and how large it is. Press **Download**, and **Save it to the client's file of record**: the app makes the copy and keeps the last one made, and saving it where it belongs is yours to do. Open **00 Read me first** in the zip; it says what the copy holds and what it does not.
 
@@ -388,7 +388,7 @@ What is not in it: the recordings and reports that were uploaded, because the of
 
 If something in the case is added, removed or edited after the copy was made, the part says **behind the case** and offers **Make it again**; the older copy can still be downloaded meanwhile. Opening the case does not mark a copy behind. Everyone the case is shared with can make and download the copy, as they can every export.
 
-The documents are PDFs of the archival kind, made to open the same in years. Their typeface is very close to the Word exports' and not identical.
+Each document is the same Word file **Export to Word** gives for that thing, so a transcript in the copy has the same pages and line numbers as one you exported and cited from.
 
 ## How long a case is kept
 

@@ -1,14 +1,16 @@
 """The Preservation copy (Phase 14 chapter 1).
 
-One zip of a Case's work, every document in it a PDF/A, laid out to be saved
+One zip of a Case's work, every document in it a Word document, laid out to be saved
 to the client's file of record. What the app and its people made goes in;
 what was uploaded is listed and left out, since the office holds it already;
 a Recording made in the app goes in, since nothing else holds it.
 
 Every document is one of the app's own Word exports, or a Word document
-written here in the same typography, turned into a PDF by `core.pdf_maker`.
-The work is queued on the `media` queue and done in batches, so the page can
-say how far it has got and a Stop is honoured between two batches. A copy
+written here in the same typography. PDF was the first choice and was set
+aside the day it was tried (docs/research/pdf-maker.md): the free tool that
+makes one lays a page out differently from Word, and a Transcript is cited
+by its line numbers. The work is queued on the `media` queue, so the page
+can say how far it has got and a Stop is honoured every few documents. A copy
 with a hole in it would be worse than none: a document that cannot be made
 fails the whole copy, by name.
 """
@@ -18,8 +20,6 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
-import shutil
-import tempfile
 import uuid
 import zipfile
 from collections.abc import Callable
@@ -42,11 +42,16 @@ QUEUED, MAKING, READY, FAILED, STOPPED = (
 )
 UNDER_WAY = (QUEUED, MAKING)
 
-# Word files turned into PDFs per start of the PDF maker: enough to share one
-# start's cost, few enough that the page's count moves and a Stop is prompt.
-BATCH = 8
+# How often the making says how far it has got and looks for a Stop: every
+# so many documents, few enough that the page's count moves and a Stop is
+# prompt.
+EVERY = 8
 
 SAVE_IT = "Save this file to the client's file of record."
+
+
+class Failed(Exception):
+    """A document that could not be written, said in the page's own words."""
 
 
 class PreservationCopy(models.Model):
@@ -107,7 +112,7 @@ def kept_bytes(case) -> int:
 
 def for_page(case) -> dict:
     """The part on the Details tab, as the page and its script read it."""
-    from core import pdf_maker, uploads
+    from core import uploads
 
     making = under_way(case)
     kept = ready(case)
@@ -115,8 +120,6 @@ def for_page(case) -> dict:
     failed = latest if latest is not None and latest.state == FAILED else None
     told: dict = {
         "state": "none",
-        "installed": pdf_maker.installed(),
-        "not_installed": pdf_maker.NOT_INSTALLED,
     }
     if kept is not None:
         by = kept.made_by.shown_name if kept.made_by else "someone who has left"
@@ -192,13 +195,11 @@ def signature(case) -> str:
 
 def start(case, by, request=None) -> PreservationCopy:
     """Queue a making, or hand back the one already under way."""
-    from core import deferring, pdf_maker, tasks
+    from core import deferring, tasks
 
     making = under_way(case)
     if making is not None:
         return making
-    if not pdf_maker.installed():
-        raise pdf_maker.Failed(pdf_maker.NOT_INSTALLED)
     copy = PreservationCopy.objects.create(
         case=case,
         made_by=by,
@@ -247,7 +248,7 @@ def _audit(event: str, copy: PreservationCopy, actor=None, request=None, **detai
 
 @dataclass
 class Item:
-    """One file of the copy: a Word document to turn into a PDF, or a file
+    """One file of the copy: a Word document written for it, or a file
     that goes in as it is (the sound of a Recording made in the app)."""
 
     name: str  # the path inside the zip, without its ending
@@ -427,10 +428,8 @@ def zip_name(case, when) -> str:
 
 
 def make(copy_id: str) -> None:
-    """Write each document, turn it into a PDF, and zip them; the worker's
-    side of Make the Preservation copy."""
-    from core import pdf_maker
-
+    """Write each document into the zip; the worker's side of Make the
+    Preservation copy."""
     copy = (
         PreservationCopy.objects.select_related("case", "made_by")
         .filter(pk=copy_id, state=QUEUED)
@@ -439,56 +438,35 @@ def make(copy_id: str) -> None:
     if copy is None:
         return
     case = copy.case
-    work = Path(tempfile.mkdtemp(prefix="transcribe-preservation-"))
+    target = copy.path
+    partial = target.with_suffix(".partial")
     try:
         items = plan(case, copy.made_by)
         copy.state = MAKING
         copy.documents_total = len(items)
         copy.save(update_fields=["state", "documents_total"])
-        words = [(n, one) for n, one in enumerate(items) if one.word is not None]
-        pdfs: dict[int, Path] = {}
-        for at in range(0, len(words), BATCH):
-            if _stopped(copy):
-                return
-            sources = []
-            for number, one in words[at : at + BATCH]:
-                source = work / f"{number:05d}.docx"
-                try:
-                    source.write_bytes(one.word())
-                except Exception as error:
-                    log.exception("preservation copy %s: %s", copy.pk, one.name)
-                    told = f"{Path(one.name).name} could not be written."
-                    raise pdf_maker.Failed(told) from error
-                sources.append((number, one, source))
-            try:
-                made = pdf_maker.convert([s for _, _, s in sources], work / "pdf")
-            except pdf_maker.Failed as error:
-                # The maker names the numbered file; the page names the document.
-                told = str(error)
-                for _, one, source in sources:
-                    told = told.replace(source.stem, Path(one.name).name)
-                raise pdf_maker.Failed(told) from error
-            for (number, _, _), pdf in zip(sources, made, strict=True):
-                pdfs[number] = pdf
-            PreservationCopy.objects.filter(pk=copy.pk).update(documents_done=len(pdfs))
-        if _stopped(copy):
-            return
-        target = copy.path
         target.parent.mkdir(parents=True, exist_ok=True)
-        partial = target.with_suffix(".partial")
-        with zipfile.ZipFile(partial, "w", zipfile.ZIP_DEFLATED) as bundle:
-            for number, one in enumerate(items):
+        # A Word file and a sound file are packed already, so both are
+        # stored as they are: as small, and faster.
+        with zipfile.ZipFile(partial, "w", zipfile.ZIP_STORED) as bundle:
+            for number, one in enumerate(items, 1):
+                if number % EVERY == 1 and _stopped(copy):
+                    return
                 if one.word is not None:
-                    bundle.write(pdfs[number], f"{one.name}.pdf")
+                    try:
+                        body = one.word()
+                    except Exception as error:
+                        log.exception("preservation copy %s: %s", copy.pk, one.name)
+                        told = f"{Path(one.name).name} could not be written."
+                        raise Failed(told) from error
+                    bundle.writestr(f"{one.name}.docx", body)
                 elif one.file is not None:
-                    # Sound is packed already; storing it is as small and faster.
-                    bundle.write(
-                        one.file,
-                        f"{one.name}{one.file.suffix}",
-                        compress_type=zipfile.ZIP_STORED,
+                    bundle.write(one.file, f"{one.name}{one.file.suffix}")
+                if number % EVERY == 0:
+                    PreservationCopy.objects.filter(pk=copy.pk).update(
+                        documents_done=number
                     )
         if _stopped(copy):
-            partial.unlink(missing_ok=True)
             return
         partial.replace(target)
         copy.state = READY
@@ -503,13 +481,13 @@ def make(copy_id: str) -> None:
             documents=copy.documents_total,
             megabytes=round(copy.size_bytes / 1024 / 1024, 1),
         )
-    except pdf_maker.Failed as error:
+    except Failed as error:
         _fail(copy, str(error))
     except Exception:
         log.exception("preservation copy %s failed", copy.pk)
         _fail(copy, "Something went wrong while it was being made.")
     finally:
-        shutil.rmtree(work, ignore_errors=True)
+        partial.unlink(missing_ok=True)
 
 
 def _stopped(copy: PreservationCopy) -> bool:

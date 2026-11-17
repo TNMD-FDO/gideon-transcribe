@@ -24,8 +24,8 @@ Models: unchanged
 Database: migrates
 ```
 
-The Preservation copy: a whole case's work as one zip of PDFs, for the
-client's file of record.
+The Preservation copy: a whole case's work as one zip of Word
+documents, for the client's file of record.
 
 - **On the case's Details tab**, above Delete case: **Make the
   Preservation copy**. It is made in the background, the page counts
@@ -43,20 +43,19 @@ client's file of record.
   the office holds already and which the copy lists; and the clip
   files, which the copy records and which can be cut again. A recording
   made in the app is in the copy, since nothing else holds it.
-- **PDF, of the archival kind (PDF/A).** Each document is the app's own
-  Word export turned into a PDF. The typeface is Carlito where the Word
-  export has Calibri: the same widths, very close to look at.
+- **Word documents.** Each is the same file Export to Word gives, so a
+  transcript in the copy has the same pages and line numbers as one
+  already exported and cited from. PDF was tried first and set aside:
+  the free tool that makes one numbers a transcript's lines differently
+  from Word.
 - **Kept, and told when it is behind.** The last copy made stays on the
   case until one is made again. When something in the case has changed
   since, the part says "behind the case" and offers Make it again.
-- **The app image is larger.** LibreOffice Writer, with no screen, is
-  in it to make the PDFs, so this upgrade's build takes longer and the
-  image grows by a few hundred megabytes. The build proves a PDF/A can
-  be made, with the network cut, before the image is used.
 
-One new table (the copies made). No setting. Not in this release:
-making a copy when a case is deleted, keeping it afterwards, and
-mailing it to the owner; those are the next two.
+One new table (the copies made). No setting, and nothing new in any
+image. Not in this release: making a copy when a case is deleted,
+keeping it afterwards, and mailing it to the owner; those are the next
+two.
 
 ## v1.243.0, 2026-11-16
 

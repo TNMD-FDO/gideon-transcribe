@@ -3,26 +3,25 @@ chapter 1; the drawing phase-14-preservation-copy-details.html).
 
 The rules checked here: the part sits on the Details tab above Delete case
 and says where the copy stands; Make queues the work and the worker writes
-one zip with the layout the chapter fixes, every document a PDF; what was
+one zip with the layout the chapter fixes, every document a Word file; what was
 uploaded is listed and left out while a Recording made in the app and a saved
 picture of the map go in; a Clip is recorded and its file left out; the copy
 is kept on the Case, replaced only once a new one is ready, marked behind
 once the Case has changed and never by its being opened; Stop leaves nothing;
 a document that cannot be made fails the whole copy by name; a download
-writes its audit row; the copy goes with the Case; the PDF maker is run as
-the research note says; and the words are in the glossary, the guides, the
-specification and the changelog.
+writes its audit row; the copy goes with the Case; no PDF maker is in the
+app, the trial of one having been set aside; and the words are in the
+glossary, the guides, the specification and the changelog.
 """
 
 from __future__ import annotations
 
 import io
-import subprocess
 import zipfile
 from pathlib import Path
 
 import pytest
-from core import cases, pdf_maker, preservation, settings_store
+from core import cases, exports, preservation, settings_store
 from core.audit import Row
 from core.cases import Case
 from core.clips import Clip, RenderState
@@ -52,28 +51,6 @@ def stranger(db):
 def a_case(owner):
     settings_store.set_to("folder_management", True)
     return Case.objects.create(owner=owner, name="Ramirez")
-
-
-@pytest.fixture
-def a_maker(monkeypatch):
-    """A stand-in for LibreOffice: each Word file becomes a small file that
-    says it is a PDF, and what it was asked for is kept."""
-    asked = []
-
-    def convert(sources, out_dir):
-        out_dir.mkdir(parents=True, exist_ok=True)
-        asked.append([one.name for one in sources])
-        made = []
-        for one in sources:
-            assert one.read_bytes()[:2] == b"PK", "a Word file is a zip"
-            pdf = out_dir / f"{one.stem}.pdf"
-            pdf.write_bytes(b"%PDF-1.7 stand-in")
-            made.append(pdf)
-        return made
-
-    monkeypatch.setattr(pdf_maker, "convert", convert)
-    monkeypatch.setattr(pdf_maker, "binary", lambda: "soffice")
-    return asked
 
 
 def a_recording(person, case, title="Stop", filename="stop.mp4", **more):
@@ -120,7 +97,7 @@ def test_the_details_tab_carries_the_part_above_delete_case(a_case, owner, clien
     page = page.content.decode()
     assert 'id="preservation"' in page
     assert "<h3>Preservation copy</h3>" in page and "none made yet" in page
-    assert "to save to the client's file of record" in page
+    assert "one zip of Word documents, to save to the client's file of record" in page
     assert "Make the Preservation copy" in page
     assert page.index('id="preservation"') < page.index('id="delete-case"')
     assert "preservation.js" in page
@@ -129,24 +106,10 @@ def test_the_details_tab_carries_the_part_above_delete_case(a_case, owner, clien
     assert 'id="preservation"' not in other and "preservation.js" not in other
 
 
-def test_a_build_without_the_maker_says_so_and_greys_the_press(
-    a_case, owner, client, monkeypatch
-):
-    monkeypatch.setattr(pdf_maker, "binary", lambda: None)
-    browser = signed_in(client, owner)
-    page = browser.get(f"/case/{a_case.pk}?tab=details").content.decode()
-    assert pdf_maker.NOT_INSTALLED in page
-    assert 'data-act="make" disabled' in page
-    answer = browser.post(f"/case/{a_case.pk}/preservation/make")
-    assert answer.status_code == 409
-    assert answer.json()["error"] == pdf_maker.NOT_INSTALLED
-    assert not PreservationCopy.objects.exists()
-
-
 # Making it -------------------------------------------------------------------
 
 
-def test_make_queues_it_and_the_worker_writes_the_zip(a_case, owner, client, a_maker):
+def test_make_queues_it_and_the_worker_writes_the_zip(a_case, owner, client):
     a_transcript(a_recording(owner, a_case))
     browser = signed_in(client, owner)
     answer = browser.post(f"/case/{a_case.pk}/preservation/make")
@@ -167,11 +130,18 @@ def test_make_queues_it_and_the_worker_writes_the_zip(a_case, owner, client, a_m
     assert copy.size_bytes == copy.path.stat().st_size > 0
     assert copy.path.parent == a_case.folder / "preservation"
     assert names_in(copy) == [
-        "00 Read me first.pdf",
-        "01 Recordings/Stop/Transcript.pdf",
-        "08 Recordings and documents, listed.pdf",
-        "10 Activity record.pdf",
+        "00 Read me first.docx",
+        "01 Recordings/Stop/Transcript.docx",
+        "08 Recordings and documents, listed.docx",
+        "10 Activity record.docx",
     ]
+    # Each is a Word document, and the Transcript is the app's own export.
+    from docx import Document
+
+    with zipfile.ZipFile(copy.path) as bundle:
+        talk = Document(io.BytesIO(bundle.read("01 Recordings/Stop/Transcript.docx")))
+    assert any("Good morning." in one.text for one in talk.paragraphs)
+    assert not copy.path.with_suffix(".partial").exists()
     row = Row.objects.get(event="preservation copy made")
     assert row.object_id == str(a_case.pk) and row.details["documents"] == 4
 
@@ -182,7 +152,7 @@ def test_make_queues_it_and_the_worker_writes_the_zip(a_case, owner, client, a_m
     assert "Save it to the client's file of record." in told["html"]
 
 
-def test_the_layout_what_goes_in_and_what_is_only_listed(a_case, owner, a_maker):
+def test_the_layout_what_goes_in_and_what_is_only_listed(a_case, owner):
     from core import documents
 
     uploaded = a_recording(owner, a_case, "Body camera", "bwc.mp4")
@@ -230,15 +200,15 @@ def test_the_layout_what_goes_in_and_what_is_only_listed(a_case, owner, a_maker)
     assert copy.state == preservation.READY, copy.reason
     names = names_in(copy)
     assert names == [
-        "00 Read me first.pdf",
-        "01 Recordings/Body camera/Transcript.pdf",
-        "01 Recordings/Interview/Transcript.pdf",
+        "00 Read me first.docx",
+        "01 Recordings/Body camera/Transcript.docx",
+        "01 Recordings/Interview/Transcript.docx",
         "01 Recordings/Interview/interview.webm",
-        "03 Notes and chronology/Notes.pdf",
+        "03 Notes and chronology/Notes.docx",
         "06 Map pictures and timelapses/Map at 20-26.png",
-        "07 Record of clips.pdf",
-        "08 Recordings and documents, listed.pdf",
-        "10 Activity record.pdf",
+        "07 Record of clips.docx",
+        "08 Recordings and documents, listed.docx",
+        "10 Activity record.docx",
     ]
     with zipfile.ZipFile(copy.path) as bundle:
         # The Recording made in the app goes in as it was recorded.
@@ -246,12 +216,10 @@ def test_the_layout_what_goes_in_and_what_is_only_listed(a_case, owner, a_maker)
         assert sound == b"sound recorded in the app"
     # Nothing that was uploaded, no Clip file, nothing of a Recording with
     # no Transcript.
-    assert not [n for n in names if n.endswith((".mp4", ".m4a"))]
+    assert not [n for n in names if n.endswith((".mp4", ".m4a", ".pdf"))]
     assert not [n for n in names if "Still waiting" in n or "report" in n.lower()]
     assert not_done.pk and report.pk
-    # Every Word document was handed to the maker, in batches.
-    assert sum(len(batch) for batch in a_maker) == copy.documents_total - 2
-    assert max(len(batch) for batch in a_maker) <= preservation.BATCH
+    assert copy.documents_total == len(names) == 9
 
 
 def test_the_documents_written_here_say_what_the_chapter_fixes(a_case, owner):
@@ -299,7 +267,7 @@ def test_the_documents_written_here_say_what_the_chapter_fixes(a_case, owner):
 
 
 def test_behind_the_case_after_a_change_and_never_after_an_opening(
-    a_case, owner, client, a_maker
+    a_case, owner, client
 ):
     recording = a_recording(owner, a_case)
     a_transcript(recording)
@@ -317,7 +285,7 @@ def test_behind_the_case_after_a_change_and_never_after_an_opening(
     assert "Download the one of" in page and "Make it again" in page
 
 
-def test_a_new_copy_replaces_the_old_one_only_once_it_is_ready(a_case, owner, a_maker):
+def test_a_new_copy_replaces_the_old_one_only_once_it_is_ready(a_case, owner):
     a_transcript(a_recording(owner, a_case))
     first = made(a_case, owner)
     old = first.path
@@ -330,7 +298,7 @@ def test_a_new_copy_replaces_the_old_one_only_once_it_is_ready(a_case, owner, a_
     assert a_case.disk_bytes() >= preservation.ready(a_case).size_bytes > 0
 
 
-def test_stop_ends_it_and_leaves_nothing_behind(a_case, owner, client, a_maker):
+def test_stop_ends_it_and_leaves_nothing_behind(a_case, owner, client):
     a_transcript(a_recording(owner, a_case))
     browser = signed_in(client, owner)
     browser.post(f"/case/{a_case.pk}/preservation/make")
@@ -341,7 +309,8 @@ def test_stop_ends_it_and_leaves_nothing_behind(a_case, owner, client, a_maker):
     assert copy.state == preservation.STOPPED
     # The worker, reaching it late, makes nothing.
     preservation.make(str(copy.pk))
-    assert not copy.path.exists() and a_maker == []
+    assert not copy.path.exists()
+    assert not copy.path.with_suffix(".partial").exists()
     assert Row.objects.filter(event="preservation copy stopped").count() == 1
 
 
@@ -349,28 +318,29 @@ def test_a_document_that_cannot_be_made_fails_the_whole_copy_by_name(
     a_case, owner, client, monkeypatch
 ):
     a_transcript(a_recording(owner, a_case))
-    monkeypatch.setattr(pdf_maker, "binary", lambda: "soffice")
 
-    def convert(sources, out_dir):
-        raise pdf_maker.Failed(f"{sources[1].stem} could not be turned into a PDF.")
+    def word(recording, exported_by, **more):
+        raise ValueError("a transcript the writer cannot lay out")
 
-    monkeypatch.setattr(pdf_maker, "convert", convert)
+    monkeypatch.setattr(exports, "word", word)
     copy = made(a_case, owner)
     assert copy.state == preservation.FAILED
-    assert copy.reason == "Transcript could not be turned into a PDF."
+    assert copy.reason == "Transcript could not be written."
+    # Nothing is left: no zip, and not the half-made one either.
     assert not copy.path.exists()
+    assert not copy.path.with_suffix(".partial").exists()
     assert Row.objects.get(event="preservation copy failed").details["reason"]
     page = signed_in(client, owner).get(f"/case/{a_case.pk}?tab=details")
     page = page.content.decode()
     assert "could not be made" in page
-    assert "Transcript could not be turned into a PDF." in page
+    assert "Transcript could not be written." in page
     assert "Make the Preservation copy" in page
 
 
 # Downloading, and who may ------------------------------------------------------
 
 
-def test_download_names_the_zip_and_writes_its_row(a_case, owner, client, a_maker):
+def test_download_names_the_zip_and_writes_its_row(a_case, owner, client):
     a_transcript(a_recording(owner, a_case))
     browser = signed_in(client, owner)
     assert browser.get(f"/case/{a_case.pk}/preservation/download").status_code == 404
@@ -380,7 +350,7 @@ def test_download_names_the_zip_and_writes_its_row(a_case, owner, client, a_make
     day = f"{copy.finished:%Y}"
     assert "Ramirez%20-%20preservation%20copy%20" + day in answer["Content-Disposition"]
     body = b"".join(answer.streaming_content)
-    assert zipfile.ZipFile(io.BytesIO(body)).namelist()[0] == "00 Read me first.pdf"
+    assert zipfile.ZipFile(io.BytesIO(body)).namelist()[0] == "00 Read me first.docx"
     row = Row.objects.get(event="export made")
     assert row.details["kind"] == "preservation copy"
     assert row.object_type == "case" and row.object_id == str(a_case.pk)
@@ -400,7 +370,7 @@ def test_a_stranger_is_told_there_is_no_such_case(a_case, owner, stranger, clien
 
 
 def test_an_admin_looking_in_may_make_one_and_asking_how_it_stands_is_quiet(
-    a_case, owner, client, a_maker
+    a_case, owner, client
 ):
     admin = User.objects.create_local_admin("asker", PASSWORD)
     a_transcript(a_recording(owner, a_case))
@@ -417,7 +387,7 @@ def test_an_admin_looking_in_may_make_one_and_asking_how_it_stands_is_quiet(
     assert row.actor_username == "asker" and row.affected_username == "jsmith"
 
 
-def test_the_copy_goes_with_the_case(a_case, owner, a_maker):
+def test_the_copy_goes_with_the_case(a_case, owner):
     a_transcript(a_recording(owner, a_case))
     copy = made(a_case, owner)
     path = copy.path
@@ -426,89 +396,33 @@ def test_the_copy_goes_with_the_case(a_case, owner, a_maker):
     assert not path.exists() and not PreservationCopy.objects.exists()
 
 
-# The PDF maker ---------------------------------------------------------------
+# Word, and no PDF maker ---------------------------------------------------------
 
 
-def test_the_maker_runs_libreoffice_as_the_research_note_says(tmp_path, monkeypatch):
-    ran = {}
-
-    def run(command, **how):
-        ran["command"] = command
-        ran["how"] = how
-        out = Path(command[command.index("--outdir") + 1])
-        for one in command[command.index("--outdir") + 2 :]:
-            (out / f"{Path(one).stem}.pdf").write_bytes(b"%PDF-1.7")
-        return subprocess.CompletedProcess(command, 0, b"", b"")
-
-    monkeypatch.setattr(pdf_maker, "binary", lambda: "/usr/bin/soffice")
-    monkeypatch.setattr(subprocess, "run", run)
-    sources = [tmp_path / "00001.docx", tmp_path / "00002.docx"]
-    for one in sources:
-        one.write_bytes(b"PK")
-    made_ = pdf_maker.convert(sources, tmp_path / "pdf")
-    assert [one.name for one in made_] == ["00001.pdf", "00002.pdf"]
-    command = ran["command"]
-    assert command[0] == "/usr/bin/soffice"
-    assert "--headless" in command and "--norestore" in command
-    # PDF/A-2b, asked for in the filter's own words.
-    assert command[command.index("--convert-to") + 1] == pdf_maker.FILTER
-    assert '"SelectPdfVersion":{"type":"long","value":"2"}' in pdf_maker.FILTER
-    # A profile of its own, which is also its home, and gone afterwards.
-    profile = [a for a in command if a.startswith("-env:UserInstallation=file://")]
-    assert len(profile) == 1
-    home = Path(ran["how"]["env"]["HOME"])
-    assert home.name.startswith("transcribe-pdf-profile-") and not home.exists()
-    assert ran["how"]["timeout"] == 60 + 60 * 2 and "shell" not in ran["how"]
-
-
-def test_the_maker_fails_by_name_and_says_when_it_is_not_there(tmp_path, monkeypatch):
-    monkeypatch.setattr(pdf_maker, "binary", lambda: None)
-    with pytest.raises(pdf_maker.Failed, match="not in this build"):
-        pdf_maker.convert([tmp_path / "a.docx"], tmp_path / "pdf")
-    monkeypatch.setattr(pdf_maker, "binary", lambda: "soffice")
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda c, **how: subprocess.CompletedProcess(c, 1, b"", b"no"),
-    )
-    (tmp_path / "Memo.docx").write_bytes(b"PK")
-    with pytest.raises(pdf_maker.Failed, match="Memo could not be turned into a PDF"):
-        pdf_maker.convert([tmp_path / "Memo.docx"], tmp_path / "pdf")
-
-
-# The image, and the words ------------------------------------------------------
-
-
-def test_the_image_carries_the_maker_and_proves_it_at_build():
-    build = (APP / "Dockerfile").read_text(encoding="utf-8")
-    for wanted in (
-        "libreoffice-writer-nogui",
-        "fonts-crosextra-carlito",
-        "COPY app/fonts-for-pdf.conf /etc/fonts/conf.d/45-transcribe-pdf.conf",
-        "fc-match Calibri | grep -qi carlito",
-        'fc-match Consolas | grep -qi "dejavu sans mono"',
-        # A conversion by the app's own command, with the network cut.
-        "RUN --network=none cd /tmp/pdfcheck",
-        "pdf_maker.convert(",
-        "assert b'pdfaid:part' in data, 'not a PDF/A'",
-    ):
-        assert wanted in build, wanted
-    faces = (APP / "fonts-for-pdf.conf").read_text(encoding="utf-8")
-    assert "<family>Carlito</family>" in faces
-    assert "<family>DejaVu Sans Mono</family>" in faces
+def test_no_pdf_maker_is_in_the_app_and_the_note_says_why():
+    # PDF was tried on 17 November 2026 and set aside: nothing of it ships.
+    assert not (APP / "core" / "pdf_maker.py").exists()
+    assert not (APP / "fonts-for-pdf.conf").exists()
+    build = (APP / "Dockerfile").read_text(encoding="utf-8").lower()
+    assert "libreoffice" not in build and "carlito" not in build
     licences = (ROOT / "THIRD_PARTY_LICENSES.md").read_text(encoding="utf-8")
-    assert "| LibreOffice Writer (no-GUI packages) | MPL-2.0 |" in licences
-    assert "| Carlito (font) | OFL-1.1 |" in licences
+    assert "LibreOffice" not in licences
+    note = (ROOT / "docs" / "research" / "pdf-maker.md").read_text(encoding="utf-8")
+    assert "# PDF for the Preservation copy: tried, and set aside" in note
+    assert "**The talk's lines break differently.**" in note
+    assert "A Transcript is cited by page and line" in note
+    spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-14.md").read_text(encoding="utf-8")
+    assert "### Why Word, and not PDF" in spec
+    assert "4. **Word, as every export is.**" in spec
 
 
 def test_the_words_are_in_the_glossary_the_guides_the_spec_and_the_changelog():
     glossary = (ROOT / "CONTEXT.md").read_text(encoding="utf-8")
     assert "**Preservation copy**:" in glossary
+    assert "every document in it a Word document" in glossary
     spec = (ROOT / "docs" / "spec" / "SPEC-PHASE-14.md").read_text(encoding="utf-8")
     assert "## 1. The Preservation copy, from the Details tab (v1.244.0)" in spec
     assert "### What the next releases add" in spec
-    note = (ROOT / "docs" / "research" / "pdf-maker.md").read_text(encoding="utf-8")
-    assert "--disable-online-update" in note and "SelectPdfVersion" in note
     drawing = ROOT / "docs/spec/mockups/phase-14-preservation-copy-details.html"
     # The drawing is kept; the local demo's picture is not.
     assert drawing.exists() and "<img" not in drawing.read_text(encoding="utf-8")
@@ -516,6 +430,7 @@ def test_the_words_are_in_the_glossary_the_guides_the_spec_and_the_changelog():
     assert "**Preservation copy**" in guide
     assert "Save it to the client's file of record" in guide
     admin = (ROOT / "docs" / "admin-guide.md").read_text(encoding="utf-8")
-    assert "Preservation copy" in admin and "LibreOffice" in admin
+    assert "## The Preservation copy" in admin and "**Word, not PDF.**" in admin
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v1.244.0" in log and "Database: migrates" in log
+    assert "as one zip of Word\ndocuments" in log

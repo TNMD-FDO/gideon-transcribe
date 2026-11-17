@@ -89,8 +89,8 @@ def read_document(document_id: str) -> None:
 
 @app.task(queue="media", name="make_preservation_copy")
 def make_preservation_copy(copy_id: str) -> None:
-    """A Case's Preservation copy written, turned into PDFs and zipped (Phase
-    14 chapter 1). On the media queue: it is CPU work, as ffmpeg's is."""
+    """A Case's Preservation copy written and zipped (Phase 14 chapter 1). On
+    the media queue: it is CPU work, as ffmpeg's is, and can take minutes."""
     from core import preservation
 
     preservation.make(copy_id)

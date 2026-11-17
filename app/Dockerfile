@@ -41,19 +41,7 @@ RUN apt-get update \
       libsasl2-2 \
       tesseract-ocr \
       tesseract-ocr-eng \
-      libreoffice-writer-nogui \
-      fontconfig \
-      fonts-crosextra-carlito \
  && rm -rf /var/lib/apt/lists/*
-
-# The PDF maker's typefaces (Phase 14 chapter 1): LibreOffice Writer, with no
-# screen and no Java, turns the Word exports into the PDFs of a Preservation
-# copy. The exports name Calibri and Consolas, which are not free; this says
-# which faces in the image stand in for them.
-COPY app/fonts-for-pdf.conf /etc/fonts/conf.d/45-transcribe-pdf.conf
-RUN fc-cache -f \
- && fc-match Calibri | grep -qi carlito \
- && fc-match Consolas | grep -qi "dejavu sans mono"
 
 # audiowaveform draws the waveform under the player. It is not in the Debian
 # archive; the project publishes a .deb per Debian release, so it is fetched by
@@ -106,16 +94,6 @@ RUN python -c "import ldap; print(ldap.__version__)"
 # OCR engine must answer, in the finished image (Phase 8 chapter 4).
 RUN python -c "import pdfplumber, pypdfium2, pytesseract; print(pdfplumber.__version__)" \
  && tesseract --version | head -n 1
-
-# The PDF maker must turn a Word file into a PDF/A in the finished image, by
-# the very command the app runs, and with the network cut: it reaches nothing
-# outside the container (Phase 14 chapter 1; docs/research/pdf-maker.md). A
-# maker that cannot is a build failure, never a failed Preservation copy.
-COPY app/core/pdf_maker.py /tmp/pdfcheck/pdf_maker.py
-RUN --network=none cd /tmp/pdfcheck \
- && python -c "from docx import Document; d = Document(); d.add_paragraph('The PDF maker answers.'); d.save('check.docx')" \
- && python -c "import pathlib, pdf_maker; made = pdf_maker.convert([pathlib.Path('check.docx')], pathlib.Path('out')); data = made[0].read_bytes(); assert data[:5] == b'%PDF-', 'not a PDF'; assert b'pdfaid:part' in data, 'not a PDF/A'; print('PDF/A made:', len(data), 'bytes')" \
- && rm -rf /tmp/pdfcheck
 
 # The container runs as the office's own account, which has no home folder on
 # the server, so HOME points somewhere writable.

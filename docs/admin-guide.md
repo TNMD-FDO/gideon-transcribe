@@ -239,13 +239,14 @@ Once Folder management is on, the app deletes cases by itself, on one rule for t
 
 ## The Preservation copy
 
-A case's Details tab makes a Preservation copy: one zip of PDFs of everything made in the case, for the person to save to the client's file of record. The user guide says what is in it. What an Admin needs to know:
+A case's Details tab makes a Preservation copy: one zip of Word documents of everything made in the case, for the person to save to the client's file of record. The user guide says what is in it. What an Admin needs to know:
 
 - **Nothing to set.** There is no setting in this release. Whoever can open a case can make its copy; an Admin's making or downloading of somebody else's is in the audit log with the owner named.
 - **Where it is kept.** The last copy made is a file in the case's own folder under the data directory, so it counts toward the owner's room, goes to the Recycle bin with the case and is wiped with it. It is in every Backup like the rest of the case.
-- **What makes the PDFs.** LibreOffice Writer, without a screen, inside the app's own image; the media worker runs it. It reaches nothing outside the server and never looks for updates. The app image is larger for it, by a few hundred megabytes, and the first upgrade to this version takes longer to build.
-- **If a copy will not make.** The Details tab says which document failed. Look in the media worker's log for the line beginning `no PDF for`; **Make the Preservation copy** tries again from the start. A copy that says "being made" and does not move after the media worker was restarted is ended with **Stop** and made again.
+- **Who makes it.** The media worker, in the background. Nothing new is installed for it.
+- **If a copy will not make.** The Details tab says which document failed, and the media worker's log has the error under `preservation copy`; **Make the Preservation copy** tries again from the start. A copy that says "being made" and does not move after the media worker was restarted is ended with **Stop** and made again.
 - **The audit log** has "preservation copy made", "preservation copy stopped", "preservation copy failed" and, for each download, "export made" of kind `preservation copy`.
+- **Word, not PDF.** PDF was tried and set aside: the free tool that makes one numbers a transcript's lines differently from Word, and a transcript is cited by its line numbers.
 
 Not in this release, and decided for the next ones: a copy made by itself when a case is deleted, kept for a number of days you set, and mailed to the owner.
 

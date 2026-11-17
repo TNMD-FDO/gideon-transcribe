@@ -52,8 +52,6 @@ is ffmpeg, whose package versions each Release must record here (see note 1).
 | Pillow | MIT-CMU (HPND) | the pictures in memory; pdfplumber's and pytesseract's dependency |
 | pytesseract | Apache-2.0 | the bridge to the OCR engine, which it calls as a separate program |
 | Tesseract OCR (with its English data) | Apache-2.0 | in the app image from Debian's `tesseract-ocr` and `tesseract-ocr-eng` packages, called as a separate program; reads a scanned page's words |
-| LibreOffice Writer (no-GUI packages) | MPL-2.0 | in the app image from Debian's `libreoffice-writer-nogui` package, called as a separate program with no screen; turns the Word exports into the PDF/A documents of a Preservation copy (docs/research/pdf-maker.md) |
-| Carlito (font) | OFL-1.1 | in the app image from Debian's `fonts-crosextra-carlito` package; the typeface a PDF shows where a Word export names Calibri, drawn to the same widths |
 | charset-normalizer, cryptography, packaging | MIT; Apache-2.0 or BSD-3-Clause; Apache-2.0 or BSD-2-Clause | pdfminer.six's and pytesseract's own dependencies, pinned so the image builds the same way every time |
 | audiowaveform | GPL-3.0-or-later | in the app image, fetched as a `.deb` by version and hash and called as a separate program; source at `github.com/bbc/audiowaveform`; see note 1 |
 | Caddy | Apache-2.0 | upstream image |

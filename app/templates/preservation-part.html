@@ -22,7 +22,7 @@
   <p class="muted small">You can leave this page. It will be here when it is done.</p>
 {% else %}
   {% if p.state == "none" or p.state == "failed" %}
-    <p class="muted small">Everything made in this case as one zip of PDFs, to save to the client's file of record: the transcripts with their summaries and chats, the case chats, the notes, the chronology, the incidents, and a record of the clips. Recordings and documents that were uploaded are listed, not included.</p>
+    <p class="muted small">Everything made in this case as one zip of Word documents, to save to the client's file of record: the transcripts with their summaries and chats, the case chats, the notes, the chronology, the incidents, and a record of the clips. Recordings and documents that were uploaded are listed, not included.</p>
   {% endif %}
   {% if p.failed %}<p class="small problem">The last one could not be made. {{ p.failed }}</p>{% endif %}
   {% if p.state == "ready" or p.state == "behind" %}
@@ -31,14 +31,13 @@
   <div class="row gap6 wrap acts">
     {% if p.state == "ready" %}
       <a class="btn primary small" href="{% url 'preservation-download' case.pk %}">Download</a>
-      <button type="button" class="small" data-act="make"{% if not p.installed %} disabled title="{{ p.not_installed }}"{% endif %}>Make it again</button>
+      <button type="button" class="small" data-act="make">Make it again</button>
       <span class="muted small">Save it to the client's file of record.</span>
     {% elif p.state == "behind" %}
-      <button type="button" class="small primary" data-act="make"{% if not p.installed %} disabled title="{{ p.not_installed }}"{% endif %}>Make it again</button>
+      <button type="button" class="small primary" data-act="make">Make it again</button>
       <a class="btn small" href="{% url 'preservation-download' case.pk %}">Download the one of {{ p.made_day }}</a>
     {% else %}
-      <button type="button" class="small primary" data-act="make"{% if not p.installed %} disabled title="{{ p.not_installed }}"{% endif %}>Make the Preservation copy</button>
+      <button type="button" class="small primary" data-act="make">Make the Preservation copy</button>
     {% endif %}
   </div>
-  {% if not p.installed %}<p class="muted small">{{ p.not_installed }}</p>{% endif %}
 {% endif %}
