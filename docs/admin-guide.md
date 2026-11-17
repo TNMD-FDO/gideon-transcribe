@@ -248,7 +248,24 @@ A case's Details tab makes a Preservation copy: one zip of Word documents of eve
 - **The audit log** has "preservation copy made", "preservation copy stopped", "preservation copy failed" and, for each download, "export made" of kind `preservation copy`.
 - **Word, not PDF.** PDF was tried and set aside: the free tool that makes one numbers a transcript's lines differently from Word, and a transcript is cited by its line numbers.
 
-Not in this release, and decided for the next ones: a copy made by itself when a case is deleted, kept for a number of days you set, and mailed to the owner.
+### At deletion, and Archived
+
+From v1.245.0 **Delete no longer leaves nothing.** When a case is deleted, by its owner, by you, or by the Retention policy, its Preservation copy is made first and kept after the case has gone, in **Archived**, the fourth tab of the Cases page. This is On after the upgrade for an office that has never chosen. Tell your people, or turn it off.
+
+Two settings on the panel's **Cases** page, under the Recycle bin's days:
+
+- **Preservation copy at deletion** (On by default). Off: Delete leaves nothing, as before, and copies already in Archived stay their days.
+- **Preservation copy kept** (30 days by default, 1 to 365). The days a copy stays in Archived, counted from the day its case was gone for good: the day of a person's Delete, or the day the Recycle bin wiped it. A shorter number removes older copies at the next nightly sweep.
+
+What to know:
+
+- **What is kept is the written work**, as Word documents: never the uploaded recordings. It is a small file under `cases/archived` in the data directory, in every Backup, and counts toward nobody's room.
+- **You see everyone's copies** in Archived, with the owner named; a copy whose owner has left is yours to download or remove. Your download or removal of somebody else's is in the audit log with the owner named.
+- **The nightly sweep** makes a case's copy before it bins the case, and bins it whether or not the copy could be made; the Recycle bin's row then offers **Make the copy**. It removes a copy from Archived when its days are up, downloaded or not. Its "Retention sweep ran" row counts the copies removed.
+- **Delete data** on the Users page keeps each case's copy as it goes.
+- **The audit log** has "preservation copy archived" and "preservation copy removed", and "case deleted" says what became of the copy: kept, none (the setting is Off), failed, or declined (the person deleted without one).
+
+Not in this release, and decided for the next one: the mail that tells the owner the copy is there, and the nightly reminder until it is downloaded.
 
 ## The AI assistant's engine
 

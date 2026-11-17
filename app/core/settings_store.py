@@ -588,6 +588,43 @@ def _rows() -> list[Definition]:
                 "number is wiped that night."
             ),
         ),
+        # The Preservation copy at deletion (Phase 14 chapter 2, ADR 0030).
+        Definition(
+            key="preservation_at_deletion",
+            page=CASES,
+            name="Preservation copy at deletion",
+            kind=TOGGLE,
+            default=True,
+            needs="folder_management",
+            what_it_does=(
+                "When a Case is deleted, by its owner, by an Admin or by the "
+                "Retention policy, its Preservation copy is made first and kept "
+                "in Archived."
+            ),
+            when_changed=(
+                "The next deletion. Off: nothing is made or kept when a Case "
+                "is deleted; copies already in Archived stay their days."
+            ),
+        ),
+        Definition(
+            key="preservation_copy_days",
+            page=CASES,
+            name="Preservation copy kept",
+            kind=NUMBER,
+            default=30,
+            least=1,
+            most=365,
+            unit="days",
+            needs="folder_management",
+            what_it_does=(
+                "The days a deleted Case's Preservation copy is kept in "
+                "Archived, counted from the day the Case was gone for good."
+            ),
+            when_changed=(
+                "The next sweep. A copy already past the new number is "
+                "removed that night."
+            ),
+        ),
         Definition(
             key="recording_types",
             page=CASES,

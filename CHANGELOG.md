@@ -17,6 +17,44 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.245.0, 2026-11-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+A Preservation copy when a case is deleted, and Archived.
+
+- **Delete no longer leaves nothing.** When a case is deleted, by its
+  owner, by an Admin or by the retention policy, its Preservation copy
+  is made first and kept after the case has gone. The case itself is
+  deleted as before and cannot be brought back. This is On after the
+  upgrade; an Admin can turn it off (**Preservation copy at
+  deletion**, on the panel's Cases page).
+- **Archived**, a fourth tab on the Cases page after the Recycle bin:
+  the copies of cases that are gone for good. Each row says when and
+  how the case was deleted, what the copy holds and when it was made,
+  the day it is kept until, and whether it has been downloaded, with
+  **Download** and **Remove now**. The owner sees their own; Admins see
+  everyone's.
+- **Kept for 30 days**, counted from the day the case was gone for
+  good, then removed by the nightly sweep whether or not it was
+  downloaded. An Admin sets the number (**Preservation copy kept**, 1
+  to 365).
+- **Delete case** says so in its question. A case whose copy is up to
+  date goes at once; otherwise the copy is made first, the Details tab
+  counts it and offers Stop, and keep the case, and the case is deleted
+  when the copy is ready. If the copy cannot be made the case is not
+  deleted, and the owner may try again or delete without a copy.
+- **The Recycle bin** has a Preservation copy column: the copy made
+  the night the retention policy deleted the case, to download while
+  the case waits. A restored case keeps its copy; a wiped case's copy
+  goes to Archived.
+
+Two settings, one new table, four new columns. Not in this release:
+the email to the owner and the nightly reminder; that is the next one.
+
 ## v1.244.0, 2026-11-17
 
 ```

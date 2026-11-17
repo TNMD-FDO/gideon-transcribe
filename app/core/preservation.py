@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import shutil
 import uuid
 import zipfile
 from collections.abc import Callable
@@ -49,6 +50,9 @@ EVERY = 8
 
 SAVE_IT = "Save this file to the client's file of record."
 
+# Who made a copy nobody pressed for: the Retention policy's deletion.
+BY_THE_APP = "Gideon Transcribe"
+
 
 class Failed(Exception):
     """A document that could not be written, said in the page's own words."""
@@ -75,14 +79,70 @@ class PreservationCopy(models.Model):
     signature = models.CharField(max_length=64, blank=True, default="")
     created = models.DateTimeField(auto_now_add=True)
     finished = models.DateTimeField(null=True, blank=True)
+    # Begun by a Delete (chapter 2): when it is ready the Case is deleted,
+    # and a failure is said as "was not deleted".
+    then_delete = models.BooleanField(default=False)
+    # Who made it, as the page says it, for a copy the app made by itself
+    # (the Retention policy's) and for one whose maker has since left.
+    made_by_name = models.CharField(max_length=200, blank=True, default="")
+    downloaded_at = models.DateTimeField(null=True, blank=True)
+    downloaded_by_name = models.CharField(max_length=200, blank=True, default="")
 
     class Meta:
         ordering = ["-created"]
 
     @property
     def path(self) -> Path:
-        """In the Case's own folder, so it is binned and wiped with the Case."""
+        """In the Case's own folder, so it is binned and restored with the Case."""
         return self.case.folder / "preservation" / f"{self.pk}.zip"
+
+
+OWNER, ADMIN, RETENTION = "owner", "admin", "retention"
+
+
+class ArchivedCopy(models.Model):
+    """The Preservation copy of a Case that is gone for good (chapter 2).
+
+    The Case's row is gone, so what the page says about it is kept here as
+    words: its name, whose it was, how it went. The owner is kept as a
+    person too, while they are one, so the page can be theirs.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    case_id_was = models.UUIDField(db_index=True)
+    case_name = models.CharField(max_length=300)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="archived_copies",
+    )
+    owner_name = models.CharField(max_length=200, blank=True, default="")
+    # The day the Case was gone for good: what the copy's days count from.
+    gone_on = models.DateField()
+    how = models.CharField(max_length=10, default=OWNER)
+    gone_by_name = models.CharField(max_length=200, blank=True, default="")
+    made = models.DateTimeField()
+    made_by_name = models.CharField(max_length=200, blank=True, default="")
+    documents = models.IntegerField(default=0)
+    size_bytes = models.BigIntegerField(default=0)
+    downloaded_at = models.DateTimeField(null=True, blank=True)
+    downloaded_by_name = models.CharField(max_length=200, blank=True, default="")
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["gone_on", "case_name"]
+
+    @property
+    def path(self) -> Path:
+        """Under cases/, so every Backup has it with no change to the Backup;
+        the file sweeper passes over it, looking only at Recording folders."""
+        return archive_folder() / f"{self.pk}.zip"
+
+
+def archive_folder() -> Path:
+    return Path(settings.DATA_DIR) / "cases" / "archived"
 
 
 # What the page shows ---------------------------------------------------------
@@ -120,9 +180,11 @@ def for_page(case) -> dict:
     failed = latest if latest is not None and latest.state == FAILED else None
     told: dict = {
         "state": "none",
+        # What the Delete question says, when a copy is kept at deletion.
+        "keep_days": keep_days() if at_deletion_on() else 0,
     }
     if kept is not None:
-        by = kept.made_by.shown_name if kept.made_by else "someone who has left"
+        by = _maker(kept)
         told.update(
             state="behind" if kept.signature != signature(case) else "ready",
             made=f"{timezone.localtime(kept.finished):%d %b %Y %H:%M}",
@@ -134,15 +196,35 @@ def for_page(case) -> dict:
         )
     if failed is not None:
         told.update(failed=failed.reason or "It could not be made.")
+        if failed.then_delete:
+            # A Delete that stopped because its copy could not be made.
+            told["not_deleted"] = told["failed"]
         if kept is None:
             told["state"] = "failed"
     if making is not None:
         told.update(
             making=True,
+            deleting=making.then_delete,
             done=making.documents_done,
             total=making.documents_total,
         )
+    elif kept is not None and kept.then_delete:
+        # The copy is ready and the Case is going this moment: still a
+        # Delete's wait, so the page keeps asking until it is told the Case
+        # has gone.
+        told.update(
+            making=True,
+            deleting=True,
+            done=kept.documents_total,
+            total=kept.documents_total,
+        )
     return told
+
+
+def _maker(copy) -> str:
+    if copy.made_by_name:
+        return copy.made_by_name
+    return copy.made_by.shown_name if copy.made_by else "someone who has left"
 
 
 def signature(case) -> str:
@@ -193,18 +275,27 @@ def signature(case) -> str:
 # Starting and stopping -------------------------------------------------------
 
 
-def start(case, by, request=None) -> PreservationCopy:
-    """Queue a making, or hand back the one already under way."""
+def start(case, by, request=None, then_delete: bool = False) -> PreservationCopy:
+    """Queue a making, or hand back the one already under way. With
+    `then_delete` the Case is deleted once the copy is ready (chapter 2); a
+    Delete while one is being made waits for that one."""
     from core import deferring, tasks
 
     making = under_way(case)
     if making is not None:
+        if then_delete and not making.then_delete:
+            making.then_delete = True
+            making.made_by = by
+            making.save(update_fields=["then_delete", "made_by"])
         return making
+    # A Delete that stopped earlier is answered by this making.
+    case.preservation_copies.filter(state=FAILED).delete()
     copy = PreservationCopy.objects.create(
         case=case,
         made_by=by,
         documents_total=len(plan(case, by)),
         signature=signature(case),
+        then_delete=then_delete,
     )
     deferring.after_commit(
         lambda: tasks.make_preservation_copy.defer(copy_id=str(copy.pk))
@@ -216,6 +307,9 @@ def stop(case, by, request=None) -> bool:
     """End the making at its next batch; nothing is left behind."""
     making = under_way(case)
     if making is None:
+        # Keep the case: a Delete that stopped is no longer said on the page.
+        case.preservation_copies.filter(state=FAILED, then_delete=True).delete()
+        case.preservation_copies.filter(then_delete=True).update(then_delete=False)
         return False
     making.state = STOPPED
     making.finished = timezone.now()
@@ -241,6 +335,188 @@ def _audit(event: str, copy: PreservationCopy, actor=None, request=None, **detai
         request=request,
         **details,
     )
+
+
+# At deletion, and Archived (chapter 2) ----------------------------------------
+
+
+def at_deletion_on() -> bool:
+    from core import settings_store
+
+    return bool(settings_store.get("preservation_at_deletion"))
+
+
+def keep_days() -> int:
+    from core import settings_store
+
+    return int(settings_store.get("preservation_copy_days"))
+
+
+def usable(case) -> PreservationCopy | None:
+    """The Case's kept copy, when it is not behind the case and its file is
+    there: the one a deletion keeps as it is."""
+    copy = ready(case)
+    if copy is None or not copy.path.exists():
+        return None
+    return copy if copy.signature == signature(case) else None
+
+
+def make_now(case, by=None) -> PreservationCopy:
+    """A copy made here and now, not queued: by the nightly sweep before it
+    bins a Case, and at a wipe that finds none."""
+    copy = PreservationCopy.objects.create(
+        case=case,
+        made_by=by,
+        made_by_name="" if by is not None else BY_THE_APP,
+        documents_total=0,
+        signature=signature(case),
+    )
+    make(str(copy.pk))
+    copy.refresh_from_db()
+    return copy
+
+
+def for_the_bin(case) -> str:
+    """Before the Retention policy bins a Case: its copy, unless it has one
+    that is not behind. The Case is binned whatever this says."""
+    if not at_deletion_on():
+        return "none"
+    if usable(case) is not None:
+        return "kept"
+    try:
+        return "kept" if make_now(case).state == READY else "failed"
+    except Exception:
+        log.exception("the copy of %s could not be made for the bin", case.pk)
+        return "failed"
+
+
+def before_it_goes(case, how: str, actor=None, request=None, keep: bool = True) -> str:
+    """The Case is about to be gone for good: its copy to Archived first.
+
+    Says what became of the copy, for the Case's own audit row: kept, none
+    (the office has it off), declined (deleted without one, by the person's
+    second word), or failed. Never stops the deletion: whether a deletion
+    may go ahead without a copy is decided before this is reached.
+    """
+    if not at_deletion_on():
+        return "none"
+    if not keep:
+        return "declined"
+    try:
+        copy = usable(case) or make_now(case, by=actor)
+        if copy.state != READY:
+            return "failed"
+        archive(copy, how, actor, request)
+        return "kept"
+    except Exception:
+        log.exception("the copy of %s could not be archived", case.pk)
+        return "failed"
+
+
+def archive(copy: PreservationCopy, how: str, actor=None, request=None) -> ArchivedCopy:
+    """Move a Case's copy out of the Case's folder, which is about to go."""
+    from core import audit
+
+    case = copy.case
+    kept = ArchivedCopy(
+        case_id_was=case.pk,
+        case_name=case.name,
+        owner=case.owner,
+        owner_name=case.owner.shown_name,
+        gone_on=timezone.localdate(),
+        how=how,
+        gone_by_name=actor.shown_name if actor is not None else "",
+        made=copy.finished or timezone.now(),
+        made_by_name=_maker(copy),
+        documents=copy.documents_total,
+        size_bytes=copy.size_bytes,
+        downloaded_at=copy.downloaded_at,
+        downloaded_by_name=copy.downloaded_by_name,
+    )
+    kept.path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(copy.path), str(kept.path))
+    kept.save()
+    copy.delete()
+    audit.write(
+        audit.Category.CASES,
+        "preservation copy archived",
+        actor=actor,
+        system=None if actor is not None else "retention",
+        affected_user=(
+            case.owner if actor is None or actor.pk != case.owner_id else None
+        ),
+        object_type="case",
+        object_id=case.pk,
+        object_label=case.name,
+        request=request,
+        cause=how,
+        days=keep_days(),
+    )
+    return kept
+
+
+def days_left(kept: ArchivedCopy, now=None) -> int:
+    """Whole days until the sweep removes it, the Off spells left out as the
+    Recycle bin leaves them out. Zero or less means tonight."""
+    from core import retention
+
+    now = now or timezone.now()
+    since = retention._at_midnight(kept.gone_on)
+    waited = retention.whole_days(since, now) - retention.days_off_between(since, now)
+    return keep_days() - max(0, waited)
+
+
+def archived_for(user, owner: str = ""):
+    """The copies this person sees: their own, or as an Admin everyone's."""
+    if getattr(user, "is_admin", False):
+        rows = ArchivedCopy.objects.all()
+        return rows.filter(owner__username=owner) if owner else rows
+    return ArchivedCopy.objects.filter(owner=user)
+
+
+def waiting_count(user) -> int:
+    """Their own copies not yet downloaded: the number on the Archived tab."""
+    return ArchivedCopy.objects.filter(owner=user, downloaded_at__isnull=True).count()
+
+
+def remove(kept: ArchivedCopy, cause: str, actor=None, request=None) -> None:
+    """Out of Archived for good: by its days, its owner, or an Admin."""
+    from core import audit
+
+    kept.path.unlink(missing_ok=True)
+    audit.write(
+        audit.Category.CASES,
+        "preservation copy removed",
+        actor=actor,
+        system=None if actor is not None else "retention",
+        affected_user=(
+            kept.owner if actor is None or actor.pk != kept.owner_id else None
+        ),
+        object_type="case",
+        object_id=kept.case_id_was,
+        object_label=kept.case_name,
+        request=request,
+        cause=cause,
+        downloaded=kept.downloaded_at is not None,
+    )
+    kept.delete()
+
+
+def sweep_archived(now=None) -> int:
+    """The nightly sweep's part: every copy past its days, downloaded or not."""
+    gone = 0
+    for kept in list(ArchivedCopy.objects.all()):
+        if days_left(kept, now) <= 0:
+            remove(kept, "its days")
+            gone += 1
+    return gone
+
+
+def downloaded(copy, by) -> None:
+    """Marked on a Case's own copy and on an archived one alike."""
+    copy.downloaded_at = timezone.now()
+    copy.downloaded_by_name = by.shown_name
+    copy.save(update_fields=["downloaded_at", "downloaded_by_name"])
 
 
 # The plan: what goes in, in order --------------------------------------------
@@ -277,8 +553,9 @@ def plan(case, by) -> list[Item]:
     from core.comparison import Comparison
     from core.notes import MomentNote
 
-    username = by.username if by is not None else ""
-    shown = by.shown_name if by is not None else ""
+    # A copy the app makes by itself, for the Retention policy, is by the app.
+    username = by.username if by is not None else BY_THE_APP
+    shown = by.shown_name if by is not None else BY_THE_APP
     taken: set[str] = set()
 
     def named(folder: str, title: str) -> str:
@@ -481,6 +758,18 @@ def make(copy_id: str) -> None:
             documents=copy.documents_total,
             megabytes=round(copy.size_bytes / 1024 / 1024, 1),
         )
+        if copy.then_delete and copy.made_by is not None:
+            # The Delete this making was begun by (chapter 2): the copy is
+            # there, so the Case goes, and the copy to Archived with it.
+            from core import cases
+
+            try:
+                cases.delete(case, actor=copy.made_by)
+            except Exception:
+                # The copy is made and kept; the Case stays, and the page
+                # stops saying it is being deleted.
+                log.exception("the case %s was not deleted after its copy", case.pk)
+                PreservationCopy.objects.filter(pk=copy.pk).update(then_delete=False)
     except Failed as error:
         _fail(copy, str(error))
     except Exception:

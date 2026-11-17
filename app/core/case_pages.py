@@ -165,6 +165,7 @@ def cases_page(request: HttpRequest) -> HttpResponse:
             "expiring": expiring,
             "owner_deactivated": owner_deactivated,
             "binned": binned,
+            "archived_waiting": preservation.waiting_count(request.user),
         },
     )
 
@@ -224,6 +225,8 @@ def _bin_row(case: Case) -> dict:
         "size": uploads.as_size(case.disk_bytes()),
         "days_left": max(0, retention.bin_days_left(case)),
         "owner_deactivated": case.owner.deactivated_at is not None,
+        # The copy made when the clock binned it (Phase 14 chapter 2).
+        "copy": preservation.ready(case),
     }
 
 
@@ -1167,16 +1170,34 @@ def rename_case(request: HttpRequest, case_id) -> JsonResponse:
 @login_required
 @require_POST
 def delete_case(request: HttpRequest, case_id) -> JsonResponse:
-    """Final. There is no recycle bin for a person's own delete."""
+    """Final. There is no recycle bin for a person's own delete.
+
+    The Case's Preservation copy is kept in Archived first (Phase 14 chapter
+    2). When the Case has one that is not behind, the Case goes now; when it
+    has not, the copy is made in the background and the Case goes when it is
+    ready, and the answer says so. `without_copy` is the person's second
+    word, after a copy that could not be made.
+    """
     _on_or_404()
     case = _case_they_run(request, case_id)
-    recordings, gigabytes = cases.delete(case, actor=request.user, request=request)
+    without = request.POST.get("without_copy") == "1"
+    keeps = preservation.at_deletion_on() and not without
+    if keeps and preservation.usable(case) is None:
+        preservation.start(case, request.user, request, then_delete=True)
+        return JsonResponse({"ok": True, "making": True})
+    name = case.name
+    recordings, gigabytes = cases.delete(
+        case, actor=request.user, request=request, keep_copy=not without
+    )
     return JsonResponse(
         {
             "ok": True,
             "recordings": recordings,
             "gigabytes": gigabytes,
             "where": "/cases",
+            "name": name,
+            # Said on the Cases page: where the copy is, and for how long.
+            "kept_days": preservation.keep_days() if keeps else 0,
         }
     )
 
@@ -1265,6 +1286,8 @@ def recycle_bin(request: HttpRequest) -> HttpResponse:
             # The strip above the page: the bin is the third view of Cases.
             "who": "bin",
             "binned": len(rows),
+            "archived_waiting": preservation.waiting_count(request.user),
+            "copies_kept": preservation.at_deletion_on(),
             "mine": sum(1 for one in rows if one["case"].owner_id == request.user.pk),
         },
     )

@@ -13,13 +13,31 @@
   {% elif p.state == "failed" %}<span class="pill small warn">could not be made</span>
   {% else %}<span class="pill small">none made yet</span>{% endif %}
 </div>
-{% if p.making %}
+{% if p.making and p.deleting %}
+  {% comment %}A Delete's wait (chapter 2): the case goes when its copy is ready.{% endcomment %}
+  <p class="small deleting"><b>Deleting this case.</b> Its Preservation copy is being made first.</p>
+  <div class="row gap6 making">
+    <span class="small"><b>{{ p.done }} of {{ p.total }}</b> document{{ p.total|pluralize }}</span>
+    <progress max="{{ p.total|default:1 }}" value="{{ p.done }}">{{ p.done }} of {{ p.total }}</progress>
+    <button type="button" class="small" data-act="stop" title="Ends the making and keeps the case as it is">Stop, and keep the case</button>
+  </div>
+  <p class="muted small">You can leave this page. The case is deleted when its copy is ready, and the copy will be in Archived.</p>
+{% elif p.making %}
   <div class="row gap6 making">
     <span class="small"><b>{{ p.done }} of {{ p.total }}</b> document{{ p.total|pluralize }}</span>
     <progress max="{{ p.total|default:1 }}" value="{{ p.done }}">{{ p.done }} of {{ p.total }}</progress>
     <button type="button" class="small ghost" data-act="stop" title="Ends it at the next few documents and leaves nothing behind">Stop</button>
   </div>
   <p class="muted small">You can leave this page. It will be here when it is done.</p>
+{% elif p.not_deleted %}
+  {% comment %}A Delete that stopped (chapter 2): the case is as it was, and the owner says what next.{% endcomment %}
+  <p class="small problem"><b>{{ case.name }} was not deleted.</b> Its Preservation copy could not be made: {{ p.not_deleted }}</p>
+  <p class="muted small">The case is as it was. You can try again, or delete it without a copy.</p>
+  <div class="row gap6 wrap acts">
+    <button type="button" class="small primary" data-act="delete-again">Try again</button>
+    <button type="button" class="small" data-act="stop">Keep the case</button>
+    <button type="button" class="small ghost danger" data-act="delete-without">Delete without a copy</button>
+  </div>
 {% else %}
   {% if p.state == "none" or p.state == "failed" %}
     <p class="muted small">Everything made in this case as one zip of Word documents, to save to the client's file of record: the transcripts with their summaries and chats, the case chats, the notes, the chronology, the incidents, and a record of the clips. Recordings and documents that were uploaded are listed, not included.</p>

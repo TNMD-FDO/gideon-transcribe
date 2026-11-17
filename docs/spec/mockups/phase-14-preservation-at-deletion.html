@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Preservation copy at deletion, and Archived</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5;
+  --ok: #2f7d4f; --ok-soft: #e2f1e7; --warn: #9a5b06; --warn-soft: #fbefd9; --danger: #b3261e; --danger-soft: #fbe9e7;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .tiny { font-size: var(--t-label); }
+.wrap { max-width: 1700px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p, .fig .why { margin: 6px 0; color: var(--muted); max-width: 105ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); max-width: 115ch; }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 4px; } .brief li b { display: inline; color: var(--text); }
+.fig { margin-top: 44px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig h3 { font-size: var(--t-small); margin: 0 0 6px; }
+.fig .why { margin-bottom: 12px; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); overflow-x: auto; box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 16px; }
+.note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--t-small); color: var(--muted); max-width: 115ch; }
+.note b { color: var(--text); }
+.pair { display: flex; gap: 16px; flex-wrap: wrap; }
+.pair img { width: 760px; border: 1px solid var(--line); border-radius: var(--radius); display: block; }
+.btn { display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font: inherit; font-size: var(--t-small); font-weight: 600; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.small { height: 28px; font-weight: 500; }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); }
+.btn.ghost.red { color: var(--danger); }
+.dialogs { display: grid; grid-template-columns: repeat(2, 470px); gap: 22px 26px; }
+.cap { font-size: var(--t-small); margin-bottom: 6px; } .cap b { display: block; }
+.dlg { background: var(--surface); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 22px 24px 18px; width: 440px; }
+.dlg h4 { margin: 0 0 10px; font-size: 17px; }
+.dlg p { margin: 0 0 10px; font-size: 14px; color: #3d4652; }
+.dlg p.new { color: var(--text); background: var(--ok-soft); border-left: 3px solid var(--ok); padding: 6px 10px; }
+.dlg p.bad { color: var(--danger); }
+.dlg .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.meter { height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; margin: 4px 0 10px; }
+.meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+.toast { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius); background: var(--text); color: #fff; font-size: var(--t-small); }
+.toast a { color: #9fd3ee; }
+.page { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px 18px; width: 1500px; }
+.page h4 { font-size: 20px; margin: 0 0 10px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.tabs span { padding: 8px 14px; font-weight: 600; font-size: var(--t-small); color: var(--muted); border: 1px solid transparent; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+.tabs span.on { color: var(--text); border-color: var(--line); background: var(--surface); margin-bottom: -1px; }
+.tabs span.fresh { color: var(--ok); }
+.count { display: inline-flex; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--warn-soft); color: var(--warn); font-size: 11px; align-items: center; justify-content: center; margin-left: 4px; }
+table.t { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
+table.t th { text-align: left; font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+table.t td { padding: 8px 10px; border-bottom: 1px solid var(--surface-2); vertical-align: middle; }
+td.newcol, th.newcol { background: #f6fbf8; }
+.pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--surface-2); font-size: var(--t-label); white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.setting { display: grid; grid-template-columns: 1fr 240px; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--surface-2); width: 1000px; }
+.setting b { font-size: var(--t-body); } .setting p { margin: 2px 0 0; font-size: var(--t-small); color: var(--muted); }
+.setting .v { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); }
+.switch { width: 38px; height: 20px; border-radius: 10px; background: var(--accent); position: relative; } .switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.num { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); font-family: var(--mono); }
+.lines { width: 1200px; }
+.tl { display: grid; grid-template-columns: 250px 1fr; gap: 6px 14px; align-items: center; margin-bottom: 10px; }
+.tl .who { font-size: var(--t-small); } .tl .who b { display: block; }
+.track { position: relative; height: 34px; background: repeating-linear-gradient(90deg, transparent 0 calc(100% / 9 - 1px), var(--line) calc(100% / 9 - 1px) calc(100% / 9)); border: 1px solid var(--line); border-radius: var(--radius); }
+.seg { position: absolute; top: 5px; height: 22px; border-radius: 4px; font-size: var(--t-label); color: #fff; display: flex; align-items: center; padding: 0 8px; white-space: nowrap; overflow: hidden; }
+.seg.live { background: #8894a1; } .seg.bin { background: var(--warn); } .seg.arch { background: var(--ok); } .seg.none { background: none; color: var(--danger); border: 1px dashed var(--danger); }
+.axis { display: grid; grid-template-columns: 250px 1fr; gap: 14px; font-size: var(--t-label); color: var(--muted); }
+.axis div:last-child { display: flex; justify-content: space-between; }
+table.picks { border-collapse: collapse; margin-top: 10px; background: var(--surface); border: 1px solid var(--line); max-width: 1500px; }
+table.picks th, table.picks td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--surface-2); font-size: var(--t-small); }
+table.picks th { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table.picks td:first-child { font-weight: 600; white-space: nowrap; }
+.rec { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--ok-soft); color: var(--ok); font-size: var(--t-label); font-weight: 600; margin-left: 4px; }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>The Preservation copy at deletion, and Archived</h1>
+    <p>The second of the plan's three releases. A Preservation copy is made by itself when a case is deleted, by its owner or by the retention clock, and is kept for a number of days an Admin sets, in a new place called Archived. What you have already decided is drawn as decided; what is still open is in the picks. The email to the owner is the release after this one. Every name below is the local demo's made-up case.</p>
+    <div class="brief">
+      <b>What this page holds</b>
+      <ul>
+        <li>The two pictures of the app as it stood are left out of this copy: no picture of a running app is kept in the repository.</li>
+        <li>Figure A: the Delete dialog in four moments. Figure B: the Cases page with Archived beside the Recycle bin. Figure C: the Admin's two settings. Figure D: how long a copy lives, on a line of days.</li>
+        <li>Six picks at the foot, each with a recommendation. Nothing is built until they are answered.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure A: Delete case, in four moments</h2>
+    <p class="why">The case is deleted exactly as today. The one new thing is that its Preservation copy is made first and outlives it. The green line is the only new sentence in the dialog.</p>
+    <div class="frame"><div class="dialogs">
+      <div><div class="cap"><b>1. The question</b><span class="muted">Says where the copy will be and for how long.</span></div>
+        <div class="dlg"><h4>Delete the case Harbour Street stop?</h4>
+          <p>This removes 8 recordings, 5 transcripts, 4 clips, and 3 case chats, 3 MB in all.</p>
+          <p>This is final. It does not go to the Recycle bin; there is no way to get the case back.</p>
+          <p class="new">A Preservation copy is made first and kept in Archived for 30 days, for you to save to the client's file of record.</p>
+          <div class="acts"><span class="btn">Keep it</span><span class="btn danger">Delete case</span></div></div></div>
+      <div><div class="cap"><b>2. While the copy is made</b><span class="muted">Seconds for most cases. The person may leave; it carries on, and the case is deleted only once the copy exists.</span></div>
+        <div class="dlg"><h4>Deleting Harbour Street stop</h4>
+          <p>Making its Preservation copy first: <b>16 of 30 documents</b></p>
+          <div class="meter"><i style="width: 53%"></i></div>
+          <p class="muted" style="font-size: 13px">You can leave this page. The case is deleted when its copy is ready, and the copy will be in Archived.</p>
+          <div class="acts"><span class="btn">Stop, and keep the case</span></div></div></div>
+      <div><div class="cap"><b>3. Done</b><span class="muted">Back on the Cases page, with the way to the copy.</span></div>
+        <div style="padding: 30px 0"><span class="toast">Harbour Street stop is deleted. Its Preservation copy is in Archived for 30 days. <a>Open Archived</a></span></div></div>
+      <div><div class="cap"><b>4. If the copy cannot be made</b><span class="muted">The case is not deleted without the owner saying so a second time.</span></div>
+        <div class="dlg"><h4>Harbour Street stop was not deleted</h4>
+          <p class="bad">Its Preservation copy could not be made: Chronology could not be written.</p>
+          <p>The case is as it was. You can try again, or delete it without a copy.</p>
+          <div class="acts"><span class="btn ghost red">Delete without a copy</span><span class="btn">Keep the case</span><span class="btn primary">Try again</span></div></div></div>
+    </div></div>
+    <div class="note"><b>When the case already has a copy that is not behind,</b> that copy is used as it is and there is no wait. <b>The other ways a case is wiped</b> (Delete permanently and Empty recycle bin on the Recycle bin page, and an Admin's Delete data for someone who has left) keep the copy the same way: it goes to Archived.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure B: Archived, beside the Recycle bin</h2>
+    <p class="why">A fourth tab on the Cases page. The Recycle bin holds whole cases the clock deleted, which can be restored; Archived holds only the copies of cases that are gone for good. The count on the tab is the copies not yet downloaded.</p>
+    <div class="frame">
+      <div class="page">
+        <h4>Recycle bin</h4>
+        <div class="tabs"><span>Mine</span><span>Everyone's</span><span class="on">Recycle bin</span><span>Archived <i class="count">2</i></span></div>
+        <p class="small muted" style="margin: 0 0 10px">Cases the retention policy has deleted wait here for 30 days, then are wiped for good. Restore puts one back exactly as it was. Each has its Preservation copy here to download meanwhile.</p>
+        <table class="t">
+          <tr><th>Name</th><th>Recordings</th><th>Size</th><th>Deleted on</th><th>Days left</th><th class="newcol">Preservation copy</th><th></th></tr>
+          <tr><td><b>Dockside interview</b></td><td>3</td><td>1.2 GB</td><td>9 Nov 2026</td><td>22</td><td class="newcol"><span class="pill warn">not yet downloaded</span> <span class="btn small">Download</span></td><td><span class="btn small">Restore</span> <span class="btn small ghost red">Delete permanently</span></td></tr>
+          <tr><td><b>Mill Lane calls</b></td><td>12</td><td>640 MB</td><td>2 Nov 2026</td><td>15</td><td class="newcol"><span class="pill ok">downloaded 4 Nov</span> <span class="btn small">Download</span></td><td><span class="btn small">Restore</span> <span class="btn small ghost red">Delete permanently</span></td></tr>
+        </table>
+      </div>
+      <div style="height: 16px"></div>
+      <div class="page">
+        <h4>Archived</h4>
+        <div class="tabs"><span>Mine</span><span>Everyone's</span><span>Recycle bin</span><span class="on">Archived <i class="count">2</i></span></div>
+        <p class="small muted" style="margin: 0 0 10px">The Preservation copies of cases that are gone for good. Each is kept for 30 days from the day its case was deleted, then removed. Download it and save it to the client's file of record. The case itself cannot be brought back from here.</p>
+        <table class="t">
+          <tr><th>Case</th><th>Deleted</th><th>How</th><th>The copy</th><th>Kept until</th><th>Downloaded</th><th></th></tr>
+          <tr><td><b>Harbour Street stop</b></td><td>17 Nov 2026</td><td>by you</td><td>30 documents · 2 MB<br><span class="muted tiny">made 17 Nov 2026 18:02</span></td><td>17 Dec 2026 · 30 days left</td><td><span class="pill warn">not yet</span></td><td><span class="btn small primary">Download</span> <span class="btn small ghost red">Remove now</span></td></tr>
+          <tr><td><b>Quay Road stop</b></td><td>1 Nov 2026</td><td>by the retention policy, wiped 1 Dec</td><td>41 documents · 14 MB<br><span class="muted tiny">made 1 Nov 2026 03:30</span></td><td>31 Dec 2026 · 44 days left</td><td><span class="pill warn">not yet</span></td><td><span class="btn small primary">Download</span> <span class="btn small ghost red">Remove now</span></td></tr>
+          <tr><td><b>Ferry terminal calls</b></td><td>28 Oct 2026</td><td>by you</td><td>9 documents · 3 MB<br><span class="muted tiny">made 26 Oct 2026 14:10, before the case was deleted</span></td><td>27 Nov 2026 · 10 days left</td><td><span class="pill ok">3 Nov, by you</span></td><td><span class="btn small">Download</span> <span class="btn small ghost red">Remove now</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="note"><b>When the copy was made</b> is on every row, under its size: usually the day the case was deleted, and earlier when the case already had a copy that was up to date. <b>Who sees it:</b> the owner sees their own; an Admin sees everyone's, with the owner named and a filter, as on the Recycle bin, and an Admin's download is in the audit log. A person a case was shared with does not see its copy here, as they do not see the Recycle bin. <b>Restoring</b> a case from the Recycle bin keeps its copy with it as the case's own.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure C: the Admin's settings</h2>
+    <p class="why">On the Admin panel's Cases page, under the Recycle bin's days. The number is the one you asked for; the switch is for other offices that may not want anything to outlive a Delete (pick 6).</p>
+    <div class="frame">
+      <div class="setting"><div><b>Preservation copy at deletion</b><p>When a Case is deleted, by its owner, by the Retention policy or by an Admin, its Preservation copy is made first and kept in Archived.</p><p>When changed: the next deletion. Off: nothing is made or kept at deletion, and copies already in Archived stay their days.</p></div><div class="v"><span class="switch"></span> On <span class="muted">Default: On</span></div></div>
+      <div class="setting"><div><b>Preservation copy kept</b><p>The days a deleted Case's Preservation copy is kept, counted from the day the Case was deleted. A Case in the Recycle bin always keeps its copy while it waits there.</p><p>When changed: the next sweep. A copy already past the new number is removed that night.</p></div><div class="v"><span class="num">30</span> days <span class="muted">1 to 365 · Default: 30</span></div></div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure D: how long a copy lives</h2>
+    <p class="why">Each mark is 10 days. Grey is the case in use, amber the case in the Recycle bin (its copy on its row), green the copy alone in Archived.</p>
+    <div class="frame"><div class="lines">
+      <div class="tl"><div class="who"><b>The owner deletes it</b><span class="muted">Copy kept: 30</span></div><div class="track"><span class="seg live" style="left: 0; width: 22%">the case</span><span class="seg arch" style="left: 22.2%; width: 33.3%">Archived, 30 days</span></div></div>
+      <div class="tl"><div class="who"><b>The clock deletes it</b><span class="muted">Recycle bin: 30 · Copy kept: 30</span></div><div class="track"><span class="seg live" style="left: 0; width: 22%">the case</span><span class="seg bin" style="left: 22.2%; width: 33.3%">Recycle bin, copy on its row</span><span class="seg none" style="left: 55.7%; width: 22%">wiped: nothing in Archived</span></div></div>
+      <div class="tl"><div class="who"><b>The clock deletes it</b><span class="muted">Recycle bin: 30 · Copy kept: 60</span></div><div class="track"><span class="seg live" style="left: 0; width: 22%">the case</span><span class="seg bin" style="left: 22.2%; width: 33.3%">Recycle bin, copy on its row</span><span class="seg arch" style="left: 55.7%; width: 33.3%">Archived, 30 more days</span></div></div>
+      <div class="axis"><div></div><div><span>day 0</span><span>10</span><span>deleted</span><span>30</span><span>40</span><span>wiped</span><span>60</span><span>70</span><span>80</span><span>90</span></div></div>
+    </div></div>
+    <div class="note"><b>The middle line is what you described, and it has a consequence worth seeing:</b> with both numbers at 30, a case the clock deletes never reaches Archived. Its copy is on its Recycle bin row for 30 days and is gone the night the case is wiped. Pick 3 is whether that is what you want.</div>
+  </div>
+
+  <div class="fig">
+    <h2>The picks</h2>
+    <p class="why">One answer to each, please; my recommendation is marked.</p>
+    <table class="picks">
+      <tr><th>Pick</th><th>The choices</th><th>Why I recommend it</th></tr>
+      <tr><td>1. While the copy is made at Delete</td><td><b>1a</b> The dialog counts the documents; the person may leave and the case is deleted when its copy is ready, Figure A moment 2 <span class="rec">recommended</span><br><b>1b</b> The person must stay on the dialog until it is done</td><td>Most cases take seconds either way. The largest on the server would hold 193 documents, and nobody should have to sit and watch that.</td></tr>
+      <tr><td>2. If the copy cannot be made</td><td><b>2a</b> The case is not deleted; the dialog names the document and offers Try again and Delete without a copy, Figure A moment 4 <span class="rec">recommended</span><br><b>2b</b> The case is never deleted without a copy<br><b>2c</b> The case is deleted anyway and the failure only logged</td><td>You said the owner is in charge and the app must not hold a deletion back. 2a keeps both: nothing is lost by accident, and the owner can still delete.</td></tr>
+      <tr><td>3. A case the clock deletes</td><td><b>3a</b> The copy's days count from the day the case went to the Recycle bin, as you described: with both at 30 it never reaches Archived, Figure D middle line<br><b>3b</b> The copy's days count from the day the case is wiped, so every copy has its full days in Archived <span class="rec">recommended</span></td><td>A clock-deleted case is the one nobody was watching, so its owner is the least likely to have downloaded the copy while it sat in the bin. 3b gives that copy 30 days after the case is truly gone. It is a change from what you said, so it is yours to choose.</td></tr>
+      <tr><td>4. Who sees a copy in Archived</td><td><b>4a</b> Its case's owner, and Admins (audited) <span class="rec">recommended</span><br><b>4b</b> Also everyone the case was shared with</td><td>The same rule as the Recycle bin, and the copy is the owner's to save.</td></tr>
+      <tr><td>5. Removing a copy early</td><td><b>5a</b> The owner (and an Admin) may press Remove now, behind a confirmation, audited <span class="rec">recommended</span><br><b>5b</b> Only the nightly sweep removes a copy</td><td>Once it is saved to the client's file, some will want privileged work off the server at once. It is their copy to remove.</td></tr>
+      <tr><td>6. The switch</td><td><b>6a</b> A switch and the number of days, the switch On by default, Figure C <span class="rec">recommended</span><br><b>6b</b> The number of days alone; a copy is always made</td><td>For your office it is On either way. The app is also for other offices, and one of them may hold that Delete must leave nothing behind.</td></tr>
+    </table>
+    <div class="note"><b>Said so it is not a surprise:</b> a copy in Archived is a small file in the app's own data folder and is in every Backup; it counts toward nobody's room. If the app cannot make a copy during the nightly sweep, the case still goes to the Recycle bin (it is all still there) and its row offers Make the copy. The reminders in the nightly email and the message to the owner are the next release, not this one. This release changes what "Delete is final" means, so it comes with a short decision record.</div>
+  </div>
+</div>
+</html>

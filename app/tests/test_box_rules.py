@@ -211,6 +211,8 @@ def test_the_ledger_answers_the_directions_by_number():
     # The rules version moves at every merge; the entries below are ours.
     assert "**Rules version:** 2026-11-12.2" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.245.0 (one release since the v1.244.0 entry" in ours
+    assert "a folder of our own, `cases/archived`, inside our existing" in ours
     assert "at v1.244.0 (two releases since the v1.242.0 entry" in ours
     assert "a zip of Word documents of a case's work" in ours
     assert "at v1.242.0 (four releases since the v1.239.0 entry" in ours

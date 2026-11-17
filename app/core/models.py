@@ -315,7 +315,7 @@ from core.jobs import Job, Run, Segment, Transcript  # noqa: E402, F401
 from core.mail import MailStatus  # noqa: E402, F401
 from core.notes import MomentNote  # noqa: E402, F401
 from core.people import Person  # noqa: E402, F401
-from core.preservation import PreservationCopy  # noqa: E402, F401
+from core.preservation import ArchivedCopy, PreservationCopy  # noqa: E402, F401
 from core.proposals import Proposal  # noqa: E402, F401
 from core.quota_raises import QuotaRaise  # noqa: E402, F401
 from core.recordings import Batch, Recording, Side  # noqa: E402, F401

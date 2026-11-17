@@ -1,7 +1,8 @@
 {% comment %}
-  The strip above the Cases page and the Recycle bin: one page in the reader's
-  eyes, three views. Everyone's is an Admin's alone. `who` is mine, everyone,
-  or bin.
+  The strip above the Cases page, the Recycle bin and Archived: one page in
+  the reader's eyes, four views. Everyone's is an Admin's alone. `who` is
+  mine, everyone, bin, or archived. Archived (Phase 14 chapter 2) carries the
+  number of the reader's own copies not yet downloaded.
 {% endcomment %}
 <div class="tabs m0 mb12">
   <a href="{% url 'cases' %}" class="tab{% if who == 'mine' %} on{% endif %}">Mine</a>
@@ -9,4 +10,5 @@
     <a href="{% url 'cases' %}?who=everyone" class="tab{% if who == 'everyone' %} on{% endif %}">Everyone's</a>
   {% endif %}
   <a href="{% url 'recycle-bin' %}" class="tab{% if who == 'bin' %} on{% endif %}">Recycle bin{% if binned %} ({{ binned }}){% endif %}</a>
+  <a href="{% url 'archived' %}" class="tab{% if who == 'archived' %} on{% endif %}" title="The Preservation copies of cases that are gone for good">Archived{% if archived_waiting %} ({{ archived_waiting }}){% endif %}</a>
 </div>

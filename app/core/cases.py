@@ -520,12 +520,17 @@ def _remove_everything(case: Case, actor, request, recording_cause: str):
     return len(recordings), gigabytes
 
 
-def delete(case: Case, actor, request=None) -> tuple[int, int]:
+def delete(case: Case, actor, request=None, keep_copy: bool = True) -> tuple[int, int]:
     """A person's own Delete of a Case. Final: there is no way back.
 
-    The Recycle bin is for what the clock takes, never for this.
+    The Recycle bin is for what the clock takes, never for this. The Case's
+    Preservation copy goes to Archived first (Phase 14 chapter 2, ADR 0030),
+    unless the office has that off or the person deleted without one.
     """
+    from core import preservation
+
     cause = WIPED_BY_OWNER if case.owner_id == actor.pk else WIPED_BY_ADMIN
+    copy = preservation.before_it_goes(case, cause, actor, request, keep=keep_copy)
     count, gigabytes = _remove_everything(case, actor, request, cause)
     audit.write(
         CATEGORY,
@@ -538,6 +543,7 @@ def delete(case: Case, actor, request=None) -> tuple[int, int]:
         request=request,
         recordings=count,
         gigabytes=gigabytes,
+        copy=copy,
     )
     case.delete()
     return count, gigabytes
@@ -600,6 +606,12 @@ def wipe(case: Case, cause: str, actor=None, request=None) -> tuple[int, float]:
     wiping a leaver's binned Cases from the Users page. The per-Recording rows
     say "retention" whichever it was, as the chapter fixes.
     """
+    from core import preservation
+
+    # The copy to Archived first (Phase 14 chapter 2): the one made when the
+    # clock binned the Case, or one made now when there is none.
+    how = preservation.RETENTION if cause == WIPED_BY_THE_BIN else cause
+    copy = preservation.before_it_goes(case, how, actor, request)
     count, gigabytes = _remove_everything(case, actor, request, "retention")
     audit.write(
         CATEGORY,
@@ -616,6 +628,7 @@ def wipe(case: Case, cause: str, actor=None, request=None) -> tuple[int, float]:
         cause=cause,
         recordings=count,
         gigabytes=gigabytes,
+        copy=copy,
     )
     case.delete()
     return count, gigabytes

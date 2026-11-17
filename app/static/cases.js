@@ -228,9 +228,14 @@
             (counts.chats ? "" : "and ") + plural(counts.clips, "clip") +
             (counts.chats ? ", and " + plural(counts.chats, "case chat") : "") +
             ", " + counts.size + " in all.";
+          // The Preservation copy kept at deletion (Phase 14 chapter 2,
+          // v1.245.0): the question says where it will be and for how long.
+          var days = parseInt(remove.dataset.copyDays || "0", 10);
+          var lines = [taking, "This is final. It does not go to the Recycle bin, which is for what the retention clock takes; there is no way to get the case back."];
+          if (days) { lines.push("A Preservation copy is made first and kept in Archived for " + plural(days, "day") + ", for you to save to the client's file of record."); }
           UI.confirm({
             title: "Delete the case " + counts.name + "?",
-            body: [taking, "This is final. It does not go to the Recycle bin, which is for what the retention clock takes; there is no way to get it back."],
+            body: lines,
             ok: "Delete case",
             cancel: "Keep it",
             danger: true
@@ -243,7 +248,18 @@
                 UI.toast("That case could not be deleted.", { problem: true, icon: "warning" });
                 return;
               }
-              window.location = answer.said.where;
+              if (answer.said.making) {
+                // Its copy is being made first: the Details tab's part
+                // counts it, and the case goes when the copy is ready.
+                remove.disabled = false;
+                var part = document.getElementById("preservation");
+                if (part) { part.dispatchEvent(new CustomEvent("preservation:watch")); }
+                UI.toast("Its Preservation copy is being made first. The case is deleted when the copy is ready.", { icon: "info" });
+                return;
+              }
+              window.location = answer.said.kept_days
+                ? "/cases?gone=" + encodeURIComponent(answer.said.name) + "&days=" + answer.said.kept_days
+                : answer.said.where;
             });
           });
         });
@@ -555,6 +571,55 @@
             });
           });
         });
+    }
+  });
+
+  // The Cases page says what a Delete left (Phase 14 chapter 2): the case is
+  // gone and its Preservation copy is in Archived, for so many days.
+  (function () {
+    var asked = new URLSearchParams(window.location.search);
+    if (!asked.get("gone")) { return; }
+    var days = parseInt(asked.get("days") || "0", 10);
+    UI.toast(asked.get("gone") + " is deleted." + (days ? " Its Preservation copy is in Archived for " + plural(days, "day") + "." : ""), { icon: "info" });
+    asked.delete("gone"); asked.delete("days");
+    var rest = asked.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? "?" + rest : ""));
+  })();
+
+  // The Recycle bin's Make the copy, and Archived's Remove now (chapter 2).
+  document.addEventListener("click", function (event) {
+    var make = event.target.closest(".make-copy");
+    if (make) {
+      make.disabled = true;
+      make.textContent = "Making the copy...";
+      post("/cases/bin/" + make.dataset.case + "/preservation/make").then(function (answer) {
+        if (answer.ok) { window.location.reload(); return; }
+        make.disabled = false;
+        make.textContent = "Make the copy";
+        UI.toast("The copy could not be made. " + (answer.said.error || ""), { problem: true, icon: "warning" });
+      });
+      return;
+    }
+    var gone = event.target.closest(".remove-copy");
+    if (gone) {
+      UI.confirm({
+        title: "Remove the Preservation copy of " + gone.dataset.name + " now?",
+        body: [
+          gone.dataset.downloaded ? "It has been downloaded." : "It has never been downloaded.",
+          "The case is gone already; this removes the last of its work from the app. Nothing can bring it back."
+        ],
+        ok: "Remove now",
+        cancel: "Keep it",
+        danger: true
+      }).then(function (yes) {
+        if (!yes) { return; }
+        gone.disabled = true;
+        post("/cases/archived/" + gone.dataset.copy + "/remove").then(function (answer) {
+          if (answer.ok) { window.location.reload(); return; }
+          gone.disabled = false;
+          UI.toast("That copy could not be removed.", { problem: true, icon: "warning" });
+        });
+      });
     }
   });
 

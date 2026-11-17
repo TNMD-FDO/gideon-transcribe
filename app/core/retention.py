@@ -24,7 +24,7 @@ from datetime import date, datetime, time
 
 from django.utils import timezone
 
-from core import audit, cases, settings_store
+from core import audit, cases, preservation, settings_store
 from core.cases import Case, OffSpell
 
 log = logging.getLogger("transcribe.retention")
@@ -143,6 +143,9 @@ def sweep(now: datetime | None = None) -> dict | None:
     for case in Case.objects.filter(deleted_on__isnull=True).select_related("owner"):
         left = days_left(case, now)
         if left <= 0:
+            # Its Preservation copy first (Phase 14 chapter 2); the Case is
+            # binned whether or not one could be made.
+            preservation.for_the_bin(case)
             cases.put_in_the_bin(case, on=today)
             deleted += 1
             continue
@@ -169,11 +172,15 @@ def sweep(now: datetime | None = None) -> dict | None:
             wiped += 1
             freed += gigabytes
 
+    # The copies in Archived past their days, downloaded or not.
+    copies_removed = preservation.sweep_archived(now)
+
     counts = {
         "warned": warned,
         "deleted": deleted,
         "wiped": wiped,
         "gigabytes_freed": round(freed, 1),
+        "copies_removed": copies_removed,
     }
     audit.write(cases.CATEGORY, "retention sweep ran", system=SYSTEM, **counts)
     log.info("the retention sweep ran: %s", counts)

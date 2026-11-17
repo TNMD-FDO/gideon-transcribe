@@ -264,6 +264,8 @@ def test_the_sweep_writes_one_row_with_the_counts(a_case):
         "deleted": 0,
         "wiped": 0,
         "gigabytes_freed": 0.0,
+        # The copies in Archived past their days (Phase 14 chapter 2).
+        "copies_removed": 0,
     }
 
 

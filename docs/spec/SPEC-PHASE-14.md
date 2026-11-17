@@ -6,15 +6,16 @@ What the app makes is part of the client's record. A Case's work leaves the app 
 
 This is the build specification for Phase 14 of Gideon Transcribe. On 2026-11-17 the maintainer asked: "we need to think about preserving data as anything created in the app is now part of the client's record. I want this to be very easy, if anything at the time of case deletion, I'm okay with the owner being emailed a zip with the preservation data ... with instructions saying that the file should be saved to the client's file of record." A plan was drawn up the same day and every choice in it answered by the maintainer; the first release's page was drawn in `docs/spec/mockups/phase-14-preservation-copy-details.html` and agreed ("Your recommendations stand", "Yes, build it"). The documents were to be PDFs; the PDF maker was built and proven on a workstation the same day, the pages it made were compared with Word's, and the maintainer changed the choice: "switch it to export as word". The section "Why Word, and not PDF" says what was found.
 
-The plan is three releases. This document holds the first as chapter 1, and says under "What the next releases add" what the maintainer has already decided for the two that follow, so that nothing built here has to be undone for them.
+The plan is three releases. This document holds the first as chapter 1 and the second as chapter 2; the third, the mail, is said at the end of chapter 2.
 
 It builds on Phase 1 chapter 11 (Exports), Phase 2 (Cases, Sharing, the Retention policy and the Recycle bin, Email notifications), Phase 6 (Incidents), Phase 8 (Notes, Documents and the Comparison) and Phase 10 (the case chronology). Read it with `CONTEXT.md` (Preservation copy, Export, Case, Recycle bin) and `docs/research/pdf-maker.md`.
 
-Nothing in this document is office-specific. One table, no setting, no service, nothing new in any image.
+Nothing in this document is office-specific. Two tables, two settings, no service, nothing new in any image.
 
 ## Contents
 
 1. The Preservation copy, from the Details tab
+2. The Preservation copy at deletion, and Archived
 
 ## 1. The Preservation copy, from the Details tab (v1.244.0)
 
@@ -114,3 +115,83 @@ Decided by the maintainer on 2026-11-17 and not built here:
 ### Left to the build
 
 How often the making counts and looks for a Stop; the names of the files inside the Recording folders; the wording of the Read me first page within what is fixed above; how the page asks how far the making has got.
+
+## 2. The Preservation copy at deletion, and Archived (v1.245.0)
+
+Drawn first in `docs/spec/mockups/phase-14-preservation-at-deletion.html` and agreed by the maintainer on 2026-11-17 ("They stand"), every choice as recommended. ADR 0030 records the decision, since it changes what Delete means.
+
+### Principles
+
+1. **The Case is deleted as it always was; its copy outlives it.** Nothing of a Case can be brought back from its Preservation copy. The copy is the written work, for the client's file of record.
+2. **Made first.** A Case is deleted once its copy exists. When the copy cannot be made, an owner's Delete stops and says why, and the owner may delete without a copy by saying so a second time. The nightly sweep never stops: it bins and wipes with or without a copy.
+3. **Kept for a number of days, then gone.** The days are an Admin's to set and are counted from the day the Case was gone for good. The sweep removes a copy when its days are up, downloaded or not.
+4. **The owner's, and the Admins'.** A Collaborator sees nothing of a deleted Case, as they see nothing of the Recycle bin.
+5. **A setting.** An office that needs Delete to leave nothing turns it Off.
+
+### Words
+
+Added to `CONTEXT.md` with this chapter: **Archived**. The Preservation copy entry is amended. The pages never say archive as a noun for the copy, and never backup.
+
+### The two settings
+
+On the Cases page of the Admin panel, under the Recycle bin's days, greyed while Folder management is Off.
+
+| Setting | Type | Default | Range | When changed |
+|---|---|---|---|---|
+| Preservation copy at deletion | on or off | On | | The next deletion. Off: nothing is made or kept when a Case is deleted, and copies already in Archived stay their days. |
+| Preservation copy kept | whole days | 30 | 1 to 365 | The next sweep. A copy already past the new number is removed that night. |
+
+### An owner's Delete
+
+- **The question** keeps its words and gains one sentence: "A Preservation copy is made first and kept in Archived for N days, for you to save to the client's file of record." With the setting Off the sentence is not there and Delete is as it was.
+- **When the Case's kept copy is not behind the case**, that copy is the one kept and the Case is deleted at once.
+- **Otherwise the copy is made first**, in the background as chapter 1 makes one. The Details tab's Preservation part says "Deleting this case: its Preservation copy is being made first", with the count, and **Stop, and keep the case**. The person may leave; the Case is deleted when its copy is ready. The Case stays in use until then.
+- **Done**: the person, if still there, is taken to the Cases page, which says "<name> is deleted. Its Preservation copy is in Archived for N days."
+- **When the copy cannot be made**, the Case is not deleted. The part says "<name> was not deleted" with the document that failed, and offers **Try again** and **Delete without a copy**, the second behind its own confirmation. A Case deleted without a copy says so in its audit row.
+- **An Admin's Delete** of somebody else's Case, and the Users page's Delete data, keep the copy the same way; Delete data makes each copy as it goes and does not stop for one that fails.
+
+### The Retention policy's deletion
+
+- **The night a Case is due**, its copy is made before it goes to the Recycle bin, by the sweep itself, unless its kept copy is not behind the case. The Case goes to the bin whether or not the copy could be made.
+- **In the Recycle bin** the copy stays with the Case, as the Case's own. The Case's row has a **Preservation copy** column: whether it has been downloaded, **Download**, and, where there is none, **Make the copy**.
+- **Restore** brings the Case back with that copy as its own, on its Details tab. Nothing goes to Archived.
+- **The wipe**, by the sweep's bin period, by Delete permanently, by Empty recycle bin or by an Admin, moves the copy to Archived. A Case with no copy at its wipe has one made then if it can be; the wipe goes ahead either way.
+
+### Archived
+
+- **Where.** A fourth view of the Cases page, after the Recycle bin: Mine, Everyone's, Recycle bin, Archived. Its tab carries the number of the person's copies not yet downloaded. Hidden while Folder management is Off.
+- **What it holds.** The Preservation copies of Cases that are gone for good, one row each: the Case's name; when it was deleted and how ("by you", "by <name>", "by the retention policy"); the copy's documents and size, and when it was made; the day it is kept until and the days left; whether it has been downloaded, when and by whom; **Download**; **Remove now**.
+- **Who.** The owner sees their own. An Admin sees everyone's with the owner named and an owner filter, as on the Recycle bin; an Admin's download or removal of somebody else's is audited with the owner as affected user. A copy whose owner has left is the Admins'.
+- **Download** writes one "export made" row of kind `preservation copy` and marks the row downloaded. A second download is allowed.
+- **Remove now** is behind a confirmation that names the Case and says whether the copy was ever downloaded.
+- **The days** are whole days from the day the Case was gone for good, the Off spells left out as the Recycle bin leaves them out.
+- **The file** is the zip chapter 1 made, moved out of the Case's folder before the folder goes, into `cases/archived/` in the app's data directory, so it is in every Backup with no change to the Backup.
+
+### The sweep
+
+The 03:30 sweep gains two things. Before it bins a Case, it makes the Case's copy (step 2). After the wipes, it removes every copy in Archived past its days (a step between 3 and 4). Its "Retention sweep ran" row gains `copies_removed`. The sweep does nothing while Folder management is Off, so a copy's days do not run then.
+
+### Audit
+
+Category Cases. "preservation copy archived" when a copy goes to Archived, with why the Case went and the days it is kept; "preservation copy removed" with the cause (its days, owner, or admin) and whether it was ever downloaded. "case deleted" gains `copy`: kept, none (the setting was Off), failed, or declined (deleted without a copy by the person's second word). Category Exports: "export made" of kind `preservation copy` at each download from Archived or the Recycle bin.
+
+### What it changes in the chapters in force
+
+- Phase 2 chapter 3, "A person's own Delete of a Case ... is unchanged: final at once": final for the Case; its Preservation copy is kept in Archived (this chapter).
+- Phase 2 chapter 3, "The wipe ... files and rows, nothing left, no recovery": the Case, yes; its Preservation copy goes to Archived for its days.
+- Phase 2 chapter 3, the nightly sweep's four steps: as above.
+- Phase 2 chapter 2's Delete confirmation gains its sentence.
+- Chapter 1's "one at a time per Case" holds: a Delete while a copy is being made waits for that one.
+
+### What the next release adds
+
+The mail: one message to the owner when a copy goes to Archived or a Case to the Recycle bin, with the instruction to save it to the client's file of record, the zip attached when it fits the office's limit and a link when it does not; and a line in the nightly Retention digest for each copy not yet downloaded.
+
+### As built, where it departs from the drawing
+
+- **The wait is on the Details tab, not in a dialog.** The drawing's second and fourth moments were dialogs of their own. As built, the question is the dialog and the wait and the failure are said by the Preservation part on the Details tab, which already counts a copy being made: one place that says how a copy stands, and nothing to dismiss.
+- **The Cases page says it is done in a line, without a link.** The Archived tab beside it carries the count.
+
+### Left to the build
+
+The archive's folder; how the Details tab learns the Case has gone (it asks how the copy stands, and is told the Case is gone).

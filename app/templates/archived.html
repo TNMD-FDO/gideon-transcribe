@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Archived{% endblock %}
+{% block main_class %}wide{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Archived (Phase 14 chapter 2, v1.245.0; the drawing
+    docs/spec/mockups/phase-14-preservation-at-deletion.html): the
+    Preservation copies of cases that are gone for good, each kept its days.
+    The fourth view of the Cases page.
+  {% endcomment %}
+  <div class="page roomy workbench">
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
+      <div class="line"><h1>Archived</h1></div>
+    </header>
+
+    {% include "cases-tabs.html" %}
+
+    <p class="lead">
+      The Preservation copies of cases that are gone for good. Each is kept for
+      {{ keep_days }} day{{ keep_days|pluralize }} from the day its case was deleted, then removed.
+      Download it and save it to the client's file of record. A case cannot be
+      brought back from here: only its written work is kept.
+    </p>
+
+    {% if owners %}
+      <p class="muted small">
+        Filter by owner:
+        {% for owner in owners %}
+          {{ owner }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+    {% elif owner_filter %}
+      <p class="muted small">
+        Showing {{ owner_filter }}'s. <a href="{% url 'archived' %}">Everyone's</a>
+      </p>
+    {% endif %}
+
+    {% if rows %}
+      <table class="tbl" id="archived">
+        <thead>
+          <tr>
+            <th>Case</th>
+            {% if user.is_admin %}<th>Owner</th>{% endif %}
+            <th>Deleted</th><th>The copy</th><th>Kept until</th><th>Downloaded</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr data-copy="{{ row.copy.pk }}">
+              <td><b>{{ row.copy.case_name }}</b></td>
+              {% if user.is_admin %}
+                <td class="muted">
+                  {% if row.copy.owner %}<a href="{% url 'archived' %}?owner={{ row.copy.owner.username|urlencode }}">{{ row.copy.owner_name }}</a>{% else %}{{ row.copy.owner_name }}{% endif %}
+                  {% if row.owner_gone %}<span class="pill warn">Owner has left</span>{% endif %}
+                </td>
+              {% endif %}
+              <td class="muted">{{ row.copy.gone_on|date:"d M Y" }}<br><span class="small">{{ row.how }}</span></td>
+              <td>{{ row.copy.documents }} document{{ row.copy.documents|pluralize }} &middot; {{ row.size }}<br><span class="muted small">made {{ row.copy.made|date:"d M Y H:i" }}{% if row.copy.made_by_name %} by {{ row.copy.made_by_name }}{% endif %}</span></td>
+              <td class="muted">{{ row.until|date:"d M Y" }}<br><span class="small">{{ row.days_left }} day{{ row.days_left|pluralize }} left</span></td>
+              <td class="small">
+                {% if row.copy.downloaded_at %}<span class="pill small ok">{{ row.copy.downloaded_at|date:"j M" }}, by {{ row.copy.downloaded_by_name }}</span>{% else %}<span class="pill small warn">not yet</span>{% endif %}
+              </td>
+              <td class="small">
+                <a class="btn small{% if not row.copy.downloaded_at %} primary{% endif %}" href="{% url 'archived-download' row.copy.pk %}">Download</a>
+                <button type="button" class="small ghost danger remove-copy" data-copy="{{ row.copy.pk }}" data-name="{{ row.copy.case_name }}" data-downloaded="{% if row.copy.downloaded_at %}1{% endif %}">Remove now</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "empty.html" with icon="delete" title="Nothing is archived" line="When a case is deleted, its Preservation copy waits here for you to save to the client's file of record." %}
+    {% endif %}
+  </div>
+
+  <script src="{% static 'cases.js' %}"></script>
+{% endblock %}

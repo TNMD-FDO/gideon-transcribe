@@ -19,7 +19,8 @@
       Cases the retention policy has deleted wait here for {{ bin_days }} days,
       then are wiped for good. Restore puts one back exactly as it was and
       starts its clock over. A case you delete yourself does not come here: that
-      is final.
+      is final.{% if copies_kept %} Each case here has its Preservation copy to download
+      meanwhile; when a case is wiped, its copy goes to Archived.{% endif %}
     </p>
 
     {% if owners %}
@@ -41,7 +42,8 @@
           <tr>
             <th>Name</th>
             {% if user.is_admin %}<th>Owner</th>{% endif %}
-            <th>Recordings</th><th>Size</th><th>Deleted on</th><th>Days left</th><th></th>
+            <th>Recordings</th><th>Size</th><th>Deleted on</th><th>Days left</th>
+            {% if copies_kept %}<th>Preservation copy</th>{% endif %}<th></th>
           </tr>
         </thead>
         <tbody>
@@ -58,6 +60,18 @@
               <td class="muted">{{ row.size }}</td>
               <td class="muted">{{ row.case.deleted_on|date:"d M Y" }}</td>
               <td class="muted">{{ row.days_left }}</td>
+              {% if copies_kept %}
+                {% comment %}The copy made when the clock binned the case (Phase 14 chapter 2).{% endcomment %}
+                <td class="small">
+                  {% if row.copy %}
+                    {% if row.copy.downloaded_at %}<span class="pill small ok">downloaded {{ row.copy.downloaded_at|date:"j M" }}</span>{% else %}<span class="pill small warn">not yet downloaded</span>{% endif %}
+                    <a class="btn small" href="{% url 'bin-preservation-download' row.case.pk %}">Download</a>
+                  {% else %}
+                    <span class="muted">none</span>
+                    <button type="button" class="small make-copy" data-case="{{ row.case.pk }}">Make the copy</button>
+                  {% endif %}
+                </td>
+              {% endif %}
               <td class="small">
                 <button type="button" class="small primary restore" data-case="{{ row.case.pk }}">Restore</button>
                 <button type="button" class="small ghost danger wipe" data-case="{{ row.case.pk }}">Delete permanently</button>

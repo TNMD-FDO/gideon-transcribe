@@ -389,6 +389,8 @@
                data-status="{% url 'preservation-status' case.pk %}"
                data-make="{% url 'preservation-make' case.pk %}"
                data-stop="{% url 'preservation-stop' case.pk %}"
+               data-delete="{% url 'delete-case' case.pk %}"
+               data-name="{{ case.name }}"
                data-making="{% if preservation.making %}1{% endif %}">
             {% include "preservation-part.html" with p=preservation %}
           </div>
@@ -401,7 +403,8 @@
             </div>
         {% if role != "collaborator" %}
           <div class="case-foot">
-            <button type="button" class="btn ghost danger" id="delete-case">Delete case</button>
+            {% comment %}The days its Preservation copy is kept in Archived, for the question's sentence; 0 when the office keeps none (Phase 14 chapter 2).{% endcomment %}
+            <button type="button" class="btn ghost danger" id="delete-case" data-copy-days="{{ preservation.keep_days|default:0 }}">Delete case</button>
           </div>
         {% endif %}
 

@@ -613,7 +613,7 @@ Deletes in N days unless used
 - **Restore**: puts the Case back exactly as it was, Recordings, text, Clips, People, Case Chats, Shares, and all, and starts its clock over (otherwise it would be deleted again that night). Audit: "Case restored". A full quota never blocks a Restore: the Case never left the disk.
 - **Room**: a binned Case counts against its owner's quota, since it is still on disk; Delete permanently and Empty recycle bin are how the owner makes room at once. The "Minimum free disk space" floor is unchanged.
 - **The wipe**: the sweep wipes a Case that has sat in the bin for Recycle-bin days (Off spells left out): files and rows, nothing left, no recovery. Delete permanently and Empty recycle bin wipe at once in the same way, and the users list's Delete data wipes a leaver's binned Cases too. Audit: "Case permanently deleted" with the cause (recycle bin period, owner, or admin) and the counts, plus one "Recording deleted (cause: retention)" row per Recording, as Case delete writes. No email is sent.
-- **A person's own Delete** of a Case or a Recording is unchanged: final at once, behind its confirmation (see the Cases chapter). Only the clock's deletions go to the bin.
+- **A person's own Delete** of a Case or a Recording is unchanged: final at once, behind its confirmation (see the Cases chapter). Only the clock's deletions go to the bin. (From v1.245.0, Phase 14 chapter 2 and ADR 0030: final for the Case, whose Preservation copy is made first and kept in Archived for a number of days, unless the office has turned that off.)
 - **Not affected**: Workspaces; the rules for the uploaded bytes; Backups (a binned Case rides in every Backup until it is wiped).
 
 ### Backups and the bin

@@ -390,6 +390,18 @@ If something in the case is added, removed or edited after the copy was made, th
 
 Each document is the same Word file **Export to Word** gives for that thing, so a transcript in the copy has the same pages and line numbers as one you exported and cited from.
 
+### When a case is deleted: Archived
+
+When a case is deleted, its Preservation copy is made first and kept after the case has gone, so the written work can still be saved to the client's file of record. (Your office can turn this off; the Delete question then has no line about a copy.)
+
+**When you delete a case yourself.** The question says, on a line of its own, "A Preservation copy is made first and kept in Archived for 30 days". The case is still deleted for good: there is no way to get the case back. If the case already has a copy that is up to date, it goes at once. If not, the copy is made first: the Preservation part on the Details tab says **Deleting this case**, counts the documents, and offers **Stop, and keep the case**. You can leave the page; the case is deleted when its copy is ready, and the Cases page then says where the copy is.
+
+**If the copy cannot be made**, the case is not deleted. The Details tab says "was not deleted" and which document failed, with **Try again**, **Keep the case**, and **Delete without a copy**, which asks once more and then deletes the case with nothing kept.
+
+**When the retention clock deletes a case**, its copy is made that night and is on the case's row in the **Recycle bin**, under **Preservation copy**, to **Download** while the case waits there. If the case is restored, the copy comes back with it. When the case is wiped, or you press **Delete permanently**, its copy goes to Archived.
+
+**Archived** is the fourth tab of the Cases page, after the Recycle bin; the number on it is your copies not yet downloaded. Each row is one deleted case's copy: when the case was deleted and how, how many documents the copy holds and when it was made, the day it is kept until, and whether it has been downloaded. **Download** it and save it to the client's file of record. **Remove now** takes it off the server at once, after asking; otherwise it is removed by itself when its days are up, whether or not anyone downloaded it. A case cannot be brought back from Archived: only its written work is kept. Only you, as the case's owner, and Admins see a copy there.
+
 ## How long a case is kept
 
 A case is kept for as long as somebody uses it. Every use starts its clock over: opening the case or a recording in it, adding or moving a recording in, correcting, naming a speaker, exporting, saving or downloading a clip, renaming. Looking at the list of cases does not count, and neither does an Admin looking in.

@@ -780,8 +780,12 @@ The amber mark a Case carries on the Cases page during its last days before the 
 The one-click act on a warned Case that starts its Retention policy clock over, as opening the Case would.
 
 **Preservation copy**:
-One zip of a Case's work, every document in it a Word document, made from the case's Details tab and laid out to be saved to the client's file of record: the Transcripts with their Summaries and Chats, the Case Chats, the notes, the chronology, each Incident's work, the comparisons, a record of the Clips, the people and names, and the activity record. Recordings and documents that were uploaded are listed in it, not included; a Recording made in the app is included. Made in the background, kept on the Case until it is made again, and marked "behind the case" once the Case has changed. Phase 14.
+One zip of a Case's work, every document in it a Word document, made from the case's Details tab and laid out to be saved to the client's file of record: the Transcripts with their Summaries and Chats, the Case Chats, the notes, the chronology, each Incident's work, the comparisons, a record of the Clips, the people and names, and the activity record. Recordings and documents that were uploaded are listed in it, not included; a Recording made in the app is included. Made in the background, kept on the Case until it is made again, and marked "behind the case" once the Case has changed. From v1.245.0 it is also made by itself when a Case is deleted, unless the office has turned that off, and then outlives the Case in Archived. Phase 14.
 _Avoid_: archive, backup (that is the office's own, of everything), bundle, package, case export, case zip
+
+**Archived**:
+The fourth view of the Cases page, after the Recycle bin: the Preservation copies of Cases that are gone for good, each kept for the days an Admin sets (Preservation copy kept, 30 by default) from the day its Case was deleted by a person or wiped from the Recycle bin, then removed by the nightly sweep. The owner sees their own and Admins see everyone's; each row downloads its copy or removes it now. A Case cannot be brought back from here: only its written work is kept. Phase 14 chapter 2.
+_Avoid_: archive (as a noun for the copy or the place), backup (that is the office's own, of everything), trash, history
 
 **Recycle bin**:
 Where a Case the Retention policy has deleted waits, out of every list and unusable, for a set number of days before it is wiped for good. The owner or an Admin can restore it meanwhile; the wait pauses while Folder management is off. Nothing a person deletes goes there.

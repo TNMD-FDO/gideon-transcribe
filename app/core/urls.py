@@ -322,6 +322,29 @@ urlpatterns = [
     # The Retention policy: Keep on a warned Case, and the Recycle bin where
     # the clock's deletions wait.
     path("cases/bin", case_pages.recycle_bin, name="recycle-bin"),
+    # Archived (Phase 14 chapter 2): the Preservation copies of Cases that are
+    # gone for good, and the copy of a Case that waits in the Recycle bin.
+    path("cases/archived", preservation_pages.archived, name="archived"),
+    path(
+        "cases/archived/<uuid:copy_id>/download",
+        preservation_pages.archived_download,
+        name="archived-download",
+    ),
+    path(
+        "cases/archived/<uuid:copy_id>/remove",
+        preservation_pages.archived_remove,
+        name="archived-remove",
+    ),
+    path(
+        "cases/bin/<uuid:case_id>/preservation/download",
+        preservation_pages.bin_download,
+        name="bin-preservation-download",
+    ),
+    path(
+        "cases/bin/<uuid:case_id>/preservation/make",
+        preservation_pages.bin_make,
+        name="bin-preservation-make",
+    ),
     path(
         "cases/bin/what-would-go",
         case_pages.bin_what_would_go,
