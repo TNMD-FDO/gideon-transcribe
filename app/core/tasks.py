@@ -87,6 +87,15 @@ def read_document(document_id: str) -> None:
     documents.read(document_id)
 
 
+@app.task(queue="media", name="make_preservation_copy")
+def make_preservation_copy(copy_id: str) -> None:
+    """A Case's Preservation copy written, turned into PDFs and zipped (Phase
+    14 chapter 1). On the media queue: it is CPU work, as ffmpeg's is."""
+    from core import preservation
+
+    preservation.make(copy_id)
+
+
 @app.task(queue="media", name="read_camera_path")
 def read_camera_path(path_id: str) -> None:
     """A camera's path file read again by a newer parser (Phase 12 chapter 1)."""

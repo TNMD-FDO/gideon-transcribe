@@ -368,6 +368,28 @@ When your office keeps a voice book for your unit (v1.146.0), the rail has one m
 
 Beside the units' tabs on the Voices place, **Phone systems** (v1.159.0) lists the jail phone systems the office has met, taught from the Call system's announcement lines as each call lands. On a jail call's guided Speakers page the Call system's card says how many lines are its by their words and how many more by its voice, lists the ones given by voice with a play and **Not the system**, which gives the line back to the speaker the recogniser had, and **The system after all** to undo that. While a phone system is still listening and not moving, the card says what its voice would have given; an Admin starts the giving from the Voices place.
 
+### The Preservation copy
+
+What is made in a case is part of the client's record: the transcripts, the summaries and chats, the notes, the chronology, the incidents' work. The **Preservation copy** is all of it in one zip of PDFs, laid out to be saved to the client's file of record as it is.
+
+It is on the case's **Details** tab, at the foot of the left column, above Delete case. Press **Make the Preservation copy**. It is made in the background and the page counts the documents as they are done ("12 of 31 documents"); you can leave the page and come back. A large case takes some minutes. **Stop** ends it and leaves nothing behind.
+
+When it is ready the part says when it was made, by whom, how many documents it holds and how large it is. Press **Download**, and **Save it to the client's file of record**: the app makes the copy and keeps the last one made, and saving it where it belongs is yours to do. Open **00 Read me first** in the zip; it says what the copy holds and what it does not.
+
+What is in the zip:
+
+- **01 Recordings**: a folder for each recording that has a transcript, with the transcript, each summary and each chat. A recording you made in the app (a dictation, or Record now) has its sound here too, since nothing else holds it.
+- **02 Case chats**, **03 Notes and chronology**, **04 Incidents** (each incident's chronology, memo and comparisons), **05 Comparisons**, and **06 Map pictures and timelapses** you saved to the case.
+- **07 Record of clips**: what each clip was cut from and from when to when, with the words said in it.
+- **08 Recordings and documents, listed**: every file that was uploaded, by name, size and date, to match against the office's permanent record.
+- **09 People and names** and **10 Activity record**, who did what in the case and when.
+
+What is not in it: the recordings and reports that were uploaded, because the office holds those already, and the clip files, because any clip can be cut again from its recording. The copy says so on its first page.
+
+If something in the case is added, removed or edited after the copy was made, the part says **behind the case** and offers **Make it again**; the older copy can still be downloaded meanwhile. Opening the case does not mark a copy behind. Everyone the case is shared with can make and download the copy, as they can every export.
+
+The documents are PDFs of the archival kind, made to open the same in years. Their typeface is very close to the Word exports' and not identical.
+
 ## How long a case is kept
 
 A case is kept for as long as somebody uses it. Every use starts its clock over: opening the case or a recording in it, adding or moving a recording in, correcting, naming a speaker, exporting, saving or downloading a clip, renaming. Looking at the list of cases does not count, and neither does an Admin looking in.

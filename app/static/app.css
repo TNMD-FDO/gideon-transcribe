@@ -518,6 +518,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 /* The Case page's Shared with panel, under the facts about the case. */
 .shared-with { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 .shared-with h3 { margin: 0 0 8px; font-size: var(--t-body); }
+/* The Preservation copy's part of the Details tab (Phase 14 chapter 1). */
+.preserve { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.preserve .head { align-items: center; margin-bottom: 6px; }
+.preserve h3 { margin: 0; font-size: var(--t-body); }
+.preserve p { margin: 0 0 8px; max-width: 78ch; }
+.preserve .making progress { flex: 1; max-width: 320px; height: 6px; }
+.preserve .acts { align-items: center; }
 .shared-with .tbl.small td, .shared-with .tbl.small th { padding: 4px 6px; }
 .shared-with ul.plain { list-style: none; margin: 0 0 8px; padding: 0; }
 .shared-with ul.plain li { padding: 2px 0; }

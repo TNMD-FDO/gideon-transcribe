@@ -779,6 +779,10 @@ The amber mark a Case carries on the Cases page during its last days before the 
 **Keep**:
 The one-click act on a warned Case that starts its Retention policy clock over, as opening the Case would.
 
+**Preservation copy**:
+One zip of a Case's work, every document in it a PDF, made from the case's Details tab and laid out to be saved to the client's file of record: the Transcripts with their Summaries and Chats, the Case Chats, the notes, the chronology, each Incident's work, the comparisons, a record of the Clips, the people and names, and the activity record. Recordings and documents that were uploaded are listed in it, not included; a Recording made in the app is included. Made in the background, kept on the Case until it is made again, and marked "behind the case" once the Case has changed. Phase 14.
+_Avoid_: archive, backup (that is the office's own, of everything), bundle, package, case export, case zip
+
 **Recycle bin**:
 Where a Case the Retention policy has deleted waits, out of every list and unusable, for a set number of days before it is wiped for good. The owner or an Admin can restore it meanwhile; the wait pauses while Folder management is off. Nothing a person deletes goes there.
 _Avoid_: trash, soft delete (an implementation term)

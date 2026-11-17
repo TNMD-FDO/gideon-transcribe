@@ -25,6 +25,7 @@ from core import (
     panel,
     panel_pages,
     people_pages,
+    preservation_pages,
     proposed_pages,
     reports,
     speakers_page,
@@ -732,6 +733,28 @@ urlpatterns = [
         "case/<uuid:case_id>/download",
         case_pages.download_case,
         name="case-download",
+    ),
+    # The Preservation copy (Phase 14 chapter 1): how it stands, Make, Stop,
+    # and the kept zip.
+    path(
+        "case/<uuid:case_id>/preservation",
+        preservation_pages.status,
+        name="preservation-status",
+    ),
+    path(
+        "case/<uuid:case_id>/preservation/make",
+        preservation_pages.make,
+        name="preservation-make",
+    ),
+    path(
+        "case/<uuid:case_id>/preservation/stop",
+        preservation_pages.stop,
+        name="preservation-stop",
+    ),
+    path(
+        "case/<uuid:case_id>/preservation/download",
+        preservation_pages.download,
+        name="preservation-download",
     ),
     path(
         "case/<uuid:case_id>/download-clips",

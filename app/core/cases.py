@@ -133,10 +133,17 @@ class Case(models.Model):
     def disk_bytes(self) -> int:
         """The Case's Recordings' kept sizes and its documents', summed in two
         queries (v1.134.0); a Recording never measured is measured first."""
+        from core import preservation
         from core.recordings import summed_disk_bytes
 
         documents = self.documents.aggregate(total=models.Sum("size_bytes"))["total"]
-        return summed_disk_bytes(self.recordings.all()) + (documents or 0)
+        return (
+            summed_disk_bytes(self.recordings.all())
+            + (documents or 0)
+            # The kept Preservation copy is a file in the Case's folder too
+            # (Phase 14 chapter 1).
+            + preservation.kept_bytes(self)
+        )
 
     def member(self, user) -> str:
         """What this person is inside the Case: "owner", "collaborator", or "".

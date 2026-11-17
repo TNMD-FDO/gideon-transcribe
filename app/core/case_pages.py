@@ -41,6 +41,7 @@ from core import (
     live,
     notes,
     pages,
+    preservation,
     retention,
     settings_store,
     sharing,
@@ -417,6 +418,8 @@ def case_page(request: HttpRequest, case_id) -> HttpResponse:
             "case": case,
             "here_case": home.here_case_for(request.user, case),
             "tab": tab,
+            # The Preservation copy's part of the Details tab (Phase 14 chapter 1).
+            "preservation": (preservation.for_page(case) if tab == "details" else None),
             # The tabs from the one helper (v1.171.0, the case bar).
             "case_tabs": case_tabs,
             "warned": retention.is_warned(left),

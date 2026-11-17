@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Preservation copy: the first piece</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5; --accent-ink: #ffffff;
+  --ok: #2f7d4f; --ok-soft: #e2f1e7; --warn: #9a5b06; --warn-soft: #fbefd9; --danger: #b3261e;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .tiny { font-size: var(--t-label); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1980px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p, .fig .why { margin: 6px 0; color: var(--muted); max-width: 105ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); max-width: 115ch; }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 4px; }
+.fig { margin-top: 44px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin-bottom: 12px; }
+.frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); overflow-x: auto; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--t-small); color: var(--muted); max-width: 115ch; }
+.note b { color: var(--text); }
+.today { position: relative; width: 1920px; }
+.today img { display: block; width: 1920px; }
+.mark { position: absolute; border: 2px dashed var(--ok); border-radius: 6px; background: rgba(47, 125, 79, .08); }
+.mark b { position: absolute; top: -13px; left: -13px; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.gnum { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 12px; align-items: center; justify-content: center; margin-right: 4px; }
+
+.tab { width: 1660px; padding: 16px 14px; display: grid; grid-template-columns: 812px 1fr; gap: 28px; }
+h3.sec { font-size: var(--t-heading); margin: 0 0 8px; }
+.facts { display: grid; grid-template-columns: 84px 1fr; gap: 4px 0; font-size: var(--t-small); margin-bottom: 12px; }
+.facts span:nth-child(odd) { color: var(--muted); }
+.btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-small); font-weight: 600; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.small { height: 28px; font-weight: 500; }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); }
+.btn.danger { border-color: transparent; background: none; color: var(--danger); }
+.btn[disabled] { color: var(--muted); background: var(--surface-2); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rule { border-top: 1px solid var(--line); margin: 16px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.copy { padding: 12px 14px; }
+.copy .h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.copy .h b { font-size: var(--t-body); }
+.copy p { margin: 0 0 10px; font-size: var(--t-small); color: var(--muted); }
+.copy .line { display: flex; align-items: center; gap: 10px; font-size: var(--t-small); }
+.pill { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--surface-2); font-size: var(--t-label); white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.meter { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; max-width: 320px; }
+.meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+.ghostbox { border: 1px dashed var(--line); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--t-small); min-height: 200px; }
+.states { display: grid; grid-template-columns: 250px 812px; gap: 14px; align-items: start; padding: 14px; width: 1100px; }
+.states .cap { font-size: var(--t-small); padding-top: 10px; } .states .cap b { display: block; }
+
+.zipwrap { display: grid; grid-template-columns: 560px 520px; gap: 28px; padding: 16px; width: 1140px; }
+.tree { font-family: var(--mono); font-size: var(--t-small); line-height: 1.7; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 16px; white-space: pre; }
+.tree .d { font-weight: 600; } .tree .c { color: var(--muted); font-family: var(--sans); }
+.paper { background: #fff; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 34px 38px; font-size: 12px; line-height: 1.5; min-height: 640px; }
+.paper h4 { font-size: 20px; margin: 0 0 2px; } .paper .sub { color: var(--muted); margin-bottom: 14px; }
+.paper .save { border: 2px solid var(--text); padding: 8px 10px; font-weight: 600; margin: 0 0 14px; font-size: 13px; }
+.paper table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+.paper td { padding: 2px 6px 2px 0; vertical-align: top; } .paper td:first-child { color: var(--muted); width: 120px; }
+.paper h5 { margin: 10px 0 3px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.paper ul { margin: 0; padding-left: 16px; }
+
+table.picks { border-collapse: collapse; margin-top: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); max-width: 1500px; }
+table.picks th, table.picks td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--surface-2); font-size: var(--t-small); }
+table.picks th { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table.picks td:first-child { font-weight: 600; white-space: nowrap; }
+.rec { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--ok-soft); color: var(--ok); font-size: var(--t-label); font-weight: 600; margin-left: 4px; }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>The Preservation copy: the first piece</h1>
+    <p>The first of the plan's three releases: a whole case's work as one zip of PDFs, from the case's Details tab, any time. Deleting a case, the email and Archived come in the two releases after this and are not drawn here. Every name below is the local demo's made-up case.</p>
+    <div class="brief">
+      <b>What this page holds</b>
+      <ul>
+        <li>The picture of the Details tab as it stood is left out of this copy: no picture of a running app is kept in the repository.</li>
+        <li>Figure A: the tab with the Preservation copy. Figure B: its four states. Figure C: what is inside the zip, and its first page. Figure D: the other place it could sit.</li>
+        <li>Five picks at the foot, each with a recommendation. Nothing is built until they are answered.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure A (recommended): a part of its own, above Delete case</h2>
+    <p class="why">The left column of the tab, with the new part between the team and Delete case. One sentence says what it is for; one button makes it.</p>
+    <div class="frame">
+      <div class="tab">
+        <div>
+          <h3 class="sec">This case</h3>
+          <div class="facts"><span>Recordings</span><span>8, 1 MB</span><span>On the map</span><span>6 cameras with a path file</span><span>Last activity</span><span>17 Nov 2026 16:06</span><span>Retention</span><span>Deletes in 30 days unless used</span></div>
+          <div class="row"><span class="btn">Rename</span><span class="btn">Share</span><span class="btn">Download all transcripts</span></div>
+          <div class="rule"></div>
+          <div class="small"><b>Team</b> <span class="muted">3 people</span></div>
+          <div class="small muted" style="margin: 6px 0">test (you) · Owner, Pat Okonkwo, Sam Reyes, as today</div>
+          <div class="rule"></div>
+          <div class="card copy">
+            <div class="h"><b>Preservation copy</b><span class="pill">none made yet</span></div>
+            <p>Everything made in this case as one zip of PDFs, to save to the client's file of record: the transcripts with their summaries and chats, the case chats, the notes, the chronology, the incidents, and a record of the clips. The videos themselves are listed, not included.</p>
+            <div class="row"><span class="btn primary">Make the Preservation copy</span><span class="small muted">31 documents · about a minute</span></div>
+          </div>
+          <div class="rule"></div>
+          <span class="btn danger">Delete case</span>
+        </div>
+        <div class="ghostbox">Names and places, as today</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure B: the part in its four states</h2>
+    <p class="why">Turning Word into PDF takes a second or two a document by my estimate, so a large case takes minutes. The copy is made in the background and the page says where it will land.</p>
+    <div class="frame">
+      <div class="states">
+        <div class="cap"><b>None made yet</b><span class="muted">How many documents it will hold, and roughly how long.</span></div>
+        <div class="card copy">
+          <div class="h"><b>Preservation copy</b><span class="pill">none made yet</span></div>
+          <div class="row"><span class="btn primary">Make the Preservation copy</span><span class="small muted">31 documents · about a minute</span></div>
+        </div>
+
+        <div class="cap"><b>Being made</b><span class="muted">The person may leave the page; nothing is lost.</span></div>
+        <div class="card copy">
+          <div class="h"><b>Preservation copy</b><span class="pill">being made</span></div>
+          <div class="line"><span>12 of 31 documents</span><span class="meter"><i style="width: 39%"></i></span><span class="btn small ghost">Stop</span></div>
+          <p style="margin: 8px 0 0">You can leave this page. It will be here, and under Ready to download on Home, when it is done.</p>
+        </div>
+
+        <div class="cap"><b>Ready</b><span class="muted">When, by whom, how much. Kept on the case until it is made again.</span></div>
+        <div class="card copy">
+          <div class="h"><b>Preservation copy</b><span class="pill ok">ready</span></div>
+          <div class="line"><span>Made 17 Nov 2026 16:12 by you · 31 documents · 4.2 MB</span></div>
+          <div class="row" style="margin-top: 10px"><span class="btn primary">Download</span><span class="btn">Make it again</span><span class="small muted">Save it to the client's file of record.</span></div>
+        </div>
+
+        <div class="cap"><b>The case has changed since</b><span class="muted">A correction, a new note, a new recording: the copy is behind.</span></div>
+        <div class="card copy">
+          <div class="h"><b>Preservation copy</b><span class="pill warn">behind the case</span></div>
+          <div class="line"><span>Made 17 Nov 2026 16:12 by you · the case has changed since (3 Dec 2026)</span></div>
+          <div class="row" style="margin-top: 10px"><span class="btn primary">Make it again</span><span class="btn">Download the one of 17 Nov</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure C: what is inside the zip, and its first page</h2>
+    <p class="why">Numbered folders so the order holds in any file system. The first page tells whoever opens it, years on, what this is and what is not in it.</p>
+    <div class="frame">
+      <div class="zipwrap">
+        <div class="tree"><span class="d">Harbour Street stop - preservation copy 2026-11-17.zip</span>
+├─ 00 Read me first.pdf
+├─ <span class="d">01 Recordings/</span>
+│  ├─ BWC2-1 Sam Roe.pdf           <span class="c">transcript, summaries, chats</span>
+│  ├─ BWC2-2 Lee Fox.pdf
+│  ├─ ...
+│  ├─ Interview 4 Nov.pdf
+│  └─ Interview 4 Nov.m4a          <span class="c">recorded live in the app</span>
+├─ <span class="d">02 Case chats/</span>
+│  └─ Case chat 2026-11-02 1410.pdf
+├─ <span class="d">03 Notes and chronology/</span>
+│  ├─ Notes.pdf
+│  ├─ Chronology.pdf
+│  └─ Proposed events kept.pdf
+├─ <span class="d">04 Incidents/</span>
+│  └─ <span class="d">Harbour Street stop, 20-25/</span>
+│     ├─ Chronology.pdf
+│     ├─ Memo.pdf
+│     └─ Comparison.pdf
+├─ 05 Record of clips.pdf
+├─ 06 Videos and documents, listed.pdf
+├─ 07 People and names.pdf
+└─ 08 Activity record.pdf</div>
+        <div class="paper">
+          <div class="muted" style="font-size: 10px; margin-bottom: 18px">[the office's logo and name, as on every export]</div>
+          <h4>Harbour Street stop</h4>
+          <div class="sub">Preservation copy, made 17 November 2026 at 16:12 by test</div>
+          <div class="save">Save this file to the client's file of record.</div>
+          <table>
+            <tr><td>Owner</td><td>test</td></tr>
+            <tr><td>Shared with</td><td>Pat Okonkwo, Sam Reyes</td></tr>
+            <tr><td>Case made</td><td>4 October 2026</td></tr>
+            <tr><td>Last used</td><td>17 November 2026</td></tr>
+          </table>
+          <h5>In this copy</h5>
+          <ul><li>8 transcripts, with 5 summaries and 2 chats</li><li>3 case chats</li><li>19 notes, the chronology, 5 proposed events kept</li><li>6 incidents: chronology, memo, comparison</li><li>A record of 4 clips</li><li>1 recording made live in the app</li><li>The activity record: 212 lines</li></ul>
+          <h5>Not in this copy</h5>
+          <ul><li>The 7 videos and 9 documents that were uploaded. They are listed in file 06 by name, size and date, to be matched to the permanent record.</li><li>The 4 clip files. File 05 says what each was cut from and when.</li></ul>
+          <h5>About these documents</h5>
+          <div class="muted">The transcription, AI and translation notices, as the app's exports carry them.</div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><b>Uploaded documents</b> (the reports on the Documents tab) are treated as the videos are: uploaded, so listed and not included. The comparisons made from them in the app are included.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure D: the other place, beside Download all transcripts</h2>
+    <p class="why">One more button in the row the tab already has, and one more line in the facts. Smaller, and it works, but there is no room to say what the copy is for or to show it being made, and it sits far from Delete case.</p>
+    <div class="frame">
+      <div class="tab" style="grid-template-columns: 812px">
+        <div>
+          <h3 class="sec">This case</h3>
+          <div class="facts"><span>Recordings</span><span>8, 1 MB</span><span>Last activity</span><span>17 Nov 2026 16:06</span><span>Retention</span><span>Deletes in 30 days unless used</span><span>Preserved</span><span>Not yet</span></div>
+          <div class="row"><span class="btn">Rename</span><span class="btn">Share</span><span class="btn">Download all transcripts</span><span class="btn">Preservation copy</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>The picks</h2>
+    <p class="why">One answer to each, please; my recommendation is marked.</p>
+    <table class="picks">
+      <tr><th>Pick</th><th>The choices</th><th>Why I recommend it</th></tr>
+      <tr><td>1. Where it sits</td><td><b>1a</b> A part of its own above Delete case, Figure A <span class="rec">recommended</span><br><b>1b</b> A button beside Download all transcripts, Figure D</td><td>Room to say what it is for and to show it being made, and it is the last thing the eye passes before Delete case.</td></tr>
+      <tr><td>2. Who may make one</td><td><b>2a</b> The owner and everyone the case is shared with, as with every export today <span class="rec">recommended</span><br><b>2b</b> The owner alone</td><td>Whoever can already export each piece can already take the whole; a rule tighter than the exports' would only be worked round.</td></tr>
+      <tr><td>3. Is the made copy kept on the case</td><td><b>3a</b> Yes: the last one made stays, with when and by whom, until it is made again <span class="rec">recommended</span><br><b>3b</b> No: each press makes it and downloads it, and nothing is kept</td><td>A large case takes minutes, so the person should not have to wait at the page; and "made on" is itself a useful fact on the case. It counts against the owner's room like any file, but it is small.</td></tr>
+      <tr><td>4. The kind of PDF</td><td><b>4a</b> The archival kind (PDF/A), made for long keeping, with its typefaces inside the file <span class="rec">recommended</span><br><b>4b</b> Ordinary PDF</td><td>A file of record is opened years later, on machines we cannot foresee. The archival kind costs nothing extra to make.</td></tr>
+      <tr><td>5. PDF elsewhere in the app</td><td><b>5a</b> Only the Preservation copy for now; "as PDF" on the other export menus is a later, separate ask <span class="rec">recommended</span><br><b>5b</b> Add "as PDF" to every export menu in this release</td><td>The maker is the same, so 5b is cheap later; keeping it out now keeps this release to one thing.</td></tr>
+    </table>
+    <div class="note"><b>Said so it is not a surprise:</b> the typeface in the PDFs will be Carlito, a free face drawn to the same widths as Calibri, because Calibri itself cannot be put in the app; pages break in the same places and it looks very close, not identical. Download all transcripts stays as it is.</div>
+  </div>
+</div>
+</html>

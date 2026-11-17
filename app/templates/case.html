@@ -378,6 +378,21 @@
             {% endif %}
           </div>
         {% endif %}
+        {% comment %}
+          The Preservation copy (Phase 14 chapter 1, v1.244.0): the last
+          thing in the left column, directly above Delete case. The part is
+          drawn by preservation-part.html and asked again by preservation.js
+          while a copy is being made.
+        {% endcomment %}
+        {% if preservation %}
+          <div class="preserve" id="preservation" aria-live="polite"
+               data-status="{% url 'preservation-status' case.pk %}"
+               data-make="{% url 'preservation-make' case.pk %}"
+               data-stop="{% url 'preservation-stop' case.pk %}"
+               data-making="{% if preservation.making %}1{% endif %}">
+            {% include "preservation-part.html" with p=preservation %}
+          </div>
+        {% endif %}
 
               </div>
               <div class="details-column">
@@ -1119,6 +1134,7 @@
   {% if tab == "incidents" %}<script src="{% static 'incident-desk.js' %}"></script>{% endif %}
   {% comment %}The shelf (Phase 12 chapter 11, v1.213.0): the chips, the drop zone, Compare a report with this incident.{% endcomment %}
   {% if tab == "documents" %}<script src="{% static 'documents-shelf.js' %}"></script>{% endif %}
+  {% if tab == "details" %}<script src="{% static 'preservation.js' %}"></script>{% endif %}
   {% if tab == "clips" %}<script src="{% static 'clips.js' %}"></script>{% endif %}
   {% if tab == "speakers" %}<script src="{% static 'people-cards.js' %}"></script>{% endif %}
   {% comment %}The Preview (v1.98.0): a chat's citation and a search's hit play over the page.{% endcomment %}

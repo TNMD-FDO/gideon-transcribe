@@ -608,7 +608,7 @@ Deletes in N days unless used
 ### Deletion into the Recycle bin
 
 - **What the bin holds**: Cases the clock has deleted, whole. Nothing else: not anything a person deletes, not anything from a Workspace (nothing there is kept, so nothing there is binned), and never a single Recording on its own.
-- **The night a Case is due**, the sweep deletes it into the Recycle bin, whole: Recordings, Transcripts, Corrections, Speaker names, People, Summaries, Chats, Case Chats, Clips (files and definitions together), Provenance, Descriptions, Recording types, and Shares go together. The Case leaves the Cases page, search, the Add to case and Move to case pickers, and every Collaborator's list; its Shares stop working; nothing in it can be opened, exported, or chatted, and a binned Case cannot be asked in a Case Chat. Its files stay in `cases/<case id>/` and its rows stay in Postgres, marked with a deleted-on date; the file sweeper leaves a binned Case's folder alone. Audit: "Case deleted (cause: retention)" with the counts. No email is sent.
+- **The night a Case is due**, the sweep deletes it into the Recycle bin, whole (its Preservation copy included, from Phase 14 chapter 1, being a file in the Case's folder): Recordings, Transcripts, Corrections, Speaker names, People, Summaries, Chats, Case Chats, Clips (files and definitions together), Provenance, Descriptions, Recording types, and Shares go together. The Case leaves the Cases page, search, the Add to case and Move to case pickers, and every Collaborator's list; its Shares stop working; nothing in it can be opened, exported, or chatted, and a binned Case cannot be asked in a Case Chat. Its files stay in `cases/<case id>/` and its rows stay in Postgres, marked with a deleted-on date; the file sweeper leaves a binned Case's folder alone. Audit: "Case deleted (cause: retention)" with the counts. No email is sent.
 - **The Recycle bin page**: reached from the Cases page; hidden while Folder management is Off. The owner sees their own deleted Cases: name, Recordings, size, deleted on, days left, **Restore**, **Delete permanently** (behind a confirmation naming the counts), and **Empty recycle bin** (behind a confirmation). Admins see every user's deleted Cases on the same page with an owner filter and the "Owner deactivated" mark, and may restore or permanently delete any. Collaborators see nothing of the bin.
 - **Restore**: puts the Case back exactly as it was, Recordings, text, Clips, People, Case Chats, Shares, and all, and starts its clock over (otherwise it would be deleted again that night). Audit: "Case restored". A full quota never blocks a Restore: the Case never left the disk.
 - **Room**: a binned Case counts against its owner's quota, since it is still on disk; Delete permanently and Empty recycle bin are how the owner makes room at once. The "Minimum free disk space" floor is unchanged.
@@ -1334,7 +1334,7 @@ Export to Word follows the Phase 1 Chat export (Phase 1 Exports chapter): layout
 <case name> - case chat <yyyy-mm-dd hhmm>.docx
 ```
 
-One "export made" audit row of kind `case chat`. The Workspace's "Download everything" is untouched and a Case has no zip.
+One "export made" audit row of kind `case chat`. The Workspace's "Download everything" is untouched and a Case has no zip. (Ended: v1.242.0 gave a Case its zip of Transcripts, and Phase 14 chapter 1, v1.244.0, gives it the Preservation copy.)
 
 ### The prompt inventory
 
