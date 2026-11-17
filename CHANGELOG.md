@@ -17,6 +17,42 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.246.0, 2026-11-17
+
+```
+Models: unchanged
+Database: migrates
+```
+
+The Preservation copy's email, and one save between several owners.
+
+- **A copy's owners are the case's owner and everyone marked Also an
+  owner.** Each sees the copy in Archived and may download it; Remove
+  now stays the owner's and an Admin's. A row with more than one owner
+  says who they are.
+- **The owners are emailed** when a case is deleted and its copy kept:
+  how the case went, where the copy is and until when, and to save it
+  to the client's file of record. A case the retention clock deletes
+  is told the night it goes to the Recycle bin.
+- **Saved once.** With several owners the message names them, says
+  only one needs to save it, and carries a link, never the file. The
+  first to download it is recorded for everyone to see; after that
+  **Download again** asks first. **Mark as saved** is for someone who
+  saved the zip straight from the message.
+- **Reminded each night** until somebody has taken it: the nightly
+  email lists the copies not yet saved with their days left, and tells
+  the others once when somebody has taken one.
+- **Attach the Preservation copy** is a setting on the panel's Email
+  page, Off after the upgrade. On: the zip is attached when the message
+  goes to one person and is no larger than **Largest Preservation copy
+  attached** (20 MB). **Preservation copy mail** (On) turns the message
+  and the reminder off altogether.
+- A copy with nobody to tell is told to the Operator address by name.
+
+Three settings, one message whose wording an Admin may edit, six new
+columns. This is the last of the three releases of the Preservation
+copy.
+
 ## v1.245.0, 2026-11-17
 
 ```

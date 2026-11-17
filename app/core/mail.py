@@ -24,6 +24,7 @@ import smtplib
 import string
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
+from pathlib import Path
 
 from django.db import models
 from django.utils import timezone
@@ -41,6 +42,7 @@ VISION_DONE = "vision_done"
 VISION_REQUEST = "vision_requested"
 VISION_ALLOWED = "vision_allowed"
 DICTATION = "dictation_sent"
+PRESERVATION = "preservation_copy"
 OPERATOR = "operator"
 TEST = "test"
 
@@ -61,7 +63,7 @@ TEMPLATES = {
     DIGEST: {
         "subject_key": "digest_subject",
         "body_key": "digest_body",
-        "placeholders": {"name", "cases", "shared", "dictations", "link"},
+        "placeholders": {"name", "cases", "shared", "dictations", "copies", "link"},
         "subject": "Gideon Transcribe: cases deleting soon",
         "body": (
             "Hello {name},\n"
@@ -73,9 +75,20 @@ TEMPLATES = {
             "\n"
             "{dictations}\n"
             "\n"
+            "{copies}\n"
+            "\n"
             "Open a case, or press Keep on the Cases page, to start its clock "
             "over: {link}\n"
         ),
+    },
+    # A deleted Case's Preservation copy, to its owners (Phase 14 chapter 3).
+    # The app writes the four blocks; the frame is an Admin's to edit.
+    PRESERVATION: {
+        "subject_key": "preservation_subject",
+        "body_key": "preservation_body",
+        "placeholders": {"name", "case", "happened", "copy", "owners", "link"},
+        "subject": 'Gideon Transcribe: save the Preservation copy of "{case}"',
+        "body": ("Hello {name},\n\n{happened}\n\n{copy}\n\n{owners}\n\n{link}\n"),
     },
     DICTATION: {
         "subject_key": "dictation_subject",
@@ -420,7 +433,8 @@ def build(to_address: str, subject: str, body: str, attachment=None) -> EmailMes
 
 
 def _mime_of(filename: str) -> tuple[str, str]:
-    """The type a file is sent as, from its ending; a Word file or a recording."""
+    """The type a file is sent as, from its ending: a Word file, a recording,
+    or a Preservation copy's zip."""
     ending = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     return {
         "docx": (
@@ -432,6 +446,7 @@ def _mime_of(filename: str) -> tuple[str, str]:
         "webm": ("audio", "webm"),
         "mp3": ("audio", "mpeg"),
         "wav": ("audio", "wav"),
+        "zip": ("application", "zip"),
     }.get(ending, ("application", "octet-stream"))
 
 
@@ -610,6 +625,27 @@ def attempt(
         details = {key: value for key, value in details.items() if key != "attach_memo"}
         details["attached"] = bool(files)
         details["files"] = [name for name, _ in files]
+    if "attach_copy" in details:
+        # A Preservation copy's zip (Phase 14 chapter 3), read now: whether
+        # it may be attached was decided when the message was written. A
+        # file that has since gone (removed, or its days up) is said so.
+        path = Path(details.get("attach_copy") or "")
+        name = details.get("attach_name") or "preservation copy.zip"
+        details = {
+            key: value
+            for key, value in details.items()
+            if key not in ("attach_copy", "attach_name")
+        }
+        if path.is_file():
+            attachment = [(name, path.read_bytes())]
+        else:
+            body = body.replace(
+                "\nSent automatically by",
+                "\nThe file is no longer there to attach; the copy has been "
+                "removed.\n\nSent automatically by",
+                1,
+            )
+        details["attached"] = bool(attachment)
     try:
         reply = deliver(to_address, subject, body, attachment)
     except MailFailure as why:
@@ -777,6 +813,7 @@ def people_without_email() -> int:
 KIND_WORDS = {
     DIGEST: "retention digest",
     DICTATION: "recording sent",
+    PRESERVATION: "preservation copy kept",
     SHARED: "case shared",
     HANDED: "case handed over",
     BATCH: "batch finished",
@@ -839,7 +876,136 @@ def _digest_line(line: dict) -> str:
     return f"deletes in {days} unless used"
 
 
-def send_digests(digests: dict, dictations: dict | None = None) -> int:
+def _copies_block(told: dict) -> str:
+    """The digest's block for Preservation copies (Phase 14 chapter 3): the
+    ones not yet saved, every night; and, once, the ones somebody else took."""
+    parts = []
+    waiting = told.get("waiting") or []
+    if waiting:
+        parts.append(
+            "Preservation copies not yet saved to the client's file:\n"
+            + "\n".join(
+                f"- {one['case']}: kept until {one['until']:%d %B %Y} "
+                f"({one['days_left']} day{'' if one['days_left'] == 1 else 's'} left"
+                + ("; the case is in the Recycle bin" if one.get("in_bin") else "")
+                + ")"
+                for one in waiting
+            )
+            + f"\nDownload them from Archived: {app_url('/cases/archived')}"
+        )
+    done = told.get("done") or []
+    if done:
+        parts.append(
+            "Preservation copies saved by someone else:\n"
+            + "\n".join(
+                f"- {one['case']}: {one['how']} by {one['by']} on "
+                f"{one['when']:%d %B %Y}. Nothing more for you to do."
+                for one in done
+            )
+        )
+    return "\n\n".join(parts)
+
+
+def preservation_copy(
+    people: list,
+    *,
+    case_id,
+    case_name: str,
+    owner_name: str,
+    happened: str,
+    download: str,
+    saved: str,
+    until,
+    path,
+    filename: str,
+    size_bytes: int,
+) -> int:
+    """ "Preservation copy kept", to each of a copy's owners (Phase 14 chapter 3).
+
+    The file goes with it only when the office has turned that on, the
+    message goes to one person, and the zip fits the office's limit: a file
+    in two mailboxes is a file nobody can know was saved once. With nobody
+    to tell, the Operator address is told the Case's name, never the file.
+    """
+    if not settings_store.get("preservation_mail"):
+        return 0
+    to = [one for one in people if one is not None and one.is_active and one.email]
+    if not to:
+        send_to_operator(
+            OPERATOR,
+            "Gideon Transcribe: a Preservation copy with nobody to tell",
+            f'The case "{case_name}" (owner: {owner_name}) was deleted and its '
+            f"Preservation copy is kept until {until:%d %B %Y}. None of its "
+            "owners can be mailed. An Admin can download it from Archived: "
+            f"{app_url('/cases/archived')}\n",
+            case=case_name,
+        )
+        return 0
+    limit = int(settings_store.get("preservation_attach_most_mb") or 20)
+    megabytes = size_bytes / 1024 / 1024
+    wanted = bool(settings_store.get("preservation_attach")) and len(to) == 1
+    attach = wanted and size_bytes <= limit * 1024 * 1024
+    if attach:
+        copy_words = (
+            "Its Preservation copy is attached: everything made in the case, as "
+            "Word documents. Save it to the client's file of record."
+        )
+        link_words = (
+            f"The copy is also kept in the app until {until:%d %B %Y}: {download}\n"
+            "\n"
+            "Saved it from this message? Press here so you are not reminded: "
+            f"{saved}"
+        )
+    else:
+        copy_words = (
+            f"Its Preservation copy is {megabytes:.0f} MB, too large to attach "
+            f"(the office's limit is {limit} MB). It is to be saved to the "
+            "client's file of record."
+            if wanted
+            else "Its Preservation copy, everything made in the case as Word "
+            "documents, is to be saved to the client's file of record."
+        )
+        link_words = f"Download it, until {until:%d %B %Y}: {download}"
+    owners_words = ""
+    if len(people) > 1:
+        names = [f"{people[0].shown_name} (owner)"] + [
+            one.shown_name for one in people[1:]
+        ]
+        owners_words = (
+            f"This went to {', '.join(names[:-1])} and {names[-1]}. Only one of "
+            "you needs to save it. Whoever downloads it is recorded, and the "
+            "others are told it is done."
+        )
+    sent = 0
+    for person in to:
+        subject, body = render(
+            PRESERVATION,
+            name=person.shown_name,
+            case=case_name,
+            happened=happened,
+            copy=copy_words,
+            owners=owners_words,
+            link=link_words,
+        )
+        more = {"attach_copy": str(path), "attach_name": filename} if attach else {}
+        if send_to_person(
+            PRESERVATION,
+            person,
+            subject,
+            body,
+            object_type="case",
+            object_id=case_id,
+            object_label=case_name,
+            recipients=len(to),
+            **more,
+        ):
+            sent += 1
+    return sent
+
+
+def send_digests(
+    digests: dict, dictations: dict | None = None, copies: dict | None = None
+) -> int:
     """The night's Retention digests, one per person, and the Operator's message.
 
     `digests` is retention.digests_for_tonight()'s answer: per person, their
@@ -851,8 +1017,9 @@ def send_digests(digests: dict, dictations: dict | None = None) -> int:
     from core.models import User
 
     dictations = dictations or {}
+    copies = copies or {}
     sent = 0
-    for user_id in set(digests) | set(dictations):
+    for user_id in set(digests) | set(dictations) | set(copies):
         lines = digests.get(user_id, [])
         person = User.objects.filter(pk=user_id).first()
         if person is None or not person.is_active:
@@ -883,14 +1050,25 @@ def send_digests(digests: dict, dictations: dict | None = None) -> int:
             )
         if not own and not shared and theirs:
             cases_block = "- (none)"
+        copies_block = _copies_block(copies.get(user_id, {}))
         subject, body = render(
             DIGEST,
             name=person.shown_name,
             cases=cases_block,
             shared=shared_block,
             dictations=dictation_block,
+            copies=copies_block,
             link=app_url("/cases"),
         )
+        edited = settings_store.get(TEMPLATES[DIGEST]["body_key"]) or ""
+        if copies_block and edited and "{copies}" not in edited:
+            # An office that edited the digest before this block existed
+            # does not lose the reminder: it goes at the foot.
+            body = body.replace(
+                "\nSent automatically by",
+                f"\n{copies_block}\n\nSent automatically by",
+                1,
+            )
         if send_to_person(
             DIGEST,
             person,
@@ -901,6 +1079,7 @@ def send_digests(digests: dict, dictations: dict | None = None) -> int:
             own=len(own),
             shared=len(shared),
             dictations=len(theirs),
+            copies=len(copies.get(user_id, {}).get("waiting") or []),
         ):
             sent += 1
     return sent

@@ -87,6 +87,10 @@ class PreservationCopy(models.Model):
     made_by_name = models.CharField(max_length=200, blank=True, default="")
     downloaded_at = models.DateTimeField(null=True, blank=True)
     downloaded_by_name = models.CharField(max_length=200, blank=True, default="")
+    # Taken (chapter 3): who downloaded it, or said they saved it from their
+    # message, and how. One mark, the first, seen by every owner of the copy.
+    downloaded_by_user_id = models.BigIntegerField(null=True, blank=True)
+    taken_how = models.CharField(max_length=10, blank=True, default="")
 
     class Meta:
         ordering = ["-created"]
@@ -129,6 +133,15 @@ class ArchivedCopy(models.Model):
     size_bytes = models.BigIntegerField(default=0)
     downloaded_at = models.DateTimeField(null=True, blank=True)
     downloaded_by_name = models.CharField(max_length=200, blank=True, default="")
+    # Taken (chapter 3): who downloaded it, or said they saved it from their
+    # message, and how. One mark, the first, seen by every owner of the copy.
+    downloaded_by_user_id = models.BigIntegerField(null=True, blank=True)
+    taken_how = models.CharField(max_length=10, blank=True, default="")
+    # Who was marked Also an owner when the Case went (chapter 3): a Case's
+    # Shares go with it, so the copy's other owners are written here, as
+    # names for the page and as ids to find a person's copies by.
+    also_owners = models.JSONField(default=list, blank=True)
+    also_owner_ids = models.JSONField(default=list, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -381,10 +394,14 @@ def for_the_bin(case) -> str:
     that is not behind. The Case is binned whatever this says."""
     if not at_deletion_on():
         return "none"
-    if usable(case) is not None:
-        return "kept"
     try:
-        return "kept" if make_now(case).state == READY else "failed"
+        copy = usable(case) or make_now(case)
+        if copy.state != READY:
+            return "failed"
+        # Its owners are told tonight, while the Case can still be restored
+        # (chapter 3); not again when it is wiped.
+        tell_owners_of_the_bin(case, copy)
+        return "kept"
     except Exception:
         log.exception("the copy of %s could not be made for the bin", case.pk)
         return "failed"
@@ -406,7 +423,12 @@ def before_it_goes(case, how: str, actor=None, request=None, keep: bool = True) 
         copy = usable(case) or make_now(case, by=actor)
         if copy.state != READY:
             return "failed"
-        archive(copy, how, actor, request)
+        people = owners_of(case)
+        # A Case wiped from the Recycle bin was told of when it was binned.
+        tell = not case.is_binned
+        kept = archive(copy, how, actor, request)
+        if tell:
+            tell_owners_of_archived(kept, people, actor)
         return "kept"
     except Exception:
         log.exception("the copy of %s could not be archived", case.pk)
@@ -418,7 +440,12 @@ def archive(copy: PreservationCopy, how: str, actor=None, request=None) -> Archi
     from core import audit
 
     case = copy.case
+    others = [one for one in owners_of(case) if one.pk != case.owner_id]
     kept = ArchivedCopy(
+        also_owners=[{"id": one.pk, "name": one.shown_name} for one in others],
+        also_owner_ids=[one.pk for one in others],
+        downloaded_by_user_id=copy.downloaded_by_user_id,
+        taken_how=copy.taken_how,
         case_id_was=case.pk,
         case_name=case.name,
         owner=case.owner,
@@ -455,6 +482,145 @@ def archive(copy: PreservationCopy, how: str, actor=None, request=None) -> Archi
     return kept
 
 
+def _until(kept: ArchivedCopy):
+    from datetime import timedelta
+
+    return kept.gone_on + timedelta(days=keep_days())
+
+
+def tell_owners_of_archived(kept: ArchivedCopy, people: list, actor=None) -> int:
+    """The message when a person's Delete has sent a copy to Archived."""
+    from core import exports, mail
+
+    who = (
+        "you"
+        if len(people) == 1 and actor is not None and actor.pk == people[0].pk
+        else ""
+    )
+    by = who or (actor.shown_name if actor is not None else "the retention policy")
+    return mail.preservation_copy(
+        people,
+        case_id=kept.case_id_was,
+        case_name=kept.case_name,
+        owner_name=kept.owner_name,
+        happened=(
+            f'The case "{kept.case_name}" was deleted on '
+            f"{kept.gone_on:%d %B %Y} by {by}."
+        ),
+        download=mail.app_url(f"/cases/archived/{kept.pk}/download"),
+        saved=mail.app_url(f"/cases/archived/{kept.pk}/saved"),
+        until=_until(kept),
+        path=kept.path,
+        filename=(
+            f"{exports.safe_name(kept.case_name)} - preservation copy "
+            f"{timezone.localtime(kept.made):%Y-%m-%d}.zip"
+        ),
+        size_bytes=kept.size_bytes,
+    )
+
+
+def _bin_until(case):
+    """The day a binned Case's copy is kept until: the Case's days in the
+    Recycle bin, and then its own days in Archived."""
+    from datetime import timedelta
+
+    from core import retention
+
+    wiped = timezone.localdate() + timedelta(days=max(0, retention.bin_days_left(case)))
+    return wiped, wiped + timedelta(days=keep_days())
+
+
+def tell_owners_of_the_bin(case, copy: PreservationCopy) -> int:
+    """The message the night the Retention policy bins a Case: it can still
+    be restored, so this is when its owners most need to hear."""
+    from datetime import timedelta
+
+    from core import mail, retention
+
+    today = timezone.localdate()
+    wiped = today + timedelta(days=retention.recycle_bin_days())
+    return mail.preservation_copy(
+        owners_of(case),
+        case_id=case.pk,
+        case_name=case.name,
+        owner_name=case.owner.shown_name,
+        happened=(
+            f'The case "{case.name}" went unused for {retention.retention_days()} '
+            f"days and was deleted by the retention policy on {today:%d %B %Y}. "
+            f"It waits in the Recycle bin until {wiped:%d %B %Y}, where its owner "
+            f"can restore it: {mail.app_url('/cases/bin')}"
+        ),
+        download=mail.app_url(f"/cases/bin/{case.pk}/preservation/download"),
+        saved=mail.app_url(f"/cases/bin/{case.pk}/preservation/saved"),
+        until=wiped + timedelta(days=keep_days()),
+        path=copy.path,
+        filename=zip_name(case, copy.finished or timezone.now()),
+        size_bytes=copy.size_bytes,
+    )
+
+
+def for_tonights_digest(now=None) -> dict:
+    """Per person, the copies they are an owner of: the ones nobody has taken
+    (every night), and the ones somebody else took since last night (once)."""
+    from datetime import timedelta
+
+    from core import settings_store
+    from core.cases import Case
+
+    if not settings_store.get("preservation_mail"):
+        return {}
+    now = now or timezone.now()
+    since = now - timedelta(days=1)
+    told: dict = {}
+
+    def add(people_ids, copy, name, until, left, in_bin):
+        for person in people_ids:
+            mine = told.setdefault(person, {"waiting": [], "done": []})
+            if copy.downloaded_at is None:
+                mine["waiting"].append(
+                    {"case": name, "until": until, "days_left": left, "in_bin": in_bin}
+                )
+            elif copy.downloaded_at >= since and copy.downloaded_by_user_id != person:
+                mine["done"].append(
+                    {
+                        "case": name,
+                        "by": copy.downloaded_by_name,
+                        "when": timezone.localtime(copy.downloaded_at),
+                        "how": "saved" if copy.taken_how == "saved" else "downloaded",
+                    }
+                )
+
+    for kept in ArchivedCopy.objects.all():
+        people = [kept.owner_id, *(kept.also_owner_ids or [])]
+        add(
+            [one for one in people if one],
+            kept,
+            kept.case_name,
+            _until(kept),
+            max(0, days_left(kept, now)),
+            False,
+        )
+    binned = Case.objects.filter(deleted_on__isnull=False).select_related("owner")
+    for case in binned:
+        copy = ready(case)
+        if copy is None:
+            continue
+        wiped, until = _bin_until(case)
+        add(
+            [one.pk for one in owners_of(case)],
+            copy,
+            case.name,
+            until,
+            (until - timezone.localdate(now)).days,
+            True,
+        )
+    return {
+        person: lines
+        for person, lines in told.items()
+        if lines["waiting"] or lines["done"]
+    }
+
+
 def days_left(kept: ArchivedCopy, now=None) -> int:
     """Whole days until the sweep removes it, the Off spells left out as the
     Recycle bin leaves them out. Zero or less means tonight."""
@@ -466,17 +632,54 @@ def days_left(kept: ArchivedCopy, now=None) -> int:
     return keep_days() - max(0, waited)
 
 
+def owners_of(case) -> list:
+    """A copy's owners (chapter 3): the Case's Owner, then everyone marked
+    Also an owner, while Sharing is on. The Owner is not always the person
+    who answers for the client's file."""
+    from core import sharing
+
+    people = [case.owner]
+    if sharing.on():
+        marked = case.shares.filter(also_owner=True).select_related("person")
+        people += [one.person for one in marked.order_by("added_on")]
+    return people
+
+
+def _theirs(user) -> Q:
+    return Q(owner=user) | Q(also_owner_ids__contains=[user.pk])
+
+
+def is_an_owner(kept: ArchivedCopy, user) -> bool:
+    return kept.owner_id == user.pk or user.pk in (kept.also_owner_ids or [])
+
+
 def archived_for(user, owner: str = ""):
-    """The copies this person sees: their own, or as an Admin everyone's."""
+    """The copies this person sees: the ones they are an owner of, or as an
+    Admin everyone's."""
     if getattr(user, "is_admin", False):
         rows = ArchivedCopy.objects.all()
         return rows.filter(owner__username=owner) if owner else rows
-    return ArchivedCopy.objects.filter(owner=user)
+    return ArchivedCopy.objects.filter(_theirs(user))
 
 
 def waiting_count(user) -> int:
-    """Their own copies not yet downloaded: the number on the Archived tab."""
-    return ArchivedCopy.objects.filter(owner=user, downloaded_at__isnull=True).count()
+    """Their copies nobody has taken yet: the number on the Archived tab."""
+    return ArchivedCopy.objects.filter(
+        _theirs(user), downloaded_at__isnull=True
+    ).count()
+
+
+def taken_by_another(copy, user) -> bool:
+    """Somebody else has this copy already: asked before it is given again."""
+    return copy.downloaded_at is not None and copy.downloaded_by_user_id != user.pk
+
+
+def taken_words(copy) -> str:
+    if copy.downloaded_at is None:
+        return ""
+    how = "saved" if copy.taken_how == "saved" else "downloaded"
+    when = timezone.localtime(copy.downloaded_at)
+    return f"{how} {when:%d %b} by {copy.downloaded_by_name}"
 
 
 def remove(kept: ArchivedCopy, cause: str, actor=None, request=None) -> None:
@@ -512,11 +715,44 @@ def sweep_archived(now=None) -> int:
     return gone
 
 
-def downloaded(copy, by) -> None:
-    """Marked on a Case's own copy and on an archived one alike."""
+def downloaded(copy, by, how: str = "downloaded") -> bool:
+    """The one mark, on a Case's own copy and on an archived one alike: the
+    first to take it. A later download changes nothing, and it is not undone."""
+    if copy.downloaded_at is not None:
+        return False
     copy.downloaded_at = timezone.now()
     copy.downloaded_by_name = by.shown_name
-    copy.save(update_fields=["downloaded_at", "downloaded_by_name"])
+    copy.downloaded_by_user_id = by.pk
+    copy.taken_how = how
+    copy.save(
+        update_fields=[
+            "downloaded_at",
+            "downloaded_by_name",
+            "downloaded_by_user_id",
+            "taken_how",
+        ]
+    )
+    return True
+
+
+def mark_saved(copy, case_id, case_name: str, owner, by, request=None) -> bool:
+    """Said by a person who saved it from their message: taken, as a download
+    is, so nobody is reminded and nobody saves it twice."""
+    from core import audit
+
+    if not downloaded(copy, by, how="saved"):
+        return False
+    audit.write(
+        audit.Category.CASES,
+        "preservation copy marked saved",
+        actor=by,
+        affected_user=owner if owner is not None and owner.pk != by.pk else None,
+        object_type="case",
+        object_id=case_id,
+        object_label=case_name,
+        request=request,
+    )
+    return True
 
 
 # The plan: what goes in, in order --------------------------------------------

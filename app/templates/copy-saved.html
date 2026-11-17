@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Mark as saved{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Mark as saved (Phase 14 chapter 3, v1.246.0): for a person who saved the
+    Preservation copy from the message it was attached to. The message's link
+    comes here and only asks; the press below is what marks it.
+  {% endcomment %}
+  <div class="page roomy">
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
+      <div class="line"><h1>Mark as saved</h1></div>
+    </header>
+    <div class="card copy-ask">
+      {% if taken %}
+        <p>The Preservation copy of <b>{{ case_name }}</b> is marked already: {{ taken }}. Nobody is being reminded about it.</p>
+        <div class="row gap6 mt8"><a class="btn primary" href="{{ where }}">Back to Archived</a></div>
+      {% else %}
+        <p>Have you saved the Preservation copy of <b>{{ case_name }}</b> to the client's file of record?</p>
+        <p class="muted small">Marking it stops the nightly reminder for everyone who was sent it, and tells them it is done. It cannot be unmarked.</p>
+        <form method="post" class="row gap6 mt8">
+          {% csrf_token %}
+          <button type="submit" class="primary">Yes, I saved it</button>
+          <a class="btn" href="{{ where }}">Not yet</a>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

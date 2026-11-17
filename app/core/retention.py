@@ -192,8 +192,11 @@ def sweep(now: datetime | None = None) -> dict | None:
 
     digests = digests_for_tonight(in_the_window)
     dictations = dictation.for_tonights_digest()
-    if digests or dictations:
-        sent = mail.send_digests(digests, dictations)
+    # The Preservation copies not yet saved, and the ones somebody else took
+    # since last night (Phase 14 chapter 3).
+    copies = preservation.for_tonights_digest(now)
+    if digests or dictations or copies:
+        sent = mail.send_digests(digests, dictations, copies)
         log.info("%d retention digest(s) queued tonight", sent)
     left = [
         {

@@ -50,7 +50,7 @@
         <tbody>
           {% for row in rows %}
             <tr data-copy="{{ row.copy.pk }}">
-              <td><b>{{ row.copy.case_name }}</b></td>
+              <td><b>{{ row.copy.case_name }}</b>{% if row.owners %}<br><span class="muted small">Owners: {{ row.owners|join:", " }}</span>{% endif %}</td>
               {% if user.is_admin %}
                 <td class="muted">
                   {% if row.copy.owner %}<a href="{% url 'archived' %}?owner={{ row.copy.owner.username|urlencode }}">{{ row.copy.owner_name }}</a>{% else %}{{ row.copy.owner_name }}{% endif %}
@@ -61,11 +61,13 @@
               <td>{{ row.copy.documents }} document{{ row.copy.documents|pluralize }} &middot; {{ row.size }}<br><span class="muted small">made {{ row.copy.made|date:"d M Y H:i" }}{% if row.copy.made_by_name %} by {{ row.copy.made_by_name }}{% endif %}</span></td>
               <td class="muted">{{ row.until|date:"d M Y" }}<br><span class="small">{{ row.days_left }} day{{ row.days_left|pluralize }} left</span></td>
               <td class="small">
-                {% if row.copy.downloaded_at %}<span class="pill small ok">{{ row.copy.downloaded_at|date:"j M" }}, by {{ row.copy.downloaded_by_name }}</span>{% else %}<span class="pill small warn">not yet</span>{% endif %}
+                {% if row.taken %}<span class="pill small ok">{{ row.taken }}</span>{% else %}<span class="pill small warn">not yet</span>{% endif %}
               </td>
               <td class="small">
-                <a class="btn small{% if not row.copy.downloaded_at %} primary{% endif %}" href="{% url 'archived-download' row.copy.pk %}">Download</a>
-                <button type="button" class="small ghost danger remove-copy" data-copy="{{ row.copy.pk }}" data-name="{{ row.copy.case_name }}" data-downloaded="{% if row.copy.downloaded_at %}1{% endif %}">Remove now</button>
+                {% comment %}One save between a copy's owners (chapter 3): once somebody has it, Download asks first.{% endcomment %}
+                <a class="btn small{% if not row.taken %} primary{% endif %}" href="{% url 'archived-download' row.copy.pk %}">{% if row.by_another %}Download again{% else %}Download{% endif %}</a>
+                {% if not row.taken %}<a class="btn small ghost" href="{% url 'archived-saved' row.copy.pk %}" title="For a copy you saved from the message it was attached to: nobody is reminded after this">Mark as saved</a>{% endif %}
+                {% if row.may_remove %}<button type="button" class="small ghost danger remove-copy" data-copy="{{ row.copy.pk }}" data-name="{{ row.copy.case_name }}" data-downloaded="{% if row.copy.downloaded_at %}1{% endif %}">Remove now</button>{% endif %}
               </td>
             </tr>
           {% endfor %}

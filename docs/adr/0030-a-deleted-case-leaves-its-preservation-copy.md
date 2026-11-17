@@ -55,6 +55,23 @@ unless it is told.
 - The mail that tells the owner the copy is there is the next release; until
   then the pages are the only notice.
 
+## Added with v1.246.0 (Phase 14 chapter 3)
+
+- **The copy's owners are the Case's Owner and everyone marked Also an
+  owner**, written on the archived copy as the Case goes, since a Case's
+  Shares go with it. The maintainer: "Owner and also-owner, but I don't want
+  them to double save the preservation."
+- **They are mailed, and reminded nightly until one of them has taken it.**
+  The message carries the file only when it goes to one person, the office
+  has turned that on, and the zip fits the office's limit. With several
+  owners it carries a link: a file in two mailboxes is a file nobody can
+  know was saved once.
+- **This is the second message of the app that may carry an attachment**
+  (the first is a dictation sent to a colleague), and the first sent when a
+  Case is deleted. Both were ruled out by Phase 2 chapter 8, which is
+  amended. Attach is Off by default: whether privileged work goes through
+  the office's mail system is the office's decision.
+
 ## Considered and not chosen
 
 - **Nothing kept; the copy downloaded to the browser as the Case is deleted.**

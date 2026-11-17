@@ -64,7 +64,7 @@
                 {% comment %}The copy made when the clock binned the case (Phase 14 chapter 2).{% endcomment %}
                 <td class="small">
                   {% if row.copy %}
-                    {% if row.copy.downloaded_at %}<span class="pill small ok">downloaded {{ row.copy.downloaded_at|date:"j M" }}</span>{% else %}<span class="pill small warn">not yet downloaded</span>{% endif %}
+                    {% if row.copy.downloaded_at %}<span class="pill small ok">{% if row.copy.taken_how == "saved" %}saved{% else %}downloaded{% endif %} {{ row.copy.downloaded_at|date:"j M" }}{% if row.copy.downloaded_by_name %} by {{ row.copy.downloaded_by_name }}{% endif %}</span>{% else %}<span class="pill small warn">not yet downloaded</span>{% endif %}
                     <a class="btn small" href="{% url 'bin-preservation-download' row.case.pk %}">Download</a>
                   {% else %}
                     <span class="muted">none</span>

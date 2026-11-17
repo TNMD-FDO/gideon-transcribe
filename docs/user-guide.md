@@ -400,7 +400,15 @@ When a case is deleted, its Preservation copy is made first and kept after the c
 
 **When the retention clock deletes a case**, its copy is made that night and is on the case's row in the **Recycle bin**, under **Preservation copy**, to **Download** while the case waits there. If the case is restored, the copy comes back with it. When the case is wiped, or you press **Delete permanently**, its copy goes to Archived.
 
-**Archived** is the fourth tab of the Cases page, after the Recycle bin; the number on it is your copies not yet downloaded. Each row is one deleted case's copy: when the case was deleted and how, how many documents the copy holds and when it was made, the day it is kept until, and whether it has been downloaded. **Download** it and save it to the client's file of record. **Remove now** takes it off the server at once, after asking; otherwise it is removed by itself when its days are up, whether or not anyone downloaded it. A case cannot be brought back from Archived: only its written work is kept. Only you, as the case's owner, and Admins see a copy there.
+**Archived** is the fourth tab of the Cases page, after the Recycle bin; the number on it is your copies not yet downloaded. Each row is one deleted case's copy: when the case was deleted and how, how many documents the copy holds and when it was made, the day it is kept until, and whether it has been downloaded. **Download** it and save it to the client's file of record. **Remove now** takes it off the server at once, after asking; otherwise it is removed by itself when its days are up, whether or not anyone downloaded it. A case cannot be brought back from Archived: only its written work is kept.
+
+**Who a copy belongs to.** The case's owner, and everyone the owner had marked **Also an owner**. Each of them sees the copy in Archived and may download it; **Remove now** is the owner's and an Admin's. A row whose copy has more than one owner says who they are.
+
+**The email.** When a case is deleted and its copy kept, each of the copy's owners is sent a message saying so, with where to download the copy and until when. If your office allows it and the copy went to you alone, the zip is attached; save it to the client's file of record. If the retention clock deleted the case, the message comes the night it goes to the Recycle bin, while it can still be restored.
+
+**Saved once.** When a copy has several owners the message names them and says only one of you needs to save it, and it carries a link, never the file. The first of you to download it is recorded, and everyone sees "downloaded by" with the name on the copy's row. After that the button reads **Download again** and asks first: if it is already in the client's file, you do not need to save it again. If you saved the zip straight from the message, press **Mark as saved** on the row, or the link in the message, so that nobody is reminded.
+
+**The reminder.** Until somebody has taken the copy, the nightly email that warns of cases about to be deleted also lists your copies not yet saved, with the days left. When someone else takes one, you are told once, "Nothing more for you to do", and not again.
 
 ## How long a case is kept
 

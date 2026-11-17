@@ -1502,7 +1502,7 @@ Phase 2 gives the app one way out by mail. It sends plain-text messages over SMT
 | Operator: backup | the Operator address | as the Backup and restore chapter says | that chapter's four messages, fixed wording |
 | Test message | the signed-in Admin (the Email page's button) or the Operator address (`./transcribe check`) | on demand | fixed wording |
 
-Nothing else, ever: no welcome or sign-in mail; no mail when a Case is deleted, restored, or wiped, or when a Share is removed, or when Keep is pressed; no per-Recording mail; no mail for a refused upload or a single failed Job (the Batch mail covers it); no mail about the Directory check's result or a service being down; no mail about another person's material; and never a mail from the drill project.
+(From v1.246.0, Phase 14 chapter 3: one more kind, Preservation copy kept, to a deleted Case's owners, which may carry the copy's file; and a block in the Retention digest for copies not yet saved.) Nothing else, ever: no welcome or sign-in mail; no mail when a Case is deleted, restored, or wiped, or when a Share is removed, or when Keep is pressed; no per-Recording mail; no mail for a refused upload or a single failed Job (the Batch mail covers it); no mail about the Directory check's result or a service being down; no mail about another person's material; and never a mail from the drill project.
 
 Admins' own mailboxes are never used for the app's mail. Operator mail goes to the Operator address only.
 

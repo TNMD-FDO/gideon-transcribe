@@ -12,8 +12,9 @@ from urllib.parse import quote
 
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from core import audit, cases, exports, preservation, uploads
@@ -123,10 +124,11 @@ def download(request: HttpRequest, case_id) -> FileResponse:
 def bin_download(request: HttpRequest, case_id) -> FileResponse:
     """The copy made when the Retention policy binned the Case."""
     _on_or_404()
-    case = _their_binned_case(request, case_id)
-    copy = preservation.ready(case)
-    if copy is None or not copy.path.exists():
-        raise Http404("no Preservation copy")
+    case, copy = _their_bin_copy(request, case_id)
+    if preservation.taken_by_another(copy, request.user) and "again" not in request.GET:
+        return _already_taken(
+            request, copy, case.name, reverse("archived"), request.path + "?again=1"
+        )
     _export_row(request, case.owner, case.pk, case.name)
     preservation.downloaded(copy, request.user)
     return _zip(copy.path, preservation.zip_name(case, copy.finished))
@@ -150,7 +152,45 @@ def bin_make(request: HttpRequest, case_id) -> JsonResponse:
 
 
 def _is_theirs(request, kept: ArchivedCopy) -> bool:
+    """A copy's owners (the Case's Owner and whoever was marked Also an
+    owner, chapter 3) and Admins."""
+    return preservation.is_an_owner(kept, request.user) or request.user.is_admin
+
+
+def _may_remove(request, kept: ArchivedCopy) -> bool:
+    """Remove now stays the Case's Owner's and the Admins'."""
     return kept.owner_id == request.user.pk or request.user.is_admin
+
+
+def _already_taken(request, copy, case_name: str, where: str, again: str):
+    """Asked before a copy somebody else took is given a second time."""
+    return render(
+        request,
+        "copy-taken.html",
+        {
+            "page": "cases",
+            "case_name": case_name,
+            "by": copy.downloaded_by_name,
+            "when": copy.downloaded_at,
+            "saved": copy.taken_how == "saved",
+            "where": where,
+            "again": again,
+        },
+    )
+
+
+def _their_bin_copy(request, case_id):
+    """A binned Case's copy, for its owners and Admins: a person marked Also
+    an owner reaches it by the link their message carries, though the
+    Recycle bin page is not theirs."""
+    case = get_object_or_404(Case, pk=case_id, deleted_on__isnull=False)
+    people = {one.pk for one in preservation.owners_of(case)}
+    if request.user.pk not in people and not request.user.is_admin:
+        raise Http404("not this person's case")
+    copy = preservation.ready(case)
+    if copy is None or not copy.path.exists():
+        raise Http404("no Preservation copy")
+    return case, copy
 
 
 def _their_archived(request, copy_id) -> ArchivedCopy:
@@ -174,8 +214,14 @@ def _archived_row(kept: ArchivedCopy, viewer) -> dict:
     from datetime import timedelta
 
     left = max(0, preservation.days_left(kept))
+    others = [one["name"] for one in kept.also_owners or []]
     return {
         "copy": kept,
+        # Named only when the copy has more than one owner (chapter 3).
+        "owners": [kept.owner_name, *others] if others else [],
+        "taken": preservation.taken_words(kept),
+        "by_another": preservation.taken_by_another(kept, viewer),
+        "may_remove": kept.owner_id == viewer.pk or viewer.is_admin,
         "how": _how(kept, viewer),
         "size": uploads.as_size(kept.size_bytes),
         "days_left": left,
@@ -226,6 +272,14 @@ def archived_download(request: HttpRequest, copy_id) -> FileResponse:
     kept = _their_archived(request, copy_id)
     if not kept.path.exists():
         raise Http404("the copy's file is gone")
+    if preservation.taken_by_another(kept, request.user) and "again" not in request.GET:
+        return _already_taken(
+            request,
+            kept,
+            kept.case_name,
+            reverse("archived"),
+            request.path + "?again=1",
+        )
     _export_row(request, kept.owner, kept.case_id_was, kept.case_name)
     preservation.downloaded(kept, request.user)
     name = (
@@ -241,8 +295,45 @@ def archived_remove(request: HttpRequest, copy_id) -> JsonResponse:
     """Remove now: the owner's, or an Admin's, behind the page's confirmation."""
     _on_or_404()
     kept = _their_archived(request, copy_id)
+    if not _may_remove(request, kept):
+        raise Http404("not this person's to remove")
     cause = (
         preservation.OWNER if kept.owner_id == request.user.pk else preservation.ADMIN
     )
     preservation.remove(kept, cause, actor=request.user, request=request)
     return JsonResponse({"ok": True})
+
+
+# Mark as saved (chapter 3) -----------------------------------------------------------
+
+
+def _saved(request, copy, case_id, case_name: str, owner):
+    """Asked once by a page, then marked: the message's link is only ever a
+    question, since a mail system may open a link by itself."""
+    if request.method == "POST":
+        preservation.mark_saved(copy, case_id, case_name, owner, request.user, request)
+        return redirect("archived")
+    return render(
+        request,
+        "copy-saved.html",
+        {
+            "page": "cases",
+            "case_name": case_name,
+            "taken": preservation.taken_words(copy),
+            "where": reverse("archived"),
+        },
+    )
+
+
+@login_required
+def archived_saved(request: HttpRequest, copy_id) -> HttpResponse:
+    _on_or_404()
+    kept = _their_archived(request, copy_id)
+    return _saved(request, kept, kept.case_id_was, kept.case_name, kept.owner)
+
+
+@login_required
+def bin_saved(request: HttpRequest, case_id) -> HttpResponse:
+    _on_or_404()
+    case, copy = _their_bin_copy(request, case_id)
+    return _saved(request, copy, case.pk, case.name, case.owner)

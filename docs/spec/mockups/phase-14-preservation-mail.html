@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Preservation copy's email, and one save between several owners</title>
+<style>
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --surface-2: #e9edf1; --line: #d3d9e0;
+  --text: #171b21; --muted: #5b6673;
+  --accent: #0f5e86; --accent-soft: #e3eef5;
+  --ok: #2f7d4f; --ok-soft: #e2f1e7; --warn: #9a5b06; --warn-soft: #fbefd9; --danger: #b3261e;
+  --radius: 6px; --radius-lg: 8px;
+  --sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --t-title: 22px; --t-heading: 17px; --t-body: 15px; --t-small: 13px; --t-label: 11px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--sans); font-size: var(--t-body); line-height: 1.45; color: var(--text); background: var(--bg); }
+.muted { color: var(--muted); } .small { font-size: var(--t-small); } .tiny { font-size: var(--t-label); }
+.wrap { max-width: 1700px; margin: 0 auto; padding: 28px 20px 80px; }
+.intro h1 { font-size: var(--t-title); margin: 0 0 8px; }
+.intro p, .fig .why { margin: 6px 0; color: var(--muted); max-width: 105ch; }
+.brief { margin: 14px 0 0; padding: 12px 16px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); max-width: 115ch; }
+.brief b { display: block; margin-bottom: 4px; }
+.brief ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: var(--t-small); }
+.brief li { margin-bottom: 4px; } .brief li b { display: inline; color: var(--text); }
+.fig { margin-top: 44px; }
+.fig h2 { font-size: var(--t-heading); margin: 0 0 4px; }
+.fig .why { margin-bottom: 12px; }
+.frame { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg); overflow-x: auto; box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 16px; }
+.note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--t-small); color: var(--muted); max-width: 115ch; }
+.note b { color: var(--text); }
+.mails { display: grid; grid-template-columns: repeat(2, 720px); gap: 20px 26px; }
+.cap { font-size: var(--t-small); margin-bottom: 6px; } .cap b { display: block; }
+.mail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.mail .hd { padding: 10px 14px; border-bottom: 1px solid var(--surface-2); font-size: var(--t-small); }
+.mail .hd div { display: grid; grid-template-columns: 62px 1fr; } .mail .hd span:first-child { color: var(--muted); }
+.mail .hd .sub { display: block; font-weight: 600; font-size: var(--t-body); margin-top: 2px; }
+.mail pre { margin: 0; padding: 14px; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; }
+.mail pre u { color: var(--accent); }
+.mail pre mark { background: var(--ok-soft); color: inherit; }
+.att { display: inline-flex; align-items: center; gap: 8px; margin: 0 14px 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--t-small); background: #fafbfc; }
+.att i { width: 22px; height: 26px; border-radius: 3px; background: var(--accent-soft); border: 1px solid var(--accent); }
+.page { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 18px; width: 1500px; }
+.btn { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: var(--t-small); font-weight: 500; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost { border-color: transparent; background: none; color: var(--danger); }
+table.t { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
+table.t th { text-align: left; font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+table.t td { padding: 8px 10px; border-bottom: 1px solid var(--surface-2); vertical-align: top; }
+td.newcol, th.newcol { background: #f6fbf8; }
+.pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--surface-2); font-size: var(--t-label); white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.dlg { background: var(--surface); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 20px 22px 16px; width: 460px; }
+.dlg h4 { margin: 0 0 8px; font-size: 16px; } .dlg p { margin: 0 0 8px; font-size: 14px; color: #3d4652; }
+.dlg .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.setting { display: grid; grid-template-columns: 1fr 250px; gap: 6px 20px; padding: 12px 0; border-bottom: 1px solid var(--surface-2); width: 1000px; }
+.setting b { font-size: var(--t-body); } .setting p { margin: 2px 0 0; font-size: var(--t-small); color: var(--muted); }
+.setting .v { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); }
+.switch { width: 38px; height: 20px; border-radius: 10px; background: var(--accent); position: relative; } .switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.num { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); font-family: var(--mono); }
+table.picks { border-collapse: collapse; margin-top: 10px; background: var(--surface); border: 1px solid var(--line); max-width: 1500px; }
+table.picks th, table.picks td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--surface-2); font-size: var(--t-small); }
+table.picks th { font-size: var(--t-label); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table.picks td:first-child { font-weight: 600; white-space: nowrap; }
+.rec { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--ok-soft); color: var(--ok); font-size: var(--t-label); font-weight: 600; margin-left: 4px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 1500px; }
+.stepc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 14px; font-size: var(--t-small); }
+.stepc b { display: block; margin-bottom: 4px; } .stepc .n { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; align-items: center; justify-content: center; margin-right: 6px; }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>The Preservation copy's email, and one save between several owners</h1>
+    <p>The last of the plan's three releases. Your words of 17 November 2026: the owner is emailed until the copy is downloaded; the copy goes to the "Owner and also-owner, but I don't want them to double save the preservation". Every name below is made up.</p>
+    <div class="brief" style="border-style: solid">
+      <b>As built (v1.246.0)</b>
+      <ul><li>The nightly digest keeps its subject, which an office may have edited. Download again is a small page of its own, not a dialog, so that it is asked from the message's link too. Phase 14 chapter 3 says the rest.</li></ul>
+    </div>
+    <div class="brief">
+      <b>What this page holds</b>
+      <ul>
+        <li><b>The rule first:</b> who counts as an owner here, and how a copy is saved once and only once.</li>
+        <li>Figure A: the four messages. Figure B: the nightly reminder. Figure C: Archived with several owners. Figure D: the Admin's settings.</li>
+        <li>Five picks at the foot, each with a recommendation. Nothing is built until they are answered.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="fig">
+    <h2>The rule: one copy, saved once</h2>
+    <p class="why">A case has one Owner, and the Owner may mark people it is shared with "Also an owner". For the Preservation copy, all of them are its owners (your decision). The risk is that two of them each save it to the client's file. Four things together prevent that.</p>
+    <div class="frame"><div class="steps">
+      <div class="stepc"><b><span class="n">1</span>Everyone is told who else has it</b>The message names every person it went to and says "only one of you needs to save it".</div>
+      <div class="stepc"><b><span class="n">2</span>The file is not handed to several people</b>When the copy goes to more than one person, the message carries a link, not the file. Whoever downloads it is recorded the moment they do.</div>
+      <div class="stepc"><b><span class="n">3</span>One mark, seen by all</b>The first download marks the copy "Downloaded by M Jones, 18 Nov" for everyone. The reminders stop for everyone that night.</div>
+      <div class="stepc"><b><span class="n">4</span>The others are told it is done</b>Each other owner gets one last line, "saved by M Jones, nothing more to do", and Download asks before giving the file a second time.</div>
+    </div></div>
+    <div class="note"><b>What has to change in what is on the server:</b> today a case's sharing list goes with the case, and only the one Owner sees its copy in Archived. From this release the app records who was marked Also an owner when the case goes, and shows them the copy too. Delete, Restore and Remove now stay the Owner's and the Admins'.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure A: the messages</h2>
+    <p class="why">Plain text, as every message the app sends. The green lines are the ones that prevent a double save. The wording is a draft for you to change; an Admin can edit it afterwards on the Email page, like the other messages.</p>
+    <div class="frame"><div class="mails">
+      <div><div class="cap"><b>1. One owner, and the copy fits: attached</b><span class="muted">What you asked for first. The last line is for someone who saves it straight from the message.</span></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith</span></div><div class="sub">Gideon Transcribe: save the Preservation copy of "Ramirez"</div></div>
+<pre>Hello J Smith,
+
+The case "Ramirez" was deleted on 17 November 2026 by you.
+
+Its Preservation copy is attached: everything made in the
+case, as Word documents. Save it to the client's file of
+record.
+
+The copy is also kept in Archived until 17 December 2026:
+<u>https://transcribe.example/cases/archived</u>
+
+<mark>Saved it from this message? Press here so you are not
+reminded: <u>https://transcribe.example/cases/archived/…/saved</u></mark>
+
+Sent automatically by Gideon Transcribe.</pre>
+          <div class="att"><i></i>Ramirez - preservation copy 2026-11-17.zip · 2 MB</div></div></div>
+
+      <div><div class="cap"><b>2. Several owners: a link, never the file</b><span class="muted">The same message to each of them. Nobody holds the file until one of them downloads it, and that is recorded.</span></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith; M Jones</span></div><div class="sub">Gideon Transcribe: save the Preservation copy of "Ramirez"</div></div>
+<pre>Hello M Jones,
+
+The case "Ramirez" was deleted on 17 November 2026 by
+J Smith.
+
+Its Preservation copy, everything made in the case as Word
+documents, is to be saved to the client's file of record.
+
+<mark>This went to J Smith (owner) and M Jones. Only one of you
+needs to save it. Whoever downloads it is recorded, and the
+other is told it is done.</mark>
+
+Download it, until 17 December 2026:
+<u>https://transcribe.example/cases/archived/…/download</u>
+
+Sent automatically by Gideon Transcribe.</pre></div></div>
+
+      <div><div class="cap"><b>3. Too large to attach</b><span class="muted">A large case, or one with audio recorded in the app. The message says why there is no file.</span></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith</span></div><div class="sub">Gideon Transcribe: save the Preservation copy of "State v. Quay"</div></div>
+<pre>Hello J Smith,
+
+The case "State v. Quay" was deleted on 17 November 2026
+by you.
+
+Its Preservation copy is 64 MB, too large to attach (the
+office's limit is 20 MB). Download it and save it to the
+client's file of record, until 17 December 2026:
+<u>https://transcribe.example/cases/archived/…/download</u>
+
+Sent automatically by Gideon Transcribe.</pre></div></div>
+
+      <div><div class="cap"><b>4. The retention clock deleted it</b><span class="muted">Sent the night the case goes to the Recycle bin, where it can still be restored.</span></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith</span></div><div class="sub">Gideon Transcribe: "Mill Lane calls" was deleted, and its Preservation copy</div></div>
+<pre>Hello J Smith,
+
+The case "Mill Lane calls" went unused for 30 days and was
+deleted by the retention policy on 17 November 2026. It
+waits in the Recycle bin until 17 December 2026, where you
+can restore it:
+<u>https://transcribe.example/cases/bin</u>
+
+Its Preservation copy is attached: everything made in the
+case, as Word documents. Save it to the client's file of
+record.
+
+Saved it from this message? Press here so you are not
+reminded: <u>https://transcribe.example/cases/bin/…/saved</u>
+
+Sent automatically by Gideon Transcribe.</pre>
+          <div class="att"><i></i>Mill Lane calls - preservation copy 2026-11-17.zip · 5 MB</div></div></div>
+    </div></div>
+    <div class="note"><b>If the Owner has left the office,</b> their message goes to nobody; the people marked Also an owner still get theirs. If nobody is left to tell, the IT mailbox gets one line naming the case and its owner, never the file, and an Admin downloads the copy from Archived.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure B: the nightly reminder</h2>
+    <p class="why">The app already sends one email a night to anyone with a case about to be deleted. The same email gains a section for copies not yet saved. A person with nothing else to be told gets the email for this alone.</p>
+    <div class="frame"><div class="mails">
+      <div><div class="cap"><b>Every night until it is saved or its days run out</b></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith</span></div><div class="sub">Gideon Transcribe: cases deleting soon, and copies to save</div></div>
+<pre>Hello J Smith,
+
+These cases delete unless someone uses them:
+- (none of your own)
+
+Preservation copies not yet saved to the client's file:
+- Ramirez: kept until 17 December 2026 (29 days left)
+- Mill Lane calls: kept until 17 January 2027 (60 days
+  left; the case is in the Recycle bin)
+
+Download them from Archived:
+<u>https://transcribe.example/cases/archived</u></pre></div></div>
+      <div><div class="cap"><b>The night after someone else saved it: one last line, to the others only</b></div>
+        <div class="mail"><div class="hd"><div><span>To</span><span>J Smith</span></div><div class="sub">Gideon Transcribe: cases deleting soon, and copies to save</div></div>
+<pre>Hello J Smith,
+
+These cases delete unless someone uses them:
+- (none of your own)
+
+<mark>Preservation copies saved by someone else:
+- Ramirez: downloaded by M Jones on 18 November 2026.
+  Nothing more for you to do.</mark></pre></div></div>
+    </div></div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure C: Archived, when a copy has several owners</h2>
+    <p class="why">The page of v1.245.0 with two changes: a line under the case's name saying who its owners were, and Download asking first once somebody has it.</p>
+    <div class="frame">
+      <div class="page">
+        <table class="t">
+          <tr><th>Case</th><th>Deleted</th><th>The copy</th><th>Kept until</th><th>Downloaded</th><th></th></tr>
+          <tr><td><b>Ramirez</b><br><span class="muted tiny newcol">Owners: J Smith, M Jones</span></td><td>17 Nov 2026<br><span class="muted tiny">by J Smith</span></td><td>30 documents · 2 MB<br><span class="muted tiny">made 17 Nov 2026 18:02</span></td><td>17 Dec 2026<br><span class="muted tiny">30 days left</span></td><td><span class="pill warn">not yet</span></td><td><span class="btn primary">Download</span></td></tr>
+          <tr><td><b>Quay Road stop</b><br><span class="muted tiny newcol">Owners: J Smith, M Jones</span></td><td>12 Nov 2026<br><span class="muted tiny">by J Smith</span></td><td>41 documents · 14 MB<br><span class="muted tiny">made 12 Nov 2026 09:40</span></td><td>12 Dec 2026<br><span class="muted tiny">25 days left</span></td><td><span class="pill ok">13 Nov, by M Jones</span></td><td><span class="btn">Download again</span></td></tr>
+        </table>
+      </div>
+      <div style="height: 14px"></div>
+      <div class="dlg"><h4>M Jones already downloaded this</h4><p>M Jones downloaded the Preservation copy of Quay Road stop on 13 November 2026.</p><p>If it is already in the client's file of record, you do not need to save it again.</p><div class="acts"><span class="btn">Leave it</span><span class="btn primary">Download anyway</span></div></div>
+    </div>
+    <div class="note"><b>Remove now</b> is shown to the Owner and to Admins only, not to a person marked Also an owner. The same "already downloaded" question is asked on the Recycle bin's row and by the link in the email.</div>
+  </div>
+
+  <div class="fig">
+    <h2>Figure D: the Admin's settings</h2>
+    <p class="why">On the Admin panel's Email page, with the other messages. All three are greyed while Email notifications are Off.</p>
+    <div class="frame">
+      <div class="setting"><div><b>Preservation copy mail</b><p>When a Case is deleted and its Preservation copy kept, its owners are mailed, and reminded each night until it is downloaded.</p></div><div class="v"><span class="switch"></span> On <span class="muted">Default: On</span></div></div>
+      <div class="setting"><div><b>Attach the Preservation copy</b><p>The zip is attached when the message goes to one person and the zip is no larger than the limit below. Off: every message carries the link alone.</p></div><div class="v"><span class="switch"></span> On <span class="muted">Default: Off</span></div></div>
+      <div class="setting"><div><b>Largest Preservation copy attached</b><p>A larger copy is not attached, and the message says so with the link.</p></div><div class="v"><span class="num">20</span> MB <span class="muted">1 to 100 · Default: 20</span></div></div>
+    </div>
+    <div class="note"><b>Why the attachment is Off by default and On for you:</b> the app is also installed by other offices, and an attachment sends privileged work through the office's mail system. You have said yours may; another office should choose. Your mail's 30 MB limit holds a zip of about 21 MB once encoded, so 20 is the right number for you.</div>
+  </div>
+
+  <div class="fig">
+    <h2>The picks</h2>
+    <p class="why">One answer to each, please; my recommendation is marked.</p>
+    <table class="picks">
+      <tr><th>Pick</th><th>The choices</th><th>Why I recommend it</th></tr>
+      <tr><td>1. Several owners and the file</td><td><b>1a</b> A link, never the file, when the copy goes to more than one person <span class="rec">recommended</span><br><b>1b</b> The file attached for the Owner alone; the others get the link<br><b>1c</b> The file attached for everyone</td><td>If two people each have the file in their mailbox, nothing in the app can tell either that the other saved it. With a link, the first download is recorded and everyone sees it. Most cases have one owner and still get the file.</td></tr>
+      <tr><td>2. Someone who saves it from the email</td><td><b>2a</b> The message has a "press here so you are not reminded" link, and the row a Mark as saved button <span class="rec">recommended</span><br><b>2b</b> Nothing: the reminders carry on until they download it from the app or its days run out</td><td>You asked for reminders until it is downloaded. A person who saved the attachment has done the job and should be able to say so in one press.</td></tr>
+      <tr><td>3. How often the reminder</td><td><b>3a</b> Every night until it is downloaded or its days run out, as you said <span class="rec">recommended</span><br><b>3b</b> The first night, then weekly, then nightly in its last week</td><td>It is what you asked for and matches how the app already warns about cases. It can mean up to 30 messages for someone who ignores it; 3b is there if that is too many.</td></tr>
+      <tr><td>4. A case the clock deletes</td><td><b>4a</b> One message the night it goes to the Recycle bin, then the nightly reminder; no second message when it is wiped <span class="rec">recommended</span><br><b>4b</b> A message only when it is wiped and its copy reaches Archived</td><td>The night it is binned is when the owner can still restore the case, so that is when they most need to hear.</td></tr>
+      <tr><td>5. Download again</td><td><b>5a</b> Once someone has downloaded it, Download asks first, Figure C <span class="rec">recommended</span><br><b>5b</b> Download never asks; the row's "downloaded by" is the only sign</td><td>It is the last guard against a double save, at the moment it would happen.</td></tr>
+    </table>
+    <div class="note"><b>Said so it is not a surprise:</b> the message never quotes anything from the case; it names the case, the people and the dates, as the app's other messages do, and the file when it is attached. This release changes the written rule that the app's mail carries no attachment (the dictation message is the one exception today), so it comes with its chapter and an addition to the decision record. A copy made from the Details tab at any time sends no mail: that one you asked for yourself.</div>
+  </div>
+</div>
+</html>

@@ -336,6 +336,16 @@ urlpatterns = [
         name="archived-remove",
     ),
     path(
+        "cases/archived/<uuid:copy_id>/saved",
+        preservation_pages.archived_saved,
+        name="archived-saved",
+    ),
+    path(
+        "cases/bin/<uuid:case_id>/preservation/saved",
+        preservation_pages.bin_saved,
+        name="bin-preservation-saved",
+    ),
+    path(
         "cases/bin/<uuid:case_id>/preservation/download",
         preservation_pages.bin_download,
         name="bin-preservation-download",

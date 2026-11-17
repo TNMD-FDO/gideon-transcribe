@@ -265,7 +265,23 @@ What to know:
 - **Delete data** on the Users page keeps each case's copy as it goes.
 - **The audit log** has "preservation copy archived" and "preservation copy removed", and "case deleted" says what became of the copy: kept, none (the setting is Off), failed, or declined (the person deleted without one).
 
-Not in this release, and decided for the next one: the mail that tells the owner the copy is there, and the nightly reminder until it is downloaded.
+### The mail, and one save between several owners
+
+From v1.246.0 a deleted case's copy belongs to the case's owner **and everyone the owner had marked Also an owner**: each sees it in Archived and is mailed about it. Remove now stays the owner's and yours.
+
+Three settings on the panel's **Email** page, greyed while Email notifications are Off:
+
+- **Preservation copy mail** (On by default). The copy's owners are mailed when a case is deleted and its copy kept, and reminded in each night's digest until one of them has downloaded it. Off: no message and no reminder; the pages are as they were.
+- **Attach the Preservation copy** (Off by default). On: the zip is attached, but only when the message goes to one person and the zip is no larger than the limit. With several owners the message always carries a link, so that the first to download it is recorded and nobody saves it twice. An attachment puts a case's written work through your office's mail system; turn it On only if that is acceptable to your office.
+- **Largest Preservation copy attached** (20 MB by default). A mail system that accepts 30 MB a message holds a file of about 21 MB, because a file grows by a third on its way; 20 suits that.
+
+The message's wording is yours to edit on the same page (**Preservation copy kept: subject** and **body**); the app writes the lines that say how the case went, whether the file is attached, who else was sent it, and the link. The nightly digest has a new block, `{copies}`; a digest you edited before this version gets the block at its foot.
+
+What to know:
+
+- **Nothing waits for mail.** The copy is in Archived whether or not the message arrives, and the case was deleted either way.
+- **A copy with nobody to tell** (every owner has left, or none has an email address) is told to the Operator address by name, never with the file. Download it from Archived.
+- **The audit log** has "Email sent" and "Email failed" of kind `preservation_copy`, saying whether the file was attached, and "preservation copy marked saved" when a person says they saved it from the message.
 
 ## The AI assistant's engine
 

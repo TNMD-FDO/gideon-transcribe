@@ -525,6 +525,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .preserve p { margin: 0 0 8px; max-width: 78ch; }
 .preserve .making progress { flex: 1; max-width: 320px; height: 6px; }
 .preserve .acts { align-items: center; }
+/* The two small pages that ask before a copy is given again or marked saved (chapter 3). */
+.copy-ask { max-width: 62ch; padding: 16px 18px; }
+.copy-ask p { margin: 0 0 10px; }
 .shared-with .tbl.small td, .shared-with .tbl.small th { padding: 4px 6px; }
 .shared-with ul.plain { list-style: none; margin: 0 0 8px; padding: 0; }
 .shared-with ul.plain li { padding: 2px 0; }

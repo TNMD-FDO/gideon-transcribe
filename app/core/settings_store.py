@@ -813,16 +813,95 @@ def _rows() -> list[Definition]:
                 "\n"
                 "{dictations}\n"
                 "\n"
+                "{copies}\n"
+                "\n"
                 "Open a case, or press Keep on the Cases page, to start its clock "
                 "over: {link}\n"
             ),
             needs_mail=True,
             what_it_does=(
                 "The nightly digest, one per person with a case or a dictation in "
-                "its last days. {cases} is the list of their own cases, {shared} "
-                "the cases shared with them, {dictations} their dictations, all "
-                "built by the app; {name} and {link} as above. The footer is "
-                "added by the app."
+                "its last days, or a Preservation copy to save. {cases} is the "
+                "list of their own cases, {shared} the cases shared with them, "
+                "{dictations} their dictations, {copies} the Preservation copies "
+                "not yet saved, all built by the app; {name} and {link} as above. "
+                "The footer is added by the app."
+            ),
+            when_changed="The next message.",
+        ),
+        # The Preservation copy's mail (Phase 14 chapter 3).
+        Definition(
+            key="preservation_mail",
+            page=EMAIL,
+            name="Preservation copy mail",
+            kind=TOGGLE,
+            default=True,
+            needs="email_notifications",
+            what_it_does=(
+                "When a Case is deleted and its Preservation copy kept, the "
+                "copy's owners are mailed, and reminded in each night's digest "
+                "until one of them has downloaded it."
+            ),
+            when_changed="The next deletion, and the next night's digest.",
+        ),
+        Definition(
+            key="preservation_attach",
+            page=EMAIL,
+            name="Attach the Preservation copy",
+            kind=TOGGLE,
+            default=False,
+            needs="preservation_mail",
+            what_it_does=(
+                "The zip is attached when the message goes to one person and is "
+                "no larger than the limit below. Off: every message carries the "
+                "link alone. An attachment puts the Case's written work through "
+                "the office's mail system."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="preservation_attach_most_mb",
+            page=EMAIL,
+            name="Largest Preservation copy attached",
+            kind=NUMBER,
+            default=20,
+            least=1,
+            most=100,
+            unit="MB",
+            needs="preservation_attach",
+            what_it_does=(
+                "A larger copy is not attached, and the message says so with the "
+                "link. A mail system that takes 30 MB a message holds a file of "
+                "about 21 MB, since a file grows by a third on its way."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="preservation_subject",
+            page=EMAIL,
+            name="Preservation copy kept: subject",
+            kind=TEXT,
+            lines=1,
+            default='Gideon Transcribe: save the Preservation copy of "{case}"',
+            needs_mail=True,
+            what_it_does=(
+                "Placeholders: {name}, {case}, {happened}, {copy}, {owners}, {link}."
+            ),
+            when_changed="The next message.",
+        ),
+        Definition(
+            key="preservation_body",
+            page=EMAIL,
+            name="Preservation copy kept: body",
+            kind=TEXT,
+            lines=10,
+            default=("Hello {name},\n\n{happened}\n\n{copy}\n\n{owners}\n\n{link}\n"),
+            needs_mail=True,
+            what_it_does=(
+                "To a deleted Case's owners. {happened} says how the Case went, "
+                "{copy} whether the file is attached, {owners} who else was sent "
+                "it (only when more than one), {link} where to download it and "
+                "until when; all built by the app."
             ),
             when_changed="The next message.",
         ),

@@ -6,16 +6,17 @@ What the app makes is part of the client's record. A Case's work leaves the app 
 
 This is the build specification for Phase 14 of Gideon Transcribe. On 2026-11-17 the maintainer asked: "we need to think about preserving data as anything created in the app is now part of the client's record. I want this to be very easy, if anything at the time of case deletion, I'm okay with the owner being emailed a zip with the preservation data ... with instructions saying that the file should be saved to the client's file of record." A plan was drawn up the same day and every choice in it answered by the maintainer; the first release's page was drawn in `docs/spec/mockups/phase-14-preservation-copy-details.html` and agreed ("Your recommendations stand", "Yes, build it"). The documents were to be PDFs; the PDF maker was built and proven on a workstation the same day, the pages it made were compared with Word's, and the maintainer changed the choice: "switch it to export as word". The section "Why Word, and not PDF" says what was found.
 
-The plan is three releases. This document holds the first as chapter 1 and the second as chapter 2; the third, the mail, is said at the end of chapter 2.
+The plan is three releases. This document holds them as chapters 1, 2 and 3.
 
 It builds on Phase 1 chapter 11 (Exports), Phase 2 (Cases, Sharing, the Retention policy and the Recycle bin, Email notifications), Phase 6 (Incidents), Phase 8 (Notes, Documents and the Comparison) and Phase 10 (the case chronology). Read it with `CONTEXT.md` (Preservation copy, Export, Case, Recycle bin) and `docs/research/pdf-maker.md`.
 
-Nothing in this document is office-specific. Two tables, two settings, no service, nothing new in any image.
+Nothing in this document is office-specific. Two tables, five settings and one message template, no service, nothing new in any image.
 
 ## Contents
 
 1. The Preservation copy, from the Details tab
 2. The Preservation copy at deletion, and Archived
+3. The Preservation copy's mail, and one save between several owners
 
 ## 1. The Preservation copy, from the Details tab (v1.244.0)
 
@@ -195,3 +196,86 @@ The mail: one message to the owner when a copy goes to Archived or a Case to the
 ### Left to the build
 
 The archive's folder; how the Details tab learns the Case has gone (it asks how the copy stands, and is told the Case is gone).
+
+## 3. The Preservation copy's mail, and one save between several owners (v1.246.0)
+
+Drawn first in `docs/spec/mockups/phase-14-preservation-mail.html` and agreed by the maintainer on 2026-11-17 ("They stand, build"), every choice as recommended. Two things the maintainer said shape it: the owner is mailed until the copy is downloaded; and the copy is for the "Owner and also-owner, but I don't want them to double save the preservation".
+
+### Principles
+
+1. **A copy's owners are the Case's Owner and everyone marked Also an owner.** The Owner is not always the person who answers for the client's file. Delete, Restore and Remove now stay the Owner's and the Admins'.
+2. **One copy, saved once.** Everyone is told who else has it; the file is not handed to more than one person; one mark, seen by all, says who took it; the others are told it is done; and taking it a second time asks first.
+3. **Mail announces, as it always has.** Nothing waits for a message: the copy is in the app whether or not the mail arrives. What changes is that this message may carry the file, when it goes to one person and an Admin has said it may.
+4. **Reminded until it is taken, then left alone.**
+
+### Words
+
+No new entry. The Archived, Preservation copy, Also an owner and Notification entries of `CONTEXT.md` are amended.
+
+### Who a copy's owners are
+
+- For a Case that still has its row (in use, or in the Recycle bin): its Owner, and each Collaborator whose Share carries the Also an owner mark, while Sharing is on.
+- For a Case that is gone: the same people as they stood when it went. A Case's Shares go with it, so they are written on the archived copy as it is archived.
+- **Archived** shows a copy to each of its owners and to Admins. A row whose copy has more than one owner says "Owners:" and their names. **Remove now** is offered to the Case's Owner and to Admins, not to a person marked Also an owner.
+- The copy of a Case in the Recycle bin may be downloaded by a person marked Also an owner through the link their message carries; the Recycle bin page itself stays the Owner's and the Admins'.
+
+### One mark
+
+- A copy is **taken** when one of its owners, or an Admin, downloads it from the app, or says they saved it from their message (**Mark as saved**, on the copy's row and by a link in the message, which asks once before it marks). The copy carries who and when. The pages say "downloaded" or "saved" with the name and the day.
+- **Taken once, asked after.** A person other than the one who took it who then goes to download it is shown who took it and when, and "If it is already in the client's file of record, you do not need to save it again", with Leave it and Download anyway. The row's button reads **Download again**.
+- Marking is not undone, and a second download by the same person asks nothing.
+
+### The message
+
+One kind of Notification, "Preservation copy kept", to each of a copy's owners who is active and has an Email address. Its Subject and Body are templates on the Email page like the others, with placeholders `{name}`, `{case}`, `{happened}`, `{copy}`, `{owners}` and `{link}`; the app writes what the last four stand for:
+
+| Placeholder | What the app writes |
+|---|---|
+| `{happened}` | "The case "<name>" was deleted on <day> by <who>." For the Retention policy: that it went unused for the Retention period and was deleted by the retention policy, that it waits in the Recycle bin until <day>, and the Recycle bin's address. |
+| `{copy}` | Attached: "Its Preservation copy is attached: everything made in the case, as Word documents. Save it to the client's file of record." Not attached because it is too large: its size and the office's limit. Otherwise that it is to be saved to the client's file of record. |
+| `{owners}` | Only when it goes to more than one: "This went to <A> (owner) and <B>. Only one of you needs to save it. Whoever downloads it is recorded, and the others are told it is done." |
+| `{link}` | Where to download it and until when; and, when the file is attached, "Saved it from this message? Press here so you are not reminded:" with the Mark as saved address. |
+
+- **When.** At once when a copy goes to Archived by a person's Delete (the Owner's or an Admin's). The night the Retention policy bins a Case, for the copy made that night. Not again when a binned Case is wiped and its copy moves to Archived. Not for a copy a person made from the Details tab.
+- **The file.** Attached only when all three hold: Attach the Preservation copy is On; the message goes to exactly one person; the zip is no larger than Largest Preservation copy attached. The file is read when the message is sent.
+- **Nobody to tell.** When none of a copy's owners is active with an address, the Operator address is sent one message naming the Case and its Owner, never the file.
+
+### The nightly reminder
+
+The Retention digest gains a block, `{copies}`, after the dictations. A digest whose template an Admin has edited and which has no `{copies}` has the block added at its foot, so no office loses the reminder by having edited the message.
+
+- **"Preservation copies not yet saved to the client's file:"** one line for each copy the person is an owner of that is not taken: the Case, the day it is kept until, the days left, and "(the case is in the Recycle bin)" where it is. Every night until it is taken or its days are up.
+- **"Preservation copies saved by someone else:"** one line, once, to each other owner, the night after a copy was taken: the Case, who took it and when, and "Nothing more for you to do."
+- A person with nothing else to be told is sent the digest for this alone.
+
+### The three settings
+
+On the Email page, greyed while Email notifications are Off.
+
+| Setting | Type | Default | When changed |
+|---|---|---|---|
+| Preservation copy mail | on or off | On | The next deletion, and the next night's digest. Off: no message and no reminder; the pages are unchanged. |
+| Attach the Preservation copy | on or off | Off | The next message. On: the zip is attached when the message goes to one person and fits the limit. |
+| Largest Preservation copy attached | whole MB, 1 to 100 | 20 | The next message. |
+
+Attach is Off by default because an attachment puts the office's privileged work through its mail system, which is the office's to decide.
+
+### Audit
+
+Category Email: "Email sent" and "Email failed" of kind `preservation_copy`, with whether the file was attached. Category Cases: "preservation copy marked saved". "export made" at a download, as chapter 2.
+
+### What it changes in the chapters in force
+
+- Phase 2 chapter 8, "no mail when a Case is deleted, restored, or wiped": one, when a Case is deleted and its Preservation copy kept. None at a restore or a wipe.
+- Phase 2 chapter 8, a Notification "never carries an attachment" (already excepted for a dictation sent to a colleague): this message may, under the three conditions above.
+- Phase 2 chapter 8, the Retention digest: the block above.
+- Chapter 2 of this document, "The owner sees their own" in Archived: each of a copy's owners.
+
+### As built, where it departs from the drawing
+
+- **The digest keeps its subject.** The drawing changed it to "cases deleting soon, and copies to save". The subject is an Admin's to edit and an office may have edited it, so the app leaves it.
+- **Download again is a page, not a dialog.** The question is asked wherever the download is pressed from, the message's link included, so it is one small page of its own.
+
+### Left to the build
+
+How the "saved by someone else" line knows it has been said (it is said the night after the copy was taken, by the day the copy was taken); the exact wording within the table above.

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Already downloaded{% endblock %}
+
+{% block content %}
+  {% comment %}
+    One save between a copy's owners (Phase 14 chapter 3, v1.246.0): asked
+    before a Preservation copy somebody else has taken is given a second
+    time, wherever the download was pressed from, the message's link included.
+  {% endcomment %}
+  <div class="page roomy">
+    <header class="page-head">
+      <span class="eyebrow"><a href="{% url 'cases' %}">Cases</a></span>
+      <div class="line"><h1>{{ by }} already {% if saved %}saved{% else %}downloaded{% endif %} this</h1></div>
+    </header>
+    <div class="card copy-ask">
+      <p>{{ by }} {% if saved %}saved{% else %}downloaded{% endif %} the Preservation copy of <b>{{ case_name }}</b> on {{ when|date:"j F Y" }}.</p>
+      <p>If it is already in the client's file of record, you do not need to save it again.</p>
+      <div class="row gap6 mt8">
+        <a class="btn primary" href="{{ where }}">Leave it</a>
+        <a class="btn" href="{{ again }}">Download anyway</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
