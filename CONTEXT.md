@@ -90,7 +90,7 @@ _Avoid_: original (alone), source text, bilingual view, interlinear
 The admin-set wording printed on every export of a translated Transcript, saying the text is a machine translation and not a certified one; a second wording for an English the chat engine wrote from the words As spoken (ADR 0026).
 
 **Transcription notice**:
-The admin-set wording printed on every export of a Transcript that was not translated, saying the text is a machine transcription with Corrections marked and not a certified transcript. An export carries one notice, never both. The `{model}` it prints names the Recogniser from ADR 0025.
+The admin-set wording printed on every export of a Transcript that was not translated, and from v1.248.0 shown above the words on its page: that an AI model generated the transcription, that it may contain errors and is to be confirmed against the recording, and that it is not a certified transcript. A second wording stands in its place when a model told the speakers apart (Diarization), naming both models; a translated Transcript whose speakers were told apart gains one sentence at the end of its Translation notice. An export carries one notice, never both. The `{model}` it prints names the Recogniser from ADR 0025 by its whole name, and `{voices}` the Diarizer.
 
 **Export**:
 A file a user takes out of the app from a Transcript, Summary, or Chat: a Word document, a plain-text file, or Captions. Exports and Clip downloads are the only ways anything leaves a Workspace.

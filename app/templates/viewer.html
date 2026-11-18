@@ -515,6 +515,8 @@
           </div>
           {% comment %}Find's close matches and what the camera showed (v1.97.0).{% endcomment %}
           <div id="find-more" class="find-more small" hidden></div>
+          {% comment %}The notice the exports print (v1.248.0): above the first line, scrolling away with it, so it costs the reading no height.{% endcomment %}
+          {% if transcript_notice %}<p id="transcript-notice" class="transcript-notice">{{ transcript_notice }}</p>{% endif %}
           {% comment %}Twelve grey rows in the lines' own shape until the script draws the transcript (v1.176.0, the motion walk): the column is never blank, then full.{% endcomment %}
           <ol id="transcript" class="transcript">{% if transcript %}{% for _ in "123456789012" %}<li class="seg skeleton" aria-hidden="true"><span class="bar t"></span><span class="bar w"></span></li>{% endfor %}{% endif %}</ol>
         {% else %}

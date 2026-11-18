@@ -1320,6 +1320,17 @@ body.viewer main { padding: 0; flex: 1; min-height: 0; }
 .cast .hint { margin-top: 6px; }
 .cast .card { margin: 6px auto 0; }
 .cast input[type="text"] { width: 100%; }
+/* The notice the exports print, above the first line (v1.248.0): the
+ * transcript's own width, small and quiet, and it scrolls away with the text. */
+.read .transcript-notice {
+  max-width: var(--reading, 1040px);
+  width: 100%;
+  margin: 10px auto 0;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-style: italic;
+}
 .read .transcript {
   max-width: var(--reading, 1040px);
   width: 100%;

@@ -248,31 +248,84 @@ def notice_for(transcript: Transcript) -> str:
     """The one notice, with its placeholders filled from the Provenance."""
     from core import translation
 
-    model = model_of(transcript)
+    apart = told_apart(transcript)
+    spoken = (
+        languages_heard(transcript)
+        if transcript.language_mixed
+        else language_name(transcript.language)
+    )
     if translation.by_engine(transcript):
         # The second wording (ADR 0026): the English is the chat engine's,
         # from the words as spoken, which are kept; {model} names the
         # recogniser that wrote them.
-        spoken = (
-            languages_heard(transcript)
-            if transcript.language_mixed
-            else language_name(transcript.language)
-        )
-        return _fill(
+        notice = _fill(
             settings_store.get("translation_notice_engine"),
             language=spoken,
             model=engine_of(transcript),
         )
-    if transcript.task_run == "translate":
-        spoken = (
-            languages_heard(transcript)
-            if transcript.language_mixed
-            else language_name(transcript.language)
+    elif transcript.task_run == "translate":
+        notice = _fill_models(
+            settings_store.get("translation_notice"), transcript, language=spoken
         )
-        return _fill(
-            settings_store.get("translation_notice"), language=spoken, model=model
-        )
-    return _fill(settings_store.get("transcription_notice"), model=model)
+    else:
+        # A Transcript that was not translated (v1.248.0): the wording that
+        # names both models when the speakers were told apart, the plain one
+        # otherwise. An office that emptied the first falls back on the second.
+        wording = (
+            settings_store.get("transcription_notice_speakers") if apart else ""
+        ) or settings_store.get("transcription_notice")
+        return _fill_models(wording, transcript)
+    if apart:
+        # A translated Transcript keeps its own notice and gains the
+        # speakers' sentence, so no Transcript whose speakers a model told
+        # apart goes out without saying so.
+        more = _fill_models(settings_store.get("speaker_notice"), transcript)
+        notice = f"{notice} {more}".strip()
+    return notice
+
+
+def told_apart(transcript: Transcript) -> bool:
+    """Whether a model told this Transcript's speakers apart: what a Run
+    says it was given, or what the Recording asked for where no Run says."""
+    said = [
+        (run.get("settings_used") or {}).get("diarize") for run in runs_of(transcript)
+    ]
+    if any(one is not None for one in said):
+        return any(said)
+    return bool(transcript.recording.diarize)
+
+
+def recogniser_name(transcript: Transcript) -> str:
+    """The model that wrote the words, as a notice names it: "Whisper
+    large-v3-turbo" or "Qwen3-ASR 1.7B", without the version mark the
+    processing record carries."""
+    for run in runs_of(transcript):
+        used = run.get("settings_used") or {}
+        if used.get("model") or used.get("recogniser"):
+            return recogniser_words({**used, "recogniser_version": ""})
+    return "Whisper"
+
+
+def voices_name(transcript: Transcript) -> str:
+    """The model that told the speakers apart, as a notice names it."""
+    for run in runs_of(transcript):
+        used = run.get("settings_used") or {}
+        if used.get("diarize"):
+            return diarizer_words({**used, "diarizer_version": ""})
+    return diarizer_words({"diarize": True})
+
+
+def _fill_models(notice: str, transcript: Transcript, **filling) -> str:
+    """{model} and {voices} from the Provenance (v1.248.0).
+
+    {model} is the recogniser by its whole name. The wordings shipped until
+    v1.247.0 had "Whisper" typed in before the placeholder, which printed
+    "Whisper qwen3-asr-1.7b" on a Transcript Qwen3-ASR wrote; a wording an
+    office kept from then is mended as it is filled, not rewritten.
+    """
+    name = recogniser_name(transcript)
+    notice = notice.replace("Whisper {model}", name)
+    return _fill(notice, model=name, voices=voices_name(transcript), **filling)
 
 
 def _fill(notice: str, **filling) -> str:
