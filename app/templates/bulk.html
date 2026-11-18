@@ -86,7 +86,8 @@
           <div class="tick">{% icon "done" %}</div>
           <h2 id="bulk-done-heading"></h2>
           <p id="bulk-done-when" class="lead"></p>
-          <a id="bulk-download-done" href="#"><button type="button" class="primary big">Download transcripts</button></a>
+          {# Word or text (v1.247.0): the menu My recordings has; bulk.js sets its addresses. #}
+          <span id="bulk-download-done">{% include "transcripts-menu.html" with url="#" label="Download transcripts" classes="primary big" what="this batch" %}</span>
           <div class="quiet-row">
             <button type="button" class="btn clear-recordings" id="bulk-clear" data-batch="">Done with these</button>
             <button type="button" class="btn" id="bulk-more">Transcribe more</button>
@@ -95,7 +96,7 @@
         <div id="bulk-running">
           <p id="bulk-lead" class="lead">Reading the batch...</p>
           <div class="row" style="gap: 10px; flex-wrap: wrap">
-            <a id="bulk-download" href="#" hidden><button type="button" class="primary">Download what is ready</button></a>
+            <span id="bulk-download" hidden>{% include "transcripts-menu.html" with url="#" label="Download what is ready" classes="primary" what="this batch, as far as it has got" %}</span>
             <button type="button" id="bulk-cancel" class="ghost danger">Cancel the rest</button>
           </div>
         </div>
@@ -111,7 +112,7 @@
               <b>{{ one.done }} transcript{{ one.done|pluralize }} ready</b>
               <span class="muted small">uploaded {{ one.when|date:"j M" }} at {{ one.when|time:"g:i a" }}{% if one.failed %}, {{ one.failed }} not transcribed{% endif %}</span>
               <span class="grow"></span>
-              <a href="{{ one.download }}" class="btn primary small">{% icon "download" %} Download transcripts</a>
+              {% include "transcripts-menu.html" with url=one.download label="Download transcripts" classes="primary small" what="this batch" %}
               <a href="{{ one.url }}" class="btn small">Open the batch</a>
               <button type="button" class="btn ghost small clear-recordings" data-batch="{{ one.batch.pk }}">Done with these</button>
             </div>

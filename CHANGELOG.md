@@ -17,6 +17,26 @@ This project follows [Semantic Versioning](https://semver.org): a tag is
 `vMAJOR.MINOR.PATCH`, and a Release is the only thing an installer ever
 installs or upgrades to.
 
+## v1.247.0, 2026-11-18
+
+```
+Models: unchanged
+Database: unchanged
+```
+
+Bulk transcription's download as Word or as text.
+
+- **Download transcripts on the Bulk transcription page is a choice of
+  two**, As Word (.docx) or As text (.txt): at the end of a batch,
+  on **Download what is ready** while one runs, and on the rows of
+  earlier batches. The same menu My recordings and a case have had
+  since v1.242.0, and the same zips.
+- **Mended:** while uploading was paused (transcription not
+  answering, or the server low on space) the Bulk transcription page
+  stayed at "Reading the batch" and never showed a finished batch's
+  download. It now shows the batch and its download; **Transcribe
+  more** waits until uploading is back.
+
 ## v1.246.0, 2026-11-17
 
 ```

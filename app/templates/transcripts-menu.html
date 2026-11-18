@@ -4,11 +4,14 @@
   zip's address, which gives plain text as it always did; `?as=word` asks for
   each recording's own Word document instead. `label` is the button's words,
   `classes` its size and weight, `what` the words its hover ends with.
+  The links say which they are (`data-as`) and the words sit in a span,
+  for Bulk transcription, which learns the zip's address as it runs and
+  sets them from its script (v1.247.0).
 {% endcomment %}
 <details class="menu transcripts-menu">
-  <summary class="btn {{ classes }}" title="One file for each transcript that is ready, in one zip: {{ what }}">{% icon "download" %} {{ label }} {% icon "chevron-down" %}</summary>
+  <summary class="btn {{ classes }}" title="One file for each transcript that is ready, in one zip: {{ what }}">{% icon "download" %} <span class="menu-label">{{ label }}</span> {% icon "chevron-down" %}</summary>
   <ul>
-    <li><a href="{{ url }}?as=word" title="Each one as Export to Word gives it, with its notice and its processing record">{% icon "word" %} As Word (.docx)</a></li>
-    <li><a href="{{ url }}" title="Each one as Export as text gives it, with its notice">{% icon "text" %} As text (.txt)</a></li>
+    <li><a href="{{ url }}?as=word" data-as="word" title="Each one as Export to Word gives it, with its notice and its processing record">{% icon "word" %} As Word (.docx)</a></li>
+    <li><a href="{{ url }}" data-as="text" title="Each one as Export as text gives it, with its notice">{% icon "text" %} As text (.txt)</a></li>
   </ul>
 </details>

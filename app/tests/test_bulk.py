@@ -115,3 +115,62 @@ def test_the_brand_mark_is_the_six_bars_everywhere_it_lives(person, client):
     client.logout()
     gate = client.get(reverse("sign-in")).content.decode()
     assert '<circle cx="16" cy="16" r="13.25"/>' in gate
+
+
+# The download as Word or as text (v1.247.0) -----------------------------------
+
+
+def test_the_downloads_are_the_menu_of_two(person, client):
+    earlier = _recording(person, MediaState.READY, with_transcript=True)
+    newest = _recording(person, MediaState.READY, with_transcript=True)
+    signed_in(client, person)
+    page = client.get(reverse("bulk")).content.decode()
+    assert f'data-batch="{newest.pk}"' in page
+    # Three menus: the one the page ends as, the one while a batch runs, and
+    # the earlier batch's row. The first two get their addresses from the
+    # script, which learns the batch as it runs; the row's are written here.
+    assert page.count('class="menu transcripts-menu"') == 3
+    assert '<span id="bulk-download-done">' in page
+    assert '<span id="bulk-download" hidden>' in page
+    assert f'href="/batch/{earlier.pk}/download?as=word" data-as="word"' in page
+    assert f'href="/batch/{earlier.pk}/download" data-as="text"' in page
+    assert "As Word (.docx)" in page and "As text (.txt)" in page
+    # No download left on the page that gives text alone.
+    assert '<a id="bulk-download' not in page
+
+
+def test_the_script_points_both_choices_at_the_batch():
+    script = (STATIC / "bulk.js").read_text(encoding="utf-8")
+    assert "function pointDownload(holder, address, label)" in script
+    assert 'word.href = address + "?as=word";' in script
+    assert "text.href = address;" in script
+    assert "pointDownload(doneLink, download);" in script
+    assert "pointDownload(downloadLine, download," in script
+    menu = (TEMPLATES / "transcripts-menu.html").read_text(encoding="utf-8")
+    assert 'data-as="word"' in menu and 'data-as="text"' in menu
+    assert '<span class="menu-label">{{ label }}</span>' in menu
+
+
+def test_a_finished_batch_keeps_its_download_while_uploading_is_paused(
+    person, client, monkeypatch
+):
+    """The drop is not on the page while the service is down, and the script
+    had stopped for want of it, so the page stayed at "Reading the batch"."""
+    from core import pieces, whisperx
+
+    monkeypatch.setattr(whisperx, "is_alive", lambda *args, **kwargs: False)
+    monkeypatch.setattr(pieces, "transcription_installed", lambda: True)
+    batch = _recording(person, MediaState.READY, with_transcript=True)
+    signed_in(client, person)
+    page = client.get(reverse("bulk")).content.decode()
+    assert "Uploading is paused until it is back" in page
+    assert 'id="bulk-drop"' not in page
+    assert f'data-batch="{batch.pk}"' in page
+    assert 'id="bulk-download-done"' in page
+    script = (STATIC / "bulk.js").read_text(encoding="utf-8")
+    # The script starts on the batch section alone, and only the drop's own
+    # listeners wait on the drop.
+    assert "if (!section) { return; }" in script
+    assert "!picker ||" not in script
+    assert "var hasDrop = !!(picker && Card);" in script
+    assert 'by("bulk-more").hidden = !hasDrop;' in script

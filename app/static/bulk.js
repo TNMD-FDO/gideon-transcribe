@@ -17,8 +17,17 @@
   var section = document.getElementById("bulk-batch");
   var dropBox = document.getElementById("bulk-drop");
   var picker = document.getElementById("picker");
-  if (!section || !picker || !window.UploadSettings) { return; }
+  if (!section) { return; }
   var Card = window.UploadSettings;
+  // While uploading is paused (the service is down, or the disk is low) the
+  // drop and its settings card are not on the page, and the batch still
+  // is: its rows and its download are drawn all the same (v1.247.0; the
+  // script had stopped here, and a finished batch never showed its
+  // download on this page while uploading was paused).
+  var hasDrop = !!(picker && Card);
+  function on(element, event, handler) {
+    if (hasDrop && element) { element.addEventListener(event, handler); }
+  }
 
   var chosen = [];
   var list = document.getElementById("chosen");
@@ -97,10 +106,10 @@
     else if (chosen[railFor] && chosen[railFor].own) { chosen[railFor].own = Card.read(); }
     sayLine();
   }
-  Card.onChange(remember);
+  if (hasDrop) { Card.onChange(remember); }
 
-  by("back-to-batch").addEventListener("click", showBatch);
-  by("use-batch").addEventListener("change", function () {
+  on(by("back-to-batch"), "click", showBatch);
+  on(by("use-batch"), "change", function () {
     var one = chosen[railFor];
     if (!one) { return; }
     one.own = this.checked ? null : Card.copyOf(settings());
@@ -108,7 +117,7 @@
     Card.write(one.own || settings());
     draw();
   });
-  by("file-title").addEventListener("input", function () {
+  on(by("file-title"), "input", function () {
     var one = chosen[railFor];
     if (!one) { return; }
     one.title = this.value;
@@ -218,10 +227,10 @@
     sayLine();
   }
 
-  picker.addEventListener("change", function () { add(picker.files); picker.value = ""; });
-  drop.addEventListener("dragover", function (event) { event.preventDefault(); drop.classList.add("over"); });
-  drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
-  drop.addEventListener("drop", function (event) {
+  on(picker, "change", function () { add(picker.files); picker.value = ""; });
+  on(drop, "dragover", function (event) { event.preventDefault(); drop.classList.add("over"); });
+  on(drop, "dragleave", function () { drop.classList.remove("over"); });
+  on(drop, "drop", function (event) {
     event.preventDefault();
     drop.classList.remove("over");
     add(event.dataTransfer.files);
@@ -230,7 +239,7 @@
   // Start: the batch is made with the card's settings; a file with its own
   // sends them, as on the Upload page. Never a case: the card has no box
   // for one here.
-  start.addEventListener("click", function () {
+  on(start, "click", function () {
     var files = usable();
     start.disabled = true;
     problem.hidden = true;
@@ -383,6 +392,17 @@
     return (h ? h + " h " : "") + (whole % 60) + " min";
   }
 
+  // The download is a menu of two (v1.247.0): the batch's zip as Word
+  // documents or as text, at one address with and without `?as=word`.
+  function pointDownload(holder, address, label) {
+    var word = holder.querySelector("a[data-as='word']");
+    var text = holder.querySelector("a[data-as='text']");
+    if (word) { word.href = address + "?as=word"; }
+    if (text) { text.href = address; }
+    var words = holder.querySelector(".menu-label");
+    if (label && words) { words.textContent = label; }
+  }
+
   function drawBatch(state) {
     var tally = { done: 0, failed: 0, waiting: 0 };
     rows.innerHTML = "";
@@ -414,7 +434,7 @@
         "Yours until you sign out or press Done with these.";
       var doneLink = by("bulk-download-done");
       doneLink.hidden = tally.done === 0;
-      doneLink.href = download;
+      pointDownload(doneLink, download);
       by("bulk-clear").dataset.batch = batchId;
       return;
     }
@@ -425,8 +445,7 @@
       (state.everything_done_by ? ". " + state.everything_done_by : "") +
       ". The page carries on without you, and the download stays on Home until you press Done with these.";
     downloadLine.hidden = tally.done === 0;
-    downloadLine.href = download;
-    downloadLine.querySelector("button").textContent = "Download the " + plural(tally.done, "transcript") + " ready";
+    pointDownload(downloadLine, download, "Download the " + plural(tally.done, "transcript") + " ready");
   }
 
   function ask() {
@@ -465,8 +484,10 @@
     });
   });
 
-  // Transcribe more: the drop again, the finished batch kept under it.
-  by("bulk-more").addEventListener("click", function () {
+  // Transcribe more: the drop again, the finished batch kept under it. Not
+  // offered while uploading is paused, when there is no drop to show.
+  by("bulk-more").hidden = !hasDrop;
+  on(by("bulk-more"), "click", function () {
     dropBox.hidden = false;
     start.hidden = false;
     list.hidden = false;
@@ -478,7 +499,9 @@
   });
 
   // The card starts on the batch's settings.
-  batchSettings = Card.read();
-  showBatch();
+  if (hasDrop) {
+    batchSettings = Card.read();
+    showBatch();
+  }
   if (batchId) { showBatch_(batchId); }
 })();

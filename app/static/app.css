@@ -928,6 +928,10 @@ main.wide { max-width: none; }
 .done-hero .tick { font-size: 2.2em; line-height: 1; color: var(--ok); }
 .done-hero h1 { font-size: var(--t-title); margin: 10px 0 4px; }
 .done-hero .lead { color: var(--muted); margin-bottom: 16px; }
+/* The download as a menu of two (v1.247.0): the list opens under its own
+ * button in the middle of the card, not at the card's right edge. */
+.done-hero details.menu { display: inline-block; }
+.done-hero details.menu > ul { right: auto; left: 50%; transform: translateX(-50%); }
 .quiet-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
 
 /* The guides, rendered from Markdown ---------------------------------------- */

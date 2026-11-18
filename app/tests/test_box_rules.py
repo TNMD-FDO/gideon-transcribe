@@ -209,8 +209,10 @@ def test_the_local_admin_takes_its_password_from_a_pipe(monkeypatch):
 def test_the_ledger_answers_the_directions_by_number():
     ledger = (HERE / "docs" / "box-ledger.md").read_text(encoding="utf-8")
     # The rules version moves at every merge; the entries below are ours.
-    assert "**Rules version:** 2026-11-12.2" in ledger
+    assert "**Rules version:** 2026-11-17.1" in ledger
     ours = ledger.split("### Gideon Transcribe", 1)[1]
+    assert "at v1.247.0 (one release since the v1.246.0 entry" in ours
+    assert "at v0.3.199 (the batch release of six landed tickets" in ledger
     assert "at v1.246.0 (one release since the v1.245.0 entry" in ours
     assert "at v1.245.0 (one release since the v1.244.0 entry" in ours
     assert "a folder of our own, `cases/archived`, inside our existing" in ours
